@@ -140,11 +140,11 @@ def calculate_beam_design(inputs: BeamInputs) -> BeamResults:
         Mu_required = M_ultimate  # kN⋅m
         
         # 5. Calculate required reinforcement
-        # Mu = φ * ρ * fy * b * d² * (1 - 0.59 * ρ * fy / fc)
-        # This is a quadratic equation, solve iteratively or use approximation
+        # Convert Mu to N⋅mm for consistency with MPa units
+        Mu_N_mm = M_ultimate * 1000 * 1000  # kN⋅m to N⋅mm
         
-        # First approximation (conservative)
-        Ru = Mu_required * 1000 / (phi * b * d**2)  # N/m²
+        # Calculate Ru in MPa
+        Ru = Mu_N_mm / (phi * b * 1000 * d * 1000 * d * 1000)  # N⋅mm / (mm * mm * mm) = MPa
         
         # Calculate required rho using quadratic formula approach
         # For rectangular beam: Ru = rho * fy * (1 - 0.59 * rho * fy / fc)
@@ -152,13 +152,13 @@ def calculate_beam_design(inputs: BeamInputs) -> BeamResults:
         
         a_coeff = 0.59 * fy / fc
         b_coeff = -1.0
-        c_coeff = Ru / (fy * 1000)
+        c_coeff = Ru / fy
         
         discriminant = b_coeff**2 - 4 * a_coeff * c_coeff
         
         if discriminant < 0:
             # If discriminant is negative, use approximation
-            rho_required = Ru / (0.9 * fy * 1000)
+            rho_required = Ru / (0.9 * fy)
         else:
             # Use smaller root (compression controlled)
             rho_required = (-b_coeff - math.sqrt(discriminant)) / (2 * a_coeff)
