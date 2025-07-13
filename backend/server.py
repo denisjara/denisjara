@@ -131,7 +131,9 @@ def calculate_beam_design(inputs: BeamInputs) -> BeamResults:
         rho_balanced = (0.85 * fc * beta1 / fy) * (600 / (600 + fy))
         
         # Minimum reinforcement ratio (E.060)
-        rho_min = max(0.7 * math.sqrt(fc) / fy, 14 / fy)
+        # As_min = max(0.26 * bt * d / fy, 0.0013 * bt * d)
+        # Converting to reinforcement ratio: rho_min = As_min / (bt * d)
+        rho_min = max(0.26 / fy, 0.0013)
         
         # Maximum reinforcement ratio (E.060)
         rho_max = 0.75 * rho_balanced
