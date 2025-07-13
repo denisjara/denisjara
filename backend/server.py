@@ -146,9 +146,22 @@ def calculate_beam_design(inputs: BeamInputs) -> BeamResults:
         # First approximation (conservative)
         Ru = Mu_required * 1000 / (phi * b * d**2)  # N/m²
         
-        # Calculate required rho
-        a = 0.59 * fy / fc
-        rho_required = (1 - math.sqrt(1 - 2 * Ru / (fy * 1000))) / a
+        # Calculate required rho using quadratic formula approach
+        # For rectangular beam: Ru = rho * fy * (1 - 0.59 * rho * fy / fc)
+        # Rearranging: 0.59 * (fy/fc) * rho^2 - rho + Ru/fy = 0
+        
+        a_coeff = 0.59 * fy / fc
+        b_coeff = -1.0
+        c_coeff = Ru / (fy * 1000)
+        
+        discriminant = b_coeff**2 - 4 * a_coeff * c_coeff
+        
+        if discriminant < 0:
+            # If discriminant is negative, use approximation
+            rho_required = Ru / (0.9 * fy * 1000)
+        else:
+            # Use smaller root (compression controlled)
+            rho_required = (-b_coeff - math.sqrt(discriminant)) / (2 * a_coeff)
         
         # Check limits
         if rho_required < rho_min:
