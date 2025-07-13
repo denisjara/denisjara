@@ -1,12 +1,13 @@
-from fastapi import FastAPI, APIRouter
+from fastapi import FastAPI, APIRouter, HTTPException
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 import os
 import logging
+import math
 from pathlib import Path
 from pydantic import BaseModel, Field
-from typing import List
+from typing import List, Optional
 import uuid
 from datetime import datetime
 
@@ -26,31 +27,246 @@ app = FastAPI()
 api_router = APIRouter(prefix="/api")
 
 
-# Define Models
-class StatusCheck(BaseModel):
+# Define Models for Beam Design
+class BeamInputs(BaseModel):
+    # Geometry
+    width: float = Field(..., description="Ancho de viga (cm)")
+    height: float = Field(..., description="Altura de viga (cm)")
+    length: float = Field(..., description="Longitud de viga (m)")
+    
+    # Loads
+    dead_load: float = Field(..., description="Carga muerta (kN/m)")
+    live_load: float = Field(..., description="Carga viva (kN/m)")
+    
+    # Materials
+    fc: float = Field(..., description="Resistencia del concreto f'c (MPa)")
+    fy: float = Field(..., description="Resistencia del acero fy (MPa)")
+    
+    # Cover
+    cover: float = Field(default=4.0, description="Recubrimiento (cm)")
+
+class BeamResults(BaseModel):
+    # Input summary
+    inputs: BeamInputs
+    
+    # Load calculations
+    total_load: float
+    max_moment_service: float
+    max_moment_ultimate: float
+    
+    # Material properties
+    beta1: float
+    rho_balanced: float
+    rho_min: float
+    rho_max: float
+    
+    # Design results
+    effective_depth: float
+    required_moment_capacity: float
+    required_rho: float
+    required_as: float
+    
+    # Verification
+    is_valid: bool
+    messages: List[str]
+    
+    # Reinforcement suggestion
+    suggested_bars: str
+    actual_as: float
+    actual_rho: float
+
+class BeamDesign(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    client_name: str
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    project_name: str
+    beam_name: str
+    inputs: BeamInputs
+    results: BeamResults
+    created_at: datetime = Field(default_factory=datetime.utcnow)
 
-class StatusCheckCreate(BaseModel):
-    client_name: str
+class BeamDesignCreate(BaseModel):
+    project_name: str
+    beam_name: str
+    inputs: BeamInputs
 
-# Add your routes to the router instead of directly to app
+
+def calculate_beam_design(inputs: BeamInputs) -> BeamResults:
+    """
+    Calcular diseño de viga según Norma E.060 del RNE (Perú)
+    """
+    try:
+        # Convert units
+        b = inputs.width / 100  # cm to m
+        h = inputs.height / 100  # cm to m
+        L = inputs.length  # m
+        wD = inputs.dead_load  # kN/m
+        wL = inputs.live_load  # kN/m
+        fc = inputs.fc  # MPa
+        fy = inputs.fy  # MPa
+        cover = inputs.cover / 100  # cm to m
+        
+        messages = []
+        
+        # 1. Load calculations
+        w_total = wD + wL
+        M_service = w_total * L**2 / 8  # kN⋅m for simply supported beam
+        
+        # Ultimate moment (E.060 load combinations)
+        M_ultimate = 1.4 * (wD * L**2 / 8) + 1.7 * (wL * L**2 / 8)  # kN⋅m
+        
+        # 2. Material properties and factors (E.060)
+        # Factor de reducción para flexión
+        phi = 0.90
+        
+        # Beta1 factor (E.060)
+        if fc <= 28:
+            beta1 = 0.85
+        else:
+            beta1 = max(0.65, 0.85 - 0.05 * (fc - 28) / 7)
+        
+        # Effective depth
+        d = h - cover - 0.01  # assuming 1cm for bar radius
+        
+        # 3. Calculate balanced reinforcement ratio (E.060)
+        # ρb = (0.85 * fc * β1 / fy) * (600 / (600 + fy))
+        rho_balanced = (0.85 * fc * beta1 / fy) * (600 / (600 + fy))
+        
+        # Minimum reinforcement ratio (E.060)
+        rho_min = max(0.7 * math.sqrt(fc) / fy, 14 / fy)
+        
+        # Maximum reinforcement ratio (E.060)
+        rho_max = 0.75 * rho_balanced
+        
+        # 4. Required moment capacity
+        Mu_required = M_ultimate  # kN⋅m
+        
+        # 5. Calculate required reinforcement
+        # Mu = φ * ρ * fy * b * d² * (1 - 0.59 * ρ * fy / fc)
+        # This is a quadratic equation, solve iteratively or use approximation
+        
+        # First approximation (conservative)
+        Ru = Mu_required * 1000 / (phi * b * d**2)  # N/m²
+        
+        # Calculate required rho
+        a = 0.59 * fy / fc
+        rho_required = (1 - math.sqrt(1 - 2 * Ru / (fy * 1000))) / a
+        
+        # Check limits
+        if rho_required < rho_min:
+            rho_required = rho_min
+            messages.append("Se usa cuantía mínima")
+        elif rho_required > rho_max:
+            messages.append("ERROR: Cuantía excede el máximo permitido. Aumentar sección.")
+            
+        # Required steel area
+        As_required = rho_required * b * d  # m²
+        As_required_cm2 = As_required * 10000  # cm²
+        
+        # 6. Verification
+        is_valid = rho_required <= rho_max and As_required > 0
+        
+        if not is_valid:
+            messages.append("Diseño no válido - revisar dimensiones o cargas")
+        
+        # 7. Steel bar suggestion (common bars in Peru)
+        # Common diameters: 8mm, 10mm, 12mm, 16mm, 20mm, 25mm
+        bar_areas = {
+            8: 0.503,   # cm²
+            10: 0.785,  # cm²
+            12: 1.131,  # cm²
+            16: 2.011,  # cm²
+            20: 3.142,  # cm²
+            25: 4.909   # cm²
+        }
+        
+        best_combination = ""
+        actual_as = 0
+        
+        for diameter in [25, 20, 16, 12, 10, 8]:
+            area_per_bar = bar_areas[diameter]
+            num_bars = math.ceil(As_required_cm2 / area_per_bar)
+            
+            if num_bars <= 6:  # practical limit
+                actual_as = num_bars * area_per_bar
+                best_combination = f"{num_bars}φ{diameter}mm (As = {actual_as:.2f} cm²)"
+                break
+        
+        if not best_combination:
+            # Combination of bars
+            num_20 = int(As_required_cm2 / bar_areas[20])
+            remaining = As_required_cm2 - num_20 * bar_areas[20]
+            num_16 = math.ceil(remaining / bar_areas[16])
+            actual_as = num_20 * bar_areas[20] + num_16 * bar_areas[16]
+            best_combination = f"{num_20}φ20mm + {num_16}φ16mm (As = {actual_as:.2f} cm²)"
+        
+        actual_rho = (actual_as / 10000) / (b * d)
+        
+        # Final verification message
+        if actual_rho > rho_max:
+            messages.append("ADVERTENCIA: Acero colocado excede cuantía máxima")
+            is_valid = False
+        
+        return BeamResults(
+            inputs=inputs,
+            total_load=w_total,
+            max_moment_service=M_service,
+            max_moment_ultimate=M_ultimate,
+            beta1=beta1,
+            rho_balanced=rho_balanced,
+            rho_min=rho_min,
+            rho_max=rho_max,
+            effective_depth=d * 100,  # convert back to cm
+            required_moment_capacity=Mu_required,
+            required_rho=rho_required,
+            required_as=As_required_cm2,
+            is_valid=is_valid,
+            messages=messages,
+            suggested_bars=best_combination,
+            actual_as=actual_as,
+            actual_rho=actual_rho
+        )
+        
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Error en cálculos: {str(e)}")
+
+
+# API Routes
+@api_router.post("/beam/design", response_model=BeamResults)
+async def design_beam(inputs: BeamInputs):
+    """Calcular diseño de viga según norma E.060"""
+    return calculate_beam_design(inputs)
+
+@api_router.post("/beam/save", response_model=BeamDesign)
+async def save_beam_design(design_data: BeamDesignCreate):
+    """Guardar diseño de viga en base de datos"""
+    results = calculate_beam_design(design_data.inputs)
+    
+    beam_design = BeamDesign(
+        project_name=design_data.project_name,
+        beam_name=design_data.beam_name,
+        inputs=design_data.inputs,
+        results=results
+    )
+    
+    await db.beam_designs.insert_one(beam_design.dict())
+    return beam_design
+
+@api_router.get("/beam/designs", response_model=List[BeamDesign])
+async def get_beam_designs():
+    """Obtener todos los diseños guardados"""
+    designs = await db.beam_designs.find().sort("created_at", -1).to_list(100)
+    return [BeamDesign(**design) for design in designs]
+
+@api_router.get("/beam/design/{design_id}", response_model=BeamDesign)
+async def get_beam_design(design_id: str):
+    """Obtener un diseño específico"""
+    design = await db.beam_designs.find_one({"id": design_id})
+    if not design:
+        raise HTTPException(status_code=404, detail="Diseño no encontrado")
+    return BeamDesign(**design)
+
 @api_router.get("/")
 async def root():
-    return {"message": "Hello World"}
-
-@api_router.post("/status", response_model=StatusCheck)
-async def create_status_check(input: StatusCheckCreate):
-    status_dict = input.dict()
-    status_obj = StatusCheck(**status_dict)
-    _ = await db.status_checks.insert_one(status_obj.dict())
-    return status_obj
-
-@api_router.get("/status", response_model=List[StatusCheck])
-async def get_status_checks():
-    status_checks = await db.status_checks.find().to_list(1000)
-    return [StatusCheck(**status_check) for status_check in status_checks]
+    return {"message": "API de Diseño de Vigas - Norma E.060 Peruana"}
 
 # Include the router in the main app
 app.include_router(api_router)
