@@ -194,22 +194,54 @@ def calculate_beam_design(inputs: BeamInputs) -> BeamResults:
         best_combination = ""
         actual_as = 0
         
+        # Try single bar size first
         for diameter in [25, 20, 16, 12, 10, 8]:
             area_per_bar = bar_areas[diameter]
             num_bars = math.ceil(As_required_cm2 / area_per_bar)
             
-            if num_bars <= 6:  # practical limit
+            if num_bars <= 8 and num_bars >= 2:  # practical limits
                 actual_as = num_bars * area_per_bar
                 best_combination = f"{num_bars}φ{diameter}mm (As = {actual_as:.2f} cm²)"
                 break
         
+        # If no single bar solution, try combinations
         if not best_combination:
-            # Combination of bars
-            num_20 = int(As_required_cm2 / bar_areas[20])
-            remaining = As_required_cm2 - num_20 * bar_areas[20]
-            num_16 = math.ceil(remaining / bar_areas[16])
-            actual_as = num_20 * bar_areas[20] + num_16 * bar_areas[16]
-            best_combination = f"{num_20}φ20mm + {num_16}φ16mm (As = {actual_as:.2f} cm²)"
+            # Try combination with larger bars first
+            for main_diameter in [25, 20, 16]:
+                main_area = bar_areas[main_diameter]
+                max_main_bars = min(6, int(As_required_cm2 / main_area))
+                
+                for num_main in range(max_main_bars, 0, -1):
+                    remaining_area = As_required_cm2 - num_main * main_area
+                    
+                    if remaining_area <= 0:
+                        actual_as = num_main * main_area
+                        best_combination = f"{num_main}φ{main_diameter}mm (As = {actual_as:.2f} cm²)"
+                        break
+                    
+                    # Find secondary bars
+                    for sec_diameter in [20, 16, 12]:
+                        if sec_diameter >= main_diameter:
+                            continue
+                        sec_area = bar_areas[sec_diameter]
+                        num_sec = math.ceil(remaining_area / sec_area)
+                        
+                        if num_sec <= 4 and (num_main + num_sec) <= 8:
+                            actual_as = num_main * main_area + num_sec * sec_area
+                            best_combination = f"{num_main}φ{main_diameter}mm + {num_sec}φ{sec_diameter}mm (As = {actual_as:.2f} cm²)"
+                            break
+                    
+                    if best_combination:
+                        break
+                
+                if best_combination:
+                    break
+        
+        # Fallback if no good combination found
+        if not best_combination:
+            num_bars = math.ceil(As_required_cm2 / bar_areas[20])
+            actual_as = num_bars * bar_areas[20]
+            best_combination = f"{num_bars}φ20mm (As = {actual_as:.2f} cm²)"
         
         actual_rho = (actual_as / 10000) / (b * d)
         
