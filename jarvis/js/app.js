@@ -181,11 +181,35 @@ const App = (() => {
   }
 
   /* ---------- MICRÓFONO ---------- */
-  function toggleMic() {
+  /* Diagnóstico del micrófono: averigua POR QUÉ no hay acceso */
+  let micIssue = null;
+  const embedded = (() => { try { return window.self !== window.top; } catch { return true; } })();
+  async function micBlockedReason() {
+    if (!window.isSecureContext) return "insecure";
+    const fp = document.permissionsPolicy || document.featurePolicy;
+    if (fp && fp.allowsFeature && !fp.allowsFeature("microphone")) return "embedded";
+    try {
+      const st = await navigator.permissions.query({ name: "microphone" });
+      if (st.state === "denied") return embedded ? "embedded" : "denied";
+    } catch {}
+    return null;
+  }
+  function showMicIssue(reason) {
+    micIssue = reason;
+    SFX.play("error");
+    HUD.setState("idle");
+    openPanel("mic");
+  }
+  async function toggleMic() {
     SFX.init();
-    if (!Voice.supported.rec) { toast("Reconocimiento de voz no disponible. Use Chrome o Edge."); SFX.play("error"); return; }
+    if (!Voice.supported.rec) { showMicIssue("unsupported"); return; }
     if (Voice.listening && !Voice.wake) { Voice.stop(); return; }
-    SFX.attachMic();
+    const reason = await micBlockedReason();
+    if (reason) { showMicIssue(reason); return; }
+    // Pide el permiso explícitamente (muestra el diálogo del navegador)
+    const ok = await SFX.attachMic();
+    if (!ok) { showMicIssue(embedded ? "embedded" : "denied"); return; }
+    if (currentPanel === "mic") closePanel();
     Voice.start();
   }
   function setWake(v) {
@@ -205,7 +229,9 @@ const App = (() => {
       if (HUD.state === "listening") { HUD.setState("idle"); SFX.play("listenEnd"); $("#coreLabel").textContent = Voice.wake ? 'DIGA "JARVIS"' : "TOCA PARA HABLAR"; }
     } else if (s === "error") {
       SFX.play("error");
-      toast(err === "not-allowed" ? "Permiso de micrófono denegado" : "Error de voz: " + err);
+      if (err === "not-allowed" || err === "service-not-allowed") showMicIssue(embedded ? "embedded" : "denied");
+      else if (err === "network") showMicIssue("network");
+      else toast("Error de voz: " + err);
       HUD.setState("idle");
     }
   });
@@ -220,7 +246,8 @@ const App = (() => {
     timers: { title: "TEMPORIZADORES", render: renderTimers },
     protocols: { title: "PROTOCOLOS", render: renderProtocols },
     settings: { title: "AJUSTES", render: renderSettings },
-    help: { title: "CAPACIDADES", render: renderHelp }
+    help: { title: "CAPACIDADES", render: renderHelp },
+    mic: { title: "MICRÓFONO", render: renderMic }
   };
   function openPanel(id) {
     const p = panels[id]; if (!p) return;
@@ -350,6 +377,32 @@ const App = (() => {
     q("#sModel").onchange = e => Store.set("model", e.target.value);
     q("#sTest").onclick = () => Voice.speak(`Prueba de voz completada. A su servicio, ${Store.get("userName", "señor")}.`);
     q("#sReset").onclick = () => { Brain.resetMemory(); toast("Memoria conversacional borrada"); };
+  }
+
+  function renderMic(el) {
+    const browser = /Edg\//.test(navigator.userAgent) ? "edge" : /Chrome\//.test(navigator.userAgent) ? "chrome" : /Firefox\//.test(navigator.userAgent) ? "firefox" : /Safari\//.test(navigator.userAgent) ? "safari" : "otro";
+    const info = {
+      embedded: ["La página está incrustada en un marco aislado (por ejemplo, la vista de Claude) que no permite el micrófono. No es un problema de su navegador y no se puede activar desde aquí.",
+        ["Abra J.A.R.V.I.S. directamente en Chrome o Edge (en local o publicado con https).", "En local: <code>cd jarvis && python3 -m http.server 8080</code> y abra <b>http://localhost:8080</b>.", "Mientras tanto puede escribir sus órdenes en la barra inferior."]],
+      denied: ["El navegador tiene bloqueado el micrófono para este sitio.",
+        browser === "firefox" ? ["Haga clic en el icono del micrófono tachado en la barra de direcciones.", "Quite el bloqueo y recargue la página."]
+        : browser === "safari" ? ["Menú Safari → Configuración para este sitio web → Micrófono → Permitir.", "Recargue la página."]
+        : [`Haga clic en el icono 🔒 / ⚙️ a la izquierda de la dirección.`, "Busque <b>Micrófono</b> y elija <b>Permitir</b>.", "Recargue la página (F5).",
+           `Si sigue bloqueado: <code>${browser === "edge" ? "edge" : "chrome"}://settings/content/microphone</code> y quite este sitio de la lista de bloqueados.`,
+           "Compruebe también que el sistema operativo permite el micrófono al navegador (Windows: Configuración → Privacidad → Micrófono; macOS: Ajustes → Privacidad → Micrófono)."]],
+      insecure: ["El micrófono solo funciona en sitios seguros (https) o en localhost.",
+        ["No abra el archivo con doble clic ni desde una IP de la red local.", "Use <code>python3 -m http.server 8080</code> y abra <b>http://localhost:8080</b>, o publíquelo con https."]],
+      unsupported: ["Este navegador no tiene reconocimiento de voz.",
+        ["Use Google Chrome o Microsoft Edge en escritorio, o Chrome en Android.", "Firefox no incluye reconocimiento de voz."]],
+      network: ["El reconocimiento de voz no pudo conectar con su servicio en línea.",
+        ["Compruebe su conexión a internet.", "Desactive VPN o bloqueadores que puedan cortar la conexión y vuelva a intentarlo."]]
+    }[micIssue || "denied"];
+    el.innerHTML = `<p style="margin-top:0">${info[0]}</p>
+      <div class="field"><label>Cómo solucionarlo</label><ol class="hint" style="padding-left:20px;margin:0;line-height:1.6">${info[1].map(x => `<li>${x}</li>`).join("")}</ol></div>
+      <div class="row" style="flex-wrap:wrap"><button class="btn" id="mRetry">REINTENTAR</button><button class="btn" id="mType">ESCRIBIR EN SU LUGAR</button></div>
+      <p class="hint" style="margin-top:14px">Diagnóstico: contexto seguro ${window.isSecureContext ? "✔" : "✖"} · incrustado ${embedded ? "sí" : "no"} · reconocimiento ${Voice.supported.rec ? "✔" : "✖"} · navegador ${browser}</p>`;
+    el.querySelector("#mRetry").onclick = () => toggleMic();
+    el.querySelector("#mType").onclick = () => { closePanel(); $("#cmdInput").focus(); };
   }
 
   function renderHelp(el) {
