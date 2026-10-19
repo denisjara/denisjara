@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="es" data-theme="arc">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>J.A.R.V.I.S.</title>
+  <meta name="description" content="Asistente personal futurista con voz, HUD holográfico y audio sintetizado." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;800&family=Rajdhani:wght@400;500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <canvas id="bg"></canvas>
+  <div class="scanlines"></div>
+  <div class="vignette"></div>
+
+  <!-- ============ BOOT ============ -->
+  <section id="boot" class="boot">
+    <div class="boot-inner">
+      <div class="boot-logo">
+        <svg viewBox="0 0 200 200" class="boot-ring">
+          <circle cx="100" cy="100" r="90" class="r1" />
+          <circle cx="100" cy="100" r="74" class="r2" />
+          <circle cx="100" cy="100" r="58" class="r3" />
+        </svg>
+        <span>J.A.R.V.I.S.</span>
+      </div>
+      <p class="boot-sub">Just A Rather Very Intelligent System</p>
+      <pre id="bootLog" class="boot-log"></pre>
+      <button id="bootBtn" class="btn-primary boot-btn" data-sfx>
+        <span>INICIAR SISTEMA</span>
+      </button>
+      <p class="boot-hint">Recomendado: Chrome o Edge · auriculares · micrófono habilitado</p>
+    </div>
+  </section>
+
+  <!-- ============ HUD ============ -->
+  <main id="hud" class="hud hidden">
+    <!-- top bar -->
+    <header class="topbar">
+      <div class="brand">
+        <span class="brand-dot"></span>
+        <b>J.A.R.V.I.S.</b>
+        <small id="statusText">EN LÍNEA</small>
+      </div>
+      <nav class="tabs" id="tabs">
+        <button data-panel="diag" data-sfx>DIAGNÓSTICO</button>
+        <button data-panel="weather" data-sfx>CLIMA</button>
+        <button data-panel="notes" data-sfx>NOTAS</button>
+        <button data-panel="timers" data-sfx>TEMPORIZADORES</button>
+        <button data-panel="protocols" data-sfx>PROTOCOLOS</button>
+        <button data-panel="settings" data-sfx>AJUSTES</button>
+      </nav>
+      <div class="clock">
+        <span id="clockTime">00:00:00</span>
+        <small id="clockDate">—</small>
+      </div>
+    </header>
+
+    <!-- left column -->
+    <aside class="col col-left">
+      <div class="card glass" id="cardSys">
+        <h3><i></i>NÚCLEO</h3>
+        <div class="metric"><label>CPU (estimado)</label><div class="bar"><span id="mCpu"></span></div><em id="vCpu">0%</em></div>
+        <div class="metric"><label>MEMORIA</label><div class="bar"><span id="mMem"></span></div><em id="vMem">—</em></div>
+        <div class="metric"><label>ENERGÍA</label><div class="bar"><span id="mBat"></span></div><em id="vBat">—</em></div>
+        <div class="metric"><label>FPS</label><div class="bar"><span id="mFps"></span></div><em id="vFps">0</em></div>
+        <canvas id="spark" class="spark" width="300" height="60"></canvas>
+      </div>
+      <div class="card glass">
+        <h3><i></i>ENLACE</h3>
+        <ul class="kv" id="kvNet"></ul>
+      </div>
+      <div class="card glass">
+        <h3><i></i>ESPECTRO</h3>
+        <canvas id="wave" class="wave" width="300" height="80"></canvas>
+      </div>
+    </aside>
+
+    <!-- center: reactor -->
+    <section class="center">
+      <div class="reactor-wrap" id="reactorWrap">
+        <canvas id="reactor"></canvas>
+        <button class="core-btn" id="coreBtn" title="Hablar (Espacio)" data-sfx>
+          <span class="core-label" id="coreLabel">TOCA PARA HABLAR</span>
+        </button>
+        <div class="radial" id="radial"></div>
+      </div>
+      <div class="subtitle" id="subtitle"></div>
+    </section>
+
+    <!-- right column: log -->
+    <aside class="col col-right">
+      <div class="card glass log-card">
+        <h3><i></i>REGISTRO DE COMUNICACIONES</h3>
+        <div class="log" id="log"></div>
+      </div>
+    </aside>
+
+    <!-- bottom command bar -->
+    <footer class="cmdbar">
+      <div class="chips" id="chips"></div>
+      <form id="cmdForm" class="cmd glass" autocomplete="off">
+        <span class="prompt">&gt;_</span>
+        <input id="cmdInput" placeholder="Escribe un comando o pregunta…  (Ctrl+K paleta · Espacio micrófono)" />
+        <button type="button" id="micBtn" class="mic" title="Micrófono" data-sfx>
+          <svg viewBox="0 0 24 24"><path d="M12 15a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V22h2v-3.08A7 7 0 0 0 19 12z"/></svg>
+        </button>
+        <button type="submit" class="send" data-sfx>EJECUTAR</button>
+      </form>
+    </footer>
+
+    <!-- sliding panel -->
+    <section class="panel glass" id="panel" aria-hidden="true">
+      <header>
+        <h2 id="panelTitle">PANEL</h2>
+        <button class="x" id="panelClose" data-sfx>✕</button>
+      </header>
+      <div class="panel-body" id="panelBody"></div>
+    </section>
+
+    <!-- command palette -->
+    <div class="palette-backdrop hidden" id="paletteBg">
+      <div class="palette glass">
+        <input id="paletteInput" placeholder="Buscar acción…" />
+        <ul id="paletteList"></ul>
+      </div>
+    </div>
+
+    <div class="toasts" id="toasts"></div>
+  </main>
+
+  <script src="js/audio.js"></script>
+  <script src="js/voice.js"></script>
+  <script src="js/brain.js"></script>
+  <script src="js/hud.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
