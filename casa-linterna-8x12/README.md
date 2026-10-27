@@ -1,16 +1,15 @@
 # CASA LINTERNA · Vivienda unifamiliar en lote de 8.00 × 17.00 m
 
-Proyecto de arquitectura (anteproyecto / proyecto básico) — **versión 4**. Frente de 8.00 m a la calle:
+Proyecto de arquitectura (anteproyecto / proyecto básico) — **versión 5**. Frente de 8.00 m a la calle:
 
 | Zona | Medidas | Área | Sistema |
 |---|---|---|---|
 | Cochera / reuniones (al frente, junto a la calle) | 8.00 × 5.00 m | 40.00 m² | Sin muros. Cobertura metálica a una sola agua (cae hacia la calle) sobre 2 columnas con pedestales |
-| Vivienda (material noble) | 8.00 × 12.00 m | 73.42 m² techados por piso, 2 pisos | Albañilería confinada + pórticos de C°A°, con pozo de luz y patio de servicio al fondo |
-| Terraza (3er nivel) | 8.00 × 9.65 m | 77.20 m² | Cobertura metálica liviana a una sola agua |
+| Vivienda (material noble) | 8.00 × 12.00 m | 95.50 m² techados por piso, 2 pisos | Albañilería confinada + pórticos de C°A°; solo 2 ductos de 0.50 × 0.50 m en las esquinas posteriores |
+| Terraza (3er nivel) | 8.00 × 12.00 m | 96.00 m² | Cobertura metálica liviana a una sola agua |
 
-La sala, el comedor y los dos dormitorios delanteros (con balcón) miran a la cochera techada.
+![Vista desde la calle](entregables/renders/foto-calle.png)
 
-![Vista desde la calle](entregables/renders/render-calle.png)
 
 ## Entregables
 
@@ -21,7 +20,8 @@ La sala, el comedor y los dos dormitorios delanteros (con balcón) miran a la co
 | `entregables/CasaLinterna_Modelo.ifc` | Modelo BIM IFC4: elementos con geometría validada (muros, losas, columnas, vigas, pedestales, escaleras, puertas, ventanas, coberturas, estructura metálica, celosías, mobiliario) + espacios con áreas y Psets | Revit, ArchiCAD, Tekla, BIMcollab, BlenderBIM |
 | `entregables/visor-3d.html` | Visor 3D interactivo: pisos, coberturas, capas, **corte en vivo**, selección de elementos con datos BIM y las 8 láminas | Navegador |
 | `entregables/laminas/A-0x.png` | Láminas en imagen (150 dpi) | — |
-| `entregables/renders/*.png` | Vistas 3D | — |
+| `entregables/renders/foto-*.png` | Renders fotorrealistas (Cycles) | — |
+| `blender/CasaLinterna.blend` | Escena de Blender con materiales, muebles, luces y 7 cámaras | Blender 5.2+ |
 | `revit/crear_modelo_revit.py` + `revit/casa_linterna_revit.json` | Script que **construye el modelo nativo en Revit** (ver abajo) | pyRevit, RevitPythonShell, Dynamo |
 
 ### Sobre el archivo nativo de Revit (.rvt)
@@ -50,64 +50,66 @@ servidor solo ejecuta C#, usa la opción 2 o pyRevit.
 
 El lote tiene 8 m de frente y 17 m de fondo. Los primeros 5 m son la **cochera**: queda abierta, sin
 muros, bajo una cobertura metálica a una sola agua (10 %, cae hacia la calle) sobre 2 columnas junto a
-la vereda y apoyada en la fachada. Caben 2 autos lado a lado con un pasillo central hacia la puerta, y
-sin los autos funciona como zona de reuniones. Junto a la fachada, una banda de policarbonato deja
-pasar la luz hacia los balcones y la sala.
+la vereda y apoyada en la fachada. Caben 2 autos lado a lado con un pasillo central hacia la puerta; sin
+los autos funciona como zona de reuniones.
 
-Detrás, la vivienda de 8 × 12 m. Como las dos medianeras son ciegas y el lote es profundo, la vivienda
-tiene un **pozo de luz** central (1.80 × 2.10 m, cubierto con policarbonato a nivel de la terraza) y un
-**patio de servicio** al fondo (7.70 × 2.20 m): así ventilan e iluminan, como pide el RNE, los ambientes
-que no pueden dar a la cochera.
+La vivienda ocupa **los 8 × 12 m completos**. El único espacio libre son **2 ductos de luz y ventilación
+de 0.50 × 0.50 m** en las esquinas posteriores (0.50 m² en total): a ellos dan ventanas altas del
+dormitorio 1, la cocina y los dormitorios 4 y 5; arriba los cubre una banda de policarbonato. Los baños
+interiores llevan extractor mecánico.
 
-**1er piso · NPT ±0.00** — Sala (12.65 m²) y comedor (11.90) abiertos a la cochera con mamparas
-corredizas, baño de visitas (1.80), hall con escalera en U, cocina (13.20) hacia el patio y el pozo de
-luz, **dormitorio 1 (9.25 m²) con baño propio (3.23)**, patio de servicio con lavandería.
+**1er piso · NPT ±0.00** — Sala (17.51 m²) y comedor (17.98) abiertos a la cochera con mamparas
+corredizas, hall con escalera en U, barra de desayuno, baño de visitas (2.10), **cocina abierta con isla
+(17.07)** y **dormitorio 1 (13.02 m²) con baño propio (3.23)**.
 
-**2do piso · NPT +2.80** — **4 dormitorios, cada uno con su baño**, alrededor del hall:
+**2do piso · NPT +2.80** — **4 dormitorios amplios, cada uno con su baño**, alrededor de un hall-estar:
 
 | Ambiente | Área | Baño | Ancho | Luz y ventilación |
 |---|---|---|---|---|
-| Dormitorio 2 | 9.35 m² + balcón 3.58 | 3.13 m² | 3.73 m | Cochera (balcón) |
-| Dormitorio 3 | 9.70 m² + balcón 3.63 | 3.13 m² | 3.83 m | Cochera (balcón) |
-| Dormitorio 4 | 9.25 m² | 3.23 m² | 3.73 m | Patio posterior |
-| Dormitorio 5 | 9.60 m² | 3.23 m² | 3.83 m | Patio posterior |
+| Dormitorio 2 | 13.91 m² + balcón 3.58 | 3.23 m² | 3.73 m | Mampara y balcón a la cochera |
+| Dormitorio 3 | 14.38 m² + balcón 3.63 | 3.23 m² | 3.83 m | Mampara y balcón a la cochera |
+| Dormitorio 4 | 13.02 m² | 3.23 m² | 3.73 m | Ventanas altas al ducto |
+| Dormitorio 5 | 13.47 m² | 3.23 m² | 3.83 m | Ventanas altas al ducto |
 
-Cada dormitorio es para una persona: cama de 1.05 × 1.90 con velador, closet y escritorio.
-Con el dormitorio del 1er piso son **5 dormitorios con baño propio**.
+Cada dormitorio tiene cama de 1.35 × 1.90 con veladores, closet y escritorio. Con el del 1er piso son
+**5 dormitorios con baño propio**.
 
-**Terraza · NPT +5.60** — 62 m² útiles bajo cobertura (pendiente 5 % hacia el patio), con parrilla,
-comedor exterior, sala, tendal y celosía de madera hacia la calle.
+**Terraza · NPT +5.60** — 84 m² útiles bajo cobertura (pendiente 5 % hacia el fondo), con parrilla,
+lavandería, tendal, comedor y sala exterior, y celosía de madera hacia la calle.
 
 | Cuadro de áreas | m² |
 |---|---|
 | Terreno | 136.00 |
-| Techado 1er piso | 73.42 |
-| Techado 2do piso | 73.42 (+ 7.21 de balcones) |
-| **Total material noble** | **154.05** |
-| Terraza con cobertura liviana | 77.20 |
+| Techado 1er piso | 95.50 |
+| Techado 2do piso | 95.50 (+ 7.21 de balcones) |
+| **Total material noble** | **198.21** |
+| Terraza con cobertura liviana | 96.00 |
 | Cochera con cobertura liviana | 40.00 (29.4 %) |
-| Patio de servicio + pozo de luz (abiertos) | 22.58 (16.6 %) |
+| Ductos de luz y ventilación | 0.50 (0.4 %) |
 
-## Criterios técnicos
+> Nota normativa: el RNE pide que los dormitorios ventilen e iluminen a exteriores o a pozos de luz de
+> dimensiones mínimas. Con ductos de 0.50 × 0.50 m, los dormitorios 1, 4 y 5 quedan por debajo de ese
+> mínimo; verifica con tu municipalidad o amplía esos ductos si te lo exigen.
 
-- **Estructura (referencial):** columnas 0.25 × 0.25, vigas 0.25 × 0.40, losa aligerada h = 0.20, muros de
-  ladrillo KK e = 0.15 y tabiques de baño e = 0.10. Ejes A-B-C (3.83 / 3.92 m) y 1-2-3-4 (3.53 / 2.35 / 3.53 m).
-  **Debe diseñarla y firmarla un ingeniero civil colegiado** (E.020, E.030, E.060, E.070, E.090).
-- **Escalera:** 16 contrapasos de 0.175 m, pasos de 0.25 m, tramos de 1.00 m.
-- **Cobertura de la cochera:** 2 columnas CM-1 (tubo 150×150×4) sobre placa base 300×300×12 con 4 pernos
-  Ø5/8", **pedestales de C°A° 0.40 × 0.40** (0.50 m sobre el piso, protegen de golpes de los autos) y
-  zapatas 0.90 × 0.90; viga frontal VM-2 (tubo 150×300×4, 7.40 m de luz entre columnas), 7 vigas VM-1
-  (tubo 100×200×3 @ 1.233) apoyadas en la vivienda con el ángulo AN-1, correas 50×100×2, panel TR4 de
-  50 mm + banda de policarbonato, arriostres Ø1/2", canaleta frontal y 2 bajantes. Altura +5.60 → +5.10.
-  Ver los detalles 1 y 2 de la lámina A-04.
-- **Cobertura de terraza:** 12 columnas CT-1 (tubo 100×100×3) sobre las columnas de concreto, 3 vigas VT-1
-  (tubo 100×250×3), correas @ 1.00, panel TR4 + policarbonato sobre el pozo de luz, canaleta y 2 bajantes al patio.
-- **Bloques realistas:** autos con su perfil lateral real (capó, parabrisas, techo, pasos de rueda, ruedas
-  circulares con aro, faros, stops, placas y espejos); camas con cabecero, almohadas, edredón y veladores
-  con lámpara; sofás con cojines; sillas con respaldo; inodoros, lavatorios, duchas; plantas y árboles.
-- **Normativa de referencia (Perú, RNE):** A.010, A.020, E.030, E.060, E.070, E.090, IS.010. Verifica los
-  parámetros urbanísticos de tu municipalidad (altura máxima, retiros, porcentaje de área libre y si la
-  cobertura liviana de la cochera requiere trámite).
+## Renders fotorrealistas (Blender + Cycles)
+
+`src/blender_render.py` arma la escena con **Blender 5.2 (bpy) y el motor de trazado de rayos Cycles**
+desde el mismo modelo:
+
+- Materiales PBR con texturas CC0 de [Poly Haven](https://polyhaven.com): yeso pintado, concreto,
+  porcelanato, piso laminado, cuarzo, madera, calamina TR4 y asfalto, proyectadas en caja sobre la geometría.
+- Muebles reales (Poly Haven): sofá, sillones, mesa de centro, sillas de comedor, banquetas y plantas, ubicados y
+  orientados automáticamente según el mobiliario del modelo.
+- Autos modelados paramétricamente: carrocería con secciones redondeadas, cabina con parantes, pasos de
+  rueda, neumáticos, aros de 5 rayos, faros, stops y placas; pintura metalizada con barniz.
+- Cielo HDRI + sol, luces interiores, calle, veredas, sardineles y edificios vecinos para dar escala.
+- Desruido OpenImageDenoise. Se guarda también `blender/CasaLinterna.blend` para abrir y seguir renderizando.
+
+```
+pip install bpy==5.2.3
+python3 src/polyhaven.py            # descarga texturas, modelos y HDRI a blender/assets/
+python3 src/blender_render.py --samples 128 --res 1600x1000 --blend
+```
 
 ## Cómo se construyó (flujo paramétrico)
 

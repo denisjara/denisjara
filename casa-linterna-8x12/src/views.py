@@ -9,7 +9,7 @@ from collections import OrderedDict
 from shapely.geometry import Polygon, box as sbox, LineString, MultiPolygon, GeometryCollection
 from shapely.ops import unary_union
 from model import (build_walls, build_rooms, all_prisms, plan2d, LV, LOT_X, LOT_Y, Y0, YB, COL_X, COL_Y, ST_Y_A, ST_Y_B,
-                   ST_X_FL, ST_X_LAND, STAIR_ZONE, WELL, PATIO, TREAD, STRIP_COLS_X, STRIP_COL_Y, BALCONIES, BAL_D,
+                   ST_X_FL, ST_X_LAND, STAIR_ZONE, DUCTS, YF, YM1, YM2, TREAD, STRIP_COLS_X, STRIP_COL_Y, BALCONIES, BAL_D,
                    strip_top, terrace_top, LEVEL_NAMES, AX_X, AX_Y)
 from drawing import Drawing
 
@@ -70,6 +70,12 @@ def void(d, x1, y1, x2, y2, label=None):
 def opening_symbol(d, w, o):
     t = w.t
     width = o.s2 - o.s1
+    if o.kind == "vano":
+        if w.horizontal:
+            for yy in (w.a[1] - t / 2, w.a[1] + t / 2):
+                d.line((o.s1, yy), (o.s2, yy), "A-PROYECCION", lw=0.09)
+            d.text(((o.s1 + o.s2) / 2, w.a[1] + 0.22), o.name, 1.5, "A-TEXTO-AREA", bold=True)
+        return
     if w.horizontal:                      # muro a lo largo de x
         yc = w.a[1]
         if o.kind in ("door", "door2"):
@@ -177,14 +183,14 @@ def grid_and_dims(d, level):
         d.circle((x, LOT_Y + 2.85), 0.28, "A-EJES")
         d.text((x, LOT_Y + 2.85), k, 2.5, "A-TEXTO", bold=True)
     if level == 1:
-        ys = [0, Y0, 5.15, 8.60, 8.70, 10.95, 11.05, 14.50, YB, 16.85, LOT_Y]
-        xs = [0, 0.15, 2.90, 3.875, 4.025, 6.0, 7.85, 8.0]
+        ys = [0, Y0, 5.15, 9.85, 9.95, 12.20, 12.30, 16.35, 16.85, LOT_Y]
+        xs = [0, 0.15, 2.90, 3.875, 4.025, 6.35, 7.85, 8.0]
     elif level == 2:
-        ys = [0, Y0 - BAL_D, Y0, 5.15, 6.90, 8.60, 8.70, 10.95, 11.05, 12.80, 14.50, YB, LOT_Y]
+        ys = [0, Y0 - BAL_D, Y0, 5.15, 8.05, 9.85, 9.95, 12.20, 12.30, 14.10, 16.35, 16.85, LOT_Y]
         xs = [0, 0.15, 2.05, 2.15, 3.875, 4.025, 5.85, 5.95, 7.85, 8.0]
     else:
-        ys = [0, Y0, 5.15, STAIR_ZONE[1], STAIR_ZONE[3], 14.50, YB, LOT_Y]
-        xs = [0, 0.15, 2.90, WELL[0], WELL[2], 8.0]
+        ys = [0, Y0, 5.15, STAIR_ZONE[1], STAIR_ZONE[3], 16.35, 16.85, LOT_Y]
+        xs = [0, 0.15, 0.65, 2.90, 7.35, 7.85, 8.0]
     dims_along_y(d, 0.0, ys, 0.95)
     dims_along_y(d, 0.0, [0] + list(GRID_H.values()) + [LOT_Y], 1.55)
     dims_along_y(d, 0.0, [0, Y0, LOT_Y], 2.10)
@@ -194,7 +200,7 @@ def grid_and_dims(d, level):
 
 
 # planos de corte: (modo, posicion, sentido de vista)
-SECTIONS = {"A": ("x", 5.20, -1), "B": ("x", 1.70, -1), "C": ("y", 6.40, -1), "D": ("y", 9.90, 1)}
+SECTIONS = {"A": ("x", 5.20, -1), "B": ("x", 1.70, -1), "C": ("y", 6.80, -1), "D": ("y", 11.60, 1)}
 
 
 def section_marks(d):
@@ -280,21 +286,20 @@ def plan_view(level):
         wall_geo = wall_geo.difference(unary_union(cut))
     wall_geo = wall_geo.difference(col_geo)
     if level == 1:
-        tiles(d, 0.15, 7.10, 1.35, 8.60)
-        tiles(d, 0.15, 11.05, 2.05, 12.75)
-        tiles(d, 4.025, 11.05, 7.85, 14.50, 0.60)
-        tiles(d, 0.15, YB, 7.85, 16.85, 0.40)
+        tiles(d, 6.45, 9.95, 7.85, 11.45)
+        tiles(d, 0.15, 12.30, 2.05, 14.00)
+        tiles(d, 4.025, 12.30, 7.85, YM2, 0.60)
         x = 0.5
         while x < 8.0:
             d.line((x, 0.02), (x, Y0 - 0.02), "A-PISO", lw=0.05)
             x += 0.5
     elif level == 2:
-        for r in ((0.15, 6.95, 2.05, 8.60), (5.95, 6.95, 7.85, 8.60), (0.15, 11.05, 2.05, 12.75), (5.95, 11.05, 7.85, 12.75)):
+        for r in ((0.15, 8.15, 2.05, 9.85), (5.95, 8.15, 7.85, 9.85), (0.15, 12.30, 2.05, 14.00), (5.95, 12.30, 7.85, 14.00)):
             tiles(d, *r)
     else:
         tiles(d, 0.15, 5.15, 7.85, STAIR_ZONE[1] - 0.05, 0.60)
-        tiles(d, 0.15, STAIR_ZONE[3] + 0.05, 7.85, 14.50, 0.60)
-        tiles(d, 2.95, STAIR_ZONE[1], 6.0, STAIR_ZONE[3], 0.60)
+        tiles(d, 0.15, STAIR_ZONE[3] + 0.05, 7.85, 16.25, 0.60)
+        tiles(d, 2.95, STAIR_ZONE[1], 7.85, STAIR_ZONE[3], 0.60)
     draw_shapely(d, wall_geo, "A-MURO", fill="#d8d3ca" if level < 3 else "#ebe7e0", hatch="muro", lw=0.35)
     draw_shapely(d, col_geo, "S-COLUMNA", fill="#1c1c1c", lw=0.35)
     for w in walls:
@@ -304,7 +309,11 @@ def plan_view(level):
     furniture(d, level)
     for r in build_rooms():
         if r.level == level:
-            room_label(d, r, -0.05 if r.name.startswith("COCHERA") else (-0.02 if r.name.startswith("PATIO") else npt))
+            room_label(d, r, -0.05 if r.name.startswith("COCHERA") else npt)
+    for (x1, y1, x2, y2) in DUCTS:
+        void(d, x1, y1, x2, y2)
+    d.text((0.40, 16.10), "DUCTO 0.50x0.50", 1.1, "A-TEXTO-AREA")
+    d.text((7.60, 16.10), "DUCTO 0.50x0.50", 1.1, "A-TEXTO-AREA")
     if level == 1:
         strip_steel(d)
         rect(d, 0.0, 0.05, 8.0, Y0 - 0.05, "A-PROYECCION")
@@ -319,15 +328,14 @@ def plan_view(level):
         d.pline([(3.12, 3.95), (3.12, Y0 - 0.02)], "A-SIMBOLO")
         d.pline([(3.04, Y0 - 0.17), (3.12, Y0 - 0.02), (3.20, Y0 - 0.17)], "A-SIMBOLO")
         d.text((3.12, 3.72), "INGRESO", 1.4, "A-TEXTO", bold=True)
-        d.text((2.0, 15.10), "TENDAL", 1.3, "A-TEXTO-AREA")
+        d.text((5.25, 11.55), "BARRA", 1.3, "A-TEXTO-AREA")
+        d.text((5.70, 14.05), "ISLA", 1.3, "A-TEXTO-AREA")
     elif level == 2:
         balconies(d)
         cover_ribs(d, 0.0, 8.0, 0.05, Y0 - BAL_D, "A-VISTA-LEJOS", 0.50)
         rect(d, 0.0, 0.05, 8.0, Y0 - 0.05, "A-PROYECCION")
         d.text((4.0, 2.30), "COBERTURA DE LA COCHERA", 1.7, "A-TEXTO", bold=True)
         d.text((4.0, 1.95), "proyección superior +5.10 a +5.60 · panel TR4 + policarbonato", 1.3, "A-TEXTO-AREA")
-        void(d, WELL[0], WELL[1], WELL[2], WELL[3], "POZO DE LUZ")
-        void(d, PATIO[0], PATIO[1], PATIO[2], PATIO[3], "VACÍO · PATIO DE SERVICIO")
     else:
         rect(d, 0.0, Y0 + 0.05, 8.0, YB - 0.05, "A-PROYECCION")
         for p in prisms_of("columna_met"):
@@ -338,10 +346,9 @@ def plan_view(level):
         d.poly([(0, 3.70), (8, 3.70), (8, 4.95), (0, 4.95)], "A-VENTANA", fill="#eef5f7", lw=0.09)
         rect(d, 0.0, 0.05, 8.0, 4.95, "A-VISTA")
         d.text((4.0, 2.30), "TECHO DE LA COCHERA (NIVEL INFERIOR)", 1.7, "A-TEXTO", bold=True)
-        d.text((4.0, 12.20), "PROYECCIÓN COBERTURA TERRAZA (h libre 2.10 a 2.55 m)", 1.2, "A-TEXTO-AREA")
-        void(d, WELL[0], WELL[1], WELL[2], WELL[3], "POZO")
-        void(d, PATIO[0], PATIO[1], PATIO[2], PATIO[3], "VACÍO · PATIO DE SERVICIO")
-        d.text((4.0, 14.25), "TENDAL", 1.3, "A-TEXTO-AREA")
+        d.text((4.0, 9.10), "PROYECCIÓN COBERTURA TERRAZA (h libre 2.00 a 2.55 m)", 1.2, "A-TEXTO-AREA")
+        d.text((6.0, 15.40), "TENDAL", 1.3, "A-TEXTO-AREA")
+        d.text((5.7, 16.10), "LAVANDERÍA", 1.3, "A-TEXTO-AREA")
     d.pline([(0, 0), (LOT_X, 0), (LOT_X, LOT_Y), (0, LOT_Y)], "A-LOTE", closed=True)
     d.line((-1.0, -1.2), (9.0, -1.2), "A-PROYECCION")
     d.text((6.5, -0.60), "VEREDA", 1.5, "A-TEXTO-AREA")
@@ -368,17 +375,17 @@ def roof_plan():
     d.text((4.0, 4.40), "Franja de POLICARBONATO 10 mm (luz a la fachada)", 1.4, "A-TEXTO", bold=True)
     d.text((4.0, 0.50), "Canaleta 200x150 + 2 bajantes Ø3\"", 1.2, "A-TEXTO-AREA")
     # terraza
-    cover_ribs(d, 0.0, 8.0, Y0 + 0.05, YB - 0.05, "A-VISTA-LEJOS")
-    d.poly([(6.0, 8.70), (8.0, 8.70), (8.0, 10.95), (6.0, 10.95)], "A-VENTANA", fill="#e7f1f4", hatch="vidrio", lw=0.13)
+    cover_ribs(d, 0.0, 8.0, Y0 + 0.05, 16.10, "A-VISTA-LEJOS")
+    d.poly([(0.0, 16.10), (8.0, 16.10), (8.0, YB - 0.05), (0.0, YB - 0.05)], "A-VENTANA", fill="#e7f1f4", hatch="vidrio", lw=0.13)
     rect(d, 0.0, Y0 + 0.05, 8.0, YB - 0.05, "A-VISTA", lw=0.35)
-    rect(d, 0.05, YB - 0.10, 7.95, YB + 0.08, "A-SANITARIO")
-    _slope_arrow(d, (0.80, 5.60), (0.80, 14.0), "PEND. 5 %")
+    rect(d, 0.05, YB - 0.20, 7.95, YB - 0.02, "A-SANITARIO")
+    for (x1, y1, x2, y2) in DUCTS:
+        rect(d, x1, y1, x2, y2, "A-PROYECCION")
+    _slope_arrow(d, (0.80, 5.60), (0.80, 15.6), "PEND. 5 %")
     d.text((3.9, 12.40), "COBERTURA DE LA TERRAZA", 2.0, "A-TEXTO", bold=True)
-    d.text((3.9, 12.00), "Panel termoacústico TR4 e = 50 mm · +8.60 → +8.12", 1.4, "A-TEXTO-AREA")
-    d.text((7.0, 9.82), "POLICARB.", 1.2, "A-TEXTO", bold=True)
-    d.text((7.0, 9.52), "sobre pozo", 1.1, "A-TEXTO-AREA")
-    d.text((3.9, 14.20), "Canaleta 200x150 → 2 bajantes Ø3\" al patio", 1.2, "A-TEXTO-AREA")
-    void(d, PATIO[0], PATIO[1], PATIO[2], PATIO[3], "PATIO DE SERVICIO (abierto)")
+    d.text((3.9, 12.00), "Panel termoacústico TR4 e = 50 mm · +8.60 → +8.00", 1.4, "A-TEXTO-AREA")
+    d.text((3.9, 16.55), "Banda de policarbonato sobre los ductos de luz", 1.2, "A-TEXTO", bold=True)
+    d.text((3.9, 15.75), "Canaleta 200x150 → 2 bajantes Ø3\" por los ductos", 1.2, "A-TEXTO-AREA")
     d.pline([(0, 0), (LOT_X, 0), (LOT_X, LOT_Y), (0, LOT_Y)], "A-LOTE", closed=True)
     for k, y in GRID_H.items():
         d.line((-1.2, y), (8.6, y), "A-EJES")
@@ -386,7 +393,7 @@ def roof_plan():
     for k, x in GRID_V.items():
         d.line((x, -0.5), (x, LOT_Y + 1.2), "A-EJES")
         d.circle((x, LOT_Y + 1.5), 0.28, "A-EJES"); d.text((x, LOT_Y + 1.5), k, 2.5, "A-TEXTO", bold=True)
-    dims_along_y(d, 0.0, [0, Y0, YB, LOT_Y], 0.75)
+    dims_along_y(d, 0.0, [0, Y0, LOT_Y], 0.75)
     dims_along_x(d, LOT_Y, [0, LOT_X], 0.75)
     d.text((4.0, -0.9), "CALLE", 2.2, "A-TEXTO", bold=True)
     north(d, LOT_X + 1.0, -0.8)
@@ -409,10 +416,10 @@ def cover_structure_plan():
         d.line((xb, 0.95), (xa, 3.95), "S-METALICA-PROY")
     for xc in (0.20, AX_X["B"], 7.80):
         d.poly([(xc - 0.05, Y0 + 0.05), (xc + 0.05, Y0 + 0.05), (xc + 0.05, YB - 0.05), (xc - 0.05, YB - 0.05)], "S-METALICA", fill="#9fb3c3", lw=0.18)
-        for yc in (5.20, AX_Y["2"], AX_Y["3"], 14.45):
+        for yc in (5.20, AX_Y["2"], AX_Y["3"], 16.80):
             d.poly([(xc - 0.05, yc - 0.05), (xc + 0.05, yc - 0.05), (xc + 0.05, yc + 0.05), (xc - 0.05, yc + 0.05)],
                    "S-METALICA", fill="#1c2a36", lw=0.25)
-    for yc in [5.25 + i * 1.0 for i in range(10)] + [14.55]:
+    for yc in [5.25 + i * 1.0 for i in range(12)] + [16.85]:
         d.line((0.05, yc), (7.95, yc), "S-METALICA", lw=0.13)
     T = ["(1) VM-2 TUBO 150x300x4 sobre 2 columnas CM-1 150x150x4 con pedestales de C°A°",
          "(2) AN-1 ÁNGULO L100x100x6 anclado a la viga de borde (lado vivienda)",
@@ -423,7 +430,7 @@ def cover_structure_plan():
     for p, s_ in (((2.15, 0.62), "(1)"), ((2.15, 4.42), "(2)"), ((2.15, 2.10), "(3)"), ((2.10, 9.80), "(4)")):
         d.circle(p, 0.30, "A-TEXTO", fill="#ffffff"); d.text(p, s_, 1.6, "A-TEXTO", bold=True)
     dims_along_x(d, YB, [0.0] + RAFTERS + [8.0], 0.75)
-    dims_along_y(d, 0.0, [0, STRIP_COL_Y, 4.95, 5.20, AX_Y["2"], AX_Y["3"], 14.45, YB], 0.75)
+    dims_along_y(d, 0.0, [0, STRIP_COL_Y, 4.95, 5.20, AX_Y["2"], AX_Y["3"], 16.80, YB], 0.75)
     return d
 
 
@@ -563,7 +570,7 @@ def _section_annotations(d, mode, c, look, umin, umax, elevation):
     if not elevation:
         lab = {1: 1.35, 2: LV[2] + 1.35, 3: LV[3] + 1.35}
         for r in build_rooms():
-            if r.name.startswith(("BAÑO", "BALCÓN", "POZO")) or r.name == "HALL":
+            if r.name.startswith(("BAÑO", "BALCÓN")) or r.name == "HALL":
                 continue
             x1, y1, x2, y2 = r.rect
             if mode == "x" and x1 < c < x2:
@@ -626,6 +633,5 @@ def all_views():
         mode, c, look = SECTIONS[k]
         V["S" + k] = section_view(mode, c, look, f"CORTE {k}-{k}")
     V["EF"] = section_view("y", -30.0, 1, "ELEVACIÓN PRINCIPAL (CALLE)", elevation=True)
-    V["ER"] = section_view("y", 16.80, -1, "ELEVACIÓN POSTERIOR (PATIO)", elevation=True)
     V["D1"], V["D2"], V["_DB"], V["_N1"], V["_N2"] = detail_views()
     return V

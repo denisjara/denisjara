@@ -16,7 +16,7 @@ from sheets import SHEETS, schedule_vanos, schedule_areas, schedule_rooms, METAL
 MODEL_POS = {
     "P1": (0, 0), "P2": (16, 0), "P3": (32, 0), "PT": (48, 0), "PE": (62, 0),
     "SA": (0, -35), "SB": (26, -35), "SC": (52, -35), "SD": (68, -35),
-    "EF": (0, -55), "ER": (16, -55), "DET": (34, -55),
+    "EF": (0, -55), "DET": (34, -55),
 }
 
 

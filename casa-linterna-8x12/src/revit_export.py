@@ -1,7 +1,7 @@
 """Exporta los datos semanticos del modelo para el script de Revit (crear_modelo_revit.py)."""
 import json
 from model import (build_walls, build_rooms, all_prisms, LV, LEVEL_NAMES, AX_X, AX_Y, SLAB, MATERIALS, Y0, YB, LOT_X, LOT_Y,
-                   ST_Y_A, ST_Y_B, ST_X_FL, STAIR_ZONE, WELL, BALCONIES, BAL_D, STRIP_COL_Y, RISER, TREAD, strip_top, terrace_top)
+                   ST_Y_A, ST_Y_B, ST_X_FL, STAIR_ZONE, DUCTS, BALCONIES, BAL_D, STRIP_COL_Y, RISER, TREAD, strip_top, terrace_top)
 
 NATIVE_CATS = {"muro", "losa", "escalera", "ventana", "puerta"}
 DS_CAT = {
@@ -32,16 +32,13 @@ def export(path):
     data["walls"] = walls
     x1, y1, x2, y2 = STAIR_ZONE
     hole = [[x1, y1], [x2, y1], [x2, y2], [x1, y2]]
-    wx1, wy1, wx2, wy2 = WELL
-    well = [[wx1, wy1], [wx2, wy1], [wx2, wy2], [wx1, wy2]]
+    ducts = [[[a, b], [c, b], [c, d], [a, d]] for (a, b, c, d) in DUCTS]
     outer = [[0, Y0], [LOT_X, Y0], [LOT_X, YB], [0, YB]]
     data["floors"] = [
         {"name": "CONTRAPISO 1er PISO", "level": 1, "offset": 0.0, "t": 0.10, "loops": [outer]},
         {"name": "LOSA COCHERA", "level": 1, "offset": -0.05, "t": 0.10, "loops": [[[0, 0], [LOT_X, 0], [LOT_X, Y0], [0, Y0]]]},
-        {"name": "PISO PATIO DE SERVICIO", "level": 1, "offset": -0.02, "t": 0.10,
-         "loops": [[[0.15, YB], [7.85, YB], [7.85, 16.85], [0.15, 16.85]]]},
-        {"name": "LOSA ALIGERADA 2do PISO", "level": 2, "offset": 0.0, "t": SLAB, "loops": [outer, hole, well]},
-        {"name": "LOSA TERRAZA", "level": 3, "offset": 0.0, "t": SLAB, "loops": [outer, hole, well]},
+        {"name": "LOSA ALIGERADA 2do PISO", "level": 2, "offset": 0.0, "t": SLAB, "loops": [outer, hole] + ducts},
+        {"name": "LOSA TERRAZA", "level": 3, "offset": 0.0, "t": SLAB, "loops": [outer, hole] + ducts},
     ] + [{"name": "BALCON 2do PISO", "level": 2, "offset": 0.0, "t": SLAB,
           "loops": [[[bx1, Y0 - BAL_D], [bx2, Y0 - BAL_D], [bx2, Y0], [bx1, Y0]]]} for bx1, bx2 in BALCONIES]
     data["roofs"] = [
@@ -65,9 +62,10 @@ def export(path):
     data["rooms"] = rooms
     data["room_separations"] = [
         {"level": 1, "a": [0.0, Y0], "b": [LOT_X, Y0]},                   # cochera / vivienda
-        {"level": 1, "a": [4.40, 5.15], "b": [4.40, 8.60]},               # sala / comedor
-        {"level": 1, "a": [2.90, 8.65], "b": [6.00, 8.65]},               # sala-comedor / hall
-        {"level": 2, "a": [2.90, 8.70], "b": [2.90, 10.95]},              # hall / escalera
+        {"level": 1, "a": [3.95, 5.15], "b": [3.95, 9.85]},               # sala / comedor
+        {"level": 1, "a": [2.90, 9.90], "b": [6.35, 9.90]},               # sala-comedor / hall
+        {"level": 1, "a": [4.15, 12.25], "b": [6.30, 12.25]},             # hall / cocina abierta
+        {"level": 2, "a": [2.90, 9.95], "b": [2.90, 12.20]},              # hall / escalera
     ]
     ds = []
     for p in all_prisms():
@@ -88,10 +86,9 @@ def export(path):
     data["sections"] = [
         {"name": "CORTE A-A", "plane": "x", "c": 5.20, "look": -1, "umin": -1.6, "umax": 17.4, "far": 5.2},
         {"name": "CORTE B-B", "plane": "x", "c": 1.70, "look": -1, "umin": -1.6, "umax": 17.4, "far": 1.7},
-        {"name": "CORTE C-C", "plane": "y", "c": 6.40, "look": -1, "umin": -0.4, "umax": 8.4, "far": 7.6},
-        {"name": "CORTE D-D", "plane": "y", "c": 9.90, "look": 1, "umin": -0.4, "umax": 8.4, "far": 7.1},
+        {"name": "CORTE C-C", "plane": "y", "c": 6.80, "look": -1, "umin": -0.4, "umax": 8.4, "far": 8.0},
+        {"name": "CORTE D-D", "plane": "y", "c": 11.60, "look": 1, "umin": -0.4, "umax": 8.4, "far": 5.4},
         {"name": "ELEVACION PRINCIPAL (CALLE)", "plane": "y", "c": -3.0, "look": 1, "umin": -0.4, "umax": 8.4, "far": 20.0},
-        {"name": "ELEVACION POSTERIOR (PATIO)", "plane": "y", "c": 16.8, "look": -1, "umin": -0.4, "umax": 8.4, "far": 3.0},
     ]
     data["sheets"] = [
         {"number": "A-01", "name": "PLANTA 1er PISO", "views": ["PLANTA NPT +0.00"]},
@@ -99,7 +96,7 @@ def export(path):
         {"number": "A-03", "name": "PLANTA DE TERRAZA", "views": ["PLANTA NPT +5.60"]},
         {"number": "A-05", "name": "CORTES LONGITUDINALES", "views": ["CORTE A-A", "CORTE B-B"]},
         {"number": "A-06", "name": "CORTES TRANSVERSALES Y ELEVACIONES",
-         "views": ["CORTE C-C", "CORTE D-D", "ELEVACION PRINCIPAL (CALLE)", "ELEVACION POSTERIOR (PATIO)"]},
+         "views": ["CORTE C-C", "CORTE D-D", "ELEVACION PRINCIPAL (CALLE)"]},
         {"number": "A-08", "name": "VISTA 3D", "views": ["3D CASA LINTERNA"]},
     ]
     with open(path, "w", encoding="utf-8") as fh:

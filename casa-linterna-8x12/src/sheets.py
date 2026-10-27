@@ -28,7 +28,7 @@ def schedule_vanos():
         for o in w.openings:
             k = o.name
             if k not in acc:
-                acc[k] = {"tipo": "PUERTA" if o.kind in ("door", "door2", "slide") else "VENTANA",
+                acc[k] = {"tipo": "VANO" if o.kind == "vano" else "PUERTA" if o.kind in ("door", "door2", "slide") else "VENTANA",
                           "ancho": o.s2 - o.s1, "alto": o.head - o.sill, "alf": o.sill, "n": 0, "desc": o.desc,
                           "f2": 0}
             acc[k]["n"] += 1
@@ -44,13 +44,13 @@ def schedule_vanos():
 
 def schedule_areas():
     rows = [["TERRENO", "8.00 x 17.00", "136.00"],
-            ["ÁREA TECHADA 1er PISO", "8.00 x 9.65 - pozo de luz", "73.42"],
-            ["ÁREA TECHADA 2do PISO", "8.00 x 9.65 - pozo de luz", "73.42"],
+            ["ÁREA TECHADA 1er PISO", "8.00 x 12.00 - 2 ductos", "95.50"],
+            ["ÁREA TECHADA 2do PISO", "8.00 x 12.00 - 2 ductos", "95.50"],
             ["BALCONES (volados sobre la cochera)", "2 x 3.30 x 1.10", "7.21"],
-            ["TOTAL MATERIAL NOBLE", "", "154.05"],
-            ["TERRAZA (cobertura liviana)", "8.00 x 9.65", "77.20"],
+            ["TOTAL MATERIAL NOBLE", "", "198.21"],
+            ["TERRAZA (cobertura liviana)", "8.00 x 12.00", "96.00"],
             ["COCHERA / REUNIONES (cob. liviana)", "8.00 x 5.00", "40.00 (29.4 %)"],
-            ["PATIO DE SERVICIO + POZO DE LUZ (abiertos)", "8.00 x 2.35 + 1.80 x 2.10", "22.58 (16.6 %)"]]
+            ["DUCTOS DE LUZ Y VENTILACIÓN", "2 x 0.50 x 0.50", "0.50 (0.4 %)"]]
     return ["ÍTEM", "MEDIDAS (m)", "ÁREA (m²)"], rows
 
 
@@ -78,8 +78,8 @@ NOTES = [
     "4. Estructura referencial: diseño y firma de Ing. Civil colegiado (E.030, E.060, E.070, E.090).",
     "5. Cochera 8.00 x 5.00 SIN muros ni cerramientos: 2 autos lado a lado o zona de reuniones.",
     "6. Columnas metálicas de la cochera sobre pedestales C°A° 0.40x0.40 (h=0.50 sobre piso) y zapatas.",
-    "7. Sala, comedor y dormitorios 2 y 3 (con balcón) miran a la cochera; dorm. 1, 4, 5 y cocina al patio.",
-    "8. Baños 3 y 5, hall y cocina ventilan al pozo de luz; baños 1, 2 y 4 por ducto (extractor).",
+    "7. Sala, comedor y dormitorios 2 y 3 (con balcón) miran a la cochera techada.",
+    "8. Dorm. 1, 4, 5 y cocina: ventanas altas a ductos 0.50x0.50; baños con extractor mecánico.",
     "9. Escalera: contrapaso 0.175, paso 0.25, ancho 1.00 m por tramo.",
 ]
 
@@ -90,10 +90,10 @@ NOTES = [
 # (clave_vista, origen_papel_mm(x,y) del punto modelo (u0,v0), (u0,v0), escala, titulo, subtitulo)
 SHEETS = [
     {"code": "A-01", "title": "PLANTA 1er PISO", "scale": "1/50",
-     "views": [("P1", (135, 100), (0, 0), 50, "PLANTA 1er PISO — GENERAL", "NPT ±0.00  |  cochera, sala, comedor, cocina, dormitorio con baño")],
+     "views": [("P1", (135, 100), (0, 0), 50, "PLANTA 1er PISO — GENERAL", "NPT ±0.00  |  cochera, sala, comedor, cocina abierta, dormitorio con baño")],
      "tables": [("vanos", (400, 540), 320)]},
     {"code": "A-02", "title": "PLANTA 2do PISO", "scale": "1/50",
-     "views": [("P2", (135, 100), (0, 0), 50, "PLANTA 2do PISO", "NPT +2.80  |  4 dormitorios con baño, 2 con balcón a la cochera")],
+     "views": [("P2", (135, 100), (0, 0), 50, "PLANTA 2do PISO", "NPT +2.80  |  4 dormitorios amplios con baño, 2 con balcón a la cochera")],
      "tables": [("rooms", (400, 540), 320), ("areas", (400, 300), 320)]},
     {"code": "A-03", "title": "PLANTA DE TERRAZA", "scale": "1/50",
      "views": [("P3", (135, 100), (0, 0), 50, "PLANTA TERRAZA (3er NIVEL)", "NPT +5.60  |  terraza techada con parrilla, sala y comedor exterior")],
@@ -106,17 +106,18 @@ SHEETS = [
      "tables": [("metal", (40, 175), 440)]},
     {"code": "A-05", "title": "CORTES LONGITUDINALES A-A Y B-B", "scale": "1/50",
      "views": [("SA", (75, 335), (0, 0), 50, "CORTE A-A", "por comedor, hall, cocina y dormitorios 3 y 5 — calle a la izquierda"),
-               ("SB", (75, 70), (0, 0), 50, "CORTE B-B", "por escalera, sala, dormitorio 1 y dormitorios 2 y 4")]},
+               ("SB", (75, 70), (0, 0), 50, "CORTE B-B", "por escalera, sala, dormitorio 1 y dormitorios 2 y 4")],
+     "images": [("render-corte", (505, 330), 215), ("render-p2", (505, 70), 215)]},
     {"code": "A-06", "title": "CORTES TRANSVERSALES Y ELEVACIONES", "scale": "1/50",
      "views": [("SC", (60, 330), (0, 0), 50, "CORTE C-C", "por sala, comedor y dormitorios 2 y 3, mirando a la calle"),
-               ("SD", (400, 330), (0, 0), 50, "CORTE D-D", "por escalera, hall y pozo de luz, mirando al fondo"),
-               ("EF", (60, 62), (0, 0), 50, "ELEVACIÓN PRINCIPAL (CALLE)", "cochera abierta, balcones y celosía de la terraza"),
-               ("ER", (400, 62), (0, 0), 50, "ELEVACIÓN POSTERIOR (PATIO)", "ventanas de dormitorios 1, 4, 5 y cocina")]},
-    {"code": "A-07", "title": "VISTAS EXTERIORES", "scale": "S/E",
-     "images": [("render-calle", (34, 175), 342), ("render-cochera", (384, 175), 342)]},
-    {"code": "A-08", "title": "VISTAS 3D", "scale": "S/E",
-     "images": [("render-iso", (34, 305), 342), ("render-corte", (384, 305), 342),
-                ("render-p2", (34, 38), 342), ("render-terraza", (384, 38), 342)]},
+               ("SD", (400, 330), (0, 0), 50, "CORTE D-D", "por escalera y hall, mirando al fondo"),
+               ("EF", (60, 62), (0, 0), 50, "ELEVACIÓN PRINCIPAL (CALLE)", "cochera abierta, balcones y celosía de la terraza")],
+     "images": [("foto-aerea", (400, 40), 300)]},
+    {"code": "A-07", "title": "VISTAS FOTORREALISTAS · EXTERIOR", "scale": "S/E",
+     "images": [("foto-calle", (34, 175), 342), ("foto-cochera", (384, 175), 342)]},
+    {"code": "A-08", "title": "VISTAS FOTORREALISTAS · INTERIOR", "scale": "S/E",
+     "images": [("foto-sala", (34, 305), 342), ("foto-cocina", (384, 305), 342),
+                ("foto-dormitorio", (34, 38), 342), ("foto-terraza", (384, 38), 342)]},
 ]
 
 
@@ -278,11 +279,11 @@ METAL_ROWS = [
     ["PD-1", "Pedestal", "C°A° 0.40x0.40 h=1.10, 4Ø5/8\" + est. Ø3/8\"", "2"],
     ["PL-1", "Placa base", "PL 300x300x12 + 4 pernos Ø5/8\" L=0.50", "2"],
     ["CT-1", "Columna terraza", "Tubo LAC 100x100x3 mm + PL 200x200x9", "12"],
-    ["VT-1", "Viga terraza", "Tubo LAC 100x250x3 mm", "3"],
-    ["CO-1", "Correas", "Tubo LAC 50x100x2 mm @0.75-1.00", "18"],
+    ["VT-1", "Viga terraza", "Tubo LAC 100x250x3 mm (L = 11.90 m)", "3"],
+    ["CO-1", "Correas", "Tubo LAC 50x100x2 mm @0.75-1.00", "20"],
     ["AR-1", "Arriostres", "Varilla lisa Ø1/2\" con templador", "4"],
-    ["CB-1", "Cobertura", "Panel termoacústico TR4 e=50 mm", "~ 101 m²"],
-    ["CB-2", "Paños de luz", "Policarbonato alveolar 10 mm UV", "~ 15 m²"],
+    ["CB-1", "Cobertura", "Panel termoacústico TR4 e=50 mm", "~ 118 m²"],
+    ["CB-2", "Paños de luz", "Policarbonato alveolar 10 mm UV", "~ 17 m²"],
     ["CA-1", "Canaletas + bajantes", "Plancha galv. e=0.9 mm + 4 Ø3\" PVC", "2"],
 ]
 
@@ -411,9 +412,11 @@ def render_sheets(V, out_pdf, png_dir=None, img_dir=None, dpi_png=110):
                     h = w * im.height / im.width
                     ax.imshow(im, extent=(x, x + w, y, y + h), zorder=0, interpolation="lanczos")
                     ax.add_patch(Rectangle((x, y), w, h, facecolor="none", edgecolor="#1a1a1a", lw=0.4))
-                    cap = {"render-calle": "VISTA DESDE LA CALLE", "render-cochera": "COCHERA TECHADA BAJO LOS BALCONES",
-                           "render-iso": "ISOMÉTRICA GENERAL", "render-corte": "CORTE FUGADO LONGITUDINAL (x = 4.95)",
-                           "render-p2": "2do PISO — 4 DORMITORIOS CON BAÑO", "render-terraza": "TERRAZA (COBERTURA EN TRANSPARENCIA)"}.get(name, name)
+                    cap = {"foto-calle": "VISTA DESDE LA CALLE (CYCLES)", "foto-cochera": "COCHERA TECHADA BAJO LOS BALCONES",
+                           "foto-aerea": "VISTA AÉREA CON CONTEXTO URBANO", "foto-sala": "SALA Y COMEDOR ABIERTOS A LA COCHERA",
+                           "foto-cocina": "COCINA ABIERTA CON ISLA", "foto-dormitorio": "DORMITORIO 2 CON BALCÓN (2do PISO)",
+                           "foto-terraza": "TERRAZA TECHADA (3er NIVEL)", "render-corte": "CORTE FUGADO LONGITUDINAL",
+                           "render-p2": "2do PISO — 4 DORMITORIOS CON BAÑO"}.get(name, name)
                     ax.text(x, y - 4, cap, fontsize=2.4 / 0.72 * PT, fontweight="bold", va="top")
             title_block(ax, sh, idx, len(SHEETS))
             pdf.savefig(fig)
