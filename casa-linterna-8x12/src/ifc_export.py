@@ -35,7 +35,7 @@ MAT_NAME = {
     "panel_tr4": "Panel termoacústico TR4 50 mm", "policarbonato": "Policarbonato alveolar 10 mm",
     "celosia_met": "Plancha perforada acero", "piso_int": "Porcelanato", "piso_ext": "Porcelanato antideslizante",
     "vereda": "Concreto f'c=175 vereda", "verde": "Vegetación", "canto_rodado": "Canto rodado", "tanque": "Polietileno",
-    "tela": "Tapiz", "cuarzo": "Cuarzo", "blanco": "Esmalte blanco",
+    "tela": "Tapiz", "canto_rodado": "Canto rodado", "piso_ext": "Cerámico antideslizante", "cuarzo": "Cuarzo", "blanco": "Esmalte blanco",
 }
 
 
@@ -46,11 +46,11 @@ def _rgb(h):
 
 def export(path):
     f = project.create_file(version="IFC4")
-    proj = root.create_entity(f, ifc_class="IfcProject", name="CASA LINTERNA 13x12")
+    proj = root.create_entity(f, ifc_class="IfcProject", name="CASA LINTERNA 8x17")
     unit.assign_unit(f)                                   # metros
     model_ctx = context.add_context(f, context_type="Model")
     body = context.add_context(f, context_type="Model", context_identifier="Body", target_view="MODEL_VIEW", parent=model_ctx)
-    site = root.create_entity(f, ifc_class="IfcSite", name="Lote 13.00 x 12.00")
+    site = root.create_entity(f, ifc_class="IfcSite", name="Lote 8.00 x 17.00")
     bldg = root.create_entity(f, ifc_class="IfcBuilding", name="Vivienda unifamiliar - Casa Linterna")
     aggregate.assign_object(f, products=[site], relating_object=proj)
     aggregate.assign_object(f, products=[bldg], relating_object=site)
@@ -135,7 +135,7 @@ def export(path):
                                            f.createIfcDirection((0.0, 0.0, 1.0)), float(h))
         geometry.assign_representation(f, product=sp, representation=f.createIfcShapeRepresentation(body, "Body", "SweptSolid", [sol]))
         q = pset.add_pset(f, product=sp, name="Pset_SpaceCommon")
-        pset.edit_pset(f, pset=q, properties={"Reference": r.name, "IsExternal": r.name.startswith("TERRAZA") or r.name == "AZOTEA"})
+        pset.edit_pset(f, pset=q, properties={"Reference": r.name, "IsExternal": r.name.startswith(("TERRAZA", "COCHERA", "PATIO", "POZO", "BALCÓN"))})
         q2 = pset.add_pset(f, product=sp, name="Pset_CasaLinterna")
         pset.edit_pset(f, pset=q2, properties={"Area_m2": round(r.area, 2), "AcabadoPiso": r.finish})
         spaces[r.level].append(sp)

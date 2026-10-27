@@ -14,9 +14,9 @@ from drawing import LAYERS, block_drawing
 from sheets import SHEETS, schedule_vanos, schedule_areas, schedule_rooms, METAL_ROWS, NOTES, PROJECT, DATE, SHEET_W, SHEET_H, TB_X
 
 MODEL_POS = {
-    "P1": (0, 0), "P2": (25, 0), "P3": (50, 0), "PT": (75, 0), "PE": (100, 0),
-    "SA": (0, -30), "SB": (25, -30), "SC": (50, -30), "SD": (75, -30),
-    "EF": (0, -55), "EL": (25, -55), "DET": (55, -55),
+    "P1": (0, 0), "P2": (16, 0), "P3": (32, 0), "PT": (48, 0), "PE": (62, 0),
+    "SA": (0, -35), "SB": (26, -35), "SC": (52, -35), "SD": (68, -35),
+    "EF": (0, -55), "ER": (16, -55), "DET": (34, -55),
 }
 
 
@@ -219,7 +219,7 @@ def export(V, out_path, render_dir_rel="renders"):
                 lay.add_image(idef, insert=(x, y), size_in_units=(w, h), dxfattribs={"layer": "A-ROTULO"})
     if "Layout1" in doc.layouts:
         doc.layouts.delete("Layout1")
-    doc.set_modelspace_vport(height=90, center=(55, -25))
+    doc.set_modelspace_vport(height=90, center=(45, -20))
     doc.saveas(out_path)
     print("DXF:", out_path)
 
@@ -263,8 +263,8 @@ def frame(lay, sh, idx):
     ptext(lay, cx, y1 - 14, "CASA", 9, bold=True)
     ptext(lay, cx, y1 - 26, "LINTERNA", 9, bold=True, color="#a95f28")
     ptext(lay, cx, y1 - 33, "VIVIENDA UNIFAMILIAR · 2 PISOS + TERRAZA + COCHERA", 1.9)
-    rows = [("TERRENO", "13.00 x 12.00 m = 156.00 m²"), ("VIVIENDA", "8.00 x 12.00 m · 2 pisos (material noble)"),
-            ("FRANJA LIBRE", "5.00 x 12.00 m · cochera / reuniones"), ("PROPIETARIO", "____________________"),
+    rows = [("TERRENO", "8.00 x 17.00 m = 136.00 m²"), ("VIVIENDA", "8.00 x 12.00 m · 2 pisos (material noble)"),
+            ("COCHERA", "8.00 x 5.00 m · al frente, cob. liviana"), ("PROPIETARIO", "____________________"),
             ("UBICACIÓN", "____________________"), ("PROYECTISTA", "____________________"),
             ("CAP / CIP N°", "__________"), ("ESPECIALIDAD", "ARQUITECTURA")]
     yy = y1 - 45

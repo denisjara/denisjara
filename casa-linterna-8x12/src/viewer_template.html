@@ -1,4 +1,4 @@
-<title>Casa Linterna 8x12</title>
+<title>Casa Linterna 8x17</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
@@ -73,9 +73,9 @@ table.areas tr.tot td{font-weight:500;color:var(--accent)}
 <header>
   <h1>Casa <span>Linterna</span></h1>
   <div class="specs">
-    <span>TERRENO 13.00 × 12.00 m = 156.00 m²</span>
+    <span>TERRENO 8.00 × 17.00 m = 136.00 m²</span>
+    <span>COCHERA 8.00 × 5.00 m AL FRENTE · COBERTURA A UNA AGUA</span>
     <span>VIVIENDA 8.00 × 12.00 m · 2 PISOS + TERRAZA TECHADA</span>
-    <span>FRANJA LIBRE 5.00 × 12.00 m · COBERTURA A UNA AGUA</span>
   </div>
   <div class="tabs" role="tablist">
     <button class="tab" id="tab-3d" role="tab" aria-selected="true">Modelo 3D</button>
@@ -88,7 +88,7 @@ table.areas tr.tot td{font-weight:500;color:var(--accent)}
     <div id="stage">
       <div class="views">
         <button data-v="iso">Isométrica</button><button data-v="front">Calle</button>
-        <button data-v="back">Franja</button><button data-v="top">Planta</button>
+        <button data-v="back">Patio</button><button data-v="top">Planta</button>
       </div>
       <div id="pick"><b>Selecciona un elemento</b>Toca o haz clic en cualquier muro, losa, viga o pieza de la cobertura para ver sus datos BIM.</div>
     </div>
@@ -114,7 +114,7 @@ table.areas tr.tot td{font-weight:500;color:var(--accent)}
       <div>
         <h2>Corte en vivo</h2>
         <div class="seg three" id="cut">
-          <button data-c="none" aria-pressed="true">Sin corte</button><button data-c="x">Transv.</button><button data-c="y">Long.</button>
+          <button data-c="none" aria-pressed="true">Sin corte</button><button data-c="x">Long.</button><button data-c="y">Transv.</button>
         </div>
         <input type="range" id="cutpos" min="0" max="1000" value="500" aria-label="Posición del corte" style="margin-top:10px" disabled>
         <div class="cut-val" id="cutlbl">—</div>
@@ -122,15 +122,16 @@ table.areas tr.tot td{font-weight:500;color:var(--accent)}
       <div>
         <h2>Cuadro de áreas</h2>
         <table class="areas">
-          <tr><td>Terreno</td><td>96.00 m²</td></tr>
-          <tr><td>Techado 1° piso</td><td>96.00 m²</td></tr>
-          <tr><td>Techado 2° piso</td><td>96.00 m² + balcones</td></tr>
-          <tr><td>Terraza (cob. liviana)</td><td>96.00 m²</td></tr>
-          <tr class="tot"><td>Total material noble</td><td>192.00 m²</td></tr>
-          <tr><td>Franja libre techada (38.5 %)</td><td>60.00 m²</td></tr>
+          <tr><td>Terreno</td><td>136.00 m²</td></tr>
+          <tr><td>Techado 1° piso</td><td>73.42 m²</td></tr>
+          <tr><td>Techado 2° piso + balcones</td><td>80.63 m²</td></tr>
+          <tr class="tot"><td>Total material noble</td><td>154.05 m²</td></tr>
+          <tr><td>Terraza (cob. liviana)</td><td>77.20 m²</td></tr>
+          <tr><td>Cochera techada (29.4 %)</td><td>40.00 m²</td></tr>
+          <tr><td>Patio + pozo de luz</td><td>22.58 m²</td></tr>
         </table>
       </div>
-      <p class="note">1er piso: sala, comedor, cocina y un dormitorio con baño. 2do piso: 3 dormitorios amplios, cada uno con baño propio y balcón. Todas las ventanas miran a la franja techada: cochera para 2 autos y zona de parrilla, sin muros, cubierta a una sola agua sobre 4 columnas metálicas con pedestales.</p>
+      <p class="note">Frente de 8 m a la calle. Cochera de 8 × 5 m al frente, sin muros, con cobertura metálica a una sola agua (cae hacia la calle) sobre 2 columnas con pedestales. 1er piso: sala y comedor abiertos a la cochera, cocina y dormitorio con baño hacia el patio. 2do piso: 4 dormitorios con baño; los 2 delanteros con balcón sobre la cochera. Pozo de luz central y patio de servicio al fondo.</p>
     </aside>
   </section>
   <section id="sheets" hidden>
@@ -160,24 +161,24 @@ const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(35, 1, 0.1, 400);
 const controls = new THREE.OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
-controls.target.set(6, 3.2, -6.5);
+controls.target.set(4, 3.2, -8.5);
 
 scene.add(new THREE.HemisphereLight(0xffffff, 0x8a8577, 0.75));
 const sun = new THREE.DirectionalLight(0xfff4e2, 0.85);
-sun.position.set(-14, 26, -26);
+sun.position.set(-12, 26, 14);
 sun.castShadow = true;
 sun.shadow.bias = -0.0004; sun.shadow.normalBias = 0.03;
 sun.shadow.mapSize.set(2048, 2048);
 Object.assign(sun.shadow.camera, {left:-18, right:18, top:18, bottom:-18, near:1, far:90});
-sun.target.position.set(6, 0, -6.5);
+sun.target.position.set(4, 0, -8.5);
 scene.add(sun, sun.target);
 
 const ground = new THREE.Mesh(new THREE.PlaneGeometry(120, 120), new THREE.MeshStandardMaterial({color:0x9f9b91, roughness:1}));
-ground.rotation.x = -Math.PI/2; ground.position.set(6, -0.31, -6.5); ground.receiveShadow = true;
+ground.rotation.x = -Math.PI/2; ground.position.set(4, -0.31, -8.5); ground.receiveShadow = true;
 scene.add(ground);
 // linderos del lote
 const lot = new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(
-  [[0,0],[12,0],[12,13],[0,13]].map(([x,y]) => new THREE.Vector3(x, -0.29, -y))),
+  [[0,0],[8,0],[8,17],[0,17]].map(([x,y]) => new THREE.Vector3(x, -0.29, -y))),
   new THREE.LineDashedMaterial({color:0xa95f28, dashSize:0.3, gapSize:0.15}));
 lot.computeLineDistances(); scene.add(lot);
 
@@ -278,8 +279,8 @@ function apply(){
     m.children[0].visible = state.edg && !gh && !SMOOTH.has(e.n) && e.c !== 'vehiculo';
   }
   const planes = state.cut === 'none' ? [] : [clip];
-  if (state.cut === 'x'){ const x = 0.05 + state.cutpos*11.9; clip.normal.set(-1,0,0); clip.constant = x; cutlbl.textContent = `Corte transversal a ${x.toFixed(2)} m de la calle`; }
-  if (state.cut === 'y'){ const y = 0.05 + state.cutpos*12.9; clip.normal.set(0,0,-1); clip.constant = -y; cutlbl.textContent = `Corte longitudinal a ${y.toFixed(2)} m de la medianera`; }
+  if (state.cut === 'x'){ const x = 0.05 + state.cutpos*7.9; clip.normal.set(-1,0,0); clip.constant = x; cutlbl.textContent = `Corte longitudinal a ${x.toFixed(2)} m de la medianera izquierda`; }
+  if (state.cut === 'y'){ const y = 0.05 + state.cutpos*16.9; clip.normal.set(0,0,-1); clip.constant = -y; cutlbl.textContent = `Corte transversal a ${y.toFixed(2)} m de la calle`; }
   if (state.cut === 'none') cutlbl.textContent = '—';
   Object.values(matCache).forEach(m => { m.clippingPlanes = planes; m.needsUpdate = true; });
   edgeMat.clippingPlanes = planes; edgeMat.needsUpdate = true;
@@ -302,10 +303,10 @@ const cutlbl = document.getElementById('cutlbl');
 document.getElementById('cutpos').addEventListener('input', ev => { state.cutpos = ev.target.value/1000; apply(); });
 
 const VIEWS = {
-  iso:  {p:[-10, 15, -24], t:[6, 3.4, -6.5]},
-  front:{p:[-21, 5, -6.5], t:[6, 4.2, -6.5]},
-  back: {p:[6, 6, -31], t:[6, 3.5, -6]},
-  top:  {p:[6.01, 40, -6.5], t:[6, 0, -6.5]},
+  iso:  {p:[-11, 15, 11], t:[4, 3.4, -8]},
+  front:{p:[4, 5, 17], t:[4, 4.2, -5]},
+  back: {p:[4, 13, -34], t:[4, 3.5, -12]},
+  top:  {p:[4.01, 42, -8.5], t:[4, 0, -8.5]},
 };
 let anim = null;
 function goView(k){

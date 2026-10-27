@@ -1,20 +1,21 @@
-"""Generacion de vistas 2D (plantas, cortes, elevaciones) desde el modelo. Version 3.
+"""Generacion de vistas 2D (plantas, cortes, elevaciones) desde el modelo. Version 4.
 
-Las plantas se dibujan en coordenadas del modelo y luego se giran 90 grados:
-  u = LOT_Y - y  (franja a la izquierda, medianera a la derecha)
-  v = x          (calle abajo, fondo arriba)
+Las plantas se dibujan en coordenadas del modelo, sin giro:
+  u = x (ancho del lote, medianera izquierda a la izquierda)
+  v = y (calle abajo, fondo arriba)
 """
 import math
 from collections import OrderedDict
 from shapely.geometry import Polygon, box as sbox, LineString, MultiPolygon, GeometryCollection
 from shapely.ops import unary_union
-from model import (build_walls, build_rooms, all_prisms, LV, LOT_X, LOT_Y, HOUSE_Y, COL_X, COL_Y, ST_Y_A, ST_Y_B,
-                   ST_X_FL, ST_X_LAND, STAIR_ZONE, TREAD, STRIP_COLS_X, STRIP_COL_Y, BALCONIES, strip_top, terrace_top,
-                   LEVEL_NAMES)
+from model import (build_walls, build_rooms, all_prisms, plan2d, LV, LOT_X, LOT_Y, Y0, YB, COL_X, COL_Y, ST_Y_A, ST_Y_B,
+                   ST_X_FL, ST_X_LAND, STAIR_ZONE, WELL, PATIO, TREAD, STRIP_COLS_X, STRIP_COL_Y, BALCONIES, BAL_D,
+                   strip_top, terrace_top, LEVEL_NAMES, AX_X, AX_Y)
 from drawing import Drawing
 
-GRID_V = OrderedDict([("A", STRIP_COL_Y), ("B", sum(COL_Y["C"]) / 2), ("C", sum(COL_Y["B"]) / 2), ("D", sum(COL_Y["A"]) / 2)])
-GRID_H = OrderedDict((k, (a + b) / 2) for k, (a, b) in COL_X.items())
+GRID_V = OrderedDict((k, (a + b) / 2) for k, (a, b) in COL_X.items())            # lineas verticales (x)
+GRID_H = OrderedDict([("0", STRIP_COL_Y)] + [(k, (a + b) / 2) for k, (a, b) in COL_Y.items()])   # horizontales (y)
+RAFTERS = [0.30 + i * 7.40 / 6 for i in range(7)]
 
 
 def prisms_of(cat):
@@ -55,39 +56,16 @@ def rect(d, x1, y1, x2, y2, layer, **kw):
     d.pline([(x1, y1), (x2, y1), (x2, y2), (x1, y2)], layer, closed=True, **kw)
 
 
-# ---------------------------------------------------------------------------
-# GIRO DE PLANTA (modelo -> lamina)
-# ---------------------------------------------------------------------------
-def _r(p):
-    return (LOT_Y - p[1], p[0])
-
-
-def rotate_plan(d):
-    out = Drawing(d.title)
-    for it in d.items:
-        k = it[0]
-        if k == "line":
-            out.items.append(("line", _r(it[1]), _r(it[2])) + it[3:])
-        elif k == "pline":
-            out.items.append(("pline", [_r(p) for p in it[1]]) + it[2:])
-        elif k == "poly":
-            out.items.append(("poly", [_r(p) for p in it[1]]) + it[2:])
-        elif k == "circle":
-            out.items.append(("circle", _r(it[1])) + it[2:])
-        elif k == "arc":
-            out.items.append(("arc", _r(it[1]), it[2], it[3] + 90, it[4] + 90) + it[5:])
-        elif k == "text":
-            out.items.append(("text", _r(it[1])) + it[2:])
-        elif k == "dim":
-            out.items.append(("dim", _r(it[1]), _r(it[2])) + it[3:])
-        elif k == "insert":
-            _, name, pos, rot, sx, sy, attrs = it
-            out.items.append(("insert", name, _r(pos), rot + 90, sx, sy, attrs))
-    return out
+def void(d, x1, y1, x2, y2, label=None):
+    rect(d, x1, y1, x2, y2, "A-PROYECCION")
+    d.line((x1, y1), (x2, y2), "A-PROYECCION", lw=0.09)
+    d.line((x1, y2), (x2, y1), "A-PROYECCION", lw=0.09)
+    if label:
+        d.text(((x1 + x2) / 2, (y1 + y2) / 2 + 0.25), label, 1.5, "A-TEXTO", bold=True)
 
 
 # ---------------------------------------------------------------------------
-# SIMBOLOS DE VANOS Y ESCALERA (en coordenadas del modelo)
+# SIMBOLOS DE VANOS Y ESCALERA
 # ---------------------------------------------------------------------------
 def opening_symbol(d, w, o):
     t = w.t
@@ -98,13 +76,17 @@ def opening_symbol(d, w, o):
             name = ("PIVOT" if o.kind == "door2" else "PUERTA") + f"_{width:.2f}_{t:.2f}"
             hx = o.s1 if o.hinge == "a" else o.s2
             d.insert(name, (hx, yc), 0, 1 if o.hinge == "a" else -1, 1 if o.side > 0 else -1, {"TAG": o.name})
-            out = -0.40 * o.side
+            out = -0.30 * o.side
         elif o.kind == "slide":
             d.insert(f"CORREDIZA_{width:.2f}_{t:.2f}", (o.s1, yc), 0, 1, 1, {"TAG": o.name})
-            out = 0.40 if yc > 7.0 else -0.40
+            out = 0.30
         else:
             d.insert(f"VENTANA_{width:.2f}_{t:.2f}", (o.s1, yc), 0, 1, 1, {"TAG": o.name})
-            out = 0.40 if yc > 7.0 else -0.40
+            out = 0.30
+        if yc < Y0 + 0.2:
+            out = -0.42 if o.kind != "door2" else -0.55
+        elif yc > YB - 0.2:
+            out = 0.40
         tag = ((o.s1 + o.s2) / 2, yc + out)
     else:                                 # muro a lo largo de y
         xc = w.a[0]
@@ -115,11 +97,10 @@ def opening_symbol(d, w, o):
                 d.insert(name, (xc, hy), -90, -1 if o.hinge == "a" else 1, 1, {"TAG": o.name})
             else:
                 d.insert(name, (xc, hy), 90, 1 if o.hinge == "a" else -1, 1, {"TAG": o.name})
-        elif o.kind == "slide":
-            d.insert(f"CORREDIZA_{width:.2f}_{t:.2f}", (xc, o.s1), 90, 1, 1, {"TAG": o.name})
+            tag = (xc + 0.24 * o.side, (o.s1 + o.s2) / 2 + 0.22)
         else:
             d.insert(f"VENTANA_{width:.2f}_{t:.2f}", (xc, o.s1), 90, 1, 1, {"TAG": o.name})
-        tag = (xc - 0.40 if xc < 1 else xc - 0.32 * o.side, (o.s1 + o.s2) / 2)
+            tag = (xc - 0.32, (o.s1 + o.s2) / 2)
     d.text(tag, o.name, 1.5, "A-TEXTO-AREA", bold=True)
 
 
@@ -144,22 +125,23 @@ def stair_plan(d, level):
         d.pline([(xf - 0.05, ym), (ST_X_LAND[0] + 0.35, ym)], "A-ESCALERA")
         d.pline([(ST_X_LAND[0] + 0.50, ym - 0.08), (ST_X_LAND[0] + 0.35, ym), (ST_X_LAND[0] + 0.50, ym + 0.08)], "A-ESCALERA")
         d.circle((xf - 0.05, ym), 0.04, "A-ESCALERA", fill="#333333")
-        d.text((2.45, ym + 0.25), "SUBE", 1.4, "A-TEXTO")
+        d.text((2.45, ym - 0.22), "SUBE", 1.4, "A-TEXTO")
     rect(d, ST_X_LAND[0], STAIR_ZONE[1], ST_X_LAND[1], STAIR_ZONE[3], "A-ESCALERA" if (down and not up) else "A-PROYECCION")
     if down:
         ym = sum(ST_Y_B) / 2
         d.pline([(xf - 0.05, ym), (xl + 0.10, ym)], "A-ESCALERA")
         d.pline([(xf - 0.20, ym - 0.08), (xf - 0.05, ym), (xf - 0.20, ym + 0.08)], "A-ESCALERA")
-        d.text((2.20, ym - 0.25), "BAJA", 1.4, "A-TEXTO")
-    d.line((xl, 1.25), (xf, 1.25), "A-ESCALERA", lw=0.25)
+        d.text((2.20, ym + 0.22), "BAJA", 1.4, "A-TEXTO")
+    yr = (ST_Y_A[1] + ST_Y_B[0]) / 2
+    d.line((xl, yr), (xf, yr), "A-ESCALERA", lw=0.25)
 
 
 def room_label(d, r, npt):
     x, y = r.label_at
-    d.text((x + 0.16, y), r.name, 2.1, "A-TEXTO", bold=True)
-    d.text((x - 0.10, y), f"A = {r.area:.2f} m²", 1.5, "A-TEXTO-AREA")
-    d.text((x - 0.33, y), f"NPT {npt:+.2f}", 1.4, "A-TEXTO-AREA")
-    rect(d, x - 0.43, y - 0.34, x - 0.23, y + 0.34, "A-TEXTO-AREA", lw=0.09)
+    d.text((x, y + 0.16), r.name, 2.1, "A-TEXTO", bold=True)
+    d.text((x, y - 0.10), f"A = {r.area:.2f} m²", 1.5, "A-TEXTO-AREA")
+    d.text((x, y - 0.33), f"NPT {npt:+.2f}", 1.4, "A-TEXTO-AREA")
+    rect(d, x - 0.34, y - 0.43, x + 0.34, y - 0.23, "A-TEXTO-AREA", lw=0.09)
 
 
 def tiles(d, x1, y1, x2, y2, step=0.30, layer="A-PISO"):
@@ -174,67 +156,71 @@ def tiles(d, x1, y1, x2, y2, step=0.30, layer="A-PISO"):
 
 
 def dims_along_y(d, x, ys, off):
-    """Cotas a lo largo de y (horizontales en la lamina). off>0 -> hacia -x (abajo en la lamina)."""
+    """Cotas a lo largo de y (verticales en la lamina). off>0 -> hacia -x (izquierda)."""
     for a, b in zip(ys[:-1], ys[1:]):
         d.dim((x, a), (x, b), off)
 
 
 def dims_along_x(d, y, xs, off):
-    """Cotas a lo largo de x (verticales en la lamina). off>0 -> hacia +y (izquierda en la lamina)."""
+    """Cotas a lo largo de x (horizontales en la lamina). off>0 -> hacia +y (arriba)."""
     for a, b in zip(xs[:-1], xs[1:]):
         d.dim((a, y), (b, y), off)
 
 
 def grid_and_dims(d, level):
-    for k, y in GRID_V.items():
-        d.line((-2.55, y), (12.9, y), "A-EJES")
+    for k, y in GRID_H.items():
+        d.line((-2.55, y), (8.75, y), "A-EJES")
         d.circle((-2.85, y), 0.28, "A-EJES")
         d.text((-2.85, y), k, 2.5, "A-TEXTO", bold=True)
-    for k, x in GRID_H.items():
-        d.line((x, -0.80), (x, 15.55), "A-EJES")
-        d.circle((x, 15.85), 0.28, "A-EJES")
-        d.text((x, 15.85), k, 2.5, "A-TEXTO", bold=True)
-    dims_along_y(d, 0.0, [0, 0.15, 2.35, 2.50, 7.85, 8.0, 10.25, 12.05, 13.0], 0.95)
-    dims_along_y(d, 0.0, [0] + sorted(GRID_V.values()) + [13.0], 1.55)
-    dims_along_y(d, 0.0, [0, HOUSE_Y, LOT_Y], 2.10)
+    for k, x in GRID_V.items():
+        d.line((x, -0.80), (x, LOT_Y + 2.55), "A-EJES")
+        d.circle((x, LOT_Y + 2.85), 0.28, "A-EJES")
+        d.text((x, LOT_Y + 2.85), k, 2.5, "A-TEXTO", bold=True)
     if level == 1:
-        xs = [0, 0.15, 2.75, 2.90, 4.10, 4.25, 7.80, 9.90, 11.85, 12.0]
+        ys = [0, Y0, 5.15, 8.60, 8.70, 10.95, 11.05, 14.50, YB, 16.85, LOT_Y]
+        xs = [0, 0.15, 2.90, 3.875, 4.025, 6.0, 7.85, 8.0]
     elif level == 2:
-        xs = [0, 0.15, 4.10, 4.25, 7.85, 8.0, 11.85, 12.0]
+        ys = [0, Y0 - BAL_D, Y0, 5.15, 6.90, 8.60, 8.70, 10.95, 11.05, 12.80, 14.50, YB, LOT_Y]
+        xs = [0, 0.15, 2.05, 2.15, 3.875, 4.025, 5.85, 5.95, 7.85, 8.0]
     else:
-        xs = [0, 0.15, 2.90, 11.85, 12.0]
-    dims_along_x(d, 13.0, xs, 0.95)
-    dims_along_x(d, 13.0, [0] + list(GRID_H.values()) + [12.0], 1.55)
-    dims_along_x(d, 13.0, [0, 12.0], 2.10)
+        ys = [0, Y0, 5.15, STAIR_ZONE[1], STAIR_ZONE[3], 14.50, YB, LOT_Y]
+        xs = [0, 0.15, 2.90, WELL[0], WELL[2], 8.0]
+    dims_along_y(d, 0.0, ys, 0.95)
+    dims_along_y(d, 0.0, [0] + list(GRID_H.values()) + [LOT_Y], 1.55)
+    dims_along_y(d, 0.0, [0, Y0, LOT_Y], 2.10)
+    dims_along_x(d, LOT_Y, xs, 0.95)
+    dims_along_x(d, LOT_Y, [0] + list(GRID_V.values()) + [LOT_X], 1.55)
+    dims_along_x(d, LOT_Y, [0, LOT_X], 2.10)
 
 
-SECTIONS = {"A": ("x", 6.00, 1), "B": ("x", 1.70, 1), "C": ("y", 5.20, 1), "D": ("y", 1.70, 1)}
+# planos de corte: (modo, posicion, sentido de vista)
+SECTIONS = {"A": ("x", 5.20, -1), "B": ("x", 1.70, -1), "C": ("y", 6.40, -1), "D": ("y", 9.90, 1)}
 
 
 def section_marks(d):
     for lbl in ("A", "B"):
-        x = SECTIONS[lbl][1]
-        for y in (-1.0, 14.6):
-            d.circle((x + 0.32, y), 0.24, "A-SIMBOLO")
-            d.text((x + 0.32, y), lbl, 2.2, "A-TEXTO", bold=True)
-            d.poly([(x + 0.05, y + 0.10), (x + 0.05, y - 0.10), (x + 0.30, y)], "A-SIMBOLO", fill="#1a1a1a", edge=False)
+        _, x, s = SECTIONS[lbl]
+        for y in (-2.55, LOT_Y + 3.55):
+            d.circle((x + 0.32 * s, y), 0.24, "A-SIMBOLO")
+            d.text((x + 0.32 * s, y), lbl, 2.2, "A-TEXTO", bold=True)
+            d.poly([(x + 0.05 * s, y + 0.10), (x + 0.05 * s, y - 0.10), (x + 0.30 * s, y)], "A-SIMBOLO", fill="#1a1a1a", edge=False)
             d.line((x, y - 0.35), (x, y + 0.35), "A-SIMBOLO", lw=0.5)
-        d.line((x, -1.0), (x, 14.6), "A-SIMBOLO", lw=0.09, ls="DASHDOT")
+        d.line((x, -2.55), (x, LOT_Y + 3.55), "A-SIMBOLO", lw=0.09, ls="DASHDOT")
     for lbl in ("C", "D"):
-        y = SECTIONS[lbl][1]
-        for x in (-3.4, 12.6):
-            d.circle((x, y + 0.32), 0.24, "A-SIMBOLO")
-            d.text((x, y + 0.32), lbl, 2.2, "A-TEXTO", bold=True)
-            d.poly([(x - 0.10, y + 0.05), (x + 0.10, y + 0.05), (x, y + 0.30)], "A-SIMBOLO", fill="#1a1a1a", edge=False)
+        _, y, s = SECTIONS[lbl]
+        for x in (-3.55, LOT_X + 1.15):
+            d.circle((x, y + 0.32 * s), 0.24, "A-SIMBOLO")
+            d.text((x, y + 0.32 * s), lbl, 2.2, "A-TEXTO", bold=True)
+            d.poly([(x - 0.10, y + 0.05 * s), (x + 0.10, y + 0.05 * s), (x, y + 0.30 * s)], "A-SIMBOLO", fill="#1a1a1a", edge=False)
             d.line((x - 0.35, y), (x + 0.35, y), "A-SIMBOLO", lw=0.5)
-        d.line((-3.4, y), (12.6, y), "A-SIMBOLO", lw=0.09, ls="DASHDOT")
+        d.line((-3.55, y), (LOT_X + 1.15, y), "A-SIMBOLO", lw=0.09, ls="DASHDOT")
 
 
 def north(d, x, y):
     d.circle((x, y), 0.45, "A-SIMBOLO")
-    d.poly([(x + 0.42, y), (x - 0.25, y + 0.15), (x - 0.10, y)], "A-SIMBOLO", fill="#1a1a1a")
-    d.poly([(x + 0.42, y), (x - 0.25, y - 0.15), (x - 0.10, y)], "A-SIMBOLO", fill="#ffffff")
-    d.text((x + 0.70, y), "N", 2.5, "A-TEXTO", bold=True)
+    d.poly([(x, y + 0.42), (x - 0.15, y - 0.25), (x, y - 0.10)], "A-SIMBOLO", fill="#1a1a1a")
+    d.poly([(x, y + 0.42), (x + 0.15, y - 0.25), (x, y - 0.10)], "A-SIMBOLO", fill="#ffffff")
+    d.text((x, y + 0.75), "N", 2.5, "A-TEXTO", bold=True)
 
 
 def _slope_arrow(d, p1, p2, label):
@@ -244,7 +230,7 @@ def _slope_arrow(d, p1, p2, label):
     a2 = (p2[0] - 0.22 * math.cos(ang + 0.35), p2[1] - 0.22 * math.sin(ang + 0.35))
     d.poly([p2, a1, a2], "A-SIMBOLO", fill="#1a1a1a", edge=False)
     mx, my = (p1[0] + p2[0]) / 2, (p1[1] + p2[1]) / 2
-    d.text((mx + 0.22, my), label, 1.6, "A-TEXTO", bold=True)
+    d.text((mx + 0.22, my), label, 1.6, "A-TEXTO", bold=True, ha="left")
 
 
 def strip_steel(d):
@@ -264,92 +250,16 @@ def cover_ribs(d, x1, x2, y1, y2, layer="A-PISO", step=0.25):
         x += step
 
 
-def lantern(d):
-    d.line((0.06, 0.25), (0.06, STAIR_ZONE[3]), "A-VENTANA", lw=0.25)
-    d.line((0.09, 0.25), (0.09, STAIR_ZONE[3]), "A-VENTANA", lw=0.25)
-    y = 0.28
-    while y < STAIR_ZONE[3] + 0.10:
-        d.poly([(-0.02, y), (0.02, y), (0.02, y + 0.04), (-0.02, y + 0.04)], "A-MOBILIARIO", fill="#b07a45", lw=0.05)
-        y += 0.11
-
-
-def balconies(d):
+def balconies(d, layer="A-MURO-BAJO"):
     for (x1, x2) in BALCONIES:
-        rect(d, x1, HOUSE_Y, x2, HOUSE_Y + 1.0, "A-MURO-BAJO")
-        d.line((x1, HOUSE_Y + 0.965), (x2, HOUSE_Y + 0.965), "A-VENTANA", lw=0.35)
+        rect(d, x1, Y0 - BAL_D, x2, Y0, layer)
+        if layer != "A-PROYECCION":
+            d.line((x1, Y0 - BAL_D + 0.035), (x2, Y0 - BAL_D + 0.035), "A-VENTANA", lw=0.35)
 
 
-# ---------------------------------------------------------------------------
-# MOBILIARIO 2D (bloques en coordenadas del modelo; rot y escala locales)
-# ---------------------------------------------------------------------------
-def _furn_strip(d):
-    d.insert("AUTO_4.45_1.80", (0.40, 10.25), 0)
-    d.insert("AUTO_4.45_1.80", (5.15, 10.25), 0)
-    d.insert("PARRILLA_1.40", (9.95, 12.55), -90)
-    d.insert("MESA_1.80_0.90_3", (10.05, 9.55))
-    d.insert("ARBOL_0.62", (11.30, 8.75))
-    d.insert("PLANTA_0.28", (0.35, 8.45))
-    d.insert("PLANTA_0.28", (9.85, 8.45))
-    d.text((6.0, 9.15), "CIRCULACIÓN PEATONAL CUBIERTA", 1.3, "A-TEXTO-AREA")
-
-
-def _furn_level1(d):
-    d.insert("CAMA_1.35_1.95", (2.10, 5.95), 90)
-    d.insert("CLOSET_1.25_0.60", (0.20, 4.95), 0, 1, -1)
-    d.insert("DUCHA_0.90_0.90", (0.15, 2.50))
-    d.insert("INODORO", (1.55, 2.50), 90)
-    d.insert("LAVATORIO_0.60", (2.60, 2.50), 90)
-    d.insert("INODORO", (5.40, 0.15), 90)
-    d.insert("LAVATORIO_0.55", (4.975, 0.15), 90)
-    d.insert("SOFA_2.40_0.90", (7.60, 4.80), 180)
-    d.insert("MESACENTRO_1.20_0.60", (5.80, 3.00))
-    d.insert("TV_1.50", (7.60, 2.05), 180, 1, -1)
-    d.insert("PLANTA_0.30", (4.55, 7.45))
-    d.insert("MESA_1.60_0.90_3", (8.05, 3.50))
-    d.insert("MUEBLE_1.90", (9.95, 0.15))
-    d.insert("MUEBLE_5.35", (11.85, 0.75), 90)
-    d.insert("COCINA", (11.85, 2.40), 90)
-    d.insert("TARJA", (11.85, 4.20), 90)
-    d.insert("REFRI", (11.85, 6.20), 90)
-
-
-def _furn_level2(d):
-    d.insert("CAMA_1.50_2.00", (2.10, 6.45), -90)
-    d.insert("CLOSET_1.15_0.60", (1.95, 3.15), 0, 1, -1)
-    d.insert("ESCRITORIO_1.20", (0.25, 5.20), 90, 1, -1)
-    d.insert("DUCHA_0.90_0.90", (0.15, 2.50))
-    d.insert("INODORO", (0.15, 3.85), -90)
-    d.insert("LAVATORIO_0.55", (0.83, 4.27), 0, 1, -1)
-    d.insert("CAMA_1.35_1.95", (5.90, 6.40), -90)
-    d.insert("CLOSET_1.85_0.60", (4.30, 5.10), -90)
-    d.insert("ESCRITORIO_1.00", (6.80, 3.30), 0)
-    d.insert("DUCHA_0.90_1.82", (6.95, 1.30))
-    d.insert("INODORO", (6.35, 1.30), 90)
-    d.insert("LAVATORIO_0.60", (5.85, 1.30), 90)
-    d.insert("CAMA_1.80_2.00", (9.85, 6.10), -90)
-    d.insert("CLOSET_2.10_0.60", (9.00, 2.30), -90)
-    d.insert("ESCRITORIO_1.00", (8.10, 2.60))
-    d.insert("DUCHA_1.00_1.10", (10.85, 0.15))
-    d.insert("INODORO", (11.85, 1.85), 180)
-    d.insert("LAVATORIO_0.90", (10.75, 0.15), 90)
-    for (x1, x2) in BALCONIES:
-        d.insert("PLANTA_0.22", (x2 - 0.35, HOUSE_Y + 0.55))
-        d.insert("SILLON", (x1 + 0.25, HOUSE_Y + 0.15))
-
-
-def _furn_level3(d):
-    d.insert("LAVADERO", (9.85, 0.15))
-    d.insert("LAVADORA", (10.80, 0.20))
-    d.insert("LAVADORA", (11.25, 0.20))
-    for yy in (2.0, 2.5, 3.0, 3.5):
-        d.line((8.30, yy), (11.70, yy), "A-MOBILIARIO", ls="DASHED")
-    d.text((10.0, 3.80), "TENDAL", 1.3, "A-TEXTO-AREA")
-    d.insert("SOFA_2.40_0.85", (5.80, 7.80), 180)
-    d.insert("SOFA_2.00_0.80", (4.40, 4.20), 0)
-    d.insert("MESACENTRO_1.60_1.10", (4.05, 5.30))
-    d.insert("MESA_2.20_0.90_3", (4.70, 2.80))
-    for (cx, cy) in ((0.45, 7.55), (3.20, 7.55), (7.60, 7.55), (11.50, 7.55)):
-        d.insert("PLANTA_0.25", (cx, cy))
+def furniture(d, level):
+    for (_, name, pos, rot, sx, sy) in plan2d(level):
+        d.insert(name, pos, rot, sx, sy)
 
 
 # ---------------------------------------------------------------------------
@@ -370,141 +280,151 @@ def plan_view(level):
         wall_geo = wall_geo.difference(unary_union(cut))
     wall_geo = wall_geo.difference(col_geo)
     if level == 1:
-        tiles(d, 0.15, 2.50, 2.75, 4.20)
-        tiles(d, 4.25, 0.15, 5.725, 1.875)
+        tiles(d, 0.15, 7.10, 1.35, 8.60)
+        tiles(d, 0.15, 11.05, 2.05, 12.75)
+        tiles(d, 4.025, 11.05, 7.85, 14.50, 0.60)
+        tiles(d, 0.15, YB, 7.85, 16.85, 0.40)
         x = 0.5
-        while x < 12.0:
-            d.line((x, HOUSE_Y + 0.02), (x, 13.0), "A-PISO", lw=0.05)
+        while x < 8.0:
+            d.line((x, 0.02), (x, Y0 - 0.02), "A-PISO", lw=0.05)
             x += 0.5
     elif level == 2:
-        for r in ((0.15, 2.50, 1.775, 4.275), (5.425, 1.30, 7.85, 3.125), (9.725, 0.15, 11.85, 2.375)):
+        for r in ((0.15, 6.95, 2.05, 8.60), (5.95, 6.95, 7.85, 8.60), (0.15, 11.05, 2.05, 12.75), (5.95, 11.05, 7.85, 12.75)):
             tiles(d, *r)
     else:
-        tiles(d, 0.15, 0.15, 11.85, 7.85, 0.60)
+        tiles(d, 0.15, 5.15, 7.85, STAIR_ZONE[1] - 0.05, 0.60)
+        tiles(d, 0.15, STAIR_ZONE[3] + 0.05, 7.85, 14.50, 0.60)
+        tiles(d, 2.95, STAIR_ZONE[1], 6.0, STAIR_ZONE[3], 0.60)
     draw_shapely(d, wall_geo, "A-MURO", fill="#d8d3ca" if level < 3 else "#ebe7e0", hatch="muro", lw=0.35)
     draw_shapely(d, col_geo, "S-COLUMNA", fill="#1c1c1c", lw=0.35)
     for w in walls:
         for o in w.openings:
             opening_symbol(d, w, o)
-    lantern(d)
     stair_plan(d, level)
+    furniture(d, level)
     for r in build_rooms():
-        if r.level == level or (level == 1 and r.name.startswith("COCHERA")):
-            room_label(d, r, -0.05 if r.name.startswith("COCHERA") else npt)
+        if r.level == level:
+            room_label(d, r, -0.05 if r.name.startswith("COCHERA") else (-0.02 if r.name.startswith("PATIO") else npt))
     if level == 1:
-        _furn_level1(d)
-        _furn_strip(d)
         strip_steel(d)
-        rect(d, 0.0, 8.05, 12.0, 12.95, "A-PROYECCION")
-        for i in range(9):
-            xc = 0.30 + i * 1.425
-            d.line((xc, 8.05), (xc, 12.95), "S-METALICA-PROY")
-        d.line((0.05, STRIP_COL_Y), (11.95, STRIP_COL_Y), "S-METALICA-PROY")
-        for (x1, x2) in BALCONIES:
-            rect(d, x1, HOUSE_Y, x2, HOUSE_Y + 1.0, "A-PROYECCION")
-        d.text((-0.70, 11.20), "INGRESO VEHICULAR", 1.4, "A-TEXTO", bold=True)
-        for y in (10.80, 11.60):
-            d.pline([(-1.0, y), (-0.15, y)], "A-SIMBOLO")
-            d.pline([(-0.30, y - 0.08), (-0.15, y), (-0.30, y + 0.08)], "A-SIMBOLO")
-        d.pline([(3.50, 9.0), (3.50, 8.05)], "A-SIMBOLO")
-        d.pline([(3.42, 8.20), (3.50, 8.05), (3.58, 8.20)], "A-SIMBOLO")
-        d.text((3.50, 9.35), "INGRESO", 1.4, "A-TEXTO", bold=True)
+        rect(d, 0.0, 0.05, 8.0, Y0 - 0.05, "A-PROYECCION")
+        for xc in RAFTERS:
+            d.line((xc, 0.05), (xc, Y0 - 0.05), "S-METALICA-PROY")
+        d.line((0.05, STRIP_COL_Y), (7.95, STRIP_COL_Y), "S-METALICA-PROY")
+        balconies(d, "A-PROYECCION")
+        for x in (1.50, 5.10):
+            d.pline([(x, -1.05), (x, -0.20)], "A-SIMBOLO")
+            d.pline([(x - 0.08, -0.35), (x, -0.20), (x + 0.08, -0.35)], "A-SIMBOLO")
+        d.text((1.50, -1.45), "INGRESO VEHICULAR", 1.4, "A-TEXTO", bold=True)
+        d.pline([(3.12, 3.95), (3.12, Y0 - 0.02)], "A-SIMBOLO")
+        d.pline([(3.04, Y0 - 0.17), (3.12, Y0 - 0.02), (3.20, Y0 - 0.17)], "A-SIMBOLO")
+        d.text((3.12, 3.72), "INGRESO", 1.4, "A-TEXTO", bold=True)
+        d.text((2.0, 15.10), "TENDAL", 1.3, "A-TEXTO-AREA")
     elif level == 2:
-        _furn_level2(d)
         balconies(d)
-        cover_ribs(d, 0.0, 12.0, 9.40, 12.95)
-        rect(d, 0.0, 9.0, 12.0, 12.95, "A-VISTA")
-        d.text((6.0, 11.0), "COBERTURA DE LA FRANJA (+5.10 a +5.60)", 1.7, "A-TEXTO", bold=True)
-        d.text((5.55, 11.0), "panel TR4 + policarbonato junto a la fachada", 1.3, "A-TEXTO-AREA")
+        cover_ribs(d, 0.0, 8.0, 0.05, Y0 - BAL_D, "A-VISTA-LEJOS", 0.50)
+        rect(d, 0.0, 0.05, 8.0, Y0 - 0.05, "A-PROYECCION")
+        d.text((4.0, 2.30), "COBERTURA DE LA COCHERA", 1.7, "A-TEXTO", bold=True)
+        d.text((4.0, 1.95), "proyección superior +5.10 a +5.60 · panel TR4 + policarbonato", 1.3, "A-TEXTO-AREA")
+        void(d, WELL[0], WELL[1], WELL[2], WELL[3], "POZO DE LUZ")
+        void(d, PATIO[0], PATIO[1], PATIO[2], PATIO[3], "VACÍO · PATIO DE SERVICIO")
     else:
-        _furn_level3(d)
-        rect(d, 0.0, 0.05, 12.0, 7.95, "A-PROYECCION")
+        rect(d, 0.0, Y0 + 0.05, 8.0, YB - 0.05, "A-PROYECCION")
         for p in prisms_of("columna_met"):
             if p.name.startswith("COL CT"):
                 y1, y2, _, _ = p.yz_bounds()
                 d.poly([(p.x1, y1), (p.x2, y1), (p.x2, y2), (p.x1, y2)], "S-METALICA", fill="#24435c", lw=0.25)
-        cover_ribs(d, 0.0, 12.0, HOUSE_Y + 0.10, 12.95)
-        rect(d, 0.0, HOUSE_Y + 0.10, 12.0, 12.95, "A-VISTA")
-        d.text((6.0, 10.6), "TECHO DE LA FRANJA (NIVEL INFERIOR)", 1.7, "A-TEXTO", bold=True)
-        d.text((9.6, 6.6), "PROYECCIÓN COBERTURA TERRAZA (h libre 2.20 a 2.60 m)", 1.2, "A-TEXTO-AREA")
-    d.pline([(0, 0), (12, 0), (12, 13), (0, 13)], "A-LOTE", closed=True)
-    d.line((-1.2, -1.5), (-1.2, 14.5), "A-PROYECCION")
-    d.text((-0.60, 5.0), "VEREDA", 1.5, "A-TEXTO-AREA")
-    d.text((-1.85, 5.0), "CALLE", 2.2, "A-TEXTO", bold=True)
+        cover_ribs(d, 0.0, 8.0, 0.05, 3.70, "A-VISTA-LEJOS")
+        d.poly([(0, 3.70), (8, 3.70), (8, 4.95), (0, 4.95)], "A-VENTANA", fill="#eef5f7", lw=0.09)
+        rect(d, 0.0, 0.05, 8.0, 4.95, "A-VISTA")
+        d.text((4.0, 2.30), "TECHO DE LA COCHERA (NIVEL INFERIOR)", 1.7, "A-TEXTO", bold=True)
+        d.text((4.0, 12.20), "PROYECCIÓN COBERTURA TERRAZA (h libre 2.10 a 2.55 m)", 1.2, "A-TEXTO-AREA")
+        void(d, WELL[0], WELL[1], WELL[2], WELL[3], "POZO")
+        void(d, PATIO[0], PATIO[1], PATIO[2], PATIO[3], "VACÍO · PATIO DE SERVICIO")
+        d.text((4.0, 14.25), "TENDAL", 1.3, "A-TEXTO-AREA")
+    d.pline([(0, 0), (LOT_X, 0), (LOT_X, LOT_Y), (0, LOT_Y)], "A-LOTE", closed=True)
+    d.line((-1.0, -1.2), (9.0, -1.2), "A-PROYECCION")
+    d.text((6.5, -0.60), "VEREDA", 1.5, "A-TEXTO-AREA")
+    d.text((4.0, -1.85), "CALLE", 2.2, "A-TEXTO", bold=True)
     grid_and_dims(d, level)
     section_marks(d)
-    north(d, 12.6, -2.6)
-    return rotate_plan(d)
+    north(d, LOT_X + 1.15, -1.6)
+    return d
 
 
 def roof_plan():
     d = Drawing("PLANTA DE TECHOS")
-    rect(d, 0.0, 0.0, 12.0, HOUSE_Y, "A-PROYECCION")
-    cover_ribs(d, 0.0, 12.0, 9.40, 12.95, "A-VISTA-LEJOS")
-    d.poly([(0, 8.10), (12, 8.10), (12, 9.40), (0, 9.40)], "A-VENTANA", fill="#e7f1f4", hatch="vidrio", lw=0.13)
-    rect(d, 0.0, 8.05, 12.0, 12.95, "A-VISTA", lw=0.35)
-    rect(d, 0.05, 12.80, 11.95, 13.0, "A-SANITARIO")
+    rect(d, 0.0, Y0, 8.0, YB, "A-PROYECCION")
+    # cochera
+    cover_ribs(d, 0.0, 8.0, 0.05, 3.70, "A-VISTA-LEJOS")
+    d.poly([(0, 3.70), (8, 3.70), (8, 4.95), (0, 4.95)], "A-VENTANA", fill="#e7f1f4", hatch="vidrio", lw=0.13)
+    rect(d, 0.0, 0.05, 8.0, 4.95, "A-VISTA", lw=0.35)
+    rect(d, 0.05, 0.0, 7.95, 0.20, "A-SANITARIO")
     for xc in STRIP_COLS_X:
-        d.circle((xc + 0.12, STRIP_COL_Y), 0.05, "A-SANITARIO")
-    _slope_arrow(d, (2.0, 9.6), (2.0, 12.6), "PEND. 10 %")
-    d.text((7.0, 10.75), "COBERTURA DE LA FRANJA", 2.0, "A-TEXTO", bold=True)
-    d.text((6.55, 10.75), "Panel TR4 e = 50 mm · +5.60 → +5.10", 1.4, "A-TEXTO-AREA")
-    d.text((3.2, 10.75), "Franja de POLICARBONATO 10 mm", 1.4, "A-TEXTO", bold=True)
-    d.text((2.8, 10.75), "(luz natural junto a la fachada)", 1.2, "A-TEXTO-AREA")
-    d.text((9.8, 10.75), "Canaleta 200x150 + 4 bajantes Ø3\"", 1.2, "A-TEXTO-AREA")
-    cover_ribs(d, 0.0, 12.0, 0.05, 7.95, "A-VISTA-LEJOS")
-    rect(d, 0.0, 0.05, 12.0, 7.95, "A-VISTA", lw=0.35)
-    rect(d, 0.05, 7.92, 11.95, 8.10, "A-SANITARIO")
-    _slope_arrow(d, (2.0, 0.8), (2.0, 7.4), "PEND. 5 %")
-    d.text((6.0, 4.40), "COBERTURA DE LA TERRAZA", 2.0, "A-TEXTO", bold=True)
-    d.text((5.65, 4.40), "Panel termoacústico TR4 e = 50 mm · +8.60 → +8.20", 1.4, "A-TEXTO-AREA")
-    d.text((9.8, 4.40), "Canaleta 200x150 → 2 bajantes Ø3\"", 1.2, "A-TEXTO-AREA")
-    d.pline([(0, 0), (12, 0), (12, 13), (0, 13)], "A-LOTE", closed=True)
-    for k, y in GRID_V.items():
-        d.line((-1.2, y), (12.9, y), "A-EJES")
+        d.circle((xc + (0.14 if xc < 4 else -0.14), 0.10), 0.05, "A-SANITARIO")
+    _slope_arrow(d, (0.80, 4.55), (0.80, 0.55), "PEND. 10 %")
+    d.text((4.0, 2.55), "COBERTURA DE LA COCHERA", 2.0, "A-TEXTO", bold=True)
+    d.text((4.0, 2.15), "Panel TR4 e = 50 mm · +5.60 → +5.10", 1.4, "A-TEXTO-AREA")
+    d.text((4.0, 4.40), "Franja de POLICARBONATO 10 mm (luz a la fachada)", 1.4, "A-TEXTO", bold=True)
+    d.text((4.0, 0.50), "Canaleta 200x150 + 2 bajantes Ø3\"", 1.2, "A-TEXTO-AREA")
+    # terraza
+    cover_ribs(d, 0.0, 8.0, Y0 + 0.05, YB - 0.05, "A-VISTA-LEJOS")
+    d.poly([(6.0, 8.70), (8.0, 8.70), (8.0, 10.95), (6.0, 10.95)], "A-VENTANA", fill="#e7f1f4", hatch="vidrio", lw=0.13)
+    rect(d, 0.0, Y0 + 0.05, 8.0, YB - 0.05, "A-VISTA", lw=0.35)
+    rect(d, 0.05, YB - 0.10, 7.95, YB + 0.08, "A-SANITARIO")
+    _slope_arrow(d, (0.80, 5.60), (0.80, 14.0), "PEND. 5 %")
+    d.text((3.9, 12.40), "COBERTURA DE LA TERRAZA", 2.0, "A-TEXTO", bold=True)
+    d.text((3.9, 12.00), "Panel termoacústico TR4 e = 50 mm · +8.60 → +8.12", 1.4, "A-TEXTO-AREA")
+    d.text((7.0, 9.82), "POLICARB.", 1.2, "A-TEXTO", bold=True)
+    d.text((7.0, 9.52), "sobre pozo", 1.1, "A-TEXTO-AREA")
+    d.text((3.9, 14.20), "Canaleta 200x150 → 2 bajantes Ø3\" al patio", 1.2, "A-TEXTO-AREA")
+    void(d, PATIO[0], PATIO[1], PATIO[2], PATIO[3], "PATIO DE SERVICIO (abierto)")
+    d.pline([(0, 0), (LOT_X, 0), (LOT_X, LOT_Y), (0, LOT_Y)], "A-LOTE", closed=True)
+    for k, y in GRID_H.items():
+        d.line((-1.2, y), (8.6, y), "A-EJES")
         d.circle((-1.5, y), 0.28, "A-EJES"); d.text((-1.5, y), k, 2.5, "A-TEXTO", bold=True)
-    for k, x in GRID_H.items():
-        d.line((x, -0.5), (x, 14.2), "A-EJES")
-        d.circle((x, 14.5), 0.28, "A-EJES"); d.text((x, 14.5), k, 2.5, "A-TEXTO", bold=True)
-    dims_along_y(d, 0.0, [0, HOUSE_Y, LOT_Y], 0.75)
-    dims_along_x(d, 13.0, [0, 12.0], 0.75)
-    north(d, 12.6, -1.6)
-    return rotate_plan(d)
+    for k, x in GRID_V.items():
+        d.line((x, -0.5), (x, LOT_Y + 1.2), "A-EJES")
+        d.circle((x, LOT_Y + 1.5), 0.28, "A-EJES"); d.text((x, LOT_Y + 1.5), k, 2.5, "A-TEXTO", bold=True)
+    dims_along_y(d, 0.0, [0, Y0, YB, LOT_Y], 0.75)
+    dims_along_x(d, LOT_Y, [0, LOT_X], 0.75)
+    d.text((4.0, -0.9), "CALLE", 2.2, "A-TEXTO", bold=True)
+    north(d, LOT_X + 1.0, -0.8)
+    return d
 
 
 def cover_structure_plan():
     d = Drawing("ESTRUCTURA DE COBERTURAS METÁLICAS")
-    rect(d, 0.0, 0.0, 12.0, HOUSE_Y, "A-PROYECCION")
-    d.poly([(0.05, 8.0), (11.95, 8.0), (11.95, 8.10), (0.05, 8.10)], "S-METALICA", fill="#5d7a92", lw=0.18)
-    d.poly([(0.05, STRIP_COL_Y - 0.075), (11.95, STRIP_COL_Y - 0.075), (11.95, STRIP_COL_Y + 0.075), (0.05, STRIP_COL_Y + 0.075)],
+    rect(d, 0.0, Y0, 8.0, YB, "A-PROYECCION")
+    d.poly([(0.05, 4.90), (7.95, 4.90), (7.95, 5.00), (0.05, 5.00)], "S-METALICA", fill="#5d7a92", lw=0.18)
+    d.poly([(0.05, STRIP_COL_Y - 0.075), (7.95, STRIP_COL_Y - 0.075), (7.95, STRIP_COL_Y + 0.075), (0.05, STRIP_COL_Y + 0.075)],
            "S-METALICA", fill="#5d7a92", lw=0.18)
-    for i in range(9):
-        xc = 0.30 + i * 1.425
-        d.poly([(xc - 0.05, 8.05), (xc + 0.05, 8.05), (xc + 0.05, 12.95), (xc - 0.05, 12.95)], "S-METALICA", fill="#9fb3c3", lw=0.18)
-    for yc in (8.30, 9.25, 10.20, 11.15, 12.10, 12.85):
-        d.line((0.05, yc), (11.95, yc), "S-METALICA", lw=0.13)
+    for xc in RAFTERS:
+        d.poly([(xc - 0.05, 0.05), (xc + 0.05, 0.05), (xc + 0.05, 4.95), (xc - 0.05, 4.95)], "S-METALICA", fill="#9fb3c3", lw=0.18)
+    for yc in (0.20, 0.95, 1.70, 2.45, 3.20, 3.95, 4.70):
+        d.line((0.05, yc), (7.95, yc), "S-METALICA", lw=0.13)
     strip_steel(d)
-    for (xa, xb) in ((0.30, 1.725), (10.275, 11.70)):
-        d.line((xa, 9.25), (xb, 12.10), "S-METALICA-PROY")
-        d.line((xb, 9.25), (xa, 12.10), "S-METALICA-PROY")
-    for xc in (0.20, sum(COL_X["2"]) / 2, sum(COL_X["3"]) / 2, 11.80):
-        d.poly([(xc - 0.05, 0.05), (xc + 0.05, 0.05), (xc + 0.05, 7.95), (xc - 0.05, 7.95)], "S-METALICA", fill="#9fb3c3", lw=0.18)
-        for yc in (0.20, sum(COL_Y["B"]) / 2, 7.80):
+    for (xa, xb) in ((RAFTERS[0], RAFTERS[1]), (RAFTERS[-2], RAFTERS[-1])):
+        d.line((xa, 0.95), (xb, 3.95), "S-METALICA-PROY")
+        d.line((xb, 0.95), (xa, 3.95), "S-METALICA-PROY")
+    for xc in (0.20, AX_X["B"], 7.80):
+        d.poly([(xc - 0.05, Y0 + 0.05), (xc + 0.05, Y0 + 0.05), (xc + 0.05, YB - 0.05), (xc - 0.05, YB - 0.05)], "S-METALICA", fill="#9fb3c3", lw=0.18)
+        for yc in (5.20, AX_Y["2"], AX_Y["3"], 14.45):
             d.poly([(xc - 0.05, yc - 0.05), (xc + 0.05, yc - 0.05), (xc + 0.05, yc + 0.05), (xc - 0.05, yc + 0.05)],
                    "S-METALICA", fill="#1c2a36", lw=0.25)
-    for yc in (0.30, 1.30, 2.30, 3.30, 4.30, 5.30, 6.30, 7.30, 7.85):
-        d.line((0.05, yc), (11.95, yc), "S-METALICA", lw=0.13)
-    T = ["(1) VM-2 TUBO 150x300x4 sobre 4 columnas CM-1 150x150x4 con pedestales de C°A°",
+    for yc in [5.25 + i * 1.0 for i in range(10)] + [14.55]:
+        d.line((0.05, yc), (7.95, yc), "S-METALICA", lw=0.13)
+    T = ["(1) VM-2 TUBO 150x300x4 sobre 2 columnas CM-1 150x150x4 con pedestales de C°A°",
          "(2) AN-1 ÁNGULO L100x100x6 anclado a la viga de borde (lado vivienda)",
-         "(3) VM-1 TUBO 100x200x3 @1.425 · correas CO-1 50x100x2 @0.95 · arriostres Ø1/2\"",
-         "(4) VT-1 TUBO 100x250x3 (4 ejes) · CT-1 TUBO 100x100x3 (12 und.) sobre columnas C°A° · CO-1 @1.00"]
+         "(3) VM-1 TUBO 100x200x3 @1.233 · correas CO-1 50x100x2 @0.75 · arriostres Ø1/2\"",
+         "(4) VT-1 TUBO 100x250x3 (3 ejes) · CT-1 TUBO 100x100x3 (12 und.) sobre columnas C°A° · CO-1 @1.00"]
     for i, s_ in enumerate(T):
-        d.text((-2.0 - i * 0.55, 12.9), s_, 1.5, "A-TEXTO", bold=(i == 0), ha="left")
-    for p, s_ in (((6.0, STRIP_COL_Y - 0.45), "(1)"), ((6.0, 8.35), "(2)"), ((5.4, 10.65), "(3)"), ((6.0, 4.70), "(4)")):
-        d.circle(p, 0.32, "A-TEXTO"); d.text(p, s_, 1.6, "A-TEXTO", bold=True)
-    dims_along_x(d, 13.0, [0.0] + [0.30 + i * 1.425 for i in range(9)] + [12.0], 0.75)
-    dims_along_y(d, 0.0, [0, 0.20, sum(COL_Y["B"]) / 2, 7.80, 8.05, STRIP_COL_Y, 13.0], 0.75)
-    return rotate_plan(d)
+        d.text((-0.6, -1.0 - i * 0.55), s_, 1.5, "A-TEXTO", bold=(i == 0), ha="left")
+    for p, s_ in (((2.15, 0.62), "(1)"), ((2.15, 4.42), "(2)"), ((2.15, 2.10), "(3)"), ((2.10, 9.80), "(4)")):
+        d.circle(p, 0.30, "A-TEXTO", fill="#ffffff"); d.text(p, s_, 1.6, "A-TEXTO", bold=True)
+    dims_along_x(d, YB, [0.0] + RAFTERS + [8.0], 0.75)
+    dims_along_y(d, 0.0, [0, STRIP_COL_Y, 4.95, 5.20, AX_Y["2"], AX_Y["3"], 14.45, YB], 0.75)
+    return d
 
 
 # ---------------------------------------------------------------------------
@@ -534,7 +454,7 @@ MERGE_CATS = {"vehiculo", "jardin", "mobiliario", "escalera"}
 
 def _project(prisms, mode, c, look):
     """Devuelve [(Polygon_uz, depth, prism, is_cut)].
-    mode 'x': plano x=c; look +1 mira hacia +x (u = LOT_Y - y), look -1 hacia -x (u = y).
+    mode 'x': plano x=c; look +1 mira hacia +x (u = LOT_Y - y), look -1 hacia -x (u = y, calle a la izquierda).
     mode 'y': plano y=c; look +1 mira hacia +y (u = x),        look -1 hacia -y (u = LOT_X - x)."""
     out = []
     for p in prisms:
@@ -595,7 +515,7 @@ def section_view(mode, c, look, title, elevation=False, hide_fur=False, umin=Non
         P = [p for p in P if p.cat != "cimentacion"]
     items = _project(P, mode, c, look)
     if umin is None:
-        umin, umax = (-0.3, LOT_Y + 0.3) if mode == "x" else (-1.3, LOT_X + 0.3)
+        umin, umax = (-1.5, LOT_Y + 0.3) if mode == "x" else (-0.4, LOT_X + 0.4)
     occl = []
     if not elevation:
         earth = sbox(umin, -1.9, umax, -0.15)
@@ -643,20 +563,21 @@ def _section_annotations(d, mode, c, look, umin, umax, elevation):
     if not elevation:
         lab = {1: 1.35, 2: LV[2] + 1.35, 3: LV[3] + 1.35}
         for r in build_rooms():
-            if r.name.startswith("BAÑO") or r.name in ("HALL", "WALK-IN"):
+            if r.name.startswith(("BAÑO", "BALCÓN", "POZO")) or r.name == "HALL":
                 continue
             x1, y1, x2, y2 = r.rect
             if mode == "x" and x1 < c < x2:
                 u = (LOT_Y - (y1 + y2) / 2) if look > 0 else (y1 + y2) / 2
-                d.text((u, lab[r.level]), r.name, 1.5, "A-TEXTO", bold=True)
+                z = 3.60 if r.name.startswith("COCHERA") else lab[r.level]
+                d.text((u, z), r.name, 1.5, "A-TEXTO", bold=True)
             if mode == "y" and y1 < c < y2:
                 u = (x1 + x2) / 2 if look > 0 else LOT_X - (x1 + x2) / 2
                 d.text((u, lab[r.level]), r.name, 1.5, "A-TEXTO", bold=True)
         if mode == "x":
-            u = LOT_Y - 10.5 if look > 0 else 10.5
-            d.text((u, strip_top(10.5) + 0.40), "COBERTURA FRANJA PEND. 10 %", 1.5, "A-TEXTO", bold=True)
-            u = LOT_Y - 4.0 if look > 0 else 4.0
-            d.text((u, terrace_top(4.0) + 0.40), "COBERTURA TERRAZA PEND. 5 %", 1.5, "A-TEXTO", bold=True)
+            u = LOT_Y - 2.5 if look > 0 else 2.5
+            d.text((u, strip_top(2.5) + 0.40), "COBERTURA COCHERA PEND. 10 %", 1.5, "A-TEXTO", bold=True)
+            u = LOT_Y - 10.0 if look > 0 else 10.0
+            d.text((u, terrace_top(10.0) + 0.40), "COBERTURA TERRAZA PEND. 5 %", 1.5, "A-TEXTO", bold=True)
 
 
 def _notes(d, notes, ha="left"):
@@ -667,28 +588,28 @@ def _notes(d, notes, ha="left"):
 
 
 def detail_views():
-    """Detalles de la cobertura de la franja: corte transversal por la columna CM-1 de x = 4.10, mirando a +x."""
-    base = section_view("x", 4.10, 1, "CORTE POR COLUMNA CM-1", hide_fur=True)
-    u = lambda y: LOT_Y - y
+    """Detalles de la cobertura de la cochera: corte por la columna CM-1 de x = 0.30, mirando a -x (u = y)."""
+    base = section_view("x", STRIP_COLS_X[0], -1, "CORTE POR COLUMNA CM-1", hide_fur=True)
     t = strip_top
+    yc = STRIP_COL_Y
     d1 = Drawing("DETALLE 1"); d1.extend(base)
-    notes1 = [((1.10, 0.80), (u(12.775) + 0.03, 0.70), "COLUMNA CM-1 TUBO LAC 150x150x4"),
-              ((1.10, 0.66), (u(12.775) + 0.10, 0.507), "PLANCHA BASE 300x300x12 + GROUT"),
-              ((1.10, 0.52), (u(12.875), 0.30), "4 PERNOS ANCLAJE Ø5/8\" L=0.50"),
-              ((1.10, 0.20), (u(12.6), 0.10), "PEDESTAL C°A° 0.40x0.40 h=1.10"),
-              ((1.10, -0.10), (u(11.9), -0.10), "LOSA FRANJA e=0.10 + CONTRAPISO"),
-              ((1.10, -0.90), (u(12.3), -0.90), "ZAPATA 0.90x0.90x0.60 f'c=210"),
-              ((1.10, -1.30), (u(12.4), -1.25), "SOLADO e=0.10 / TERRENO NATURAL")]
+    notes1 = [((1.10, 0.80), (yc + 0.03, 0.70), "COLUMNA CM-1 TUBO LAC 150x150x4"),
+              ((1.10, 0.66), (yc + 0.10, 0.507), "PLANCHA BASE 300x300x12 + GROUT"),
+              ((1.10, 0.52), (yc + 0.10, 0.30), "4 PERNOS ANCLAJE Ø5/8\" L=0.50"),
+              ((1.10, 0.20), (yc + 0.15, 0.10), "PEDESTAL C°A° 0.40x0.40 h=1.10"),
+              ((1.10, -0.10), (0.90, -0.10), "LOSA COCHERA e=0.10 + CONTRAPISO"),
+              ((1.10, -0.90), (0.70, -0.90), "ZAPATA 0.90x0.90x0.60 f'c=210"),
+              ((1.10, -1.30), (0.60, -1.25), "SOLADO e=0.10 / TERRENO NATURAL")]
     _notes(d1, notes1)
     n1 = Drawing("NOTAS D1"); n1.items = d1.items[len(base.items):]
     d2 = Drawing("DETALLE 2"); d2.extend(base)
-    zl = t(8.05)
-    notes2 = [((3.40, 6.10), (u(8.5), t(8.5) - 0.006), "POLICARBONATO ALVEOLAR 10 mm"),
-              ((3.40, 6.00), (u(8.30), t(8.30) - 0.10), "CORREA CO-1 TUBO 50x100x2"),
-              ((3.40, 5.90), (u(8.9), t(8.9) - 0.25), "VIGA VM-1 TUBO 100x200x3 @1.425"),
-              ((3.40, 4.95), (u(8.05), zl - 0.45), "ÁNGULO AN-1 L100x100x6 + PERNOS Ø5/8\" @0.60"),
-              ((3.40, 4.85), (u(7.9), 5.40), "VIGA DE BORDE C°A° 0.25x0.40"),
-              ((3.40, 4.75), (u(7.95), 4.80), "MURO 2do PISO + SELLO POLIURETANO")]
+    zl = t(4.95)
+    notes2 = [((3.40, 6.10), (4.5, t(4.5) - 0.006), "POLICARBONATO ALVEOLAR 10 mm"),
+              ((3.40, 6.00), (4.70, t(4.70) - 0.10), "CORREA CO-1 TUBO 50x100x2"),
+              ((3.40, 5.90), (4.10, t(4.10) - 0.25), "VIGA VM-1 TUBO 100x200x3 @1.233"),
+              ((3.40, 4.95), (4.95, zl - 0.45), "ÁNGULO AN-1 L100x100x6 + PERNOS Ø5/8\" @0.60"),
+              ((3.40, 4.85), (5.10, 5.40), "VIGA DE BORDE C°A° 0.25x0.40"),
+              ((3.40, 4.75), (5.05, 4.80), "MURO 2do PISO + SELLO POLIURETANO")]
     _notes(d2, notes2, "right")
     n2 = Drawing("NOTAS D2"); n2.items = d2.items[len(base.items):]
     return d1, d2, base, n1, n2
@@ -704,7 +625,7 @@ def all_views():
     for k in "ABCD":
         mode, c, look = SECTIONS[k]
         V["S" + k] = section_view(mode, c, look, f"CORTE {k}-{k}")
-    V["EF"] = section_view("x", -30.0, 1, "ELEVACIÓN PRINCIPAL (CALLE)", elevation=True)
-    V["EL"] = section_view("y", 30.0, -1, "ELEVACIÓN HACIA LA FRANJA", elevation=True)
+    V["EF"] = section_view("y", -30.0, 1, "ELEVACIÓN PRINCIPAL (CALLE)", elevation=True)
+    V["ER"] = section_view("y", 16.80, -1, "ELEVACIÓN POSTERIOR (PATIO)", elevation=True)
     V["D1"], V["D2"], V["_DB"], V["_N1"], V["_N2"] = detail_views()
     return V

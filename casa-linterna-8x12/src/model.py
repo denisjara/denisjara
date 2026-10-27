@@ -1,19 +1,20 @@
 """
-CASA LINTERNA - Modelo parametrico (fuente unica de verdad). Version 3.
+CASA LINTERNA - Modelo parametrico (fuente unica de verdad). Version 4.
 
-Terreno 13.00 (frente) x 12.00 (fondo) = 156.00 m2
-  Vivienda (material noble) : 8.00 x 12.00, 2 pisos + terraza techada
-  Franja libre techada      : 5.00 x 12.00, cochera / reuniones, sin muros,
-                              cobertura metalica a una sola agua
+Terreno 8.00 (frente a la calle) x 17.00 (fondo) = 136.00 m2
+  Cochera / reuniones : 8.00 x 5.00 al frente, sin muros, cobertura metalica a una sola agua
+  Vivienda            : 8.00 x 12.00 (material noble), 2 pisos + terraza techada,
+                        con pozo de luz central y patio posterior de servicio
 
 Sistema de coordenadas del MODELO (metros):
-  x : fondo, 0 = linea de propiedad en la calle -> 12 = lindero posterior
-  y : ancho, 0 = medianera de la vivienda -> 8 = fachada hacia la franja -> 13 = lindero de la franja
+  x : ancho del lote, 0 = medianera izquierda (mirando desde la calle) -> 8 = medianera derecha
+  y : fondo, 0 = linea de propiedad en la calle -> 5 = fachada -> 17 = lindero posterior
   z : altura, 0.00 = NPT 1er piso
-Las plantas se dibujan giradas 90 grados (calle abajo).
+Las plantas se dibujan sin giro: calle abajo, fondo arriba.
 
 Cada elemento 3D es un PRISMA: poligono en el plano YZ extruido en X entre x1 y x2.
-Elementos que varian a lo largo de X (autos, escalones, ruedas) se modelan por rebanadas.
+Asi las coberturas inclinan hacia la calle con un solo prisma y los autos se modelan
+con su perfil lateral real.
 """
 from dataclasses import dataclass, field
 import math
@@ -21,9 +22,11 @@ import math
 # --------------------------------------------------------------------------
 # PARAMETROS GENERALES
 # --------------------------------------------------------------------------
-LOT_X, LOT_Y = 12.00, 13.00
-HOUSE_Y = 8.00                 # fachada interior hacia la franja
-LOT_W = LOT_Y                  # compatibilidad
+LOT_X, LOT_Y = 8.00, 17.00
+LOT_W = LOT_X
+Y0 = 5.00                       # fachada principal (hacia la cochera)
+YB = 14.65                      # cara exterior de la fachada posterior (hacia el patio)
+HOUSE_Y = Y0                    # compatibilidad: limite cochera / vivienda
 TE, TI, TP = 0.15, 0.15, 0.10
 SLAB = 0.20
 BEAM_H = 0.40
@@ -31,32 +34,35 @@ LV = {1: 0.00, 2: 2.80, 3: 5.60, 4: 8.40}
 LEVEL_NAMES = {1: "1er PISO", 2: "2do PISO", 3: "TERRAZA (3er NIVEL)", 4: "TECHO"}
 PHASE = {1: "F1", 2: "F1", 3: "F1", 4: "F1"}
 
-# Ejes estructurales (columnas de concreto)
-COL_X = {"1": (0.0, 0.25), "2": (4.05, 4.30), "3": (7.80, 8.05), "4": (11.75, 12.0)}
-COL_Y = {"A": (0.0, 0.25), "B": (2.30, 2.55), "C": (7.75, 8.0)}
+# Ejes estructurales (columnas de concreto): letras a lo ancho, numeros a lo largo
+COL_X = {"A": (0.0, 0.25), "B": (3.825, 4.075), "C": (7.75, 8.0)}
+COL_Y = {"1": (5.0, 5.25), "2": (8.525, 8.775), "3": (10.875, 11.125), "4": (14.40, 14.65)}
 AX_X = {k: (a + b) / 2 for k, (a, b) in COL_X.items()}
 AX_Y = {k: (a + b) / 2 for k, (a, b) in COL_Y.items()}
-STRIP_COLS_X = (0.30, 4.10, 7.90, 11.70)          # columnas metalicas de la franja
-STRIP_COL_Y = 12.775
-AX_Y["D"] = STRIP_COL_Y
+STRIP_COLS_X = (0.30, 7.70)                      # columnas metalicas de la cochera (junto a la calle)
+STRIP_COL_Y = 0.30
 
-# Escalera en U (tramos a lo largo de X, descanso contra la fachada de calle)
+# Escalera en U (tramos a lo ancho, descanso contra la medianera izquierda)
 RISER, TREAD, N_TREADS = 0.175, 0.25, 7
-ST_Y_A = (0.20, 1.20)          # tramo que sube hacia la calle
-ST_Y_B = (1.30, 2.30)          # tramo que regresa
+ST_Y_A = (8.78, 9.78)          # tramo que arranca (sube hacia la medianera)
+ST_Y_B = (9.88, 10.87)         # tramo que regresa hacia el hall
 ST_X_LAND = (0.15, 1.15)
 ST_X_FL = (1.15, 2.90)
-STAIR_ZONE = (0.15, 0.15, 2.90, 2.35)            # x1, y1, x2, y2
+STAIR_ZONE = (0.15, 8.775, 2.90, 10.875)          # x1, y1, x2, y2
+WELL = (6.05, 8.775, 7.85, 10.875)                # pozo de luz (abierto al cielo)
+PATIO = (0.15, YB, 7.85, 16.85)                   # patio posterior de servicio
+BALCONIES = ((0.40, 3.65), (4.30, 7.60))          # x1, x2 ; vuelan 1.10 m sobre la cochera
+BAL_D = 1.10
 
 
 def strip_top(y):
-    """Cara superior de la cobertura de la franja: 5.60 junto a la casa -> 5.10 en el lindero (10 %)."""
-    return 5.60 - 0.10 * (y - HOUSE_Y)
+    """Cara superior de la cobertura de la cochera: +5.10 en la calle -> +5.60 en la fachada (10 %)."""
+    return 5.10 + 0.10 * y
 
 
 def terrace_top(y):
-    """Cobertura de la terraza: 8.60 en la medianera -> 8.20 sobre la fachada interior (5 %)."""
-    return 8.60 - 0.05 * y
+    """Cobertura de la terraza: +8.60 sobre la fachada principal -> cae 5 % hacia el patio posterior."""
+    return 8.60 - 0.05 * (y - Y0)
 
 
 carport_top = strip_top
@@ -148,69 +154,92 @@ def W(name, a, b, t, level, **kw):
     return Wall(name, a, b, t, level, **kw)
 
 
+def _shell(L):
+    """Medianeras (incluyen el patio posterior) y lindero de fondo."""
+    return [W("M-MED-I", (0.075, Y0), (0.075, LOT_Y), TE, L, kind="medianera"),
+            W("M-MED-D", (7.925, Y0), (7.925, LOT_Y), TE, L, kind="medianera"),
+            W("M-FONDO", (0.15, 16.925), (7.85, 16.925), TE, L, kind="medianera")]
+
+
+def _bath_walls(L, side, back):
+    """Tabiques de un baño de 1.90 m de ancho en la esquina del dormitorio.
+    side: 'I' (contra la medianera izquierda) o 'D'; back: True si el baño esta del lado del hall en la mitad posterior."""
+    if side == "I":
+        xw, xa, xb, hinge_side = 2.10, 0.15, 2.15, 1
+    else:
+        xw, xa, xb, hinge_side = 5.90, 5.85, 7.85, -1
+    if back:                       # mitad posterior: baño junto al hall (y 11.05 - 12.75)
+        return [W(f"T-BAN-{side}{L}a", (xw, 11.05), (xw, 12.80), TP, L, openings=[
+                    Opening("P-02", "door", 11.90, 12.60, 0.0, 2.10, "a", hinge_side, "Baño de dormitorio")]),
+                W(f"T-BAN-{side}{L}b", (xa, 12.80), (xb, 12.80), TP, L)]
+    return [W(f"T-BAN-{side}{L}a", (xw, 6.90), (xw, 8.60), TP, L, openings=[
+                Opening("P-02", "door", 7.05, 7.75, 0.0, 2.10, "b", hinge_side, "Baño de dormitorio")]),
+            W(f"T-BAN-{side}{L}b", (xa, 6.90), (xb, 6.90), TP, L)]
+
+
 def build_walls():
     walls = []
-    # ================= 1er PISO: dormitorio de visitas, sala, comedor, cocina =================
+    # ================= 1er PISO: sala, comedor, cocina, dormitorio con baño =================
     L = 1
-    walls += [
-        W("M-MED", (0.0, 0.075), (12.0, 0.075), TE, L, kind="medianera"),
-        W("M-POS", (11.925, 0.15), (11.925, 7.85), TE, L, kind="medianera"),
-        W("M-CAL", (0.075, 2.35), (0.075, 7.85), TE, L, kind="fachada", openings=[
-            Opening("V-01", "window", 2.70, 3.90, 1.60, 2.20, desc="Ventana alta baño (calle)"),
-            Opening("V-02", "window", 4.70, 7.40, 0.90, 2.40, desc="Ventana dormitorio (calle)")]),
-        W("M-FRA", (0.15, 7.925), (11.85, 7.925), TE, L, kind="fachada", openings=[
-            Opening("V-03", "window", 0.55, 2.55, 0.90, 2.40, desc="Ventana dormitorio a la franja"),
-            Opening("PP", "door2", 2.98, 4.02, 0.0, 2.40, "a", -1, "Puerta principal pivotante de madera"),
-            Opening("MP-01", "slide", 4.50, 7.40, 0.0, 2.40, desc="Mampara corrediza sala-franja"),
-            Opening("MP-02", "slide", 8.25, 9.85, 0.0, 2.40, desc="Mampara corrediza comedor-franja"),
-            Opening("V-04", "window", 10.05, 11.55, 1.05, 2.20, desc="Ventana cocina")]),
-        W("T-ESC", (0.15, 2.425), (2.90, 2.425), TI, L),
-        W("T-DORM", (2.825, 2.50), (2.825, 7.85), TI, L, openings=[
-            Opening("P-01", "door", 4.50, 5.30, 0.0, 2.10, "a", -1, "Dormitorio 1er piso")]),
-        W("T-BAN-1", (0.15, 4.275), (2.75, 4.275), TP, L, openings=[
-            Opening("P-02", "door", 1.90, 2.60, 0.0, 2.10, "b", -1, "Baño dormitorio")]),
-        W("T-BV-1", (4.175, 0.15), (4.175, 1.90), TP, L, openings=[
-            Opening("P-03", "door", 1.10, 1.75, 0.0, 2.10, "b", 1, "Baño de visitas")]),
-        W("T-BV-2", (4.13, 1.925), (5.80, 1.925), TP, L),
-        W("T-BV-3", (5.775, 0.15), (5.775, 1.975), TP, L),
-    ]
-    # ================= 2do PISO: 3 dormitorios con baño y balcón =================
+    walls += _shell(L) + [
+        W("M-FRE", (0.15, 5.075), (7.85, 5.075), TE, L, kind="fachada", openings=[
+            Opening("MP-01", "slide", 0.45, 2.35, 0.0, 2.40, desc="Mampara corrediza sala-cochera"),
+            Opening("PP", "door2", 2.60, 3.65, 0.0, 2.40, "a", 1, "Puerta principal pivotante de madera"),
+            Opening("MP-02", "slide", 4.35, 7.45, 0.0, 2.40, desc="Mampara corrediza comedor-cochera")]),
+        W("T-ESC", (0.15, 8.65), (2.90, 8.65), TP, L),
+        W("T-BV-1", (1.40, 7.05), (1.40, 8.60), TP, L),
+        W("T-BV-2", (0.15, 7.05), (1.45, 7.05), TP, L, openings=[
+            Opening("P-03", "door", 0.30, 0.95, 0.0, 2.10, "a", -1, "Baño de visitas")]),
+        W("T-POZO-F", (6.00, 8.65), (7.85, 8.65), TP, L, openings=[
+            Opening("V-05", "window", 6.20, 7.70, 0.30, 2.40, desc="Paño fijo comedor-pozo de luz")]),
+        W("T-POZO", (6.00, 8.70), (6.00, 10.95), TP, L, openings=[
+            Opening("V-06", "window", 9.10, 10.60, 0.90, 2.20, desc="Ventana hall-pozo de luz")]),
+        W("T-POST", (0.15, 11.00), (7.85, 11.00), TP, L, openings=[
+            Opening("P-01", "door", 2.95, 3.75, 0.0, 2.10, "a", 1, "Puerta de dormitorio"),
+            Opening("P-04", "door", 4.10, 4.90, 0.0, 2.10, "b", 1, "Puerta de cocina"),
+            Opening("V-07", "window", 6.25, 7.65, 1.05, 2.20, desc="Ventana cocina-pozo de luz")]),
+        W("T-DIV-B", (3.95, 11.05), (3.95, 14.50), TI, L),
+        W("M-POS", (0.15, 14.575), (7.85, 14.575), TE, L, kind="fachada", openings=[
+            Opening("V-08", "window", 0.55, 3.35, 0.90, 2.40, desc="Ventana dormitorio al patio"),
+            Opening("V-09", "window", 4.30, 6.10, 1.05, 2.20, desc="Ventana cocina al patio"),
+            Opening("P-05", "door", 6.40, 7.30, 0.0, 2.10, "a", 1, "Puerta cocina-patio de servicio")]),
+    ] + _bath_walls(L, "I", True)
+    # ================= 2do PISO: 4 dormitorios, cada uno con baño =================
     L = 2
-    walls += [
-        W("M-MED", (0.0, 0.075), (12.0, 0.075), TE, L, kind="medianera"),
-        W("M-POS", (11.925, 0.15), (11.925, 7.85), TE, L, kind="medianera"),
-        W("M-CAL", (0.075, 2.35), (0.075, 7.85), TE, L, kind="fachada", openings=[
-            Opening("V-01", "window", 2.70, 3.90, 1.60, 2.20, desc="Ventana alta baño (calle)"),
-            Opening("V-02", "window", 4.70, 7.40, 0.90, 2.40, desc="Ventana dormitorio (calle)")]),
-        W("M-FRA", (0.15, 7.925), (11.85, 7.925), TE, L, kind="fachada", openings=[
-            Opening("MP-03", "slide", 1.00, 3.60, 0.0, 2.40, desc="Mampara corrediza a balcón"),
-            Opening("MP-03", "slide", 4.70, 7.30, 0.0, 2.40, desc="Mampara corrediza a balcón"),
-            Opening("MP-03", "slide", 8.60, 11.20, 0.0, 2.40, desc="Mampara corrediza a balcón")]),
-        W("T-ESC", (0.15, 2.425), (4.10, 2.425), TI, L, openings=[
-            Opening("P-01", "door", 3.20, 4.00, 0.0, 2.10, "b", 1, "Dormitorio 2")]),
-        W("T-BAN-2", (1.825, 2.50), (1.825, 4.375), TP, L, openings=[
-            Opening("P-02", "door", 3.45, 4.15, 0.0, 2.10, "a", -1, "Baño dormitorio 2")]),
-        W("T-BAN-2b", (0.15, 4.325), (1.875, 4.325), TP, L),
-        W("T-DM", (4.175, 1.225), (4.175, 7.85), TI, L),
-        W("T-COR", (4.25, 1.225), (7.85, 1.225), TI, L, openings=[
-            Opening("P-01", "door", 4.40, 5.20, 0.0, 2.10, "a", 1, "Dormitorio 3")]),
-        W("T-BAN-3", (5.375, 1.30), (5.375, 3.225), TP, L, openings=[
-            Opening("P-02", "door", 2.30, 3.00, 0.0, 2.10, "b", 1, "Baño dormitorio 3")]),
-        W("T-BAN-3b", (5.33, 3.175), (7.85, 3.175), TP, L),
-        W("T-MB", (7.925, 0.15), (7.925, 7.85), TI, L, openings=[
-            Opening("P-01", "door", 0.25, 1.05, 0.0, 2.10, "a", 1, "Dormitorio 4 (principal)")]),
-        W("T-BAN-4", (9.675, 0.15), (9.675, 2.475), TP, L, openings=[
-            Opening("P-02", "door", 1.50, 2.20, 0.0, 2.10, "b", 1, "Baño dormitorio 4")]),
-        W("T-BAN-4b", (9.63, 2.425), (11.85, 2.425), TP, L),
-    ]
-    # ================= TERRAZA: parapetos =================
+    walls += _shell(L) + [
+        W("M-FRE", (0.15, 5.075), (7.85, 5.075), TE, L, kind="fachada", openings=[
+            Opening("MP-03", "slide", 0.55, 3.05, 0.0, 2.40, desc="Mampara corrediza a balcón"),
+            Opening("MP-03", "slide", 4.80, 7.30, 0.0, 2.40, desc="Mampara corrediza a balcón")]),
+        W("T-ANT", (0.15, 8.65), (7.85, 8.65), TP, L, openings=[
+            Opening("P-01", "door", 2.95, 3.75, 0.0, 2.10, "a", -1, "Puerta de dormitorio"),
+            Opening("P-01", "door", 4.15, 4.95, 0.0, 2.10, "b", -1, "Puerta de dormitorio"),
+            Opening("V-10", "window", 6.25, 7.65, 1.60, 2.20, desc="Ventana alta baño-pozo de luz")]),
+        W("T-POST", (0.15, 11.00), (7.85, 11.00), TP, L, openings=[
+            Opening("P-01", "door", 2.95, 3.75, 0.0, 2.10, "a", 1, "Puerta de dormitorio"),
+            Opening("P-01", "door", 4.15, 4.95, 0.0, 2.10, "b", 1, "Puerta de dormitorio"),
+            Opening("V-10", "window", 6.25, 7.65, 1.60, 2.20, desc="Ventana alta baño-pozo de luz")]),
+        W("T-POZO", (6.00, 8.70), (6.00, 10.95), TP, L, openings=[
+            Opening("V-06", "window", 9.10, 10.60, 0.90, 2.20, desc="Ventana hall-pozo de luz")]),
+        W("T-DIV-F", (3.95, 5.15), (3.95, 8.60), TI, L),
+        W("T-DIV-B", (3.95, 11.05), (3.95, 14.50), TI, L),
+        W("M-POS", (0.15, 14.575), (7.85, 14.575), TE, L, kind="fachada", openings=[
+            Opening("V-11", "window", 0.55, 3.35, 0.90, 2.40, desc="Ventana dormitorio al patio"),
+            Opening("V-11", "window", 4.50, 7.30, 0.90, 2.40, desc="Ventana dormitorio al patio")]),
+    ] + _bath_walls(L, "I", False) + _bath_walls(L, "D", False) + _bath_walls(L, "I", True) + _bath_walls(L, "D", True)
+    # ================= TERRAZA: parapetos y barandas =================
     L = 3
     walls += [
-        W("PAR-MED", (0.0, 0.075), (12.0, 0.075), TE, L, h=1.10, kind="parapeto"),
-        W("PAR-POS", (11.925, 0.15), (11.925, 7.85), TE, L, h=1.10, kind="parapeto"),
-        W("PAR-CAL", (0.075, 2.35), (0.075, 7.85), TE, L, h=1.00, kind="parapeto"),
-        W("PAR-FRA", (0.15, 7.925), (11.85, 7.925), TE, L, h=1.00, kind="parapeto"),
-        W("PAR-ESC", (0.15, 2.425), (2.90, 2.425), TI, L, h=1.00, kind="parapeto"),
+        W("PAR-MED-I", (0.075, Y0), (0.075, LOT_Y), TE, L, h=1.10, kind="parapeto"),
+        W("PAR-MED-D", (7.925, Y0), (7.925, LOT_Y), TE, L, h=1.10, kind="parapeto"),
+        W("PAR-FONDO", (0.15, 16.925), (7.85, 16.925), TE, L, h=1.10, kind="parapeto"),
+        W("PAR-FRE", (0.15, 5.075), (7.85, 5.075), TE, L, h=1.00, kind="parapeto"),
+        W("PAR-POS", (0.15, 14.575), (7.85, 14.575), TE, L, h=1.00, kind="parapeto"),
+        W("PAR-ESC-1", (0.15, 8.725), (2.90, 8.725), TP, L, h=1.00, kind="parapeto"),
+        W("PAR-ESC-2", (0.15, 10.925), (2.90, 10.925), TP, L, h=1.00, kind="parapeto"),
+        W("PAR-ESC-3", (2.95, 8.775), (2.95, 9.83), TP, L, h=1.00, kind="parapeto"),
+        W("PAR-POZO-1", (6.00, 8.70), (6.00, 10.95), TP, L, h=1.00, kind="parapeto"),
+        W("PAR-POZO-2", (6.05, 8.725), (7.85, 8.725), TP, L, h=1.00, kind="parapeto"),
+        W("PAR-POZO-3", (6.05, 10.925), (7.85, 10.925), TP, L, h=1.00, kind="parapeto"),
     ]
     return walls
 
@@ -235,26 +264,35 @@ class Room:
         return (x2 - x1) * (y2 - y1)
 
 
+BATH_FOOT = 2.00 * 1.80          # baño + tabiques dentro del dormitorio
+
+
 def build_rooms():
+    lam, por, pg = "Piso laminado", "Porcelanato", "Porcelanato 60x120"
     return [
-        Room("COCHERA / REUNIONES", 1, (0.0, 8.0, 12.0, 13.0), "Concreto estampado", (6.0, 11.30)),
-        Room("DORMITORIO 1", 1, (0.15, 4.35, 2.75, 7.85), "Piso laminado", (1.45, 6.20)),
-        Room("BAÑO 1", 1, (0.15, 2.50, 2.75, 4.20), "Porcelanato", (1.10, 3.30)),
-        Room("VESTÍBULO", 1, (2.90, 0.15, 4.10, 7.85), "Porcelanato 60x120", (3.50, 6.70)),
-        Room("BAÑO VISITAS", 1, (4.25, 0.15, 5.725, 1.875), "Cerámico", (5.00, 1.05)),
-        Room("SALA", 1, (4.25, 2.00, 7.80, 7.85), "Porcelanato 60x120", (6.00, 4.30)),
-        Room("COMEDOR", 1, (7.80, 0.15, 9.90, 7.85), "Porcelanato 60x120", (8.85, 4.30)),
-        Room("COCINA", 1, (9.90, 0.15, 11.85, 7.85), "Porcelanato 60x120", (10.85, 4.30)),
-        Room("DORMITORIO 2", 2, (0.15, 2.50, 4.10, 7.85), "Piso laminado", (2.40, 5.80), 3.95 * 5.35 - 1.70 * 1.85),
-        Room("BAÑO 2", 2, (0.15, 2.50, 1.775, 4.275), "Porcelanato", (0.95, 3.35)),
-        Room("DORMITORIO 3", 2, (4.25, 3.25, 7.85, 7.85), "Piso laminado", (6.05, 5.80)),
-        Room("BAÑO 3", 2, (5.425, 1.30, 7.85, 3.125), "Porcelanato", (6.65, 2.20)),
-        Room("DORMITORIO 4", 2, (8.0, 2.50, 11.85, 7.85), "Piso laminado", (9.90, 5.80)),
-        Room("BAÑO 4", 2, (9.725, 0.15, 11.85, 2.375), "Porcelanato", (10.80, 1.25)),
-        Room("WALK-IN", 2, (8.0, 0.15, 9.625, 2.375), "Piso laminado", (8.80, 1.70)),
-        Room("HALL", 2, (2.90, 0.15, 7.85, 1.15), "Piso laminado", (5.90, 0.62), 1.20 * 2.20 + 3.75 * 1.0),
-        Room("TERRAZA", 3, (0.15, 0.15, 11.85, 7.85), "Porcelanato antideslizante", (6.00, 4.60),
-             11.70 * 7.70 - 2.75 * 2.20),
+        Room("COCHERA / REUNIONES", 1, (0.0, 0.0, 8.0, 5.0), "Concreto estampado", (3.30, 2.30)),
+        Room("SALA", 1, (0.15, 5.15, 4.40, 8.60), pg, (1.75, 5.80), 4.25 * 3.45 - 1.30 * 1.55),
+        Room("COMEDOR", 1, (4.40, 5.15, 7.85, 8.60), pg, (5.00, 5.62)),
+        Room("BAÑO VISITAS", 1, (0.15, 7.10, 1.35, 8.60), "Cerámico", (0.98, 7.55)),
+        Room("HALL", 1, (2.90, 8.70, 6.00, 10.95), pg, (4.45, 10.10), 3.10 * 2.25),
+        Room("POZO DE LUZ", 1, WELL, "Canto rodado", (6.95, 9.30)),
+        Room("DORMITORIO 1", 1, (0.15, 11.05, 3.875, 14.50), lam, (2.70, 13.08), 3.725 * 3.45 - BATH_FOOT),
+        Room("BAÑO 1", 1, (0.15, 11.05, 2.05, 12.75), por, (1.45, 12.30)),
+        Room("COCINA", 1, (4.025, 11.05, 7.85, 14.50), pg, (6.80, 13.45)),
+        Room("PATIO DE SERVICIO", 1, PATIO, "Cerámico antideslizante", (3.45, 15.75)),
+        Room("DORMITORIO 2", 2, (0.15, 5.15, 3.875, 8.60), lam, (2.70, 6.62), 3.725 * 3.45 - 2.00 * 1.75),
+        Room("BAÑO 2", 2, (0.15, 6.95, 2.05, 8.60), por, (1.45, 7.45)),
+        Room("DORMITORIO 3", 2, (4.025, 5.15, 7.85, 8.60), lam, (5.25, 6.62), 3.825 * 3.45 - 2.00 * 1.75),
+        Room("BAÑO 3", 2, (5.95, 6.95, 7.85, 8.60), por, (6.55, 7.45)),
+        Room("BALCÓN 2", 2, (0.40, 3.90, 3.65, 5.00), "Porcelanato antideslizante", (2.35, 4.50)),
+        Room("BALCÓN 3", 2, (4.30, 3.90, 7.60, 5.00), "Porcelanato antideslizante", (5.75, 4.50)),
+        Room("HALL", 2, (2.90, 8.70, 6.00, 10.95), lam, (4.45, 10.10), 3.10 * 2.25),
+        Room("DORMITORIO 4", 2, (0.15, 11.05, 3.875, 14.50), lam, (2.70, 13.08), 3.725 * 3.45 - BATH_FOOT),
+        Room("BAÑO 4", 2, (0.15, 11.05, 2.05, 12.75), por, (1.45, 12.30)),
+        Room("DORMITORIO 5", 2, (4.025, 11.05, 7.85, 14.50), lam, (5.25, 13.08), 3.825 * 3.45 - BATH_FOOT),
+        Room("BAÑO 5", 2, (5.95, 11.05, 7.85, 12.75), por, (6.55, 12.30)),
+        Room("TERRAZA", 3, (0.15, 5.15, 7.85, 14.50), "Porcelanato antideslizante", (4.45, 10.10),
+             7.70 * 9.35 - 2.75 * 2.10 - 1.80 * 2.10),
     ]
 
 
@@ -319,12 +357,12 @@ def wall_prisms(w: Wall):
 
 
 def stair_prisms(storey):
-    """Escalera en U con tramos a lo largo de X: escalones macizos (soffit escalonado)."""
+    """Escalera en U con tramos a lo ancho del lote: escalones macizos (soffit escalonado)."""
     z0 = LV[storey]
     g = f"ESC-{storey}"
     out = []
     xf, xl = ST_X_FL[1], ST_X_FL[0]
-    for i in range(1, N_TREADS + 1):                                   # tramo A: sube hacia la calle
+    for i in range(1, N_TREADS + 1):                                   # tramo A: sube hacia la medianera
         xa = xf - TREAD * i
         zt = z0 + RISER * i
         out.append(box(xa, xa + TREAD, ST_Y_A[0], ST_Y_A[1], max(z0 - 0.02, zt - 0.32), zt, "concreto", "escalera",
@@ -332,43 +370,49 @@ def stair_prisms(storey):
     zl = z0 + 8 * RISER
     out.append(box(ST_X_LAND[0], ST_X_LAND[1], STAIR_ZONE[1], STAIR_ZONE[3], zl - SLAB, zl, "concreto", "escalera",
                    level=storey, name=f"ESC-DESC-{storey}", group=g))
-    for j in range(1, N_TREADS + 1):                                   # tramo B: regresa hacia el fondo
+    for j in range(1, N_TREADS + 1):                                   # tramo B: regresa hacia el hall
         xa = xl + TREAD * (j - 1)
         zt = zl + RISER * j
         out.append(box(xa, xa + TREAD, ST_Y_B[0], ST_Y_B[1], zt - 0.32, zt, "concreto", "escalera",
                        level=storey, name=f"ESC-T2-{storey}", group=g))
+    ym = (ST_Y_A[1] + ST_Y_B[0]) / 2
     for k in range(N_TREADS):
         xa = xl + TREAD * k
-        out.append(box(xa, xa + TREAD, 1.22, 1.28, zl + RISER * (k + 1) - 0.30, zl + RISER * (k + 1) + 0.95, "vidrio", "baranda",
+        out.append(box(xa, xa + TREAD, ym - 0.03, ym + 0.03, zl + RISER * (k + 1) - 0.30, zl + RISER * (k + 1) + 0.95, "vidrio", "baranda",
                        level=storey, name=f"BAR-{storey}", group=g))
     return out
 
 
-def _slab(L, z, name, holes=True):
+def _slab(L, z, name):
     t = (z - SLAB, z)
-    x1, y1, x2, y2 = STAIR_ZONE
-    return [box(0, 12, y2, HOUSE_Y, *t, "concreto", "losa", level=L, name=name, group=name),
-            box(x2, 12, 0, y2, *t, "concreto", "losa", level=L, name=name, group=name),
-            box(0.15, x2, 0, y1, *t, "concreto", "losa", level=L, name=name, group=name)]
+    sx1, sy1, sx2, sy2 = STAIR_ZONE
+    wx1, _, wx2, _ = WELL
+    kw = dict(level=L, name=name, group=name)
+    return [box(0, 8, Y0, sy1, *t, "concreto", "losa", **kw),
+            box(0, 8, sy2, YB, *t, "concreto", "losa", **kw),
+            box(0, sx1, sy1, sy2, *t, "concreto", "losa", **kw),
+            box(sx2, wx1, sy1, sy2, *t, "concreto", "losa", **kw),
+            box(wx2, 8, sy1, sy2, *t, "concreto", "losa", **kw)]
 
 
 def slab_prisms():
-    out = [box(0, 12, 0, HOUSE_Y, -0.10, 0.0, "piso_int", "losa", level=1, name="CONTRAPISO-1"),
-           box(0, 12, HOUSE_Y, LOT_Y, -0.15, -0.05, "piso_cochera", "losa", level=1, name="LOSA-FRANJA"),
-           box(-1.20, 0, 0, LOT_Y, -0.30, -0.15, "vereda", "losa", level=1, name="VEREDA")]
+    out = [box(0, 8, Y0, YB, -0.10, 0.0, "piso_int", "losa", level=1, name="CONTRAPISO-1"),
+           box(0.15, 7.85, YB, 16.85, -0.12, -0.02, "piso_ext", "losa", level=1, name="PISO PATIO"),
+           box(0, 8, 0, Y0, -0.15, -0.05, "piso_cochera", "losa", level=1, name="LOSA-COCHERA"),
+           box(0, 8, -1.20, 0, -0.30, -0.15, "vereda", "losa", level=1, name="VEREDA"),
+           box(WELL[0], WELL[2], WELL[1], WELL[3], 0.0, 0.05, "canto_rodado", "jardin", level=1, name="CANTO RODADO", group="POZO")]
     out += _slab(2, LV[2], "LOSA-2")
     out += _slab(3, LV[3], "LOSA-3")
-    # balcones del 2do piso (volados hacia la franja) + barandas de vidrio
+    # balcones del 2do piso (volados sobre la cochera) + barandas de vidrio
+    yb = Y0 - BAL_D
     for (x1, x2) in BALCONIES:
-        out.append(box(x1, x2, HOUSE_Y, HOUSE_Y + 1.0, LV[2] - SLAB, LV[2], "concreto_visto", "losa", level=2, name="BALCÓN", group=f"BALCON-{x1}"))
-        out.append(box(x1, x2, HOUSE_Y + 0.95, HOUSE_Y + 0.98, LV[2], LV[2] + 1.0, "vidrio", "baranda", level=2, name="BARANDA BALCÓN", group=f"BALCON-{x1}"))
-        out.append(box(x1, x2, HOUSE_Y + 0.93, HOUSE_Y + 1.0, LV[2] + 0.98, LV[2] + 1.03, "acero", "baranda", level=2, name="PASAMANOS", group=f"BALCON-{x1}"))
+        g = f"BALCON-{x1}"
+        out.append(box(x1, x2, yb, Y0, LV[2] - SLAB, LV[2], "concreto_visto", "losa", level=2, name="BALCÓN", group=g))
+        out.append(box(x1, x2, yb + 0.02, yb + 0.05, LV[2], LV[2] + 1.0, "vidrio", "baranda", level=2, name="BARANDA BALCÓN", group=g))
+        out.append(box(x1, x2, yb, yb + 0.07, LV[2] + 0.98, LV[2] + 1.03, "acero", "baranda", level=2, name="PASAMANOS", group=g))
         for xx in (x1, x2 - 0.03):
-            out.append(box(xx, xx + 0.03, HOUSE_Y, HOUSE_Y + 0.98, LV[2], LV[2] + 1.0, "vidrio", "baranda", level=2, name="BARANDA BALCÓN", group=f"BALCON-{x1}"))
+            out.append(box(xx, xx + 0.03, yb + 0.02, Y0, LV[2], LV[2] + 1.0, "vidrio", "baranda", level=2, name="BARANDA BALCÓN", group=g))
     return out
-
-
-BALCONIES = ((0.70, 3.90), (4.40, 7.60), (8.30, 11.50))
 
 
 def structure_prisms():
@@ -377,56 +421,51 @@ def structure_prisms():
         for ay, (y1, y2) in COL_Y.items():
             nm = f"C-{ax}{ay}"
             out.append(box(x1, x2, y1, y2, -1.0, LV[3] + 1.0, "concreto", "columna", level=1, name=nm, group=nm))
-            out.append(box(max(x1 - 0.35, 0), min(x2 + 0.35, 12), max(y1 - 0.35, 0), min(y2 + 0.35, HOUSE_Y),
+            out.append(box(max(x1 - 0.35, 0), min(x2 + 0.35, 8), y1 - 0.35, y2 + 0.35,
                            -1.60, -1.00, "cimiento", "cimentacion", level=1, name=f"Z-{ax}{ay}"))
     for L in (2, 3):
         z = LV[L]
         b = (z - BEAM_H, z - SLAB)
         for ay, (y1, y2) in COL_Y.items():
-            out.append(box(0.0, 12.0, y1, y2, *b, "concreto", "viga", level=L, name=f"VP-{ay}"))
+            out.append(box(0.0, 8.0, y1, y2, *b, "concreto", "viga", level=L, name=f"VP-{ay}"))
         for ax, (x1, x2) in COL_X.items():
-            ya = STAIR_ZONE[3] if ax == "1" else 0.0
-            out.append(box(x1, x2, ya, HOUSE_Y, *b, "concreto", "viga", level=L, name=f"VS-{ax}"))
-        out.append(box(2.90, 3.15, 0.15, 2.35, *b, "concreto", "viga", level=L, name="VB-ESC"))
-    for (x1, x2, y1, y2) in [(0, 12, 0, 0.60), (0, 12, 7.40, 8.0), (0, 0.60, 0, 8.0), (11.40, 12, 0, 8.0),
-                             (3.90, 4.45, 0, 8.0), (7.65, 8.20, 0, 8.0), (0, 12, 2.15, 2.70)]:
+            out.append(box(x1, x2, Y0, YB, *b, "concreto", "viga", level=L, name=f"VS-{ax}"))
+        out.append(box(2.90, 3.15, STAIR_ZONE[1], STAIR_ZONE[3], *b, "concreto", "viga", level=L, name="VB-ESC"))
+        out.append(box(5.80, 6.05, WELL[1], WELL[3], *b, "concreto", "viga", level=L, name="VB-POZO"))
+    for (x1, x2, y1, y2) in [(0, 8, Y0, 5.60), (0, 8, 14.05, YB), (0, 0.60, Y0, LOT_Y), (7.40, 8.0, Y0, LOT_Y),
+                             (0, 8, 16.40, LOT_Y), (0, 8, 8.40, 8.95), (0, 8, 10.75, 11.30), (3.68, 4.23, Y0, YB)]:
         out.append(box(x1, x2, y1, y2, -1.00, -0.30, "cimiento", "cimentacion", level=1, name="CIMIENTO"))
     return out
 
 
 def facade_prisms():
-    """Linterna de la escalera sobre la fachada de calle + celosia de listones."""
+    """Bandas de losa en la fachada principal y jardinera del pozo de luz."""
     out = []
-    zt = LV[3] + 1.00
-    y1, y2 = STAIR_ZONE[1], STAIR_ZONE[3]
-    out.append(box(0.06, 0.09, 0.25, y2, 0.0, zt, "vidrio", "muro_cortina", level=1, name="LINTERNA"))
-    for ym in (0.25, (0.25 + y2) / 2, y2 - 0.05):
-        out.append(box(0.03, 0.12, ym, ym + 0.05, 0.0, zt, "aluminio", "muro_cortina", level=1, name="LINTERNA-MONT"))
-    for z in (LV[2], LV[3], zt):
-        out.append(box(0.03, 0.12, 0.25, y2, z - 0.05, z, "aluminio", "muro_cortina", level=1, name="LINTERNA-TRAV"))
-    y = 0.28
-    while y < y2 + 0.10:
-        out.append(box(-0.02, 0.02, y, y + 0.04, -0.05, zt + 0.10, "madera", "celosia", level=1, name="CELOSIA-LINTERNA", group="CELOSIA-LINTERNA"))
-        y += 0.11
-    for (zb, zt_) in ((LV[2] - SLAB, LV[2]), (LV[3] - SLAB, LV[3] + 1.0)):
-        out.append(box(0.0, 12.0, HOUSE_Y - 0.02, HOUSE_Y + 0.08, zb, zt_, "concreto_visto", "fachada", level=2 if zb < 3 else 3, name="BANDA-LOSA"))
+    for (zb, zt_, L) in ((LV[2] - SLAB, LV[2], 2), (LV[3] - SLAB, LV[3] + 1.0, 3)):
+        out.append(box(0.0, 8.0, Y0 - 0.08, Y0 + 0.02, zb, zt_, "concreto_visto", "fachada", level=L, name="BANDA-LOSA"))
+    # celosia de madera en el frente de la terraza (sobre el parapeto)
+    x = 0.20
+    while x < 7.80:
+        out.append(box(x, x + 0.04, Y0 - 0.06, Y0 - 0.02, LV[3] + 1.0, LV[3] + 2.35, "madera", "celosia", level=3,
+                       name="CELOSÍA TERRAZA", group="CELOSIA-TERRAZA"))
+        x += 0.12
     return out
 
 
 def strip_cover_prisms():
-    """Cobertura de la franja 5 x 12: una sola agua hacia el lindero, 4 columnas sobre pedestales."""
+    """Cobertura de la cochera 8 x 5: una sola agua hacia la calle, 2 columnas sobre pedestales."""
     out = []
     t = strip_top
-    out.append(sloped(0.0, 12.0, 8.10, 9.40, t, 0.0, 0.012, "policarbonato", "cobertura", "POLICARBONATO (luz a fachada)"))
-    out.append(sloped(0.0, 12.0, 9.40, 12.95, t, 0.0, 0.05, "panel_tr4", "cobertura", "PANEL TR4 FRANJA"))
-    for yc in (8.30, 9.25, 10.20, 11.15, 12.10, 12.85):
-        out.append(sloped(0.05, 11.95, yc - 0.025, yc + 0.025, t, 0.05, 0.15, "acero", "correa", "CORREA CO-1 50x100x2"))
-    for i in range(9):
-        xc = 0.30 + i * 1.425
-        out.append(sloped(xc - 0.05, xc + 0.05, 8.05, 12.95, t, 0.15, 0.35, "acero", "viga_met", "VIGA VM-1 100x200x3"))
-    out.append(box(0.05, 11.95, 8.00, 8.10, t(8.05) - 0.55, t(8.05) - 0.35, "acero", "viga_met", name="ÁNGULO AN-1 L100x100x6", group="COBERTURA"))
+    out.append(sloped(0.0, 8.0, 3.70, 4.95, t, 0.0, 0.012, "policarbonato", "cobertura", "POLICARBONATO (luz a fachada)"))
+    out.append(sloped(0.0, 8.0, 0.05, 3.70, t, 0.0, 0.05, "panel_tr4", "cobertura", "PANEL TR4 COCHERA"))
+    for yc in (0.20, 0.95, 1.70, 2.45, 3.20, 3.95, 4.70):
+        out.append(sloped(0.05, 7.95, yc - 0.025, yc + 0.025, t, 0.05, 0.15, "acero", "correa", "CORREA CO-1 50x100x2"))
+    for i in range(7):
+        xc = 0.30 + i * 7.40 / 6
+        out.append(sloped(xc - 0.05, xc + 0.05, 0.05, 4.95, t, 0.15, 0.35, "acero", "viga_met", "VIGA VM-1 100x200x3"))
+    out.append(box(0.05, 7.95, 4.90, 5.00, t(4.95) - 0.55, t(4.95) - 0.35, "acero", "viga_met", name="ÁNGULO AN-1 L100x100x6", group="COBERTURA"))
     ztop = t(STRIP_COL_Y) - 0.35
-    out.append(box(0.05, 11.95, STRIP_COL_Y - 0.075, STRIP_COL_Y + 0.075, ztop - 0.30, ztop, "acero", "viga_met", name="VIGA VM-2 150x300x4", group="COBERTURA"))
+    out.append(box(0.05, 7.95, STRIP_COL_Y - 0.075, STRIP_COL_Y + 0.075, ztop - 0.30, ztop, "acero", "viga_met", name="VIGA VM-2 150x300x4", group="COBERTURA"))
     for xc in STRIP_COLS_X:
         yc = STRIP_COL_Y
         nm = f"CM-{xc:.2f}"
@@ -436,36 +475,48 @@ def strip_cover_prisms():
             for dy in (-0.10, 0.10):
                 out.append(box(xc + dx - 0.008, xc + dx + 0.008, yc + dy - 0.008, yc + dy + 0.008, 0.05, 0.56, "acero_galv", "columna_met", name="PERNO DE ANCLAJE 5/8", group=nm))
         out.append(box(xc - 0.20, xc + 0.20, yc - 0.20, yc + 0.20, -0.60, 0.50, "concreto_visto", "pedestal", name="PEDESTAL 0.40x0.40", group=nm))
-        zx = min(max(xc - 0.45, 0.0), 11.10)
-        out.append(box(zx, zx + 0.90, 12.10, 13.0, -1.20, -0.60, "cimiento", "cimentacion", name=f"ZAPATA {nm}"))
-        out.append(box(xc + 0.08, xc + 0.16, yc - 0.04, yc + 0.04, -0.05, t(12.9) - 0.12, "acero_galv", "bajante", name="BAJANTE 3in", group=nm))
-    out.append(box(0.05, 11.95, 12.80, 13.0, t(12.9) - 0.12, t(12.9) + 0.07, "acero_galv", "canaleta", name="CANALETA FRANJA", group="COBERTURA"))
+        zx = min(max(xc - 0.45, 0.0), 7.10)
+        out.append(box(zx, zx + 0.90, 0.0, 0.90, -1.20, -0.60, "cimiento", "cimentacion", name=f"ZAPATA {nm}"))
+        xb = xc + 0.10 if xc < 4 else xc - 0.18
+        out.append(box(xb, xb + 0.08, 0.06, 0.14, -0.05, t(0.1) - 0.12, "acero_galv", "bajante", name="BAJANTE 3in", group=nm))
+    out.append(box(0.05, 7.95, 0.0, 0.20, t(0.1) - 0.12, t(0.1) + 0.07, "acero_galv", "canaleta", name="CANALETA COCHERA", group="COBERTURA"))
     return out
 
 
 def terrace_cover_prisms():
     out = []
     t = terrace_top
-    out.append(sloped(0.0, 12.0, 0.05, 7.95, t, 0.0, 0.05, "panel_tr4", "cobertura", "PANEL TR4 TERRAZA", 3, "COB-TERRAZA"))
-    for yc in (0.30, 1.30, 2.30, 3.30, 4.30, 5.30, 6.30, 7.30, 7.85):
-        out.append(sloped(0.05, 11.95, yc - 0.025, yc + 0.025, t, 0.05, 0.15, "acero", "correa", "CORREA CO-1 50x100x2", 3, "COB-TERRAZA"))
-    xs = (0.20, AX_X["2"], AX_X["3"], 11.80)
-    for xc in xs:
-        out.append(sloped(xc - 0.05, xc + 0.05, 0.05, 7.95, t, 0.15, 0.40, "acero", "viga_met", "VIGA VT-1 100x250x3", 3, "COB-TERRAZA"))
-        for yc in (0.20, AX_Y["B"], 7.80):
-            ztop = t(yc) - 0.40
-            out.append(box(xc - 0.05, xc + 0.05, yc - 0.05, yc + 0.05, LV[3], ztop, "acero", "columna_met", level=3, name="COL CT-1 100x100x3", group="COB-TERRAZA"))
-    out.append(box(0.05, 11.95, 7.92, 8.10, t(8.0) - 0.12, t(8.0) + 0.05, "acero_galv", "canaleta", level=3, name="CANALETA TERRAZA", group="COB-TERRAZA"))
-    for xb in (0.40, 11.55):
-        out.append(box(xb, xb + 0.08, 8.10, 8.18, -0.05, t(8.0) - 0.12, "acero_galv", "bajante", level=1, name="BAJANTE 3in", group="COB-TERRAZA"))
+    kw = dict(level=3, group="COB-TERRAZA")
+    for (x1, x2, y1, y2, m, nm) in ((0.0, 8.0, Y0 + 0.05, 8.70, "panel_tr4", "PANEL TR4 TERRAZA"),
+                                    (0.0, 8.0, 10.95, YB - 0.05, "panel_tr4", "PANEL TR4 TERRAZA"),
+                                    (0.0, 6.0, 8.70, 10.95, "panel_tr4", "PANEL TR4 TERRAZA"),
+                                    (6.0, 8.0, 8.70, 10.95, "policarbonato", "POLICARBONATO SOBRE POZO DE LUZ")):
+        out.append(sloped(x1, x2, y1, y2, t, 0.0, 0.05 if m == "panel_tr4" else 0.012, m, "cobertura", nm, 3, "COB-TERRAZA"))
+    for yc in [5.25 + i * 1.0 for i in range(10)] + [14.55]:
+        out.append(sloped(0.05, 7.95, yc - 0.025, yc + 0.025, t, 0.05, 0.15, "acero", "correa", "CORREA CO-1 50x100x2", 3, "COB-TERRAZA"))
+    for xc in (0.20, AX_X["B"], 7.80):
+        out.append(sloped(xc - 0.05, xc + 0.05, Y0 + 0.05, YB - 0.05, t, 0.15, 0.40, "acero", "viga_met", "VIGA VT-1 100x250x3", 3, "COB-TERRAZA"))
+        for yc in (5.20, AX_Y["2"], AX_Y["3"], 14.45):
+            out.append(box(xc - 0.05, xc + 0.05, yc - 0.05, yc + 0.05, LV[3], t(yc) - 0.40, "acero", "columna_met", name="COL CT-1 100x100x3", **kw))
+    out.append(box(0.05, 7.95, YB - 0.10, YB + 0.08, t(YB) - 0.12, t(YB) + 0.05, "acero_galv", "canaleta", name="CANALETA TERRAZA", **kw))
+    for xb in (0.20, 7.70):
+        out.append(box(xb, xb + 0.08, YB + 0.01, YB + 0.09, -0.05, t(YB) - 0.12, "acero_galv", "bajante", level=1, name="BAJANTE 3in", group="COB-TERRAZA"))
     return out
 
 
 # --------------------------------------------------------------------------
-# MOBILIARIO REALISTA (compuesto por piezas y rebanadas)
+# MOBILIARIO REALISTA (3D por piezas) + BLOQUES 2D equivalentes para las plantas
 # --------------------------------------------------------------------------
+PLAN2D = []          # (nivel, bloque, (x, y), rot, sx, sy)
+
+
+def reg(level, block, pos, rot=0.0, sx=1.0, sy=1.0):
+    PLAN2D.append((level, block, (round(pos[0], 4), round(pos[1], 4)), rot, sx, sy))
+
+
 def _xf(dx, dy, ox, oy, rot):
     """Local (a lo largo, a lo ancho) -> global segun orientacion rot en grados (0,90,180,270)."""
+    rot = rot % 360
     if rot == 0:
         return ox + dx, oy + dy
     if rot == 90:
@@ -483,7 +534,7 @@ def lbox(ox, oy, rot, a1, a2, b1, b2, z1, z2, mat, cat, name, group, level=1):
                level=level, name=name, group=group)
 
 
-def bed(ox, oy, rot, w, l, z, level, tag):
+def bed(ox, oy, rot, w, l, z, level, tag, stands=(True, True)):
     """Cama: cabecera en a=0, largo l a lo largo de a, ancho w a lo ancho de b."""
     g = f"CAMA-{tag}"
     o = []
@@ -497,35 +548,42 @@ def bed(ox, oy, rot, w, l, z, level, tag):
     for k in range(n):
         b0 = 0.10 + k * pw
         o.append(lbox(ox, oy, rot, 0.12, 0.50, b0 + 0.03, b0 + pw - 0.03, z + 0.55, z + 0.70, "almohada", "mobiliario", "ALMOHADA", g, level))
-    for b0 in (-0.50, w + 0.05):
+    reg(level, f"CAMA_{w:.2f}_{l:.2f}", _xf(l, 0, ox, oy, rot), rot + 90)
+    for use, b0 in zip(stands, (-0.50, w + 0.05)):
+        if not use:
+            continue
         o.append(lbox(ox, oy, rot, 0.02, 0.42, b0, b0 + 0.45, z, z + 0.50, "madera", "mobiliario", "VELADOR", g, level))
         cxy = _xf(0.21, b0 + 0.225, ox, oy, rot)
         o += vcyl(cxy[0], cxy[1], z + 0.50, z + 0.62, 0.04, "acero", "mobiliario", "LÁMPARA", g, level, n=4)
         o += vcyl(cxy[0], cxy[1], z + 0.62, z + 0.82, 0.11, "lampara", "mobiliario", "LÁMPARA", g, level, n=6, r2=0.08)
+        reg(level, "VELADOR", _xf(0.02, b0 + 0.45, ox, oy, rot), rot - 90)
     return o
 
 
-def sofa(ox, oy, rot, l, d, z, level, tag):
+def sofa(ox, oy, rot, l, d, z, level, tag, mat="tela_osc", cush="tela"):
     """Sofa: respaldo en a=0, largo l (b), fondo d (a)."""
     g = f"SOFA-{tag}"
-    o = [lbox(ox, oy, rot, 0.0, d, 0.0, l, z + 0.08, z + 0.42, "tela_osc", "mobiliario", "BASE SOFÁ", g, level),
-         lbox(ox, oy, rot, 0.0, 0.20, 0.0, l, z + 0.42, z + 0.85, "tela_osc", "mobiliario", "RESPALDO", g, level),
-         lbox(ox, oy, rot, 0.0, d, 0.0, 0.18, z + 0.42, z + 0.62, "tela_osc", "mobiliario", "BRAZO", g, level),
-         lbox(ox, oy, rot, 0.0, d, l - 0.18, l, z + 0.42, z + 0.62, "tela_osc", "mobiliario", "BRAZO", g, level)]
-    n = 3
+    o = [lbox(ox, oy, rot, 0.0, d, 0.0, l, z + 0.08, z + 0.42, mat, "mobiliario", "BASE SOFÁ", g, level),
+         lbox(ox, oy, rot, 0.0, 0.20, 0.0, l, z + 0.42, z + 0.85, mat, "mobiliario", "RESPALDO", g, level),
+         lbox(ox, oy, rot, 0.0, d, 0.0, 0.18, z + 0.42, z + 0.62, mat, "mobiliario", "BRAZO", g, level),
+         lbox(ox, oy, rot, 0.0, d, l - 0.18, l, z + 0.42, z + 0.62, mat, "mobiliario", "BRAZO", g, level)]
+    n = 3 if l > 1.4 else 1
     cw = (l - 0.36) / n
     for k in range(n):
         b0 = 0.18 + k * cw
-        o.append(lbox(ox, oy, rot, 0.20, d - 0.02, b0 + 0.01, b0 + cw - 0.01, z + 0.42, z + 0.52, "tela", "mobiliario", "COJÍN", g, level))
-        o.append(lbox(ox, oy, rot, 0.20, 0.34, b0 + 0.05, b0 + cw - 0.05, z + 0.52, z + 0.80, "tela", "mobiliario", "COJÍN RESPALDO", g, level))
+        o.append(lbox(ox, oy, rot, 0.20, d - 0.02, b0 + 0.01, b0 + cw - 0.01, z + 0.42, z + 0.52, cush, "mobiliario", "COJÍN", g, level))
+        o.append(lbox(ox, oy, rot, 0.20, 0.34, b0 + 0.05, b0 + cw - 0.05, z + 0.52, z + 0.80, cush, "mobiliario", "COJÍN RESPALDO", g, level))
+    reg(level, f"SOFA_{l:.2f}_{d:.2f}", (ox, oy), rot - 90, -1.0, 1.0)
     return o
 
 
-def table(x1, y1, x2, y2, z, level, tag, h=0.75, mat="madera"):
+def table(x1, y1, x2, y2, z, level, tag, h=0.75, mat="madera", block=None):
     g = f"MESA-{tag}"
     o = [box(x1, x2, y1, y2, z + h - 0.04, z + h, mat, "mobiliario", level=level, name="TABLERO", group=g)]
     for (xa, ya) in ((x1 + 0.05, y1 + 0.05), (x2 - 0.10, y1 + 0.05), (x1 + 0.05, y2 - 0.10), (x2 - 0.10, y2 - 0.10)):
         o.append(box(xa, xa + 0.05, ya, ya + 0.05, z, z + h - 0.04, "acero", "mobiliario", level=level, name="PATA", group=g))
+    if block:
+        reg(level, block, (x1, y1))
     return o
 
 
@@ -541,11 +599,11 @@ def chair(cx, cy, rot, z, level, tag, mat="madera"):
 
 def dining(x1, y1, x2, y2, z, level, tag, mat="madera"):
     """Mesa con sillas a ambos lados largos (largo a lo largo de x)."""
-    o = table(x1, y1, x2, y2, z, level, tag, mat=mat)
-    n = max(1, int((x2 - x1) / 0.60))
+    n = max(1, int((x2 - x1) / 0.60 + 1e-6))
+    o = table(x1, y1, x2, y2, z, level, tag, mat=mat, block=f"MESA_{x2 - x1:.2f}_{y2 - y1:.2f}_{n}")
     for k in range(n):
         cx = x1 + (k + 0.5) * (x2 - x1) / n
-        o += chair(cx, y1 - 0.25, 90 + 180, z, level, f"{tag}-{k}a")
+        o += chair(cx, y1 - 0.25, 270, z, level, f"{tag}-{k}a")
         o += chair(cx, y2 + 0.25, 90, z, level, f"{tag}-{k}b")
     return o
 
@@ -560,6 +618,10 @@ def kitchen_run(x1, x2, y_wall, depth_dir, z, level, tag, uppers=True):
     if uppers:
         yu = y_wall + 0.35 * depth_dir
         o.append(box(x1, x2, min(yw, yu), max(yw, yu), z + 1.50, z + 2.20, "laca", "mobiliario", level=level, name="MUEBLE ALTO", group=g))
+    if depth_dir > 0:
+        reg(level, f"MUEBLE_{x2 - x1:.2f}", (x1, y_wall))
+    else:
+        reg(level, f"MUEBLE_{x2 - x1:.2f}", (x2, y_wall), 180)
     return o
 
 
@@ -597,11 +659,13 @@ def plant(cx, cy, z, level, tag, r=0.30, h=1.10):
     g = f"PLANTA-{tag}"
     o = vcyl(cx, cy, z, z + 0.42, 0.17, "maceta", "jardin", "MACETA", g, level, r2=0.21)
     o += sphere(cx, cy, z + 0.42 + (h - 0.42) * 0.55, r, (h - 0.42) * 0.55, "verde", "jardin", "FOLLAJE", g, level)
+    reg(level, f"PLANTA_{r:.2f}", (cx, cy))
     return o
 
 
 def toilet(cx, cy, rot, z, level, tag):
     g = f"INODORO-{tag}"
+    reg(level, "INODORO", (cx, cy), rot - 90)
     return [lbox(cx, cy, rot, 0.0, 0.18, -0.20, 0.20, z + 0.40, z + 0.78, "loza", "mobiliario", "TANQUE", g, level),
             lbox(cx, cy, rot, 0.12, 0.66, -0.18, 0.18, z, z + 0.40, "loza", "mobiliario", "TAZA", g, level),
             lbox(cx, cy, rot, 0.18, 0.68, -0.19, 0.19, z + 0.40, z + 0.43, "loza", "mobiliario", "ASIENTO", g, level)]
@@ -609,6 +673,7 @@ def toilet(cx, cy, rot, z, level, tag):
 
 def vanity(cx, cy, rot, w, z, level, tag):
     g = f"LAVATORIO-{tag}"
+    reg(level, f"LAVATORIO_{w:.2f}", _xf(0, w / 2, cx, cy, rot), rot - 90)
     return [lbox(cx, cy, rot, 0.0, 0.48, -w / 2, w / 2, z + 0.15, z + 0.82, "madera", "mobiliario", "MUEBLE LAVATORIO", g, level),
             lbox(cx, cy, rot, 0.0, 0.50, -w / 2, w / 2, z + 0.82, z + 0.86, "cuarzo", "mobiliario", "TABLERO", g, level),
             lbox(cx, cy, rot, 0.10, 0.40, -0.20, 0.20, z + 0.86, z + 0.98, "loza", "mobiliario", "OVALÍN", g, level),
@@ -617,6 +682,7 @@ def vanity(cx, cy, rot, w, z, level, tag):
 
 def shower(x1, y1, x2, y2, z, level, tag, glass_side="x2"):
     g = f"DUCHA-{tag}"
+    reg(level, f"DUCHA_{x2 - x1:.2f}_{y2 - y1:.2f}", (x1, y1))
     o = [box(x1, x2, y1, y2, z, z + 0.04, "loza", "mobiliario", level=level, name="PLATO DUCHA", group=g)]
     if glass_side == "x2":
         o.append(box(x2 - 0.02, x2, y1, y2, z, z + 2.00, "vidrio", "mobiliario", level=level, name="MAMPARA DUCHA", group=g))
@@ -629,83 +695,92 @@ def shower(x1, y1, x2, y2, z, level, tag, glass_side="x2"):
     return o
 
 
-def wardrobe(x1, y1, x2, y2, z, level, tag, h=2.20):
+def wardrobe(x1, y1, x2, y2, z, level, tag, doors="-x", h=2.20):
+    """Closet; doors indica el lado de las puertas ('-x', '+x', '-y', '+y')."""
     g = f"CLOSET-{tag}"
-    return [box(x1, x2, y1, y2, z, z + h, "laca", "mobiliario", level=level, name="CLOSET", group=g)]
+    if doors == "-x":
+        reg(level, f"CLOSET_{y2 - y1:.2f}_{x2 - x1:.2f}", (x1, y2), -90)
+    elif doors == "+x":
+        reg(level, f"CLOSET_{y2 - y1:.2f}_{x2 - x1:.2f}", (x2, y1), 90)
+    elif doors == "-y":
+        reg(level, f"CLOSET_{x2 - x1:.2f}_{y2 - y1:.2f}", (x1, y1))
+    else:
+        reg(level, f"CLOSET_{x2 - x1:.2f}_{y2 - y1:.2f}", (x2, y2), 180)
+    return [box(x1, x2, y1, y2, z, z + h, "laca", "mobiliario", level=level, name="CLOSET", group=g),
+            box(x1 - 0.005, x2 + 0.005, y1 - 0.005, y2 + 0.005, z, z + 0.08, "madera_osc", "mobiliario", level=level, name="ZÓCALO CLOSET", group=g)]
 
 
-def desk(x1, y1, x2, y2, z, level, tag):
+def desk(x1, y1, x2, y2, z, level, tag, chair_side="-y"):
+    """Escritorio con silla del lado indicado."""
     o = table(x1, y1, x2, y2, z, level, f"ESC-{tag}", h=0.75, mat="madera")
+    cx, cy = (x1 + x2) / 2, (y1 + y2) / 2
+    if chair_side == "-y":
+        reg(level, f"ESCRITORIO_{x2 - x1:.2f}", (x1, y1)); o += chair(cx, y1 - 0.30, 270, z, level, f"E{tag}")
+    elif chair_side == "+y":
+        reg(level, f"ESCRITORIO_{x2 - x1:.2f}", (x2, y2), 180); o += chair(cx, y2 + 0.30, 90, z, level, f"E{tag}")
+    elif chair_side == "-x":
+        reg(level, f"ESCRITORIO_{y2 - y1:.2f}", (x1, y2), -90); o += chair(x1 - 0.30, cy, 180, z, level, f"E{tag}")
+    else:
+        reg(level, f"ESCRITORIO_{y2 - y1:.2f}", (x2, y1), 90); o += chair(x2 + 0.30, cy, 0, z, level, f"E{tag}")
     return o
 
 
 def car(x0, y0, color, tag, L=4.45, Wd=1.80):
-    """Auto tipo sedan/SUV compacto modelado por rebanadas transversales (frente hacia -x)."""
+    """Auto compacto con su perfil lateral real (poligono YZ) extruido a lo ancho.
+    Largo a lo largo de +y desde y0 (posterior) hasta y0+L (frente); ancho de x0 a x0+Wd."""
     g = f"AUTO-{tag}"
     o = []
-    yc = y0 + Wd / 2
-    n = 48
-    dt = L / n
+    rw, fw, R, r = 0.95, L - 0.95, 0.40, 0.33
 
-    def belt(t):          # linea de cintura (techo de la carroceria baja)
-        if t < 0.25:
-            return 0.62 + 0.80 * t
-        if t < 1.10:
-            return 0.82 + 0.10 * (t - 0.25) / 0.85
-        if t < L - 0.55:
-            return 0.92
-        return 0.92 - 0.25 * (t - (L - 0.55)) / 0.55
+    def arch(c):
+        pts = [(c - R, 0.28)]
+        for k in range(11):
+            th = math.pi * (1 - k / 10)
+            pts.append((c + R * math.cos(th), r + R * math.sin(th)))
+        pts.append((c + R, 0.28))
+        return pts
 
-    def roof(t):          # techo de la cabina
-        if 1.15 <= t < 1.95:
-            return 0.92 + 0.56 * (t - 1.15) / 0.80
-        if 1.95 <= t < 3.35:
-            return 1.48
-        if 3.35 <= t < 3.95:
-            return 1.48 - 0.50 * (t - 3.35) / 0.60
-        return None
+    def body(inset):
+        s = 1 - 2 * inset / L
+        dz = 0.04 if inset else 0.0
+        pts = [(0.08, 0.30)] + arch(rw) + arch(fw) + [(L - 0.08, 0.30), (L, 0.42), (L, 0.62 - dz), (L - 0.06, 0.72 - dz),
+                                                      (L - 0.45, 0.81 - dz), (L - 1.05, 0.88 - dz), (0.62, 0.95 - dz),
+                                                      (0.25, 0.94 - dz), (0.03, 0.85 - dz), (0.0, 0.70 - dz), (0.0, 0.45)]
+        return [(y0 + L / 2 + (p - L / 2) * s, z) for p, z in pts]
 
-    for i in range(n):
-        ta, tb = i * dt, (i + 1) * dt
-        tm = (ta + tb) / 2
-        taper = 0.06 if (tm < 0.30 or tm > L - 0.30) else 0.0
-        w = Wd - 2 * taper
-        zb = belt(tm)
-        body = [(yc - w / 2, 0.24), (yc + w / 2, 0.24), (yc + w / 2, zb - 0.06), (yc + w / 2 - 0.06, zb),
-                (yc - w / 2 + 0.06, zb), (yc - w / 2, zb - 0.06)]
-        o.append(Prism(x0 + ta, x0 + tb, body, color, "vehiculo", 1, "F1", "CARROCERÍA", g))
-        zr = roof(tm)
-        if zr is not None and zr > zb + 0.02:
-            gb, gt = w - 0.14, w - 0.40
-            if zr - zb > 0.10:
-                glass = [(yc - gb / 2, zb), (yc + gb / 2, zb), (yc + gt / 2, zr - 0.04), (yc - gt / 2, zr - 0.04)]
-                o.append(Prism(x0 + ta, x0 + tb, glass, "vidrio_auto", "vehiculo", 1, "F1", "VENTANAS", g))
-                o.append(Prism(x0 + ta, x0 + tb, [(yc - gt / 2, zr - 0.04), (yc + gt / 2, zr - 0.04), (yc + gt / 2, zr), (yc - gt / 2, zr)],
-                               color, "vehiculo", 1, "F1", "TECHO", g))
-    # paragolpes y luces
-    o.append(box(x0 - 0.04, x0 + 0.10, y0 + 0.08, y0 + Wd - 0.08, 0.26, 0.48, "plastico", "vehiculo", name="PARACHOQUE", group=g))
-    o.append(box(x0 + L - 0.10, x0 + L + 0.04, y0 + 0.08, y0 + Wd - 0.08, 0.30, 0.52, "plastico", "vehiculo", name="PARACHOQUE", group=g))
-    for yy in (y0 + 0.12, y0 + Wd - 0.40):
-        o.append(box(x0 - 0.01, x0 + 0.06, yy, yy + 0.28, 0.62, 0.72, "faro", "vehiculo", name="FARO", group=g))
-        o.append(box(x0 + L - 0.05, x0 + L + 0.01, yy, yy + 0.28, 0.72, 0.82, "faro_post", "vehiculo", name="STOP", group=g))
-    # espejos
-    for yy in (y0 - 0.12, y0 + Wd):
-        o.append(box(x0 + 1.25, x0 + 1.40, yy, yy + 0.12, 0.92, 1.04, color, "vehiculo", name="ESPEJO", group=g))
-    # ruedas (rebanadas con perfil circular)
-    r = 0.33
-    for axle in (0.95, L - 1.00):
-        for (ya, yb) in ((y0 - 0.01, y0 + 0.22), (y0 + Wd - 0.22, y0 + Wd + 0.01)):
-            m = 14
-            for k in range(m):
-                ta = axle - r + 2 * r * k / m
-                tb = axle - r + 2 * r * (k + 1) / m
-                tm = (ta + tb) / 2 - axle
-                h = math.sqrt(max(r * r - tm * tm, 0.0))
-                o.append(box(x0 + ta, x0 + tb, ya, yb, r - h, r + h, "llanta", "vehiculo", name="LLANTA", group=g))
-                if abs(tm) < r * 0.62:
-                    hh = math.sqrt(max((r * 0.6) ** 2 - tm * tm, 0.0))
-                    yy = (ya - 0.005, ya + 0.01) if ya < yc else (yb - 0.01, yb + 0.005)
-                    o.append(box(x0 + ta, x0 + tb, yy[0], yy[1], r - hh, r + hh, "aro", "vehiculo", name="ARO", group=g))
+    def glass(inset):
+        dz = 0.07 if inset else 0.0
+        pts = [(L - 1.05, 0.88), (L - 1.85 + dz, 1.38 - dz), (1.05 - dz, 1.40 - dz), (0.62, 0.95)]
+        return [(y0 + p, z) for p, z in pts]
+
+    xs = [x0, x0 + 0.05, x0 + 0.10, x0 + Wd - 0.10, x0 + Wd - 0.05, x0 + Wd]
+    for i in range(5):
+        o.append(Prism(xs[i], xs[i + 1], body(0.05 if i in (0, 4) else 0.0), color, "vehiculo", 1, "F1", "CARROCERÍA", g))
+    gx = [x0 + 0.12, x0 + 0.20, x0 + Wd - 0.20, x0 + Wd - 0.12]
+    for i in range(3):
+        o.append(Prism(gx[i], gx[i + 1], glass(i != 1), "vidrio_auto", "vehiculo", 1, "F1", "VENTANAS", g))
+    o.append(Prism(x0 + 0.14, x0 + Wd - 0.14, [(y0 + 1.04, 1.36), (y0 + L - 1.82, 1.35), (y0 + L - 1.90, 1.43), (y0 + 1.10, 1.45)],
+                   color, "vehiculo", 1, "F1", "TECHO", g))
+    o.append(box(x0 + 0.115, x0 + Wd - 0.115, y0 + 2.12, y0 + 2.22, 0.90, 1.40, color, "vehiculo", name="PARANTE", group=g))
+    # paragolpes, parrilla, faros, placa
+    o.append(box(x0 + 0.05, x0 + Wd - 0.05, y0 + L - 0.06, y0 + L + 0.03, 0.28, 0.45, "plastico", "vehiculo", name="PARACHOQUE", group=g))
+    o.append(box(x0 + 0.05, x0 + Wd - 0.05, y0 - 0.03, y0 + 0.06, 0.30, 0.48, "plastico", "vehiculo", name="PARACHOQUE", group=g))
+    o.append(box(x0 + 0.55, x0 + Wd - 0.55, y0 + L - 0.03, y0 + L + 0.005, 0.47, 0.60, "plastico", "vehiculo", name="PARRILLA", group=g))
+    for xa in (x0 + 0.12, x0 + Wd - 0.45):
+        o.append(box(xa, xa + 0.33, y0 + L - 0.04, y0 + L + 0.005, 0.60, 0.69, "faro", "vehiculo", name="FARO", group=g))
+        o.append(box(xa, xa + 0.33, y0 - 0.005, y0 + 0.03, 0.70, 0.81, "faro_post", "vehiculo", name="STOP", group=g))
+    for yy in (y0 + L + 0.03, y0 - 0.04):
+        o.append(box(x0 + Wd / 2 - 0.25, x0 + Wd / 2 + 0.25, yy, yy + 0.01, 0.32, 0.44, "blanco", "vehiculo", name="PLACA", group=g))
+    for xa in (x0 - 0.12, x0 + Wd):
+        o.append(box(xa, xa + 0.12, y0 + L - 1.20, y0 + L - 1.08, 0.90, 1.02, color, "vehiculo", name="ESPEJO", group=g))
+    # ruedas: circulo real en el plano YZ
+    for c in (rw, fw):
+        circ = [(y0 + c + r * math.cos(2 * math.pi * k / 20), r + r * math.sin(2 * math.pi * k / 20)) for k in range(20)]
+        rim = [(y0 + c + 0.19 * math.cos(2 * math.pi * k / 16), r + 0.19 * math.sin(2 * math.pi * k / 16)) for k in range(16)]
+        for (xa, xb, xr) in ((x0 - 0.01, x0 + 0.22, (x0 - 0.02, x0 - 0.01)), (x0 + Wd - 0.22, x0 + Wd + 0.01, (x0 + Wd + 0.01, x0 + Wd + 0.02))):
+            o.append(Prism(xa, xb, circ, "llanta", "vehiculo", 1, "F1", "LLANTA", g))
+            o.append(Prism(xr[0], xr[1], rim, "aro", "vehiculo", 1, "F1", "ARO", g))
+    reg(1, f"AUTO_{L:.2f}_{Wd:.2f}", (x0, y0 + L), -90)
     return o
 
 
@@ -714,82 +789,129 @@ def tree(cx, cy, z, level, tag, h=3.4, r=1.1):
     o = vcyl(cx, cy, z, z + h * 0.62, 0.10, "madera_osc", "jardin", "TRONCO", g, level, n=6, r2=0.07)
     o += sphere(cx, cy, z + h * 0.72, r, h * 0.28, "verde", "jardin", "COPA", g, level, n=11, seg=16)
     o += sphere(cx + r * 0.25, cy - r * 0.2, z + h * 0.88, r * 0.65, h * 0.16, "verde_claro", "jardin", "COPA", g, level, n=8)
+    reg(level, f"ARBOL_{r:.2f}", (cx, cy))
+    return o
+
+
+def _bath(L, side, back, z):
+    """Equipamiento de un baño de dormitorio (1.90 x 1.65/1.70)."""
+    o = []
+    tag = f"{side}{L}{'P' if back else 'F'}"
+    if side == "I":
+        xs, xt, xv = (0.15, 1.05), 0.60, 1.55
+    else:
+        xs, xt, xv = (6.95, 7.85), 7.40, 6.45
+    if back:          # baño y 11.05 - 12.75 ; ducha junto al muro del hall
+        o += shower(xs[0], 11.05, xs[1], 11.95, z, L, tag, "y2")
+        o += toilet(xt, 12.75, 270, z, L, tag)
+        o += vanity(xv, 11.05, 90, 0.60, z, L, tag)
+    else:             # baño y 6.95 - 8.60 ; ducha junto al muro del hall
+        o += shower(xs[0], 7.70, xs[1], 8.60, z, L, tag, "y1")
+        o += toilet(xt, 6.95, 90, z, L, tag)
+        o += vanity(xv, 8.60, 270, 0.60, z, L, tag)
+    return o
+
+
+def _bedroom_back(L, side, z, tag):
+    """Dormitorio posterior (ventana al patio): cama de 1.05 bajo la ventana, closet y escritorio."""
+    o = []
+    if side == "I":
+        o += bed(0.15, 12.90, 0, 1.05, 1.90, z, L, tag, stands=(False, True))
+        o += wardrobe(3.27, 12.00, 3.87, 13.60, z, L, tag, "-x")
+        o += desk(2.25, 13.95, 3.25, 14.50, z, L, tag, "-y")
+    else:
+        o += bed(7.85, 13.95, 180, 1.05, 1.90, z, L, tag, stands=(True, False))
+        o += wardrobe(4.10, 12.00, 4.70, 13.60, z, L, tag, "+x")
+        o += desk(4.75, 13.95, 5.75, 14.50, z, L, tag, "-y")
     return o
 
 
 def program_prisms():
     o = []
     z1, z2, z3 = LV[1], LV[2], LV[3]
-    # ---- franja: 2 autos en fila + area de reuniones con parrilla
-    o += car(0.40, 10.25, "pintura_1", "1")
-    o += car(5.15, 10.25, "pintura_2", "2")
-    o += [box(9.95, 11.35, 11.95, 12.55, -0.05, 0.85, "concreto_visto", "mobiliario", name="BARRA PARRILLA", group="PARRILLA"),
-          box(10.40, 10.95, 12.00, 12.50, 0.85, 0.95, "acero", "mobiliario", name="PARRILLA", group="PARRILLA"),
-          box(10.35, 11.00, 11.98, 12.52, 1.80, 2.20, "acero", "mobiliario", name="CAMPANA", group="PARRILLA"),
-          box(10.60, 10.80, 12.15, 12.35, 2.20, 5.30, "acero", "mobiliario", name="CHIMENEA", group="PARRILLA")]
-    o += dining(10.05, 9.55, 11.85, 10.45, -0.05, 1, "EXT")
-    o += plant(0.35, 8.45, -0.05, 1, "F1", 0.28, 1.0)
-    o += plant(9.85, 8.45, -0.05, 1, "F2", 0.28, 1.0)
-    o += tree(11.30, 8.75, -0.05, 1, "F", 3.6, 0.62)
-    # ---- 1er piso
-    o += bed(0.15, 5.95, 0, 1.35, 1.95, z1, 1, "D1")
-    o += wardrobe(0.20, 4.35, 1.45, 4.95, z1, 1, "D1")
-    o += shower(0.15, 2.50, 1.05, 3.40, z1, 1, "B1", "x2")
-    o += toilet(1.55, 2.50, 90, z1, 1, "B1")
-    o += vanity(2.30, 2.50, 90, 0.60, z1, 1, "B1")
-    o += toilet(5.40, 0.15, 90, z1, 1, "BV")
-    o += vanity(4.70, 0.15, 90, 0.55, z1, 1, "BV")
-    o += sofa(5.20, 4.80, 270, 2.40, 0.90, z1, 1, "S1")
-    o += table(5.80, 3.00, 7.00, 3.60, z1, 1, "CENTRO", h=0.40)
-    o += [box(6.10, 7.60, 2.05, 2.45, z1, z1 + 0.50, "madera", "mobiliario", level=1, name="MUEBLE TV", group="TV"),
-          box(6.30, 7.40, 2.12, 2.17, z1 + 0.80, z1 + 1.45, "pantalla", "mobiliario", level=1, name="TV 65in", group="TV")]
-    o += plant(4.55, 7.45, z1, 1, "S", 0.30, 1.30)
-    o += dining(8.05, 3.50, 9.65, 4.40, z1, 1, "COM")
-    o += [box(8.05, 9.65, 3.80, 4.10, z1 + 1.55, z1 + 1.60, "lampara", "mobiliario", level=1, name="LÁMPARA COLGANTE", group="LAMP")]
-    o += kitchen_run(9.95, 11.85, 0.15, 1, z1, 1, "K1")
-    o += [box(11.25, 11.85, 0.75, 6.10, z1 + 0.10, z1 + 0.88, "laca", "mobiliario", level=1, name="MUEBLE BAJO", group="COCINA-K2"),
-          box(11.23, 11.85, 0.75, 6.10, z1 + 0.88, z1 + 0.92, "cuarzo", "mobiliario", level=1, name="ENCIMERA", group="COCINA-K2"),
-          box(11.50, 11.85, 0.75, 6.10, z1 + 1.50, z1 + 2.20, "laca", "mobiliario", level=1, name="MUEBLE ALTO", group="COCINA-K2"),
-          box(11.20, 11.85, 6.20, 6.95, z1, z1 + 1.95, "acero_inox", "mobiliario", level=1, name="REFRIGERADORA", group="REFRI"),
-          box(11.30, 11.80, 2.40, 3.00, z1 + 0.92, z1 + 0.94, "acero", "mobiliario", level=1, name="COCINA 4H", group="COCINA-K2")]
-    # ---- 2do piso
-    o += bed(4.10, 6.45, 180, 1.50, 2.00, z2, 2, "D2")
-    o += wardrobe(1.95, 2.55, 3.10, 3.15, z2, 2, "D2")
-    o += desk(0.25, 5.20, 0.85, 6.40, z2, 2, "D2")
-    o += shower(0.15, 2.50, 1.05, 3.40, z2, 2, "B2", "x2")
-    o += toilet(0.15, 3.85, 0, z2, 2, "B2")
-    o += vanity(1.10, 4.27, 180, 0.55, z2, 2, "B2")
-    o += bed(7.85, 6.40, 180, 1.35, 1.95, z2, 2, "D3")
-    o += wardrobe(4.30, 3.25, 4.90, 5.10, z2, 2, "D3")
-    o += desk(6.80, 3.30, 7.80, 3.90, z2, 2, "D3")
-    o += shower(6.95, 1.30, 7.85, 3.12, z2, 2, "B3", "x1")
-    o += toilet(6.35, 1.30, 90, z2, 2, "B3")
-    o += vanity(5.85, 1.30, 90, 0.60, z2, 2, "B3")
-    o += bed(11.85, 6.10, 180, 1.80, 2.00, z2, 2, "D4")
-    o += [box(9.00, 9.60, 0.20, 2.30, z2, z2 + 2.20, "laca", "mobiliario", level=2, name="CLOSET WALK-IN", group="WALKIN")]
-    o += shower(10.85, 0.15, 11.85, 1.25, z2, 2, "B4", "y2")
-    o += toilet(11.85, 1.85, 180, z2, 2, "B4")
-    o += vanity(10.30, 0.15, 90, 0.90, z2, 2, "B4")
-    o += desk(8.10, 2.60, 9.10, 3.20, z2, 2, "D4")
+    # ---- cochera / reuniones: 2 autos lado a lado, pasillo al ingreso, banca y plantas
+    o += car(0.60, 0.40, "pintura_1", "1")
+    o += car(4.20, 0.40, "pintura_2", "2")
+    o += [box(7.30, 7.80, 1.60, 3.60, -0.05, 0.40, "madera", "mobiliario", name="BANCA", group="BANCA"),
+          box(7.30, 7.36, 1.60, 3.60, 0.40, 0.85, "madera", "mobiliario", name="RESPALDO BANCA", group="BANCA")]
+    reg(1, "CAJA_2.00_0.50", (7.80, 1.60), 90)
+    o += plant(7.45, 4.50, -0.05, 1, "C1", 0.26, 1.0)
+    o += plant(7.45, 0.85, -0.05, 1, "C2", 0.26, 1.0)
+    # ---- 1er piso: sala y comedor frente a la cochera
+    o += sofa(1.55, 8.55, 270, 2.00, 0.90, z1, 1, "S1")
+    o += table(1.95, 6.65, 3.15, 7.25, z1, 1, "CENTRO", h=0.40, block="MESACENTRO_1.20_0.60")
+    o += plant(0.45, 5.50, z1, 1, "S", 0.28, 1.25)
+    o += dining(5.15, 6.45, 6.95, 7.35, z1, 1, "COM")
+    o += [box(5.15, 6.95, 6.80, 7.00, z1 + 1.55, z1 + 1.60, "lampara", "mobiliario", level=1, name="LÁMPARA COLGANTE", group="LAMP")]
+    o += [box(7.40, 7.85, 6.00, 7.60, z1, z1 + 0.06, "madera_osc", "mobiliario", level=1, name="ZÓCALO", group="APARADOR"),
+          box(7.40, 7.85, 6.00, 7.60, z1 + 0.06, z1 + 0.80, "madera", "mobiliario", level=1, name="APARADOR", group="APARADOR")]
+    reg(1, "CAJA_1.60_0.45", (7.85, 6.00), 90)
+    # baño de visitas
+    o += toilet(0.75, 8.60, 270, z1, 1, "BV")
+    o += vanity(0.15, 7.65, 0, 0.45, z1, 1, "BV")
+    # hall + pozo de luz
+    o += plant(5.55, 10.55, z1, 1, "H1", 0.22, 0.95)
+    o += tree(6.95, 9.85, 0.05, 1, "POZO", 2.6, 0.55)
+    # dormitorio 1 + baño
+    o += _bedroom_back(1, "I", z1, "D1")
+    o += _bath(1, "I", True, z1)
+    # cocina
+    o += kitchen_run(5.10, 7.85, 11.05, 1, z1, 1, "K1", uppers=False)
+    o += kitchen_run(4.10, 6.25, 14.50, -1, z1, 1, "K2", uppers=False)
+    o += [box(5.45, 6.05, 11.10, 11.60, z1 + 0.92, z1 + 0.94, "acero", "mobiliario", level=1, name="COCINA 4H", group="COCINA-K1"),
+          box(5.40, 6.10, 11.05, 11.45, z1 + 1.60, z1 + 2.00, "acero_inox", "mobiliario", level=1, name="CAMPANA", group="COCINA-K1"),
+          box(7.20, 7.85, 12.10, 12.80, z1, z1 + 1.95, "acero_inox", "mobiliario", level=1, name="REFRIGERADORA", group="REFRI"),
+          box(4.80, 5.60, 13.98, 14.42, z1 + 0.86, z1 + 0.93, "acero_inox", "mobiliario", level=1, name="LAVADERO COCINA", group="COCINA-K2")]
+    reg(1, "COCINA", (5.45, 11.05))
+    reg(1, "REFRI", (7.85, 12.10), 90)
+    reg(1, "TARJA", (5.60, 14.50), 180)
+    o += dining(5.10, 12.55, 6.30, 13.25, z1, 1, "DES")
+    # patio de servicio: lavanderia, tendal y arbol
+    o += [box(0.30, 1.10, 16.25, 16.85, z1, z1 + 0.90, "concreto_visto", "mobiliario", level=1, name="LAVADERO", group="LAV"),
+          box(1.25, 1.85, 16.25, 16.85, z1, z1 + 0.85, "blanco", "mobiliario", level=1, name="LAVADORA", group="LAV"),
+          box(1.95, 2.55, 16.25, 16.85, z1, z1 + 0.85, "blanco", "mobiliario", level=1, name="SECADORA", group="LAV")]
+    reg(1, "LAVADERO", (1.10, 16.85), 180)
+    reg(1, "LAVADORA", (1.85, 16.85), 180)
+    reg(1, "LAVADORA", (2.55, 16.85), 180)
+    for xx in (3.0, 3.4, 3.8, 4.2):
+        o.append(box(xx - 0.005, xx + 0.005, 14.80, 16.70, z1 + 1.90, z1 + 1.91, "acero", "mobiliario", level=1, name="TENDAL", group="TENDAL"))
+    o += tree(6.60, 15.75, -0.02, 1, "PATIO", 3.6, 0.75)
+    # ---- 2do piso: 2 dormitorios con balcon hacia la cochera + 2 hacia el patio
+    o += bed(0.15, 5.70, 0, 1.05, 1.90, z2, 2, "D2", stands=(True, False))
+    o += wardrobe(3.27, 6.05, 3.87, 7.70, z2, 2, "D2", "-x")
+    o += desk(3.30, 5.20, 3.87, 6.00, z2, 2, "D2", "-x")
+    o += _bath(2, "I", False, z2)
+    o += bed(7.85, 6.75, 180, 1.05, 1.90, z2, 2, "D3", stands=(False, True))
+    o += wardrobe(4.10, 6.05, 4.70, 7.70, z2, 2, "D3", "+x")
+    o += desk(4.10, 5.20, 4.67, 6.00, z2, 2, "D3", "+x")
+    o += _bath(2, "D", False, z2)
+    o += _bedroom_back(2, "I", z2, "D4")
+    o += _bath(2, "I", True, z2)
+    o += _bedroom_back(2, "D", z2, "D5")
+    o += _bath(2, "D", True, z2)
+    o += plant(5.55, 10.55, z2, 2, "H2", 0.22, 0.95)
     for (x1, x2) in BALCONIES:
-        o += chair(x1 + 0.60, HOUSE_Y + 0.55, 180, z2, 2, f"BAL{x1}")
-        o += plant(x2 - 0.35, HOUSE_Y + 0.55, z2, 2, f"BAL{x1}", 0.22, 0.85)
+        o += chair(x1 + 0.55, Y0 - 0.55, 90, z2, 2, f"BAL{x1}")
+        o += plant(x2 - 0.30, Y0 - 0.55, z2, 2, f"BAL{x1}", 0.22, 0.85)
     # ---- terraza
-    o += [box(9.85, 10.65, 0.20, 0.80, z3, z3 + 0.90, "concreto_visto", "mobiliario", level=3, name="LAVADERO", group="LAV"),
-          box(10.80, 11.40, 0.20, 0.80, z3, z3 + 0.85, "blanco", "mobiliario", level=3, name="LAVADORA", group="LAV"),
-          box(11.45, 11.85, 0.20, 0.80, z3, z3 + 0.85, "blanco", "mobiliario", level=3, name="SECADORA", group="LAV")]
-    for yy in (2.0, 2.5, 3.0, 3.5):
-        o.append(box(8.30, 11.70, yy - 0.005, yy + 0.005, z3 + 1.90, z3 + 1.91, "acero", "mobiliario", level=3, name="TENDAL", group="TENDAL"))
-    o += sofa(3.40, 7.80, 270, 2.40, 0.85, z3, 3, "T1")
-    o += sofa(6.40, 4.20, 90, 2.00, 0.80, z3, 3, "T2")
-    o += table(4.05, 5.30, 5.65, 6.40, z3, 3, "TC", h=0.40)
-    o += dining(4.70, 2.80, 6.90, 3.70, z3, 3, "TER")
-    for (cx, cy) in ((0.45, 7.55), (3.20, 7.55), (7.60, 7.55), (11.50, 7.55)):
-        o += plant(cx, cy, z3, 3, f"T{cx}", 0.25, 1.0)
+    o += dining(1.30, 6.30, 3.10, 7.20, z3, 3, "TER")
+    o += sofa(7.80, 8.30, 180, 2.40, 0.85, z3, 3, "T1")
+    o += sofa(4.85, 6.20, 0, 1.60, 0.80, z3, 3, "T2")
+    o += table(5.95, 6.40, 6.75, 7.80, z3, 3, "TC", h=0.40, block="MESACENTRO_0.80_1.40")
+    o += [box(0.40, 1.80, 13.85, 14.45, z3, z3 + 0.90, "concreto_visto", "mobiliario", level=3, name="BARRA PARRILLA", group="PARRILLA"),
+          box(0.70, 1.30, 13.92, 14.40, z3 + 0.90, z3 + 1.00, "acero", "mobiliario", level=3, name="PARRILLA", group="PARRILLA"),
+          box(0.65, 1.35, 13.90, 14.45, z3 + 1.85, z3 + 2.25, "acero", "mobiliario", level=3, name="CAMPANA", group="PARRILLA"),
+          box(0.90, 1.10, 14.10, 14.30, z3 + 2.25, terrace_top(14.2) - 0.05, "acero", "mobiliario", level=3, name="CHIMENEA", group="PARRILLA")]
+    reg(3, "PARRILLA_1.40", (0.40, 14.45), -90)
+    o += dining(2.40, 12.40, 4.20, 13.30, z3, 3, "TER2")
+    for yy in (12.0, 12.5, 13.0, 13.5):
+        o.append(box(4.70, 7.60, yy - 0.005, yy + 0.005, z3 + 1.90, z3 + 1.91, "acero", "mobiliario", level=3, name="TENDAL", group="TENDAL-T"))
+    for (cx, cy) in ((0.45, 5.45), (3.60, 5.45), (7.55, 5.45), (0.45, 11.35), (7.55, 14.15)):
+        o += plant(cx, cy, z3, 3, f"T{cx}{cy}", 0.25, 1.0)
     return o
 
 
-SPLIT_PREFIX = ("C-", "LINTERNA", "CELOSIA-LINTERNA")
+SPLIT_PREFIX = ("C-",)
 
 
 def split_by_levels(p):
@@ -812,6 +934,7 @@ def all_prisms():
     global _ALL
     if _ALL is not None:
         return _ALL
+    PLAN2D.clear()
     P = []
     for w in build_walls():
         P += wall_prisms(w)
@@ -825,13 +948,19 @@ def all_prisms():
     return out
 
 
+def plan2d(level):
+    all_prisms()
+    return [it for it in PLAN2D if it[0] == level]
+
+
 MATERIALS = {
     "muro_blanco": ("#f4f1ea", 1.0), "muro_gris": ("#d9d5cc", 1.0), "muro_int": ("#efebe3", 1.0),
     "concreto": ("#b9b6b0", 1.0), "concreto_visto": ("#8f8c87", 1.0), "cimiento": ("#9c958a", 1.0),
     "vidrio": ("#9ec9dc", 0.35), "aluminio": ("#3a3d40", 1.0), "madera": ("#b07a45", 1.0),
     "madera_osc": ("#6b4528", 1.0), "acero": ("#2f3236", 1.0), "acero_galv": ("#a7adb2", 1.0), "acero_inox": ("#c9ccce", 1.0),
     "panel_tr4": ("#4a4f55", 1.0), "policarbonato": ("#e8f2f5", 0.50), "celosia_met": ("#3b3f44", 0.55),
-    "piso_int": ("#d8cdbb", 1.0), "piso_cochera": ("#b3aea4", 1.0), "vereda": ("#bdbab3", 1.0),
+    "piso_int": ("#d8cdbb", 1.0), "piso_ext": ("#cfc8bb", 1.0), "piso_cochera": ("#b3aea4", 1.0), "vereda": ("#bdbab3", 1.0),
+    "canto_rodado": ("#c9c3b6", 1.0),
     "verde": ("#5f8f4e", 1.0), "verde_claro": ("#77a65c", 1.0), "maceta": ("#7d5a44", 1.0), "tela": ("#d8d2c6", 1.0), "tela_osc": ("#6f7378", 1.0),
     "cuarzo": ("#ebe8e2", 1.0), "laca": ("#e9e6df", 1.0), "blanco": ("#fafafa", 1.0), "loza": ("#f7f7f5", 1.0),
     "espejo": ("#c7d6dd", 1.0), "colchon": ("#f2efe8", 1.0), "edredon": ("#8fa3ad", 1.0), "almohada": ("#fbfaf7", 1.0),
@@ -843,6 +972,6 @@ MATERIALS = {
 
 if __name__ == "__main__":
     P = all_prisms()
-    print(len(P), "prismas")
+    print(len(P), "prismas", len(PLAN2D), "bloques 2D")
     for r in build_rooms():
         print(f"{r.level} {r.name:22s} {r.area:6.2f}")

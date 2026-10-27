@@ -323,6 +323,10 @@ def block_drawing(name):
         for yy in (0.10, Wd - 0.38):
             d.poly([(0.02, yy), (0.10, yy), (0.10, yy + 0.28), (0.02, yy + 0.28)], "A-MOBILIARIO", fill="#fff7d6", lw=0.05)
             d.poly([(L - 0.08, yy), (L - 0.02, yy), (L - 0.02, yy + 0.28), (L - 0.08, yy + 0.28)], "A-MOBILIARIO", fill="#e8a39b", lw=0.05)
+    elif kind == "CAJA":            # mueble generico l x w (aparador, banca)
+        l, w = P
+        _rect(d, 0, 0, l, w, "A-MOBILIARIO")
+        _rect(d, 0.04, 0.04, l - 0.04, w - 0.04, "A-MOBILIARIO", lw=0.05)
     elif kind == "TV":
         _rect(d, 0, 0, P[0], 0.40, "A-MOBILIARIO")
         _rect(d, 0.15, 0.30, P[0] - 0.15, 0.36, "A-MOBILIARIO")
