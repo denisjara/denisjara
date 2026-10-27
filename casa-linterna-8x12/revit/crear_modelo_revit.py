@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-CASA LINTERNA 8x12 - Generador de modelo NATIVO en Revit.
+CASA LINTERNA 13x12 - Generador de modelo NATIVO en Revit.
 
 Lee 'casa_linterna_revit.json' (misma carpeta) y crea dentro del proyecto
 abierto en Revit:
@@ -450,7 +450,7 @@ for s in D["sections"]:
             tr.BasisY = XYZ.BasisZ
             tr.BasisX = tr.BasisY.CrossProduct(tr.BasisZ)
         else:
-            tr.Origin = xyz(0, s["c"], 0) if s["look"] > 0 else xyz(8, s["c"], 0)
+            tr.Origin = xyz(0, s["c"], 0) if s["look"] > 0 else xyz(12, s["c"], 0)
             tr.BasisZ = XYZ(0, -s["look"], 0)
             tr.BasisY = XYZ.BasisZ
             tr.BasisX = tr.BasisY.CrossProduct(tr.BasisZ)

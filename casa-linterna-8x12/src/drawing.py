@@ -277,12 +277,52 @@ def block_drawing(name):
         l = P[0]
         _rect(d, 0, 0, l, 0.55, "A-MOBILIARIO")
         _rect(d, l / 2 - 0.22, -0.45, l / 2 + 0.22, -0.05, "A-MOBILIARIO")
-    elif kind == "PLANTA":          # maceta / arbusto r
+    elif kind == "PLANTA":          # arbusto en maceta: contorno de follaje lobulado
         r = P[0]
-        d.circle((0, 0), r, "A-JARDIN")
-        for k in range(8):
-            a = 2 * math.pi * k / 8
-            d.line((0, 0), (r * 0.8 * math.cos(a), r * 0.8 * math.sin(a)), "A-JARDIN", lw=0.09)
+        n = 40
+        pts = [((r * (0.86 + 0.14 * math.cos(9 * 2 * math.pi * k / n))) * math.cos(2 * math.pi * k / n),
+                (r * (0.86 + 0.14 * math.cos(9 * 2 * math.pi * k / n))) * math.sin(2 * math.pi * k / n)) for k in range(n)]
+        d.poly(pts, "A-JARDIN", fill="#e3eedb", lw=0.13)
+        for k in range(6):
+            a_ = 2 * math.pi * k / 6 + 0.3
+            d.line((0, 0), (r * 0.6 * math.cos(a_), r * 0.6 * math.sin(a_)), "A-JARDIN", lw=0.05)
+        d.circle((0, 0), r * 0.18, "A-JARDIN")
+    elif kind == "ARBOL":           # copa irregular + tronco
+        r = P[0]
+        n = 60
+        pts = [((r * (0.82 + 0.10 * math.cos(7 * 2 * math.pi * k / n) + 0.06 * math.sin(11 * 2 * math.pi * k / n))) * math.cos(2 * math.pi * k / n),
+                (r * (0.82 + 0.10 * math.cos(7 * 2 * math.pi * k / n) + 0.06 * math.sin(11 * 2 * math.pi * k / n))) * math.sin(2 * math.pi * k / n))
+               for k in range(n)]
+        d.poly(pts, "A-JARDIN", fill="#dcebd1", lw=0.13)
+        pts2 = [(r * 0.55 * math.cos(2 * math.pi * k / 30), r * 0.55 * math.sin(2 * math.pi * k / 30)) for k in range(30)]
+        d.pline(pts2, "A-JARDIN", closed=True, lw=0.05)
+        d.circle((0, 0), 0.10, "A-JARDIN", fill="#8b5a33")
+    elif kind == "AUTO":            # auto en planta: largo a lo largo de x (frente en x=0)
+        L, Wd = P
+        rr = 0.38
+
+        def rrect(x1, y1, x2, y2, r, n=6):
+            pts = []
+            for (cx, cy, a0) in ((x2 - r, y1 + r, -90), (x2 - r, y2 - r, 0), (x1 + r, y2 - r, 90), (x1 + r, y1 + r, 180)):
+                for k in range(n + 1):
+                    a_ = math.radians(a0 + 90 * k / n)
+                    pts.append((cx + r * math.cos(a_), cy + r * math.sin(a_)))
+            return pts
+        for (xw, yw) in ((0.62, -0.03), (0.62, Wd - 0.19), (L - 1.32, -0.03), (L - 1.32, Wd - 0.19)):
+            d.poly([(xw, yw), (xw + 0.66, yw), (xw + 0.66, yw + 0.22), (xw, yw + 0.22)], "A-MOBILIARIO", fill="#3a3a3a", lw=0.05)
+        d.poly(rrect(0, 0, L, Wd, rr), "A-MOBILIARIO", fill="#f4f4f2", lw=0.25)
+        d.poly([(1.20, 0.22), (1.78, 0.30), (1.78, Wd - 0.30), (1.20, Wd - 0.22)], "A-MOBILIARIO", fill="#cfdbe2", lw=0.13)
+        d.poly([(3.35, 0.32), (3.85, 0.26), (3.85, Wd - 0.26), (3.35, Wd - 0.32)], "A-MOBILIARIO", fill="#cfdbe2", lw=0.13)
+        d.poly(rrect(1.78, 0.30, 3.35, Wd - 0.30, 0.10, 3), "A-MOBILIARIO", fill="#ffffff", lw=0.13)
+        d.line((0.12, 0.42), (1.18, 0.30), "A-MOBILIARIO", lw=0.09)
+        d.line((0.12, Wd - 0.42), (1.18, Wd - 0.30), "A-MOBILIARIO", lw=0.09)
+        d.line((1.80, 0.12), (3.40, 0.14), "A-MOBILIARIO", lw=0.05)
+        d.line((1.80, Wd - 0.12), (3.40, Wd - 0.14), "A-MOBILIARIO", lw=0.05)
+        for yy in (-0.13, Wd + 0.01):
+            d.poly([(1.28, yy), (1.42, yy), (1.42, yy + 0.12), (1.28, yy + 0.12)], "A-MOBILIARIO", fill="#bdbdbd", lw=0.05)
+        for yy in (0.10, Wd - 0.38):
+            d.poly([(0.02, yy), (0.10, yy), (0.10, yy + 0.28), (0.02, yy + 0.28)], "A-MOBILIARIO", fill="#fff7d6", lw=0.05)
+            d.poly([(L - 0.08, yy), (L - 0.02, yy), (L - 0.02, yy + 0.28), (L - 0.08, yy + 0.28)], "A-MOBILIARIO", fill="#e8a39b", lw=0.05)
     elif kind == "TV":
         _rect(d, 0, 0, P[0], 0.40, "A-MOBILIARIO")
         _rect(d, 0.15, 0.30, P[0] - 0.15, 0.36, "A-MOBILIARIO")

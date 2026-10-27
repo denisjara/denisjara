@@ -24,6 +24,7 @@ CLASS = {
     "muro_cortina": ("IfcPlate", "CURTAIN_PANEL"), "mobiliario": ("IfcFurniture", None),
     "jardin": ("IfcGeographicElement", "TERRAIN"), "cimentacion": ("IfcFooting", "STRIP_FOOTING"),
     "lucernario": ("IfcWindow", "SKYLIGHT"), "pedestal": ("IfcColumn", "COLUMN"), "instalaciones": ("IfcTank", "STORAGE"),
+    "vehiculo": ("IfcBuildingElementProxy", None),
 }
 MAT_NAME = {
     "muro_blanco": "Albañilería KK tarrajeada - pintura blanca", "muro_gris": "Albañilería KK - medianera",
@@ -45,11 +46,11 @@ def _rgb(h):
 
 def export(path):
     f = project.create_file(version="IFC4")
-    proj = root.create_entity(f, ifc_class="IfcProject", name="CASA LINTERNA 8x12")
+    proj = root.create_entity(f, ifc_class="IfcProject", name="CASA LINTERNA 13x12")
     unit.assign_unit(f)                                   # metros
     model_ctx = context.add_context(f, context_type="Model")
     body = context.add_context(f, context_type="Model", context_identifier="Body", target_view="MODEL_VIEW", parent=model_ctx)
-    site = root.create_entity(f, ifc_class="IfcSite", name="Lote 8.00 x 12.00")
+    site = root.create_entity(f, ifc_class="IfcSite", name="Lote 13.00 x 12.00")
     bldg = root.create_entity(f, ifc_class="IfcBuilding", name="Vivienda unifamiliar - Casa Linterna")
     aggregate.assign_object(f, products=[site], relating_object=proj)
     aggregate.assign_object(f, products=[bldg], relating_object=site)

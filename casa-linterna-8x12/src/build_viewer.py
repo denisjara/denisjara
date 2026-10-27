@@ -12,7 +12,7 @@ def model_json():
     for p in P:
         out.append({"x1": round(p.x1, 4), "x2": round(p.x2, 4),
                     "p": [[round(y, 4), round(z, 4)] for y, z in p.poly],
-                    "m": p.mat, "c": p.cat, "l": p.level, "f": p.phase, "n": p.name})
+                    "m": p.mat, "c": p.cat, "l": p.level, "f": p.phase, "n": p.name, "g": p.group or ""})
     return out
 
 

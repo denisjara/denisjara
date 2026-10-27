@@ -73,9 +73,9 @@ table.areas tr.tot td{font-weight:500;color:var(--accent)}
 <header>
   <h1>Casa <span>Linterna</span></h1>
   <div class="specs">
-    <span>LOTE 8.00 × 12.00 m = 96.00 m²</span>
-    <span>VIVIENDA 8.00 × 7.00 m · 2 PISOS + TERRAZA TECHADA</span>
-    <span>COCHERA LIBRE 8.00 × 5.00 m · COBERTURA A UNA AGUA</span>
+    <span>TERRENO 13.00 × 12.00 m = 156.00 m²</span>
+    <span>VIVIENDA 8.00 × 12.00 m · 2 PISOS + TERRAZA TECHADA</span>
+    <span>FRANJA LIBRE 5.00 × 12.00 m · COBERTURA A UNA AGUA</span>
   </div>
   <div class="tabs" role="tablist">
     <button class="tab" id="tab-3d" role="tab" aria-selected="true">Modelo 3D</button>
@@ -87,8 +87,8 @@ table.areas tr.tot td{font-weight:500;color:var(--accent)}
   <section id="view3d">
     <div id="stage">
       <div class="views">
-        <button data-v="iso">Isométrica</button><button data-v="front">Fachada</button>
-        <button data-v="back">Patio</button><button data-v="top">Planta</button>
+        <button data-v="iso">Isométrica</button><button data-v="front">Calle</button>
+        <button data-v="back">Franja</button><button data-v="top">Planta</button>
       </div>
       <div id="pick"><b>Selecciona un elemento</b>Toca o haz clic en cualquier muro, losa, viga o pieza de la cobertura para ver sus datos BIM.</div>
     </div>
@@ -114,7 +114,7 @@ table.areas tr.tot td{font-weight:500;color:var(--accent)}
       <div>
         <h2>Corte en vivo</h2>
         <div class="seg three" id="cut">
-          <button data-c="none" aria-pressed="true">Sin corte</button><button data-c="x">Long.</button><button data-c="y">Transv.</button>
+          <button data-c="none" aria-pressed="true">Sin corte</button><button data-c="x">Transv.</button><button data-c="y">Long.</button>
         </div>
         <input type="range" id="cutpos" min="0" max="1000" value="500" aria-label="Posición del corte" style="margin-top:10px" disabled>
         <div class="cut-val" id="cutlbl">—</div>
@@ -123,14 +123,14 @@ table.areas tr.tot td{font-weight:500;color:var(--accent)}
         <h2>Cuadro de áreas</h2>
         <table class="areas">
           <tr><td>Terreno</td><td>96.00 m²</td></tr>
-          <tr><td>Techado 1° piso</td><td>56.00 m²</td></tr>
-          <tr><td>Techado 2° piso</td><td>56.00 m²</td></tr>
-          <tr><td>Terraza (cob. liviana)</td><td>56.00 m²</td></tr>
-          <tr class="tot"><td>Total material noble</td><td>112.00 m²</td></tr>
-          <tr><td>Área libre (41.7 %)</td><td>40.00 m²</td></tr>
+          <tr><td>Techado 1° piso</td><td>96.00 m²</td></tr>
+          <tr><td>Techado 2° piso</td><td>96.00 m² + balcones</td></tr>
+          <tr><td>Terraza (cob. liviana)</td><td>96.00 m²</td></tr>
+          <tr class="tot"><td>Total material noble</td><td>192.00 m²</td></tr>
+          <tr><td>Franja libre techada (38.5 %)</td><td>60.00 m²</td></tr>
         </table>
       </div>
-      <p class="note">1er piso: sala, comedor, cocina y patio de luz. 2do piso: 4 dormitorios, cada uno con su baño. Terraza con lavandería y parrilla bajo cobertura metálica. Cochera abierta para 2 autos con cobertura a una sola agua sobre 4 columnas metálicas con pedestales.</p>
+      <p class="note">1er piso: sala, comedor, cocina y un dormitorio con baño. 2do piso: 3 dormitorios amplios, cada uno con baño propio y balcón. Todas las ventanas miran a la franja techada: cochera para 2 autos y zona de parrilla, sin muros, cubierta a una sola agua sobre 4 columnas metálicas con pedestales.</p>
     </aside>
   </section>
   <section id="sheets" hidden>
@@ -160,24 +160,24 @@ const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(35, 1, 0.1, 400);
 const controls = new THREE.OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
-controls.target.set(4, 3.2, -6);
+controls.target.set(6, 3.2, -6.5);
 
 scene.add(new THREE.HemisphereLight(0xffffff, 0x8a8577, 0.75));
 const sun = new THREE.DirectionalLight(0xfff4e2, 0.85);
-sun.position.set(-14, 26, 16);
+sun.position.set(-14, 26, -26);
 sun.castShadow = true;
 sun.shadow.bias = -0.0004; sun.shadow.normalBias = 0.03;
 sun.shadow.mapSize.set(2048, 2048);
-Object.assign(sun.shadow.camera, {left:-16, right:16, top:16, bottom:-16, near:1, far:80});
-sun.target.position.set(4, 0, -6);
+Object.assign(sun.shadow.camera, {left:-18, right:18, top:18, bottom:-18, near:1, far:90});
+sun.target.position.set(6, 0, -6.5);
 scene.add(sun, sun.target);
 
 const ground = new THREE.Mesh(new THREE.PlaneGeometry(120, 120), new THREE.MeshStandardMaterial({color:0x9f9b91, roughness:1}));
-ground.rotation.x = -Math.PI/2; ground.position.set(4, -0.31, -6); ground.receiveShadow = true;
+ground.rotation.x = -Math.PI/2; ground.position.set(6, -0.31, -6.5); ground.receiveShadow = true;
 scene.add(ground);
 // linderos del lote
 const lot = new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(
-  [[0,0],[8,0],[8,12],[0,12]].map(([x,y]) => new THREE.Vector3(x, -0.29, -y))),
+  [[0,0],[12,0],[12,13],[0,13]].map(([x,y]) => new THREE.Vector3(x, -0.29, -y))),
   new THREE.LineDashedMaterial({color:0xa95f28, dashSize:0.3, gapSize:0.15}));
 lot.computeLineDistances(); scene.add(lot);
 
@@ -197,7 +197,57 @@ const edgeMat = new THREE.LineBasicMaterial({color:0x2a2f33, transparent:true, o
 
 const items = [];
 const mtx = new THREE.Matrix4();
-for (const e of MODEL){
+// Autos: las rebanadas transversales se unen en una malla continua (loft) para una superficie suave
+const LOFT = new Set(['CARROCERÍA','VENTANAS','TECHO','LLANTA','ARO']);
+const loftRuns = [], used = new Set();
+{
+  const bins = {};
+  MODEL.forEach((e, i) => {
+    if (e.c !== 'vehiculo' || !LOFT.has(e.n)) return;
+    const my = e.p.reduce((a, q) => a + q[0], 0) / e.p.length;
+    (bins[e.g + '|' + e.n + '|' + Math.round(my * 10)] ||= []).push(i);
+  });
+  for (const k in bins){
+    const ids = bins[k].sort((a, b) => MODEL[a].x1 - MODEL[b].x1);
+    let run = [ids[0]];
+    for (let j = 1; j <= ids.length; j++){
+      const a = MODEL[run[run.length - 1]], b = j < ids.length ? MODEL[ids[j]] : null;
+      if (b && Math.abs(a.x2 - b.x1) < 1e-6 && a.p.length === b.p.length) { run.push(ids[j]); continue; }
+      if (run.length > 1) { loftRuns.push(run.map(i => MODEL[i])); run.forEach(i => used.add(i)); }
+      if (b) run = [ids[j]];
+    }
+  }
+}
+function loftGeometry(run){
+  const st = [[run[0].x1, run[0].p]];
+  run.forEach(e => st.push([(e.x1 + e.x2) / 2, e.p]));
+  st.push([run[run.length - 1].x2, run[run.length - 1].p]);
+  const pos = [], idx = [], n = run[0].p.length;
+  st.forEach(([x, p]) => p.forEach(([y, z]) => pos.push(x, z, -y)));
+  for (let s = 0; s < st.length - 1; s++)
+    for (let v = 0; v < n; v++){
+      const a = s * n + v, b = s * n + (v + 1) % n, c = a + n, d = b + n;
+      idx.push(a, b, d, a, d, c);
+    }
+  const cap = THREE.ShapeUtils.triangulateShape(run[0].p.map(([y, z]) => new THREE.Vector2(y, z)), []);
+  const last = (st.length - 1) * n;
+  cap.forEach(([a, b, c]) => { idx.push(a, c, b); idx.push(last + a, last + b, last + c); });
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setIndex(idx);
+  g.computeVertexNormals();
+  return g;
+}
+for (const run of loftRuns){
+  const e = Object.assign({}, run[0], {x2: run[run.length - 1].x2});
+  const mesh = new THREE.Mesh(loftGeometry(run), getMat(e.m, false));
+  mesh.castShadow = e.m !== 'vidrio_auto'; mesh.receiveShadow = true;
+  mesh.userData = e;
+  mesh.add(new THREE.LineSegments(new THREE.BufferGeometry(), edgeMat));
+  scene.add(mesh); items.push(mesh);
+}
+for (const [i, e] of MODEL.entries()){
+  if (used.has(i)) continue;
   const sh = new THREE.Shape(e.p.map(([y,z]) => new THREE.Vector2(y, z)));
   const g = new THREE.ExtrudeGeometry(sh, {depth: e.x2 - e.x1, bevelEnabled:false});
   mtx.set(0,0,1,e.x1, 0,1,0,0, -1,0,0,0, 0,0,0,1);
@@ -213,22 +263,23 @@ for (const e of MODEL){
 }
 
 const state = {lv:4, ph:'solid', fur:true, fnd:false, edg:true, cut:'none', cutpos:0.5};
+const SMOOTH = new Set(['FOLLAJE','COPA','MACETA','TRONCO','LÁMPARA']);
 const COV = new Set(['cobertura','correa','viga_met','columna_met','canaleta','bajante']);
 function apply(){
   for (const m of items){
     const e = m.userData;
     let vis = e.l <= state.lv;
     if (COV.has(e.c) && state.ph === 'off') vis = false;
-    if ((e.c === 'mobiliario' || e.c === 'jardin') && !state.fur) vis = false;
+    if ((e.c === 'mobiliario' || e.c === 'jardin' || e.c === 'vehiculo') && !state.fur) vis = false;
     if (e.c === 'cimentacion' && !state.fnd) vis = false;
     m.visible = vis;
     const gh = COV.has(e.c) && state.ph === 'ghost';
     m.material = getMat(e.m, gh);
-    m.children[0].visible = state.edg && !gh;
+    m.children[0].visible = state.edg && !gh && !SMOOTH.has(e.n) && e.c !== 'vehiculo';
   }
   const planes = state.cut === 'none' ? [] : [clip];
-  if (state.cut === 'x'){ const x = 0.05 + state.cutpos*7.9; clip.normal.set(-1,0,0); clip.constant = x; cutlbl.textContent = `Plano longitudinal x = ${x.toFixed(2)} m`; }
-  if (state.cut === 'y'){ const y = 0.05 + state.cutpos*11.9; clip.normal.set(0,0,-1); clip.constant = -y; cutlbl.textContent = `Plano transversal y = ${y.toFixed(2)} m desde la fachada`; }
+  if (state.cut === 'x'){ const x = 0.05 + state.cutpos*11.9; clip.normal.set(-1,0,0); clip.constant = x; cutlbl.textContent = `Corte transversal a ${x.toFixed(2)} m de la calle`; }
+  if (state.cut === 'y'){ const y = 0.05 + state.cutpos*12.9; clip.normal.set(0,0,-1); clip.constant = -y; cutlbl.textContent = `Corte longitudinal a ${y.toFixed(2)} m de la medianera`; }
   if (state.cut === 'none') cutlbl.textContent = '—';
   Object.values(matCache).forEach(m => { m.clippingPlanes = planes; m.needsUpdate = true; });
   edgeMat.clippingPlanes = planes; edgeMat.needsUpdate = true;
@@ -251,10 +302,10 @@ const cutlbl = document.getElementById('cutlbl');
 document.getElementById('cutpos').addEventListener('input', ev => { state.cutpos = ev.target.value/1000; apply(); });
 
 const VIEWS = {
-  iso:  {p:[-7.5, 13, 17], t:[4, 3.6, -5]},
-  front:{p:[4, 5, 21],    t:[4, 4.2, -3]},
-  back: {p:[12, 9, -24],t:[4, 3.0, -8]},
-  top:  {p:[4, 36, -6.01],t:[4, 0, -6]},
+  iso:  {p:[-10, 15, -24], t:[6, 3.4, -6.5]},
+  front:{p:[-21, 5, -6.5], t:[6, 4.2, -6.5]},
+  back: {p:[6, 6, -31], t:[6, 3.5, -6]},
+  top:  {p:[6.01, 40, -6.5], t:[6, 0, -6.5]},
 };
 let anim = null;
 function goView(k){
@@ -272,7 +323,7 @@ const CATS = {muro:'Muro de albañilería', losa:'Losa', columna:'Columna de con
   escalera:'Escalera de concreto', vidrio:'Vidrio', ventana:'Ventana', puerta:'Puerta', baranda:'Baranda', cobertura:'Cobertura liviana',
   correa:'Correa metálica', viga_met:'Viga metálica', columna_met:'Columna metálica', canaleta:'Canaleta', bajante:'Bajante pluvial',
   celosia:'Celosía', fachada:'Marco volado de concreto visto', muro_cortina:'Muro cortina', mobiliario:'Mobiliario', jardin:'Paisajismo',
-  cimentacion:'Cimentación', pedestal:'Pedestal de concreto', lucernario:'Lucernario', instalaciones:'Instalaciones'};
+  cimentacion:'Cimentación', vehiculo:'Vehículo (referencia)', pedestal:'Pedestal de concreto', lucernario:'Lucernario', instalaciones:'Instalaciones'};
 const pick = document.getElementById('pick');
 const ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
 let down = null;
