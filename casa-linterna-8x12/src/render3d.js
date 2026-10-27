@@ -11,12 +11,12 @@ const path = require('path');
   await p.addStyleTag({content: 'header,aside,#pick,.views{display:none!important} #stage{position:fixed!important;inset:0!important}'});
   await p.evaluate(() => window.dispatchEvent(new Event('resize')));
   const shots = [
-    ['render-iso',       {lv:4, ph:'solid', cut:'none'}, [-9.5, 14, 17], [4, 3.4, -5.5]],
-    ['render-calle',     {lv:4, ph:'solid', cut:'none'}, [-2.2, 1.7, 12.5], [4.2, 4.6, -2]],
-    ['render-patio',     {lv:4, ph:'solid', cut:'none'}, [0.75, 1.55, -11.6], [5.6, 2.3, -7.6]],
-    ['render-corte',     {lv:4, ph:'solid', cut:'x', cutpos:0.465}, [17, 9, 5], [3.5, 3.6, -6]],
-    ['render-p2',        {lv:2, ph:'solid', cut:'none'}, [10, 13, 8], [4, 1.5, -4.5]],
-    ['render-posterior', {lv:4, ph:'ghost', cut:'none'}, [15, 12, -24], [4, 3.6, -7]],
+    ['render-iso',       {lv:4, ph:'solid', cut:'none'}, [-9, 13, 10], [4, 3.8, -6]],
+    ['render-calle',     {lv:4, ph:'solid', cut:'none'}, [-2.4, 1.7, 9.5], [4.2, 4.4, -4]],
+    ['render-cochera',   {lv:4, ph:'solid', cut:'none'}, [2.2, 1.65, 6.5], [4.6, 2.6, -4.0]],
+    ['render-corte',     {lv:4, ph:'solid', cut:'x', cutpos:0.43}, [17, 9.5, 2], [3.5, 3.8, -6]],
+    ['render-p2',        {lv:2, ph:'off', cut:'none'}, [9, 14, 2], [4, 2, -8.5]],
+    ['render-terraza',   {lv:4, ph:'ghost', cut:'none'}, [12, 13.5, -1], [3.8, 5.9, -8.5]],
   ];
   for (const [name, st, cam, tg] of shots) {
     await p.evaluate(([st, cam, tg]) => { Object.assign(CL.state, st); CL.apply(); CL.setCam(cam, tg); }, [st, cam, tg]);

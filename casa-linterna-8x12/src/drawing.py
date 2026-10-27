@@ -295,7 +295,4 @@ def block_drawing(name):
 
 def block_attr_positions(name, attrs):
     """Posicion de atributos visibles (en coords locales del bloque)."""
-    out = {}
-    if "TAG" in attrs:
-        out["TAG"] = ((0, 0), 1.8, attrs["TAG"])
-    return out
+    return {}          # los atributos van ocultos en DXF; el rotulo visible lo dibuja la vista

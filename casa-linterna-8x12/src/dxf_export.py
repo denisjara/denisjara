@@ -16,7 +16,7 @@ from sheets import SHEETS, schedule_vanos, schedule_areas, schedule_rooms, METAL
 MODEL_POS = {
     "P1": (0, 0), "P2": (16, 0), "P3": (32, 0), "PT": (48, 0), "PE": (64, -7.0),
     "SA": (0, -25), "SB": (18, -25), "SC": (36, -25), "SD": (50, -25),
-    "EF": (0, -45), "EP": (14, -45), "DET": (28, -45),
+    "EF": (0, -45), "EL": (14, -45), "DET": (34, -45),
 }
 
 
@@ -134,7 +134,7 @@ def setup(doc):
             lay.dxf.lineweight = int(round(lw * 100 / 5.0) * 5)
     doc.styles.add("PLANO", font="arial.ttf")
     doc.styles.add("PLANO-B", font="arialbd.ttf")
-    for sc in (10, 50, 1):
+    for sc in (10, 20, 50, 1):
         k = sc / 1000.0
         ds = doc.dimstyles.new("COTA-%d" % sc)
         ds.dxf.dimtxt = 2.0 * k
@@ -161,7 +161,7 @@ def export(V, out_path, render_dir_rel="renders"):
         if key == "DET":
             d = V["_DB"]
             Writer(doc, msp, off, 10).draw_items(d.items)
-            Writer(doc, msp, off, 10).draw_items(V["_N1"].items)
+            Writer(doc, msp, off, 20).draw_items(V["_N1"].items)
             Writer(doc, msp, off, 10).draw_items(V["_N2"].items)
             placed["D1"] = placed["D2"] = off
             continue
@@ -196,7 +196,7 @@ def export(V, out_path, render_dir_rel="renders"):
         for kind, (x, y), w in sh.get("tables", []):
             if kind == "vanos":
                 h, r = schedule_vanos(); ptable(lay, x + 20, y, w, h, r, [6, 8, 6, 6, 6, 7, 36], "CUADRO DE VANOS")
-                h2, r2 = schedule_rooms(); ptable(lay, x + w + 40, y, 180, h2, r2, [5, 20, 7, 24], "CUADRO DE AMBIENTES", fs=1.6)
+                h2, r2 = schedule_rooms(); ptable(lay, x + w + 40, y + 20, 180, h2, r2, [5, 20, 7, 24], "CUADRO DE AMBIENTES", fs=1.6)
             elif kind == "areas":
                 h, r = schedule_areas(); ptable(lay, x + 20, y, w - 20, h, r, [26, 14, 14], "CUADRO DE ÁREAS")
             elif kind == "notes":
@@ -261,9 +261,9 @@ def frame(lay, sh, idx):
     cx = x0 + 5
     ptext(lay, cx, y1 - 14, "CASA", 9, bold=True)
     ptext(lay, cx, y1 - 26, "LINTERNA", 9, bold=True, color="#a95f28")
-    ptext(lay, cx, y1 - 33, "VIVIENDA UNIFAMILIAR · 2 PISOS + PROYECCIÓN 3er PISO", 1.9)
-    rows = [("TERRENO", "8.00 x 12.00 m = 96.00 m²"), ("EDIFICACIÓN", "8.00 x 7.00 m (material noble)"),
-            ("ÁREA LIBRE", "8.00 x 5.00 m (cobertura liviana)"), ("PROPIETARIO", "____________________"),
+    ptext(lay, cx, y1 - 33, "VIVIENDA UNIFAMILIAR · 2 PISOS + TERRAZA + COCHERA", 1.9)
+    rows = [("TERRENO", "8.00 x 12.00 m = 96.00 m²"), ("VIVIENDA", "8.00 x 7.00 m · 2 pisos (material noble)"),
+            ("ÁREA LIBRE", "8.00 x 5.00 m · cochera (cob. liviana)"), ("PROPIETARIO", "____________________"),
             ("UBICACIÓN", "____________________"), ("PROYECTISTA", "____________________"),
             ("CAP / CIP N°", "__________"), ("ESPECIALIDAD", "ARQUITECTURA")]
     yy = y1 - 45

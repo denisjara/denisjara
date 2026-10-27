@@ -23,7 +23,7 @@ CLASS = {
     "celosia": ("IfcShadingDevice", "LOUVER"), "fachada": ("IfcBuildingElementProxy", None),
     "muro_cortina": ("IfcPlate", "CURTAIN_PANEL"), "mobiliario": ("IfcFurniture", None),
     "jardin": ("IfcGeographicElement", "TERRAIN"), "cimentacion": ("IfcFooting", "STRIP_FOOTING"),
-    "lucernario": ("IfcWindow", "SKYLIGHT"), "instalaciones": ("IfcTank", "STORAGE"),
+    "lucernario": ("IfcWindow", "SKYLIGHT"), "pedestal": ("IfcColumn", "COLUMN"), "instalaciones": ("IfcTank", "STORAGE"),
 }
 MAT_NAME = {
     "muro_blanco": "Albañilería KK tarrajeada - pintura blanca", "muro_gris": "Albañilería KK - medianera",

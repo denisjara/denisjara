@@ -1,12 +1,12 @@
 # CASA LINTERNA · Vivienda unifamiliar en lote de 8.00 × 12.00 m
 
-Proyecto de arquitectura a nivel de **anteproyecto/proyecto básico** para una vivienda de 2 pisos con
-proyección a 3er piso, sobre un lote de 96.00 m²:
+Proyecto de arquitectura (anteproyecto / proyecto básico) — **versión 2**:
 
 | Zona | Medidas | Área | Sistema |
 |---|---|---|---|
-| Edificación (material noble) | 8.00 × 7.00 m | 56.00 m² por piso | Albañilería confinada + pórticos de C°A° |
-| Área libre (frente al fondo del lote) | 8.00 × 5.00 m | 40.00 m² (41.7 %) | Cobertura metálica liviana |
+| Área libre — cochera / reuniones (frente a la calle) | 8.00 × 5.00 m | 40.00 m² (41.7 %) | Sin muros. Cobertura metálica a una sola agua sobre 4 columnas con pedestales |
+| Vivienda (material noble) | 8.00 × 7.00 m | 56.00 m² por piso, 2 pisos | Albañilería confinada + pórticos de C°A° |
+| Terraza (3er nivel) | 8.00 × 7.00 m | 56.00 m² | Cobertura metálica liviana a una sola agua |
 
 ![Vista desde la calle](entregables/renders/render-calle.png)
 
@@ -14,10 +14,10 @@ proyección a 3er piso, sobre un lote de 96.00 m²:
 
 | Archivo | Contenido | Se abre con |
 |---|---|---|
-| `entregables/CasaLinterna_Planos_A1.pdf` | 6 láminas A1 vectoriales (plantas, techos, 4 cortes, 2 elevaciones, estructura de cobertura, 2 detalles 1/10, vistas 3D, cuadros de vanos, ambientes, áreas y metálicos) | Cualquier visor PDF / plotter |
+| `entregables/CasaLinterna_Planos_A1.pdf` | 6 láminas A1 vectoriales (plantas de 1er piso, 2do piso y terraza, techos, 4 cortes, 2 elevaciones, estructura de coberturas, detalles de pedestal y de apoyo, vistas 3D, cuadros de vanos, ambientes, áreas y metálicos) | Cualquier visor PDF / plotter |
 | `entregables/CasaLinterna_Planos.dxf` | Mismo juego de planos para CAD: espacio modelo a escala real (m) + 6 layouts A1 con viewports 1/50 y 1/10, capas normalizadas, bloques con atributos y cotas nativas | AutoCAD, BricsCAD, ZWCAD, DraftSight |
-| `entregables/CasaLinterna_Modelo.ifc` | Modelo BIM IFC4: 271 elementos (muros, losas, columnas, vigas, escaleras, puertas, ventanas, cobertura, estructura metálica, celosías, mobiliario) + 26 espacios con áreas y Psets | Revit, ArchiCAD, Tekla, BIMcollab, BlenderBIM |
-| `entregables/visor-3d.html` | Visor 3D interactivo: pisos, fase 2, capas, **corte en vivo**, selección de elementos con datos BIM y las 6 láminas | Navegador |
+| `entregables/CasaLinterna_Modelo.ifc` | Modelo BIM IFC4: elementos con geometría validada (muros, losas, columnas, vigas, pedestales, escaleras, puertas, ventanas, coberturas, estructura metálica, celosías, mobiliario) + espacios con áreas y Psets | Revit, ArchiCAD, Tekla, BIMcollab, BlenderBIM |
+| `entregables/visor-3d.html` | Visor 3D interactivo: pisos, coberturas, capas, **corte en vivo**, selección de elementos con datos BIM y las 6 láminas | Navegador |
 | `entregables/laminas/A-0x.png` | Láminas en imagen (150 dpi) | — |
 | `entregables/renders/*.png` | Vistas 3D | — |
 | `revit/crear_modelo_revit.py` + `revit/casa_linterna_revit.json` | Script que **construye el modelo nativo en Revit** (ver abajo) | pyRevit, RevitPythonShell, Dynamo |
@@ -44,62 +44,53 @@ entorno donde se generó este proyecto. Hay dos caminos para tenerlo, ambos en u
 Si usas un servidor **MCP para Revit** que ejecute Python, puedes enviarle el mismo script; si tu
 servidor solo ejecuta C#, usa la opción 2 o pyRevit.
 
-## Concepto
+## Concepto y programa
 
-**La linterna.** La escalera en U se ubica contra la medianera izquierda, detrás de un muro cortina de
-vidrio de triple altura protegido por una celosía vertical de listones (aluminio acabado madera). De día
-ilumina el núcleo de circulación con luz filtrada; de noche la casa se lee desde la calle como un farol.
-La caseta de azotea remata la linterna con un lucernario de vidrio laminado sobre la escalera. Bajo el
-primer descanso, visible desde la vereda, hay un pequeño jardín interior de canto rodado.
+El área libre se ubica **al frente** para que funcione como cochera para 2 autos y como espacio de
+reuniones: queda totalmente abierta, sin muros ni cerramientos. La cubre una estructura metálica a una
+sola agua (10 %, cae hacia la calle) sobre 4 columnas en las esquinas, con una luz libre de 7.10 m
+entre ellas y 2.45 m de altura libre mínima.
 
-**El marco.** Los pisos 2 y 3 quedan enmarcados por un pórtico volado de concreto caravista (0.50 m)
-que da sombra a los ventanales piso-techo con baranda de vidrio y funciona como alero del ingreso.
+La escalera en U va al centro de la fachada, dentro de una **linterna** de vidrio con celosía de
+listones. Detrás de la escalera, un **pozo de luz** de 2.30 × 1.80 m con un árbol, abierto desde el 1er
+piso hasta la terraza, ilumina el comedor, la cocina y los dormitorios posteriores (el fondo del lote es
+medianera ciega).
 
-**El patio techado.** El área libre se cubre con una cobertura liviana que **sube hacia el fondo** (10 %):
-la casa “abre” el patio hacia el cielo y el agua escurre a una canaleta junto al edificio, lejos de los
-vecinos. Una franja de policarbonato alveolar de 1.20 m deja pasar luz cenital y una celosía metálica
-perforada sobre el cerco posterior asegura la ventilación cruzada. El programa del patio: terraza-comedor
-exterior, barra de parrilla con campana y chimenea, lavandería-tendal tras una celosía de listones y una
-jardinera con jardín vertical.
+**1er piso · NPT ±0.00** — Sala (9.37 m²), recibo con ingreso (5.23), estar (4.60), comedor (7.46) y
+cocina (7.46) abiertos al patio de luz, baño de visitas (2.36).
 
-## Programa arquitectónico
+**2do piso · NPT +2.80** — **4 dormitorios, cada uno con su baño**, alrededor de la galería:
 
-**1er piso · NPT ±0.00** — Sala (19.89 m²) con ingreso directo, comedor (7.29) y cocina con isla (7.43)
-integrados y abiertos a la terraza por una mampara corrediza de 2.60 m, hall (3.80), baño de visitas
-completo (2.85), depósito bajo escalera y jardín interior. Área libre de 40.00 m².
+| Ambiente | Área | Baño propio | Luz y ventilación |
+|---|---|---|---|
+| Dormitorio 1 y 2 (frente) | 6.88 m² c/u (cama 1.35 × 1.90) | 2.12 m² con ventana | Fachada |
+| Dormitorio 3 y 4 (fondo) | 5.00 m² c/u (cama 1.05 × 1.90) | 2.09 m², ventilación por ducto | Pozo de luz |
 
-**2do piso · NPT +2.80** — 2 suites, cada dormitorio con **baño propio**:
-- Dormitorio 1 (10.95 m², ventanal a la calle) → walk-in closet (3.91) → baño 1 (4.14)
-- Dormitorio 2 (9.99 m², vista al patio) → baño 2 (4.32) + walk-in (2.85)
-- Estar/hall (3.99)
-
-**3er piso · NPT +5.60 (proyección, Fase 2)** — Repite la planta típica: dormitorios 3 y 4 con baños 3 y 4.
-
-**Azotea · NPT +8.40** — Caseta de escalera con lucernario, tanque elevado de 1100 L, sumideros.
+**Terraza · NPT +5.60** — 41 m² útiles bajo cobertura (pendiente 5.7 % hacia la fachada), con lavandería,
+tendal, parrilla, sala exterior y jardineras. Sobre el pozo de luz la cobertura es de policarbonato.
 
 | Cuadro de áreas | m² |
 |---|---|
 | Terreno | 96.00 |
 | Techado 1er piso | 56.00 |
 | Techado 2do piso | 56.00 |
-| **Subtotal Fase 1** | **112.00** |
-| Techado 3er piso (proyección) | 56.00 |
-| Caseta de escalera (proyección) | 12.08 |
-| **Total techado (Fase 1 + 2)** | **180.08** |
-| Área libre (cobertura liviana) | 40.00 (41.7 %) |
+| **Total material noble** | **112.00** |
+| Terraza con cobertura liviana | 56.00 |
+| Área libre (cochera con cobertura liviana) | 40.00 (41.7 %) |
 
 ## Criterios técnicos
 
-- **Estructura (referencial):** columnas C-1 0.25×0.40 (perimetrales) y C-2 0.25×0.25, vigas 0.25×0.40,
-  losa aligerada h = 0.20, cimientos corridos y zapatas. Ejes 1-2-3-4 (luces 2.10 / 3.15 / 2.50 m) y
-  A-B-C (3.85 / 2.90 m). Columnas y cimentación pensadas para 3 niveles desde la Fase 1.
-  **Debe ser diseñada y firmada por un ingeniero civil colegiado** (E.030, E.060, E.070, E.090).
-- **Escalera:** 16 contrapasos de 0.175 m, pasos de 0.25 m, ancho libre 0.90 m por tramo, descanso de 1.00 m.
-- **Cobertura metálica:** paneles termoacústicos TR4 e = 50 mm + policarbonato alveolar 10 mm; vigas VM-1
-  tubo 100×200×3 @ 1.45 m; correas CO-1 tubo 50×100×2 @ 0.95 m; viga posterior VM-2 tubo 150×300×4 sobre
-  2 columnas CM-1 tubo 150×150×4; apoyo en el edificio con ángulo L100×100×6 y pernos expansivos Ø5/8" @ 0.60
-  sobre la viga VS-C; arriostres en cruz con varilla Ø1/2"; canaleta galvanizada y 2 bajantes de 3".
-  Ver detalles 1 y 2 (lámina A-04).
+- **Estructura (referencial):** columnas 0.25 × 0.25, vigas 0.25 × 0.40, losa aligerada h = 0.20, muros de
+  ladrillo KK e = 0.15 y tabiques de baño e = 0.10. Ejes 1-2-3-4 (2.65 / 2.45 / 2.65 m) y A-B-C (3.75 / 3.00 m).
+  **Debe diseñarla y firmarla un ingeniero civil colegiado** (E.020, E.030, E.060, E.070, E.090).
+- **Escalera:** 16 contrapasos de 0.175 m, pasos de 0.25 m, tramos de 1.05 m, descanso contra la linterna.
+- **Cobertura de cochera:** 4 columnas CM-1 (tubo 150×150×4) sobre placa base 300×300×12 con 4 pernos
+  Ø5/8", **pedestales de C°A° 0.40 × 0.40** (0.50 m sobre el piso, protegen de golpes de los autos) y
+  zapatas 0.90 × 0.90; 2 vigas VM-2 (tubo 150×300×4), 6 vigas VM-1 (tubo 100×200×3 @ 1.45), correas
+  50×100×2 @ 0.95, panel termoacústico TR4 de 50 mm, arriostres Ø1/2", canaleta frontal y 2 bajantes de 3".
+  Ver los detalles 1 y 2 de la lámina A-04.
+- **Cobertura de terraza:** 12 columnas CT-1 (tubo 100×100×3) sobre las columnas de concreto, 4 vigas VT-1
+  (tubo 100×250×3), correas @ 1.00, panel TR4 + policarbonato sobre el pozo, canaleta y 2 bajantes por fachada.
 - **Normativa de referencia (Perú, RNE):** A.010, A.020, E.030, E.060, E.070, E.090, IS.010. Verifica los
   parámetros urbanísticos de tu municipalidad (altura máxima, retiros, porcentaje de área libre y si la
   cobertura liviana del área libre requiere trámite).

@@ -74,8 +74,8 @@ table.areas tr.tot td{font-weight:500;color:var(--accent)}
   <h1>Casa <span>Linterna</span></h1>
   <div class="specs">
     <span>LOTE 8.00 × 12.00 m = 96.00 m²</span>
-    <span>TECHADO 7.00 × 8.00 m × 2 PISOS (+ 3° PROYECCIÓN)</span>
-    <span>ÁREA LIBRE 5.00 × 8.00 m · COBERTURA METÁLICA LIVIANA</span>
+    <span>VIVIENDA 8.00 × 7.00 m · 2 PISOS + TERRAZA TECHADA</span>
+    <span>COCHERA LIBRE 8.00 × 5.00 m · COBERTURA A UNA AGUA</span>
   </div>
   <div class="tabs" role="tablist">
     <button class="tab" id="tab-3d" role="tab" aria-selected="true">Modelo 3D</button>
@@ -96,18 +96,17 @@ table.areas tr.tot td{font-weight:500;color:var(--accent)}
       <div>
         <h2>Mostrar hasta</h2>
         <div class="seg" id="lv">
-          <button data-l="1">1° P</button><button data-l="2">2° P</button><button data-l="3">3° P</button><button data-l="4" aria-pressed="true">Todo</button>
+          <button data-l="1">1° P</button><button data-l="2">2° P</button><button data-l="3">Terraza</button><button data-l="4" aria-pressed="true">Todo</button>
         </div>
       </div>
       <div>
-        <h2>3er piso (proyección)</h2>
+        <h2>Coberturas metálicas</h2>
         <div class="seg three" id="ph">
-          <button data-p="solid" aria-pressed="true">Sólido</button><button data-p="ghost">Fantasma</button><button data-p="off">Oculto</button>
+          <button data-p="solid" aria-pressed="true">Ver</button><button data-p="ghost">Fantasma</button><button data-p="off">Ocultas</button>
         </div>
       </div>
       <div>
         <h2>Capas</h2>
-        <label class="row"><input type="checkbox" id="c-cov" checked> Cobertura metálica del área libre</label>
         <label class="row"><input type="checkbox" id="c-fur" checked> Mobiliario y paisajismo</label>
         <label class="row"><input type="checkbox" id="c-fnd"> Cimentación</label>
         <label class="row"><input type="checkbox" id="c-edg" checked> Aristas (estilo plano)</label>
@@ -126,13 +125,12 @@ table.areas tr.tot td{font-weight:500;color:var(--accent)}
           <tr><td>Terreno</td><td>96.00 m²</td></tr>
           <tr><td>Techado 1° piso</td><td>56.00 m²</td></tr>
           <tr><td>Techado 2° piso</td><td>56.00 m²</td></tr>
-          <tr><td>Techado 3° piso (proy.)</td><td>56.00 m²</td></tr>
-          <tr><td>Caseta escalera (proy.)</td><td>12.08 m²</td></tr>
-          <tr class="tot"><td>Total techado</td><td>180.08 m²</td></tr>
+          <tr><td>Terraza (cob. liviana)</td><td>56.00 m²</td></tr>
+          <tr class="tot"><td>Total material noble</td><td>112.00 m²</td></tr>
           <tr><td>Área libre (41.7 %)</td><td>40.00 m²</td></tr>
         </table>
       </div>
-      <p class="note">4 suites (dormitorio + baño propio + walk-in) en 2° y 3° piso. Escalera en U dentro de una linterna de vidrio con celosía de madera. Cobertura de paneles termoacústicos con franja de policarbonato, pendiente 10 % hacia canaleta.</p>
+      <p class="note">1er piso: sala, comedor, cocina y patio de luz. 2do piso: 4 dormitorios, cada uno con su baño. Terraza con lavandería y parrilla bajo cobertura metálica. Cochera abierta para 2 autos con cobertura a una sola agua sobre 4 columnas metálicas con pedestales.</p>
     </aside>
   </section>
   <section id="sheets" hidden>
@@ -214,19 +212,19 @@ for (const e of MODEL){
   items.push(mesh);
 }
 
-const state = {lv:4, ph:'solid', cov:true, fur:true, fnd:false, edg:true, cut:'none', cutpos:0.5};
+const state = {lv:4, ph:'solid', fur:true, fnd:false, edg:true, cut:'none', cutpos:0.5};
 const COV = new Set(['cobertura','correa','viga_met','columna_met','canaleta','bajante']);
 function apply(){
   for (const m of items){
     const e = m.userData;
     let vis = e.l <= state.lv;
-    if (e.f === 'F2' && state.ph === 'off') vis = false;
-    if (COV.has(e.c) && !state.cov) vis = false;
+    if (COV.has(e.c) && state.ph === 'off') vis = false;
     if ((e.c === 'mobiliario' || e.c === 'jardin') && !state.fur) vis = false;
     if (e.c === 'cimentacion' && !state.fnd) vis = false;
     m.visible = vis;
-    m.material = getMat(e.m, e.f === 'F2' && state.ph === 'ghost');
-    m.children[0].visible = state.edg && !(e.f === 'F2' && state.ph === 'ghost');
+    const gh = COV.has(e.c) && state.ph === 'ghost';
+    m.material = getMat(e.m, gh);
+    m.children[0].visible = state.edg && !gh;
   }
   const planes = state.cut === 'none' ? [] : [clip];
   if (state.cut === 'x'){ const x = 0.05 + state.cutpos*7.9; clip.normal.set(-1,0,0); clip.constant = x; cutlbl.textContent = `Plano longitudinal x = ${x.toFixed(2)} m`; }
@@ -247,7 +245,7 @@ function seg(id, key, attr, parse){
   });
 }
 seg('lv','lv','l', Number); seg('ph','ph','p'); seg('cut','cut','c');
-for (const [id,k] of [['c-cov','cov'],['c-fur','fur'],['c-fnd','fnd'],['c-edg','edg']])
+for (const [id,k] of [['c-fur','fur'],['c-fnd','fnd'],['c-edg','edg']])
   document.getElementById(id).addEventListener('change', ev => { state[k] = ev.target.checked; apply(); });
 const cutlbl = document.getElementById('cutlbl');
 document.getElementById('cutpos').addEventListener('input', ev => { state.cutpos = ev.target.value/1000; apply(); });
@@ -274,7 +272,7 @@ const CATS = {muro:'Muro de albañilería', losa:'Losa', columna:'Columna de con
   escalera:'Escalera de concreto', vidrio:'Vidrio', ventana:'Ventana', puerta:'Puerta', baranda:'Baranda', cobertura:'Cobertura liviana',
   correa:'Correa metálica', viga_met:'Viga metálica', columna_met:'Columna metálica', canaleta:'Canaleta', bajante:'Bajante pluvial',
   celosia:'Celosía', fachada:'Marco volado de concreto visto', muro_cortina:'Muro cortina', mobiliario:'Mobiliario', jardin:'Paisajismo',
-  cimentacion:'Cimentación', lucernario:'Lucernario', instalaciones:'Instalaciones'};
+  cimentacion:'Cimentación', pedestal:'Pedestal de concreto', lucernario:'Lucernario', instalaciones:'Instalaciones'};
 const pick = document.getElementById('pick');
 const ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
 let down = null;
@@ -290,7 +288,7 @@ renderer.domElement.addEventListener('pointerup', e => {
   const d = hit.object.userData;
   const ys = d.p.map(p => p[0]), zs = d.p.map(p => p[1]);
   const dim = [(d.x2-d.x1), Math.max(...ys)-Math.min(...ys), Math.max(...zs)-Math.min(...zs)].map(v => v.toFixed(2)).join(' × ');
-  pick.innerHTML = `<b>${d.n || '—'}</b>${CATS[d.c] || d.c} · ${d.m.replace('_',' ')}<br>Nivel ${d.l}${d.f === 'F2' ? ' · proyección 3er piso' : ''}<br>Caja ${dim} m`;
+  pick.innerHTML = `<b>${d.n || '—'}</b>${CATS[d.c] || d.c} · ${d.m.replace('_',' ')}<br>Nivel ${d.l}<br>Caja ${dim} m`;
 });
 
 function resize(){

@@ -4,19 +4,18 @@ CASA LINTERNA 8x12 - Generador de modelo NATIVO en Revit.
 
 Lee 'casa_linterna_revit.json' (misma carpeta) y crea dentro del proyecto
 abierto en Revit:
-  - Niveles (NPT +0.00 / +2.80 / +5.60 / +8.40) y ejes 1-4 / A-D
+  - Niveles (NPT +0.00 / +2.80 / +5.60 terraza) y ejes 1-4 / A-C / A'-B' (cochera)
   - Tipos de muro, losa y techo parametricos (capa unica con espesor exacto)
   - Muros nativos (incluye muros de perfil inclinado bajo la cobertura)
   - Puertas y ventanas nativas: duplica un tipo cargado por cada medida
     (P-01 0.80x2.10, V-04 2.40x2.30 ...) y fija alfeizar, mano y sentido
   - Losas aligeradas con hueco de escalera, contrapiso, techo de caseta
   - Escaleras en U nativas (StairsEditScope: 2 tramos + descanso, 16 cp de 0.175)
-  - Cobertura liviana como techo por extrusion (pendiente 10 %)
-  - Columnas, vigas, estructura metalica, celosias, marco volado y mobiliario
+  - Coberturas de cochera y terraza como techos por extrusion (una sola agua)
+  - Columnas, vigas, pedestales, estructura metalica, celosias y mobiliario
     como DirectShape con categoria BIM y material (no dependen de familias)
   - Habitaciones (Rooms) con nombre, numero y acabado + separadores
   - Vistas: plantas por nivel, cortes A-A..D-D, elevaciones, 3D y laminas A-01..A-06
-  - Elementos del 3er piso marcados en Comentarios como "FASE 2 - PROYECCION"
 
 Ejecucion (Revit 2022 o superior, plantilla metrica de arquitectura):
   * pyRevit .............. colocar en un boton o usar "Run Script" (IronPython o CPython)
@@ -339,11 +338,11 @@ for rf in D["roofs"]:
                 MaterialFunctionAssignment.Structure, ft(rf["t"]), material("panel_tr4")))
         view = doc.ActiveView
         rp = doc.Create.NewReferencePlane(xyz(rf["x1"], 0, 0), xyz(rf["x1"], 10, 0), XYZ.BasisZ, view)
-        rp.Name = "CL - Plano cobertura"
+        rp.Name = "CL - Plano " + rf["name"]
         prof = CurveArray()
         (y1, z1), (y2, z2) = rf["profile_yz"]
         prof.Append(Line.CreateBound(xyz(rf["x1"], y1, z1), xyz(rf["x1"], y2, z2)))
-        roof = doc.Create.NewExtrusionRoof(prof, rp, LEVELS[1], rt, 0.0, ft(rf["x2"] - rf["x1"]))
+        roof = doc.Create.NewExtrusionRoof(prof, rp, LEVELS[rf.get("level", 1)], rt, 0.0, ft(rf["x2"] - rf["x1"]))
         doc.Regenerate()
         bb = roof.get_BoundingBox(None)
         if bb is not None and bb.Min.X < ft(rf["x1"]) - 0.1:      # extruyo hacia -X: trasladar
