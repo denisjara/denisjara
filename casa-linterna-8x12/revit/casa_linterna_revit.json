@@ -1,0 +1,10419 @@
+{
+ "units": "m",
+ "project": "CASA LINTERNA 8x12",
+ "levels": [
+  {
+   "id": 1,
+   "name": "NPT +0.00 - 1er PISO",
+   "elev": 0.0
+  },
+  {
+   "id": 2,
+   "name": "NPT +2.80 - 2do PISO",
+   "elev": 2.8
+  },
+  {
+   "id": 3,
+   "name": "NPT +5.60 - 3er PISO (PROYECCION)",
+   "elev": 5.6
+  },
+  {
+   "id": 4,
+   "name": "NPT +8.40 - AZOTEA",
+   "elev": 8.4
+  }
+ ],
+ "grids": [
+  {
+   "name": "1",
+   "p1": [
+    0.125,
+    -2.5
+   ],
+   "p2": [
+    0.125,
+    12.8
+   ]
+  },
+  {
+   "name": "2",
+   "p1": [
+    2.225,
+    -2.5
+   ],
+   "p2": [
+    2.225,
+    12.8
+   ]
+  },
+  {
+   "name": "3",
+   "p1": [
+    5.375,
+    -2.5
+   ],
+   "p2": [
+    5.375,
+    12.8
+   ]
+  },
+  {
+   "name": "4",
+   "p1": [
+    7.875,
+    -2.5
+   ],
+   "p2": [
+    7.875,
+    12.8
+   ]
+  },
+  {
+   "name": "A",
+   "p1": [
+    -2.5,
+    0.125
+   ],
+   "p2": [
+    8.6,
+    0.125
+   ]
+  },
+  {
+   "name": "B",
+   "p1": [
+    -2.5,
+    3.975
+   ],
+   "p2": [
+    8.6,
+    3.975
+   ]
+  },
+  {
+   "name": "C",
+   "p1": [
+    -2.5,
+    6.875
+   ],
+   "p2": [
+    8.6,
+    6.875
+   ]
+  },
+  {
+   "name": "D",
+   "p1": [
+    -2.5,
+    11.525
+   ],
+   "p2": [
+    8.6,
+    11.525
+   ]
+  }
+ ],
+ "walls": [
+  {
+   "id": 0,
+   "name": "M-IZQ",
+   "level": 1,
+   "a": [
+    0.125,
+    0.0
+   ],
+   "b": [
+    0.125,
+    7.0
+   ],
+   "t": 0.25,
+   "base_offset": 0.0,
+   "height": 2.6,
+   "kind": "medianera",
+   "phase": "F1",
+   "openings": []
+  },
+  {
+   "id": 1,
+   "name": "M-DER",
+   "level": 1,
+   "a": [
+    7.875,
+    0.0
+   ],
+   "b": [
+    7.875,
+    7.0
+   ],
+   "t": 0.25,
+   "base_offset": 0.0,
+   "height": 2.6,
+   "kind": "medianera",
+   "phase": "F1",
+   "openings": []
+  },
+  {
+   "id": 2,
+   "name": "M-FRO",
+   "level": 1,
+   "a": [
+    2.15,
+    0.125
+   ],
+   "b": [
+    7.75,
+    0.125
+   ],
+   "t": 0.25,
+   "base_offset": 0.0,
+   "height": 2.6,
+   "kind": "fachada",
+   "phase": "F1",
+   "openings": [
+    {
+     "tag": "PP",
+     "kind": "door2",
+     "s1": 2.45,
+     "s2": 3.45,
+     "sill": 0.0,
+     "head": 2.4,
+     "hinge": "b",
+     "side": 1,
+     "desc": "Puerta principal pivotante de madera"
+    },
+    {
+     "tag": "V-01",
+     "kind": "window",
+     "s1": 3.75,
+     "s2": 7.45,
+     "sill": 0.45,
+     "head": 2.4,
+     "hinge": "a",
+     "side": 1,
+     "desc": "Ventanal sala"
+    }
+   ]
+  },
+  {
+   "id": 3,
+   "name": "M-POS",
+   "level": 1,
+   "a": [
+    0.25,
+    6.875
+   ],
+   "b": [
+    7.75,
+    6.875
+   ],
+   "t": 0.25,
+   "base_offset": 0.0,
+   "height": 2.6,
+   "kind": "fachada",
+   "phase": "F1",
+   "openings": [
+    {
+     "tag": "V-03",
+     "kind": "window",
+     "s1": 0.55,
+     "s2": 1.85,
+     "sill": 1.6,
+     "head": 2.2,
+     "hinge": "a",
+     "side": 1,
+     "desc": "Ventana alta baño visitas"
+    },
+    {
+     "tag": "MP-01",
+     "kind": "slide",
+     "s1": 2.45,
+     "s2": 5.05,
+     "sill": 0.0,
+     "head": 2.4,
+     "hinge": "a",
+     "side": 1,
+     "desc": "Mampara corrediza comedor-terraza"
+    },
+    {
+     "tag": "V-02",
+     "kind": "window",
+     "s1": 5.75,
+     "s2": 7.45,
+     "sill": 1.05,
+     "head": 2.2,
+     "hinge": "a",
+     "side": 1,
+     "desc": "Ventana cocina"
+    }
+   ]
+  },
+  {
+   "id": 4,
+   "name": "T-NUC1a",
+   "level": 1,
+   "a": [
+    2.225,
+    0.25
+   ],
+   "b": [
+    2.225,
+    3.1
+   ],
+   "t": 0.15,
+   "base_offset": 0.0,
+   "height": 2.6,
+   "kind": "albanileria",
+   "phase": "F1",
+   "openings": []
+  },
+  {
+   "id": 5,
+   "name": "T-NUC1b",
+   "level": 1,
+   "a": [
+    2.225,
+    5.1
+   ],
+   "b": [
+    2.225,
+    6.75
+   ],
+   "t": 0.15,
+   "base_offset": 0.0,
+   "height": 2.6,
+   "kind": "albanileria",
+   "phase": "F1",
+   "openings": []
+  },
+  {
+   "id": 6,
+   "name": "T-HALL1",
+   "level": 1,
+   "a": [
+    0.25,
+    5.175
+   ],
+   "b": [
+    2.3,
+    5.175
+   ],
+   "t": 0.15,
+   "base_offset": 0.0,
+   "height": 2.6,
+   "kind": "albanileria",
+   "phase": "F1",
+   "openings": [
+    {
+     "tag": "P-03",
+     "kind": "door",
+     "s1": 0.45,
+     "s2": 1.15,
+     "sill": 0.0,
+     "head": 2.1,
+     "hinge": "a",
+     "side": 1,
+     "desc": "Baño visitas"
+    }
+   ]
+  },
+  {
+   "id": 7,
+   "name": "T-DEP",
+   "level": 1,
+   "a": [
+    1.25,
+    3.05
+   ],
+   "b": [
+    2.15,
+    3.05
+   ],
+   "t": 0.1,
+   "base_offset": 0.0,
+   "height": 2.45,
+   "kind": "albanileria",
+   "phase": "F1",
+   "openings": [
+    {
+     "tag": "P-04",
+     "kind": "door",
+     "s1": 1.35,
+     "s2": 2.05,
+     "sill": 0.0,
+     "head": 2.0,
+     "hinge": "a",
+     "side": -1,
+     "desc": "Depósito bajo escalera"
+    }
+   ]
+  },
+  {
+   "id": 8,
+   "name": "T-DEP2",
+   "level": 1,
+   "a": [
+    1.2,
+    1.25
+   ],
+   "b": [
+    1.2,
+    3.1
+   ],
+   "t": 0.1,
+   "base_offset": 0.0,
+   "height": 2.6,
+   "kind": "albanileria",
+   "phase": "F1",
+   "openings": [],
+   "profile_yz": [
+    [
+     1.25,
+     0.0
+    ],
+    [
+     3.1,
+     0.0
+    ],
+    [
+     3.1,
+     2.55
+    ],
+    [
+     1.25,
+     1.15
+    ]
+   ]
+  },
+  {
+   "id": 9,
+   "name": "M-IZQ",
+   "level": 2,
+   "a": [
+    0.125,
+    0.0
+   ],
+   "b": [
+    0.125,
+    7.0
+   ],
+   "t": 0.25,
+   "base_offset": 0.0,
+   "height": 2.6,
+   "kind": "medianera",
+   "phase": "F1",
+   "openings": []
+  },
+  {
+   "id": 10,
+   "name": "M-DER",
+   "level": 2,
+   "a": [
+    7.875,
+    0.0
+   ],
+   "b": [
+    7.875,
+    7.0
+   ],
+   "t": 0.25,
+   "base_offset": 0.0,
+   "height": 2.6,
+   "kind": "medianera",
+   "phase": "F1",
+   "openings": []
+  },
+  {
+   "id": 11,
+   "name": "M-FRO",
+   "level": 2,
+   "a": [
+    2.15,
+    0.125
+   ],
+   "b": [
+    7.75,
+    0.125
+   ],
+   "t": 0.25,
+   "base_offset": 0.0,
+   "height": 2.6,
+   "kind": "fachada",
+   "phase": "F1",
+   "openings": [
+    {
+     "tag": "V-04",
+     "kind": "window",
+     "s1": 2.6,
+     "s2": 5.0,
+     "sill": 0.1,
+     "head": 2.4,
+     "hinge": "a",
+     "side": 1,
+     "desc": "Ventanal piso-techo + baranda vidrio"
+    },
+    {
+     "tag": "V-05",
+     "kind": "window",
+     "s1": 5.8,
+     "s2": 7.4,
+     "sill": 1.5,
+     "head": 2.2,
+     "hinge": "a",
+     "side": 1,
+     "desc": "Ventana alta baño"
+    }
+   ]
+  },
+  {
+   "id": 12,
+   "name": "M-POS",
+   "level": 2,
+   "a": [
+    0.25,
+    6.875
+   ],
+   "b": [
+    7.75,
+    6.875
+   ],
+   "t": 0.25,
+   "base_offset": 0.0,
+   "height": 2.6,
+   "kind": "fachada",
+   "phase": "F1",
+   "openings": [
+    {
+     "tag": "V-06",
+     "kind": "window",
+     "s1": 0.55,
+     "s2": 1.85,
+     "sill": 1.5,
+     "head": 2.2,
+     "hinge": "a",
+     "side": 1,
+     "desc": "Ventana walk-in"
+    },
+    {
+     "tag": "V-07",
+     "kind": "window",
+     "s1": 2.7,
+     "s2": 5.05,
+     "sill": 0.9,
+     "head": 2.4,
+     "hinge": "a",
+     "side": 1,
+     "desc": "Ventana dormitorio posterior"
+    },
+    {
+     "tag": "V-06",
+     "kind": "window",
+     "s1": 6.45,
+     "s2": 7.45,
+     "sill": 1.5,
+     "head": 2.2,
+     "hinge": "a",
+     "side": 1,
+     "desc": "Ventana alta baño"
+    }
+   ]
+  },
+  {
+   "id": 13,
+   "name": "T-NUC",
+   "level": 2,
+   "a": [
+    2.225,
+    0.25
+   ],
+   "b": [
+    2.225,
+    6.75
+   ],
+   "t": 0.15,
+   "base_offset": 0.0,
+   "height": 2.6,
+   "kind": "albanileria",
+   "phase": "F1",
+   "openings": [
+    {
+     "tag": "P-01",
+     "kind": "door",
+     "s1": 3.05,
+     "s2": 3.85,
+     "sill": 0.0,
+     "head": 2.1,
+     "hinge": "b",
+     "side": 1,
+     "desc": "Dormitorio principal"
+    },
+    {
+     "tag": "P-01",
+     "kind": "door",
+     "s1": 4.22,
+     "s2": 5.02,
+     "sill": 0.0,
+     "head": 2.1,
+     "hinge": "a",
+     "side": 1,
+     "desc": "Dormitorio posterior"
+    },
+    {
+     "tag": "P-02",
+     "kind": "door",
+     "s1": 5.4,
+     "s2": 6.1,
+     "sill": 0.0,
+     "head": 2.1,
+     "hinge": "b",
+     "side": -1,
+     "desc": "Walk-in closet"
+    }
+   ]
+  },
+  {
+   "id": 14,
+   "name": "T-SUI",
+   "level": 2,
+   "a": [
+    2.3,
+    3.975
+   ],
+   "b": [
+    7.75,
+    3.975
+   ],
+   "t": 0.15,
+   "base_offset": 0.0,
+   "height": 2.6,
+   "kind": "albanileria",
+   "phase": "F1",
+   "openings": []
+  },
+  {
+   "id": 15,
+   "name": "T-DOR1",
+   "level": 2,
+   "a": [
+    5.375,
+    0.25
+   ],
+   "b": [
+    5.375,
+    3.9
+   ],
+   "t": 0.15,
+   "base_offset": 0.0,
+   "height": 2.6,
+   "kind": "albanileria",
+   "phase": "F1",
+   "openings": [
+    {
+     "tag": "P-02",
+     "kind": "door",
+     "s1": 2.4,
+     "s2": 3.1,
+     "sill": 0.0,
+     "head": 2.1,
+     "hinge": "a",
+     "side": 1,
+     "desc": "Walk-in closet"
+    }
+   ]
+  },
+  {
+   "id": 16,
+   "name": "T-BAN1",
+   "level": 2,
+   "a": [
+    5.45,
+    2.125
+   ],
+   "b": [
+    7.75,
+    2.125
+   ],
+   "t": 0.15,
+   "base_offset": 0.0,
+   "height": 2.6,
+   "kind": "albanileria",
+   "phase": "F1",
+   "openings": [
+    {
+     "tag": "P-03",
+     "kind": "door",
+     "s1": 6.25,
+     "s2": 6.95,
+     "sill": 0.0,
+     "head": 2.1,
+     "hinge": "a",
+     "side": -1,
+     "desc": "Baño"
+    }
+   ]
+  },
+  {
+   "id": 17,
+   "name": "T-BAN2",
+   "level": 2,
+   "a": [
+    6.075,
+    4.05
+   ],
+   "b": [
+    6.075,
+    6.75
+   ],
+   "t": 0.15,
+   "base_offset": 0.0,
+   "height": 2.6,
+   "kind": "albanileria",
+   "phase": "F1",
+   "openings": [
+    {
+     "tag": "P-03",
+     "kind": "door",
+     "s1": 4.35,
+     "s2": 5.05,
+     "sill": 0.0,
+     "head": 2.1,
+     "hinge": "a",
+     "side": 1,
+     "desc": "Baño"
+    }
+   ]
+  },
+  {
+   "id": 18,
+   "name": "T-HALL",
+   "level": 2,
+   "a": [
+    0.25,
+    5.175
+   ],
+   "b": [
+    2.15,
+    5.175
+   ],
+   "t": 0.15,
+   "base_offset": 0.0,
+   "height": 2.6,
+   "kind": "albanileria",
+   "phase": "F1",
+   "openings": []
+  },
+  {
+   "id": 19,
+   "name": "M-IZQ",
+   "level": 3,
+   "a": [
+    0.125,
+    0.0
+   ],
+   "b": [
+    0.125,
+    7.0
+   ],
+   "t": 0.25,
+   "base_offset": 0.0,
+   "height": 2.6,
+   "kind": "medianera",
+   "phase": "F2",
+   "openings": []
+  },
+  {
+   "id": 20,
+   "name": "M-DER",
+   "level": 3,
+   "a": [
+    7.875,
+    0.0
+   ],
+   "b": [
+    7.875,
+    7.0
+   ],
+   "t": 0.25,
+   "base_offset": 0.0,
+   "height": 2.6,
+   "kind": "medianera",
+   "phase": "F2",
+   "openings": []
+  },
+  {
+   "id": 21,
+   "name": "M-FRO",
+   "level": 3,
+   "a": [
+    2.15,
+    0.125
+   ],
+   "b": [
+    7.75,
+    0.125
+   ],
+   "t": 0.25,
+   "base_offset": 0.0,
+   "height": 2.6,
+   "kind": "fachada",
+   "phase": "F2",
+   "openings": [
+    {
+     "tag": "V-04",
+     "kind": "window",
+     "s1": 2.6,
+     "s2": 5.0,
+     "sill": 0.1,
+     "head": 2.4,
+     "hinge": "a",
+     "side": 1,
+     "desc": "Ventanal piso-techo + baranda vidrio"
+    },
+    {
+     "tag": "V-05",
+     "kind": "window",
+     "s1": 5.8,
+     "s2": 7.4,
+     "sill": 1.5,
+     "head": 2.2,
+     "hinge": "a",
+     "side": 1,
+     "desc": "Ventana alta baño"
+    }
+   ]
+  },
+  {
+   "id": 22,
+   "name": "M-POS",
+   "level": 3,
+   "a": [
+    0.25,
+    6.875
+   ],
+   "b": [
+    7.75,
+    6.875
+   ],
+   "t": 0.25,
+   "base_offset": 0.0,
+   "height": 2.6,
+   "kind": "fachada",
+   "phase": "F2",
+   "openings": [
+    {
+     "tag": "V-06",
+     "kind": "window",
+     "s1": 0.55,
+     "s2": 1.85,
+     "sill": 1.5,
+     "head": 2.2,
+     "hinge": "a",
+     "side": 1,
+     "desc": "Ventana walk-in"
+    },
+    {
+     "tag": "V-07",
+     "kind": "window",
+     "s1": 2.7,
+     "s2": 5.05,
+     "sill": 0.9,
+     "head": 2.4,
+     "hinge": "a",
+     "side": 1,
+     "desc": "Ventana dormitorio posterior"
+    },
+    {
+     "tag": "V-06",
+     "kind": "window",
+     "s1": 6.45,
+     "s2": 7.45,
+     "sill": 1.5,
+     "head": 2.2,
+     "hinge": "a",
+     "side": 1,
+     "desc": "Ventana alta baño"
+    }
+   ]
+  },
+  {
+   "id": 23,
+   "name": "T-NUC",
+   "level": 3,
+   "a": [
+    2.225,
+    0.25
+   ],
+   "b": [
+    2.225,
+    6.75
+   ],
+   "t": 0.15,
+   "base_offset": 0.0,
+   "height": 2.6,
+   "kind": "albanileria",
+   "phase": "F2",
+   "openings": [
+    {
+     "tag": "P-01",
+     "kind": "door",
+     "s1": 3.05,
+     "s2": 3.85,
+     "sill": 0.0,
+     "head": 2.1,
+     "hinge": "b",
+     "side": 1,
+     "desc": "Dormitorio principal"
+    },
+    {
+     "tag": "P-01",
+     "kind": "door",
+     "s1": 4.22,
+     "s2": 5.02,
+     "sill": 0.0,
+     "head": 2.1,
+     "hinge": "a",
+     "side": 1,
+     "desc": "Dormitorio posterior"
+    },
+    {
+     "tag": "P-02",
+     "kind": "door",
+     "s1": 5.4,
+     "s2": 6.1,
+     "sill": 0.0,
+     "head": 2.1,
+     "hinge": "b",
+     "side": -1,
+     "desc": "Walk-in closet"
+    }
+   ]
+  },
+  {
+   "id": 24,
+   "name": "T-SUI",
+   "level": 3,
+   "a": [
+    2.3,
+    3.975
+   ],
+   "b": [
+    7.75,
+    3.975
+   ],
+   "t": 0.15,
+   "base_offset": 0.0,
+   "height": 2.6,
+   "kind": "albanileria",
+   "phase": "F2",
+   "openings": []
+  },
+  {
+   "id": 25,
+   "name": "T-DOR1",
+   "level": 3,
+   "a": [
+    5.375,
+    0.25
+   ],
+   "b": [
+    5.375,
+    3.9
+   ],
+   "t": 0.15,
+   "base_offset": 0.0,
+   "height": 2.6,
+   "kind": "albanileria",
+   "phase": "F2",
+   "openings": [
+    {
+     "tag": "P-02",
+     "kind": "door",
+     "s1": 2.4,
+     "s2": 3.1,
+     "sill": 0.0,
+     "head": 2.1,
+     "hinge": "a",
+     "side": 1,
+     "desc": "Walk-in closet"
+    }
+   ]
+  },
+  {
+   "id": 26,
+   "name": "T-BAN1",
+   "level": 3,
+   "a": [
+    5.45,
+    2.125
+   ],
+   "b": [
+    7.75,
+    2.125
+   ],
+   "t": 0.15,
+   "base_offset": 0.0,
+   "height": 2.6,
+   "kind": "albanileria",
+   "phase": "F2",
+   "openings": [
+    {
+     "tag": "P-03",
+     "kind": "door",
+     "s1": 6.25,
+     "s2": 6.95,
+     "sill": 0.0,
+     "head": 2.1,
+     "hinge": "a",
+     "side": -1,
+     "desc": "Baño"
+    }
+   ]
+  },
+  {
+   "id": 27,
+   "name": "T-BAN2",
+   "level": 3,
+   "a": [
+    6.075,
+    4.05
+   ],
+   "b": [
+    6.075,
+    6.75
+   ],
+   "t": 0.15,
+   "base_offset": 0.0,
+   "height": 2.6,
+   "kind": "albanileria",
+   "phase": "F2",
+   "openings": [
+    {
+     "tag": "P-03",
+     "kind": "door",
+     "s1": 4.35,
+     "s2": 5.05,
+     "sill": 0.0,
+     "head": 2.1,
+     "hinge": "a",
+     "side": 1,
+     "desc": "Baño"
+    }
+   ]
+  },
+  {
+   "id": 28,
+   "name": "T-HALL",
+   "level": 3,
+   "a": [
+    0.25,
+    5.175
+   ],
+   "b": [
+    2.15,
+    5.175
+   ],
+   "t": 0.15,
+   "base_offset": 0.0,
+   "height": 2.6,
+   "kind": "albanileria",
+   "phase": "F2",
+   "openings": []
+  },
+  {
+   "id": 29,
+   "name": "PAR-IZQ",
+   "level": 4,
+   "a": [
+    0.125,
+    0.0
+   ],
+   "b": [
+    0.125,
+    7.0
+   ],
+   "t": 0.25,
+   "base_offset": 0.0,
+   "height": 1.0,
+   "kind": "parapeto",
+   "phase": "F2",
+   "openings": []
+  },
+  {
+   "id": 30,
+   "name": "PAR-DER",
+   "level": 4,
+   "a": [
+    7.875,
+    0.0
+   ],
+   "b": [
+    7.875,
+    7.0
+   ],
+   "t": 0.25,
+   "base_offset": 0.0,
+   "height": 1.0,
+   "kind": "parapeto",
+   "phase": "F2",
+   "openings": []
+  },
+  {
+   "id": 31,
+   "name": "PAR-FRO",
+   "level": 4,
+   "a": [
+    2.35,
+    0.075
+   ],
+   "b": [
+    7.75,
+    0.075
+   ],
+   "t": 0.15,
+   "base_offset": 0.0,
+   "height": 1.0,
+   "kind": "parapeto",
+   "phase": "F2",
+   "openings": []
+  },
+  {
+   "id": 32,
+   "name": "PAR-POS",
+   "level": 4,
+   "a": [
+    2.3,
+    6.925
+   ],
+   "b": [
+    7.75,
+    6.925
+   ],
+   "t": 0.15,
+   "base_offset": 0.0,
+   "height": 1.0,
+   "kind": "parapeto",
+   "phase": "F2",
+   "openings": []
+  },
+  {
+   "id": 33,
+   "name": "PAR-POS2",
+   "level": 4,
+   "a": [
+    0.25,
+    6.925
+   ],
+   "b": [
+    2.15,
+    6.925
+   ],
+   "t": 0.15,
+   "base_offset": 0.0,
+   "height": 1.0,
+   "kind": "parapeto",
+   "phase": "F2",
+   "openings": []
+  },
+  {
+   "id": 34,
+   "name": "CAS-DER",
+   "level": 4,
+   "a": [
+    2.225,
+    0.25
+   ],
+   "b": [
+    2.225,
+    5.25
+   ],
+   "t": 0.15,
+   "base_offset": 0.0,
+   "height": 2.4,
+   "kind": "caseta",
+   "phase": "F2",
+   "openings": [
+    {
+     "tag": "P-05",
+     "kind": "door",
+     "s1": 3.15,
+     "s2": 3.95,
+     "sill": 0.0,
+     "head": 2.1,
+     "hinge": "b",
+     "side": 1,
+     "desc": "Salida a azotea"
+    }
+   ]
+  },
+  {
+   "id": 35,
+   "name": "CAS-POS",
+   "level": 4,
+   "a": [
+    0.25,
+    5.175
+   ],
+   "b": [
+    2.15,
+    5.175
+   ],
+   "t": 0.15,
+   "base_offset": 0.0,
+   "height": 2.4,
+   "kind": "caseta",
+   "phase": "F2",
+   "openings": []
+  },
+  {
+   "id": 36,
+   "name": "C-IZQ",
+   "level": 1,
+   "a": [
+    0.125,
+    7.0
+   ],
+   "b": [
+    0.125,
+    12.0
+   ],
+   "t": 0.25,
+   "base_offset": 0.0,
+   "height": 2.6,
+   "kind": "medianera",
+   "phase": "F1",
+   "openings": [],
+   "profile_yz": [
+    [
+     7.0,
+     0.0
+    ],
+    [
+     12.0,
+     0.0
+    ],
+    [
+     12.0,
+     3.5
+    ],
+    [
+     7.0,
+     3.0
+    ]
+   ]
+  },
+  {
+   "id": 37,
+   "name": "C-DER",
+   "level": 1,
+   "a": [
+    7.875,
+    7.0
+   ],
+   "b": [
+    7.875,
+    12.0
+   ],
+   "t": 0.25,
+   "base_offset": 0.0,
+   "height": 2.6,
+   "kind": "medianera",
+   "phase": "F1",
+   "openings": [],
+   "profile_yz": [
+    [
+     7.0,
+     0.0
+    ],
+    [
+     12.0,
+     0.0
+    ],
+    [
+     12.0,
+     3.5
+    ],
+    [
+     7.0,
+     3.0
+    ]
+   ]
+  },
+  {
+   "id": 38,
+   "name": "C-POS",
+   "level": 1,
+   "a": [
+    0.25,
+    11.875
+   ],
+   "b": [
+    7.75,
+    11.875
+   ],
+   "t": 0.25,
+   "base_offset": 0.0,
+   "height": 2.4,
+   "kind": "cerco",
+   "phase": "F1",
+   "openings": []
+  }
+ ],
+ "floors": [
+  {
+   "name": "CONTRAPISO 1er PISO",
+   "level": 1,
+   "offset": 0.0,
+   "t": 0.1,
+   "loops": [
+    [
+     [
+      0,
+      0
+     ],
+     [
+      8,
+      0
+     ],
+     [
+      8,
+      7
+     ],
+     [
+      0,
+      7
+     ]
+    ]
+   ]
+  },
+  {
+   "name": "PISO TERRAZA",
+   "level": 1,
+   "offset": -0.02,
+   "t": 0.1,
+   "loops": [
+    [
+     [
+      0.25,
+      7
+     ],
+     [
+      7.75,
+      7
+     ],
+     [
+      7.75,
+      11.75
+     ],
+     [
+      0.25,
+      11.75
+     ]
+    ]
+   ]
+  },
+  {
+   "name": "LOSA ALIGERADA 2do PISO",
+   "level": 2,
+   "offset": 0.0,
+   "t": 0.2,
+   "loops": [
+    [
+     [
+      0,
+      0
+     ],
+     [
+      8,
+      0
+     ],
+     [
+      8,
+      7
+     ],
+     [
+      0,
+      7
+     ]
+    ],
+    [
+     [
+      0.25,
+      0.25
+     ],
+     [
+      2.15,
+      0.25
+     ],
+     [
+      2.15,
+      3.0
+     ],
+     [
+      0.25,
+      3.0
+     ]
+    ]
+   ]
+  },
+  {
+   "name": "LOSA ALIGERADA 3er PISO",
+   "level": 3,
+   "offset": 0.0,
+   "t": 0.2,
+   "loops": [
+    [
+     [
+      0,
+      0
+     ],
+     [
+      8,
+      0
+     ],
+     [
+      8,
+      7
+     ],
+     [
+      0,
+      7
+     ]
+    ],
+    [
+     [
+      0.25,
+      0.25
+     ],
+     [
+      2.15,
+      0.25
+     ],
+     [
+      2.15,
+      3.0
+     ],
+     [
+      0.25,
+      3.0
+     ]
+    ]
+   ]
+  },
+  {
+   "name": "LOSA AZOTEA",
+   "level": 4,
+   "offset": 0.0,
+   "t": 0.2,
+   "phase": "F2",
+   "loops": [
+    [
+     [
+      0,
+      0
+     ],
+     [
+      8,
+      0
+     ],
+     [
+      8,
+      7
+     ],
+     [
+      0,
+      7
+     ]
+    ],
+    [
+     [
+      0.25,
+      0.25
+     ],
+     [
+      2.15,
+      0.25
+     ],
+     [
+      2.15,
+      3.0
+     ],
+     [
+      0.25,
+      3.0
+     ]
+    ]
+   ]
+  },
+  {
+   "name": "TECHO CASETA",
+   "level": 4,
+   "offset": 2.6,
+   "t": 0.2,
+   "phase": "F2",
+   "loops": [
+    [
+     [
+      0,
+      3.0
+     ],
+     [
+      2.35,
+      3.0
+     ],
+     [
+      2.35,
+      5.25
+     ],
+     [
+      0,
+      5.25
+     ]
+    ]
+   ]
+  },
+  {
+   "name": "VOLADO MARCO",
+   "level": 2,
+   "offset": 0.0,
+   "t": 0.2,
+   "loops": [
+    [
+     [
+      2.15,
+      -0.5
+     ],
+     [
+      8.0,
+      -0.5
+     ],
+     [
+      8.0,
+      0.0
+     ],
+     [
+      2.15,
+      0.0
+     ]
+    ]
+   ]
+  }
+ ],
+ "roofs": [
+  {
+   "name": "COBERTURA TR4 + POLICARBONATO",
+   "x1": 0.0,
+   "x2": 8.0,
+   "t": 0.05,
+   "profile_yz": [
+    [
+     7.12,
+     3.062
+    ],
+    [
+     12.0,
+     3.55
+    ]
+   ],
+   "slope_pct": 10
+  }
+ ],
+ "stairs": [
+  {
+   "base_level": 1,
+   "top_level": 2,
+   "phase": "F1",
+   "run1": [
+    [
+     0.7,
+     3.0
+    ],
+    [
+     0.7,
+     1.25
+    ]
+   ],
+   "run2": [
+    [
+     1.7,
+     1.25
+    ],
+    [
+     1.7,
+     3.0
+    ]
+   ],
+   "width": 0.9,
+   "risers": 16,
+   "riser": 0.175,
+   "tread": 0.25
+  },
+  {
+   "base_level": 2,
+   "top_level": 3,
+   "phase": "F1",
+   "run1": [
+    [
+     0.7,
+     3.0
+    ],
+    [
+     0.7,
+     1.25
+    ]
+   ],
+   "run2": [
+    [
+     1.7,
+     1.25
+    ],
+    [
+     1.7,
+     3.0
+    ]
+   ],
+   "width": 0.9,
+   "risers": 16,
+   "riser": 0.175,
+   "tread": 0.25
+  },
+  {
+   "base_level": 3,
+   "top_level": 4,
+   "phase": "F2",
+   "run1": [
+    [
+     0.7,
+     3.0
+    ],
+    [
+     0.7,
+     1.25
+    ]
+   ],
+   "run2": [
+    [
+     1.7,
+     1.25
+    ],
+    [
+     1.7,
+     3.0
+    ]
+   ],
+   "width": 0.9,
+   "risers": 16,
+   "riser": 0.175,
+   "tread": 0.25
+  }
+ ],
+ "rooms": [
+  {
+   "level": 1,
+   "name": "SALA",
+   "number": "101",
+   "pt": [
+    5.025,
+    2.075
+   ],
+   "area": 19.89,
+   "finish": "Porcelanato 60x120"
+  },
+  {
+   "level": 1,
+   "name": "COMEDOR",
+   "number": "102",
+   "pt": [
+    3.65,
+    5.4
+   ],
+   "area": 7.29,
+   "finish": "Porcelanato 60x120"
+  },
+  {
+   "level": 1,
+   "name": "COCINA",
+   "number": "103",
+   "pt": [
+    6.375,
+    5.4
+   ],
+   "area": 7.43,
+   "finish": "Porcelanato 60x120"
+  },
+  {
+   "level": 1,
+   "name": "HALL",
+   "number": "104",
+   "pt": [
+    1.2,
+    4.1
+   ],
+   "area": 3.8,
+   "finish": "Porcelanato 60x120"
+  },
+  {
+   "level": 1,
+   "name": "BAÑO VISITAS",
+   "number": "105",
+   "pt": [
+    1.2,
+    6.0
+   ],
+   "area": 2.85,
+   "finish": "Cerámico antideslizante"
+  },
+  {
+   "level": 1,
+   "name": "JARDÍN INTERIOR",
+   "number": "106",
+   "pt": [
+    1.2,
+    0.75
+   ],
+   "area": 1.9,
+   "finish": "Canto rodado + helechos"
+  },
+  {
+   "level": 1,
+   "name": "DEPÓSITO",
+   "number": "107",
+   "pt": [
+    1.7,
+    2.125
+   ],
+   "area": 1.57,
+   "finish": ""
+  },
+  {
+   "level": 1,
+   "name": "TERRAZA - PARRILLA",
+   "number": "108",
+   "pt": [
+    4.0,
+    9.375
+   ],
+   "area": 35.62,
+   "finish": "Porcelanato antideslizante / deck WPC"
+  },
+  {
+   "level": 2,
+   "name": "DORMITORIO 1",
+   "number": "209",
+   "pt": [
+    3.8,
+    2.075
+   ],
+   "area": 10.95,
+   "finish": "Piso laminado"
+  },
+  {
+   "level": 2,
+   "name": "WALK-IN",
+   "number": "210",
+   "pt": [
+    6.6,
+    3.05
+   ],
+   "area": 3.91,
+   "finish": "Piso laminado"
+  },
+  {
+   "level": 2,
+   "name": "BAÑO 1",
+   "number": "211",
+   "pt": [
+    6.6,
+    1.15
+   ],
+   "area": 4.14,
+   "finish": "Porcelanato"
+  },
+  {
+   "level": 2,
+   "name": "DORMITORIO 2",
+   "number": "212",
+   "pt": [
+    4.15,
+    5.4
+   ],
+   "area": 9.99,
+   "finish": "Piso laminado"
+  },
+  {
+   "level": 2,
+   "name": "BAÑO 2",
+   "number": "213",
+   "pt": [
+    6.95,
+    5.4
+   ],
+   "area": 4.32,
+   "finish": "Porcelanato"
+  },
+  {
+   "level": 2,
+   "name": "WALK-IN",
+   "number": "214",
+   "pt": [
+    1.2,
+    6.0
+   ],
+   "area": 2.85,
+   "finish": "Piso laminado"
+  },
+  {
+   "level": 2,
+   "name": "ESTAR / HALL",
+   "number": "215",
+   "pt": [
+    1.2,
+    4.05
+   ],
+   "area": 3.99,
+   "finish": "Piso laminado"
+  },
+  {
+   "level": 3,
+   "name": "DORMITORIO 3",
+   "number": "316",
+   "pt": [
+    3.8,
+    2.075
+   ],
+   "area": 10.95,
+   "finish": "Piso laminado"
+  },
+  {
+   "level": 3,
+   "name": "WALK-IN",
+   "number": "317",
+   "pt": [
+    6.6,
+    3.05
+   ],
+   "area": 3.91,
+   "finish": "Piso laminado"
+  },
+  {
+   "level": 3,
+   "name": "BAÑO 3",
+   "number": "318",
+   "pt": [
+    6.6,
+    1.15
+   ],
+   "area": 4.14,
+   "finish": "Porcelanato"
+  },
+  {
+   "level": 3,
+   "name": "DORMITORIO 4",
+   "number": "319",
+   "pt": [
+    4.15,
+    5.4
+   ],
+   "area": 9.99,
+   "finish": "Piso laminado"
+  },
+  {
+   "level": 3,
+   "name": "BAÑO 4",
+   "number": "320",
+   "pt": [
+    6.95,
+    5.4
+   ],
+   "area": 4.32,
+   "finish": "Porcelanato"
+  },
+  {
+   "level": 3,
+   "name": "WALK-IN",
+   "number": "321",
+   "pt": [
+    1.2,
+    6.0
+   ],
+   "area": 2.85,
+   "finish": "Piso laminado"
+  },
+  {
+   "level": 3,
+   "name": "ESTAR / HALL",
+   "number": "322",
+   "pt": [
+    1.2,
+    4.05
+   ],
+   "area": 3.99,
+   "finish": "Piso laminado"
+  },
+  {
+   "level": 4,
+   "name": "AZOTEA",
+   "number": "423",
+   "pt": [
+    5.025,
+    3.4749999999999996
+   ],
+   "area": 36.79,
+   "finish": "Impermeabilizante + deck"
+  },
+  {
+   "level": 4,
+   "name": "CASETA ESCALERA",
+   "number": "424",
+   "pt": [
+    1.2,
+    4.05
+   ],
+   "area": 3.99,
+   "finish": ""
+  }
+ ],
+ "room_separations": [
+  {
+   "level": 1,
+   "a": [
+    2.3,
+    3.975
+   ],
+   "b": [
+    7.75,
+    3.975
+   ]
+  },
+  {
+   "level": 1,
+   "a": [
+    5.0,
+    4.05
+   ],
+   "b": [
+    5.0,
+    6.75
+   ]
+  },
+  {
+   "level": 1,
+   "a": [
+    2.225,
+    3.1
+   ],
+   "b": [
+    2.225,
+    5.1
+   ]
+  },
+  {
+   "level": 1,
+   "a": [
+    0.25,
+    3.1
+   ],
+   "b": [
+    1.25,
+    3.1
+   ]
+  },
+  {
+   "level": 1,
+   "a": [
+    0.25,
+    1.25
+   ],
+   "b": [
+    1.2,
+    1.25
+   ]
+  },
+  {
+   "level": 1,
+   "a": [
+    0.25,
+    7.0
+   ],
+   "b": [
+    7.75,
+    7.0
+   ]
+  },
+  {
+   "level": 2,
+   "a": [
+    0.25,
+    3.0
+   ],
+   "b": [
+    2.15,
+    3.0
+   ]
+  },
+  {
+   "level": 3,
+   "a": [
+    0.25,
+    3.0
+   ],
+   "b": [
+    2.15,
+    3.0
+   ]
+  },
+  {
+   "level": 4,
+   "a": [
+    0.25,
+    3.0
+   ],
+   "b": [
+    2.15,
+    3.0
+   ]
+  }
+ ],
+ "directshapes": [
+  {
+   "name": "ESC-T1-1",
+   "cat": "OST_GenericModel",
+   "bim_cat": "escalera",
+   "mat": "concreto",
+   "x1": 0.25,
+   "x2": 1.15,
+   "poly": [
+    [
+     3.0,
+     -0.1831
+    ],
+    [
+     3.0,
+     0.0
+    ],
+    [
+     3.0,
+     0.175
+    ],
+    [
+     2.75,
+     0.175
+    ],
+    [
+     2.75,
+     0.35
+    ],
+    [
+     2.5,
+     0.35
+    ],
+    [
+     2.5,
+     0.525
+    ],
+    [
+     2.25,
+     0.525
+    ],
+    [
+     2.25,
+     0.7
+    ],
+    [
+     2.0,
+     0.7
+    ],
+    [
+     2.0,
+     0.875
+    ],
+    [
+     1.75,
+     0.875
+    ],
+    [
+     1.75,
+     1.05
+    ],
+    [
+     1.5,
+     1.05
+    ],
+    [
+     1.5,
+     1.225
+    ],
+    [
+     1.25,
+     1.225
+    ],
+    [
+     1.25,
+     1.4
+    ],
+    [
+     1.25,
+     1.0419
+    ]
+   ],
+   "level": 1,
+   "phase": "F1",
+   "fallback_only": true
+  },
+  {
+   "name": "ESC-T2-1",
+   "cat": "OST_GenericModel",
+   "bim_cat": "escalera",
+   "mat": "concreto",
+   "x1": 1.25,
+   "x2": 2.15,
+   "poly": [
+    [
+     3.0,
+     2.4419
+    ],
+    [
+     3.0,
+     2.6
+    ],
+    [
+     3.0,
+     2.8
+    ],
+    [
+     3.0,
+     2.625
+    ],
+    [
+     2.75,
+     2.625
+    ],
+    [
+     2.75,
+     2.45
+    ],
+    [
+     2.5,
+     2.45
+    ],
+    [
+     2.5,
+     2.275
+    ],
+    [
+     2.25,
+     2.275
+    ],
+    [
+     2.25,
+     2.1
+    ],
+    [
+     2.0,
+     2.1
+    ],
+    [
+     2.0,
+     1.925
+    ],
+    [
+     1.75,
+     1.925
+    ],
+    [
+     1.75,
+     1.75
+    ],
+    [
+     1.5,
+     1.75
+    ],
+    [
+     1.5,
+     1.575
+    ],
+    [
+     1.25,
+     1.575
+    ],
+    [
+     1.25,
+     1.4
+    ],
+    [
+     1.25,
+     1.2
+    ]
+   ],
+   "level": 1,
+   "phase": "F1",
+   "fallback_only": true
+  },
+  {
+   "name": "ESC-DESC-1",
+   "cat": "OST_GenericModel",
+   "bim_cat": "escalera",
+   "mat": "concreto",
+   "x1": 0.25,
+   "x2": 2.15,
+   "poly": [
+    [
+     0.25,
+     1.2
+    ],
+    [
+     1.25,
+     1.2
+    ],
+    [
+     1.25,
+     1.4
+    ],
+    [
+     0.25,
+     1.4
+    ]
+   ],
+   "level": 1,
+   "phase": "F1",
+   "fallback_only": true
+  },
+  {
+   "name": "BAR-1A",
+   "cat": "OST_GenericModel",
+   "bim_cat": "baranda",
+   "mat": "vidrio",
+   "x1": 1.17,
+   "x2": 1.23,
+   "poly": [
+    [
+     1.25,
+     1.4
+    ],
+    [
+     3.0,
+     0.0
+    ],
+    [
+     3.0,
+     0.95
+    ],
+    [
+     1.25,
+     2.35
+    ]
+   ],
+   "level": 1,
+   "phase": "F1"
+  },
+  {
+   "name": "BAR-1B",
+   "cat": "OST_GenericModel",
+   "bim_cat": "baranda",
+   "mat": "vidrio",
+   "x1": 1.17,
+   "x2": 1.23,
+   "poly": [
+    [
+     1.25,
+     1.4
+    ],
+    [
+     3.0,
+     2.8
+    ],
+    [
+     3.0,
+     3.75
+    ],
+    [
+     1.25,
+     2.35
+    ]
+   ],
+   "level": 1,
+   "phase": "F1"
+  },
+  {
+   "name": "PAS-1",
+   "cat": "OST_GenericModel",
+   "bim_cat": "baranda",
+   "mat": "acero",
+   "x1": 1.15,
+   "x2": 1.25,
+   "poly": [
+    [
+     1.25,
+     2.35
+    ],
+    [
+     3.0,
+     0.95
+    ],
+    [
+     3.0,
+     1.0
+    ],
+    [
+     1.25,
+     2.4
+    ]
+   ],
+   "level": 1,
+   "phase": "F1"
+  },
+  {
+   "name": "ESC-T1-2",
+   "cat": "OST_GenericModel",
+   "bim_cat": "escalera",
+   "mat": "concreto",
+   "x1": 0.25,
+   "x2": 1.15,
+   "poly": [
+    [
+     3.0,
+     2.6169
+    ],
+    [
+     3.0,
+     2.8
+    ],
+    [
+     3.0,
+     2.975
+    ],
+    [
+     2.75,
+     2.975
+    ],
+    [
+     2.75,
+     3.15
+    ],
+    [
+     2.5,
+     3.15
+    ],
+    [
+     2.5,
+     3.325
+    ],
+    [
+     2.25,
+     3.325
+    ],
+    [
+     2.25,
+     3.5
+    ],
+    [
+     2.0,
+     3.5
+    ],
+    [
+     2.0,
+     3.675
+    ],
+    [
+     1.75,
+     3.675
+    ],
+    [
+     1.75,
+     3.85
+    ],
+    [
+     1.5,
+     3.85
+    ],
+    [
+     1.5,
+     4.025
+    ],
+    [
+     1.25,
+     4.025
+    ],
+    [
+     1.25,
+     4.2
+    ],
+    [
+     1.25,
+     3.8419
+    ]
+   ],
+   "level": 2,
+   "phase": "F1",
+   "fallback_only": true
+  },
+  {
+   "name": "ESC-T2-2",
+   "cat": "OST_GenericModel",
+   "bim_cat": "escalera",
+   "mat": "concreto",
+   "x1": 1.25,
+   "x2": 2.15,
+   "poly": [
+    [
+     3.0,
+     5.2419
+    ],
+    [
+     3.0,
+     5.4
+    ],
+    [
+     3.0,
+     5.6
+    ],
+    [
+     3.0,
+     5.425
+    ],
+    [
+     2.75,
+     5.425
+    ],
+    [
+     2.75,
+     5.25
+    ],
+    [
+     2.5,
+     5.25
+    ],
+    [
+     2.5,
+     5.075
+    ],
+    [
+     2.25,
+     5.075
+    ],
+    [
+     2.25,
+     4.9
+    ],
+    [
+     2.0,
+     4.9
+    ],
+    [
+     2.0,
+     4.725
+    ],
+    [
+     1.75,
+     4.725
+    ],
+    [
+     1.75,
+     4.55
+    ],
+    [
+     1.5,
+     4.55
+    ],
+    [
+     1.5,
+     4.375
+    ],
+    [
+     1.25,
+     4.375
+    ],
+    [
+     1.25,
+     4.2
+    ],
+    [
+     1.25,
+     4.0
+    ]
+   ],
+   "level": 2,
+   "phase": "F1",
+   "fallback_only": true
+  },
+  {
+   "name": "ESC-DESC-2",
+   "cat": "OST_GenericModel",
+   "bim_cat": "escalera",
+   "mat": "concreto",
+   "x1": 0.25,
+   "x2": 2.15,
+   "poly": [
+    [
+     0.25,
+     4.0
+    ],
+    [
+     1.25,
+     4.0
+    ],
+    [
+     1.25,
+     4.2
+    ],
+    [
+     0.25,
+     4.2
+    ]
+   ],
+   "level": 2,
+   "phase": "F1",
+   "fallback_only": true
+  },
+  {
+   "name": "BAR-2A",
+   "cat": "OST_GenericModel",
+   "bim_cat": "baranda",
+   "mat": "vidrio",
+   "x1": 1.17,
+   "x2": 1.23,
+   "poly": [
+    [
+     1.25,
+     4.2
+    ],
+    [
+     3.0,
+     2.8
+    ],
+    [
+     3.0,
+     3.75
+    ],
+    [
+     1.25,
+     5.15
+    ]
+   ],
+   "level": 2,
+   "phase": "F1"
+  },
+  {
+   "name": "BAR-2B",
+   "cat": "OST_GenericModel",
+   "bim_cat": "baranda",
+   "mat": "vidrio",
+   "x1": 1.17,
+   "x2": 1.23,
+   "poly": [
+    [
+     1.25,
+     4.2
+    ],
+    [
+     3.0,
+     5.6
+    ],
+    [
+     3.0,
+     6.55
+    ],
+    [
+     1.25,
+     5.15
+    ]
+   ],
+   "level": 2,
+   "phase": "F1"
+  },
+  {
+   "name": "PAS-2",
+   "cat": "OST_GenericModel",
+   "bim_cat": "baranda",
+   "mat": "acero",
+   "x1": 1.15,
+   "x2": 1.25,
+   "poly": [
+    [
+     1.25,
+     5.15
+    ],
+    [
+     3.0,
+     3.75
+    ],
+    [
+     3.0,
+     3.8
+    ],
+    [
+     1.25,
+     5.2
+    ]
+   ],
+   "level": 2,
+   "phase": "F1"
+  },
+  {
+   "name": "ESC-T1-3",
+   "cat": "OST_GenericModel",
+   "bim_cat": "escalera",
+   "mat": "concreto",
+   "x1": 0.25,
+   "x2": 1.15,
+   "poly": [
+    [
+     3.0,
+     5.4169
+    ],
+    [
+     3.0,
+     5.6
+    ],
+    [
+     3.0,
+     5.775
+    ],
+    [
+     2.75,
+     5.775
+    ],
+    [
+     2.75,
+     5.95
+    ],
+    [
+     2.5,
+     5.95
+    ],
+    [
+     2.5,
+     6.125
+    ],
+    [
+     2.25,
+     6.125
+    ],
+    [
+     2.25,
+     6.3
+    ],
+    [
+     2.0,
+     6.3
+    ],
+    [
+     2.0,
+     6.475
+    ],
+    [
+     1.75,
+     6.475
+    ],
+    [
+     1.75,
+     6.65
+    ],
+    [
+     1.5,
+     6.65
+    ],
+    [
+     1.5,
+     6.825
+    ],
+    [
+     1.25,
+     6.825
+    ],
+    [
+     1.25,
+     7.0
+    ],
+    [
+     1.25,
+     6.6419
+    ]
+   ],
+   "level": 3,
+   "phase": "F2",
+   "fallback_only": true
+  },
+  {
+   "name": "ESC-T2-3",
+   "cat": "OST_GenericModel",
+   "bim_cat": "escalera",
+   "mat": "concreto",
+   "x1": 1.25,
+   "x2": 2.15,
+   "poly": [
+    [
+     3.0,
+     8.0419
+    ],
+    [
+     3.0,
+     8.2
+    ],
+    [
+     3.0,
+     8.4
+    ],
+    [
+     3.0,
+     8.225
+    ],
+    [
+     2.75,
+     8.225
+    ],
+    [
+     2.75,
+     8.05
+    ],
+    [
+     2.5,
+     8.05
+    ],
+    [
+     2.5,
+     7.875
+    ],
+    [
+     2.25,
+     7.875
+    ],
+    [
+     2.25,
+     7.7
+    ],
+    [
+     2.0,
+     7.7
+    ],
+    [
+     2.0,
+     7.525
+    ],
+    [
+     1.75,
+     7.525
+    ],
+    [
+     1.75,
+     7.35
+    ],
+    [
+     1.5,
+     7.35
+    ],
+    [
+     1.5,
+     7.175
+    ],
+    [
+     1.25,
+     7.175
+    ],
+    [
+     1.25,
+     7.0
+    ],
+    [
+     1.25,
+     6.8
+    ]
+   ],
+   "level": 3,
+   "phase": "F2",
+   "fallback_only": true
+  },
+  {
+   "name": "ESC-DESC-3",
+   "cat": "OST_GenericModel",
+   "bim_cat": "escalera",
+   "mat": "concreto",
+   "x1": 0.25,
+   "x2": 2.15,
+   "poly": [
+    [
+     0.25,
+     6.8
+    ],
+    [
+     1.25,
+     6.8
+    ],
+    [
+     1.25,
+     7.0
+    ],
+    [
+     0.25,
+     7.0
+    ]
+   ],
+   "level": 3,
+   "phase": "F2",
+   "fallback_only": true
+  },
+  {
+   "name": "BAR-3A",
+   "cat": "OST_GenericModel",
+   "bim_cat": "baranda",
+   "mat": "vidrio",
+   "x1": 1.17,
+   "x2": 1.23,
+   "poly": [
+    [
+     1.25,
+     7.0
+    ],
+    [
+     3.0,
+     5.6
+    ],
+    [
+     3.0,
+     6.55
+    ],
+    [
+     1.25,
+     7.95
+    ]
+   ],
+   "level": 3,
+   "phase": "F2"
+  },
+  {
+   "name": "BAR-3B",
+   "cat": "OST_GenericModel",
+   "bim_cat": "baranda",
+   "mat": "vidrio",
+   "x1": 1.17,
+   "x2": 1.23,
+   "poly": [
+    [
+     1.25,
+     7.0
+    ],
+    [
+     3.0,
+     8.4
+    ],
+    [
+     3.0,
+     9.35
+    ],
+    [
+     1.25,
+     7.95
+    ]
+   ],
+   "level": 3,
+   "phase": "F2"
+  },
+  {
+   "name": "PAS-3",
+   "cat": "OST_GenericModel",
+   "bim_cat": "baranda",
+   "mat": "acero",
+   "x1": 1.15,
+   "x2": 1.25,
+   "poly": [
+    [
+     1.25,
+     7.95
+    ],
+    [
+     3.0,
+     6.55
+    ],
+    [
+     3.0,
+     6.6
+    ],
+    [
+     1.25,
+     8.0
+    ]
+   ],
+   "level": 3,
+   "phase": "F2"
+  },
+  {
+   "name": "LUCERNARIO",
+   "cat": "OST_GenericModel",
+   "bim_cat": "lucernario",
+   "mat": "vidrio",
+   "x1": 0.25,
+   "x2": 2.15,
+   "poly": [
+    [
+     0.25,
+     10.9
+    ],
+    [
+     3.0,
+     10.9
+    ],
+    [
+     3.0,
+     10.93
+    ],
+    [
+     0.25,
+     10.93
+    ]
+   ],
+   "level": 4,
+   "phase": "F2"
+  },
+  {
+   "name": "C-1A",
+   "cat": "OST_StructuralColumns",
+   "bim_cat": "columna",
+   "mat": "concreto",
+   "x1": 0.0,
+   "x2": 0.25,
+   "poly": [
+    [
+     0,
+     -1.0
+    ],
+    [
+     0.4,
+     -1.0
+    ],
+    [
+     0.4,
+     2.8
+    ],
+    [
+     0,
+     2.8
+    ]
+   ],
+   "level": 1,
+   "phase": "F1"
+  },
+  {
+   "name": "C-1A",
+   "cat": "OST_StructuralColumns",
+   "bim_cat": "columna",
+   "mat": "concreto",
+   "x1": 0.0,
+   "x2": 0.25,
+   "poly": [
+    [
+     0,
+     2.8
+    ],
+    [
+     0.4,
+     2.8
+    ],
+    [
+     0.4,
+     5.6
+    ],
+    [
+     0,
+     5.6
+    ]
+   ],
+   "level": 2,
+   "phase": "F1"
+  },
+  {
+   "name": "C-1A",
+   "cat": "OST_StructuralColumns",
+   "bim_cat": "columna",
+   "mat": "concreto",
+   "x1": 0.0,
+   "x2": 0.25,
+   "poly": [
+    [
+     0,
+     5.6
+    ],
+    [
+     0.4,
+     5.6
+    ],
+    [
+     0.4,
+     8.4
+    ],
+    [
+     0,
+     8.4
+    ]
+   ],
+   "level": 3,
+   "phase": "F2"
+  },
+  {
+   "name": "C-1A",
+   "cat": "OST_StructuralColumns",
+   "bim_cat": "columna",
+   "mat": "concreto",
+   "x1": 0.0,
+   "x2": 0.25,
+   "poly": [
+    [
+     0,
+     8.4
+    ],
+    [
+     0.4,
+     8.4
+    ],
+    [
+     0.4,
+     9.4
+    ],
+    [
+     0,
+     9.4
+    ]
+   ],
+   "level": 4,
+   "phase": "F2"
+  },
+  {
+   "name": "C-1B",
+   "cat": "OST_StructuralColumns",
+   "bim_cat": "columna",
+   "mat": "concreto",
+   "x1": 0.0,
+   "x2": 0.25,
+   "poly": [
+    [
+     3.775,
+     -1.0
+    ],
+    [
+     4.175,
+     -1.0
+    ],
+    [
+     4.175,
+     2.8
+    ],
+    [
+     3.775,
+     2.8
+    ]
+   ],
+   "level": 1,
+   "phase": "F1"
+  },
+  {
+   "name": "C-1B",
+   "cat": "OST_StructuralColumns",
+   "bim_cat": "columna",
+   "mat": "concreto",
+   "x1": 0.0,
+   "x2": 0.25,
+   "poly": [
+    [
+     3.775,
+     2.8
+    ],
+    [
+     4.175,
+     2.8
+    ],
+    [
+     4.175,
+     5.6
+    ],
+    [
+     3.775,
+     5.6
+    ]
+   ],
+   "level": 2,
+   "phase": "F1"
+  },
+  {
+   "name": "C-1B",
+   "cat": "OST_StructuralColumns",
+   "bim_cat": "columna",
+   "mat": "concreto",
+   "x1": 0.0,
+   "x2": 0.25,
+   "poly": [
+    [
+     3.775,
+     5.6
+    ],
+    [
+     4.175,
+     5.6
+    ],
+    [
+     4.175,
+     8.4
+    ],
+    [
+     3.775,
+     8.4
+    ]
+   ],
+   "level": 3,
+   "phase": "F2"
+  },
+  {
+   "name": "C-1B",
+   "cat": "OST_StructuralColumns",
+   "bim_cat": "columna",
+   "mat": "concreto",
+   "x1": 0.0,
+   "x2": 0.25,
+   "poly": [
+    [
+     3.775,
+     8.4
+    ],
+    [
+     4.175,
+     8.4
+    ],
+    [
+     4.175,
+     9.4
+    ],
+    [
+     3.775,
+     9.4
+    ]
+   ],
+   "level": 4,
+   "phase": "F2"
+  },
+  {
+   "name": "C-1C",
+   "cat": "OST_StructuralColumns",
+   "bim_cat": "columna",
+   "mat": "concreto",
+   "x1": 0.0,
+   "x2": 0.25,
+   "poly": [
+    [
+     6.6,
+     -1.0
+    ],
+    [
+     7.0,
+     -1.0
+    ],
+    [
+     7.0,
+     2.8
+    ],
+    [
+     6.6,
+     2.8
+    ]
+   ],
+   "level": 1,
+   "phase": "F1"
+  },
+  {
+   "name": "C-1C",
+   "cat": "OST_StructuralColumns",
+   "bim_cat": "columna",
+   "mat": "concreto",
+   "x1": 0.0,
+   "x2": 0.25,
+   "poly": [
+    [
+     6.6,
+     2.8
+    ],
+    [
+     7.0,
+     2.8
+    ],
+    [
+     7.0,
+     5.6
+    ],
+    [
+     6.6,
+     5.6
+    ]
+   ],
+   "level": 2,
+   "phase": "F1"
+  },
+  {
+   "name": "C-1C",
+   "cat": "OST_StructuralColumns",
+   "bim_cat": "columna",
+   "mat": "concreto",
+   "x1": 0.0,
+   "x2": 0.25,
+   "poly": [
+    [
+     6.6,
+     5.6
+    ],
+    [
+     7.0,
+     5.6
+    ],
+    [
+     7.0,
+     8.4
+    ],
+    [
+     6.6,
+     8.4
+    ]
+   ],
+   "level": 3,
+   "phase": "F2"
+  },
+  {
+   "name": "C-1C",
+   "cat": "OST_StructuralColumns",
+   "bim_cat": "columna",
+   "mat": "concreto",
+   "x1": 0.0,
+   "x2": 0.25,
+   "poly": [
+    [
+     6.6,
+     8.4
+    ],
+    [
+     7.0,
+     8.4
+    ],
+    [
+     7.0,
+     9.4
+    ],
+    [
+     6.6,
+     9.4
+    ]
+   ],
+   "level": 4,
+   "phase": "F2"
+  },
+  {
+   "name": "C-2A",
+   "cat": "OST_StructuralColumns",
+   "bim_cat": "columna",
+   "mat": "concreto",
+   "x1": 2.1,
+   "x2": 2.35,
+   "poly": [
+    [
+     0.0,
+     -1.0
+    ],
+    [
+     0.25,
+     -1.0
+    ],
+    [
+     0.25,
+     2.8
+    ],
+    [
+     0.0,
+     2.8
+    ]
+   ],
+   "level": 1,
+   "phase": "F1"
+  },
+  {
+   "name": "C-2A",
+   "cat": "OST_StructuralColumns",
+   "bim_cat": "columna",
+   "mat": "concreto",
+   "x1": 2.1,
+   "x2": 2.35,
+   "poly": [
+    [
+     0.0,
+     2.8
+    ],
+    [
+     0.25,
+     2.8
+    ],
+    [
+     0.25,
+     5.6
+    ],
+    [
+     0.0,
+     5.6
+    ]
+   ],
+   "level": 2,
+   "phase": "F1"
+  },
+  {
+   "name": "C-2A",
+   "cat": "OST_StructuralColumns",
+   "bim_cat": "columna",
+   "mat": "concreto",
+   "x1": 2.1,
+   "x2": 2.35,
+   "poly": [
+    [
+     0.0,
+     5.6
+    ],
+    [
+     0.25,
+     5.6
+    ],
+    [
+     0.25,
+     8.4
+    ],
+    [
+     0.0,
+     8.4
+    ]
+   ],
+   "level": 3,
+   "phase": "F2"
+  },
+  {
+   "name": "C-2A",
+   "cat": "OST_StructuralColumns",
+   "bim_cat": "columna",
+   "mat": "concreto",
+   "x1": 2.1,
+   "x2": 2.35,
+   "poly": [
+    [
+     0.0,
+     8.4
+    ],
+    [
+     0.25,
+     8.4
+    ],
+    [
+     0.25,
+     9.4
+    ],
+    [
+     0.0,
+     9.4
+    ]
+   ],
+   "level": 4,
+   "phase": "F2"
+  },
+  {
+   "name": "C-2B",
+   "cat": "OST_StructuralColumns",
+   "bim_cat": "columna",
+   "mat": "concreto",
+   "x1": 2.1,
+   "x2": 2.35,
+   "poly": [
+    [
+     3.9,
+     -1.0
+    ],
+    [
+     4.15,
+     -1.0
+    ],
+    [
+     4.15,
+     2.8
+    ],
+    [
+     3.9,
+     2.8
+    ]
+   ],
+   "level": 1,
+   "phase": "F1"
+  },
+  {
+   "name": "C-2B",
+   "cat": "OST_StructuralColumns",
+   "bim_cat": "columna",
+   "mat": "concreto",
+   "x1": 2.1,
+   "x2": 2.35,
+   "poly": [
+    [
+     3.9,
+     2.8
+    ],
+    [
+     4.15,
+     2.8
+    ],
+    [
+     4.15,
+     5.6
+    ],
+    [
+     3.9,
+     5.6
+    ]
+   ],
+   "level": 2,
+   "phase": "F1"
+  },
+  {
+   "name": "C-2B",
+   "cat": "OST_StructuralColumns",
+   "bim_cat": "columna",
+   "mat": "concreto",
+   "x1": 2.1,
+   "x2": 2.35,
+   "poly": [
+    [
+     3.9,
+     5.6
+    ],
+    [
+     4.15,
+     5.6
+    ],
+    [
+     4.15,
+     8.4
+    ],
+    [
+     3.9,
+     8.4
+    ]
+   ],
+   "level": 3,
+   "phase": "F2"
+  },
+  {
+   "name": "C-2B",
+   "cat": "OST_StructuralColumns",
+   "bim_cat": "columna",
+   "mat": "concreto",
+   "x1": 2.1,
+   "x2": 2.35,
+   "poly": [
+    [
+     3.9,
+     8.4
+    ],
+    [
+     4.15,
+     8.4
+    ],
+    [
+     4.15,
+     9.4
+    ],
+    [
+     3.9,
+     9.4
+    ]
+   ],
+   "level": 4,
+   "phase": "F2"
+  },
+  {
+   "name": "C-2C",
+   "cat": "OST_StructuralColumns",
+   "bim_cat": "columna",
+   "mat": "concreto",
+   "x1": 2.1,
+   "x2": 2.35,
+   "poly": [
+    [
+     6.75,
+     -1.0
+    ],
+    [
+     7.0,
+     -1.0
+    ],
+    [
+     7.0,
+     2.8
+    ],
+    [
+     6.75,
+     2.8
+    ]
+   ],
+   "level": 1,
+   "phase": "F1"
+  },
+  {
+   "name": "C-2C",
+   "cat": "OST_StructuralColumns",
+   "bim_cat": "columna",
+   "mat": "concreto",
+   "x1": 2.1,
+   "x2": 2.35,
+   "poly": [
+    [
+     6.75,
+     2.8
+    ],
+    [
+     7.0,
+     2.8
+    ],
+    [
+     7.0,
+     5.6
+    ],
+    [
+     6.75,
+     5.6
+    ]
+   ],
+   "level": 2,
+   "phase": "F1"
+  },
+  {
+   "name": "C-2C",
+   "cat": "OST_StructuralColumns",
+   "bim_cat": "columna",
+   "mat": "concreto",
+   "x1": 2.1,
+   "x2": 2.35,
+   "poly": [
+    [
+     6.75,
+     5.6
+    ],
+    [
+     7.0,
+     5.6
+    ],
+    [
+     7.0,
+     8.4
+    ],
+    [
+     6.75,
+     8.4
+    ]
+   ],
+   "level": 3,
+   "phase": "F2"
+  },
+  {
+   "name": "C-2C",
+   "cat": "OST_StructuralColumns",
+   "bim_cat": "columna",
+   "mat": "concreto",
+   "x1": 2.1,
+   "x2": 2.35,
+   "poly": [
+    [
+     6.75,
+     8.4
+    ],
+    [
+     7.0,
+     8.4
+    ],
+    [
+     7.0,
+     9.4
+    ],
+    [
+     6.75,
+     9.4
+    ]
+   ],
+   "level": 4,
+   "phase": "F2"
+  },
+  {
+   "name": "C-3A",
+   "cat": "OST_StructuralColumns",
+   "bim_cat": "columna",
+   "mat": "concreto",
+   "x1": 5.25,
+   "x2": 5.5,
+   "poly": [
+    [
+     0.0,
+     -1.0
+    ],
+    [
+     0.25,
+     -1.0
+    ],
+    [
+     0.25,
+     2.8
+    ],
+    [
+     0.0,
+     2.8
+    ]
+   ],
+   "level": 1,
+   "phase": "F1"
+  },
+  {
+   "name": "C-3A",
+   "cat": "OST_StructuralColumns",
+   "bim_cat": "columna",
+   "mat": "concreto",
+   "x1": 5.25,
+   "x2": 5.5,
+   "poly": [
+    [
+     0.0,
+     2.8
+    ],
+    [
+     0.25,
+     2.8
+    ],
+    [
+     0.25,
+     5.6
+    ],
+    [
+     0.0,
+     5.6
+    ]
+   ],
+   "level": 2,
+   "phase": "F1"
+  },
+  {
+   "name": "C-3A",
+   "cat": "OST_StructuralColumns",
+   "bim_cat": "columna",
+   "mat": "concreto",
+   "x1": 5.25,
+   "x2": 5.5,
+   "poly": [
+    [
+     0.0,
+     5.6
+    ],
+    [
+     0.25,
+     5.6
+    ],
+    [
+     0.25,
+     8.4
+    ],
+    [
+     0.0,
+     8.4
+    ]
+   ],
+   "level": 3,
+   "phase": "F2"
+  },
+  {
+   "name": "C-3A",
+   "cat": "OST_StructuralColumns",
+   "bim_cat": "columna",
+   "mat": "concreto",
+   "x1": 5.25,
+   "x2": 5.5,
+   "poly": [
+    [
+     0.0,
+     8.4
+    ],
+    [
+     0.25,
+     8.4
+    ],
+    [
+     0.25,
+     9.4
+    ],
+    [
+     0.0,
+     9.4
+    ]
+   ],
+   "level": 4,
+   "phase": "F2"
+  },
+  {
+   "name": "C-3B",
+   "cat": "OST_StructuralColumns",
+   "bim_cat": "columna",
+   "mat": "concreto",
+   "x1": 5.25,
+   "x2": 5.5,
+   "poly": [
+    [
+     3.9,
+     -1.0
+    ],
+    [
+     4.15,
+     -1.0
+    ],
+    [
+     4.15,
+     2.8
+    ],
+    [
+     3.9,
+     2.8
+    ]
+   ],
+   "level": 1,
+   "phase": "F1"
+  },
+  {
+   "name": "C-3B",
+   "cat": "OST_StructuralColumns",
+   "bim_cat": "columna",
+   "mat": "concreto",
+   "x1": 5.25,
+   "x2": 5.5,
+   "poly": [
+    [
+     3.9,
+     2.8
+    ],
+    [
+     4.15,
+     2.8
+    ],
+    [
+     4.15,
+     5.6
+    ],
+    [
+     3.9,
+     5.6
+    ]
+   ],
+   "level": 2,
+   "phase": "F1"
+  },
+  {
+   "name": "C-3B",
+   "cat": "OST_StructuralColumns",
+   "bim_cat": "columna",
+   "mat": "concreto",
+   "x1": 5.25,
+   "x2": 5.5,
+   "poly": [
+    [
+     3.9,
+     5.6
+    ],
+    [
+     4.15,
+     5.6
+    ],
+    [
+     4.15,
+     8.4
+    ],
+    [
+     3.9,
+     8.4
+    ]
+   ],
+   "level": 3,
+   "phase": "F2"
+  },
+  {
+   "name": "C-3C",
+   "cat": "OST_StructuralColumns",
+   "bim_cat": "columna",
+   "mat": "concreto",
+   "x1": 5.25,
+   "x2": 5.5,
+   "poly": [
+    [
+     6.75,
+     -1.0
+    ],
+    [
+     7.0,
+     -1.0
+    ],
+    [
+     7.0,
+     2.8
+    ],
+    [
+     6.75,
+     2.8
+    ]
+   ],
+   "level": 1,
+   "phase": "F1"
+  },
+  {
+   "name": "C-3C",
+   "cat": "OST_StructuralColumns",
+   "bim_cat": "columna",
+   "mat": "concreto",
+   "x1": 5.25,
+   "x2": 5.5,
+   "poly": [
+    [
+     6.75,
+     2.8
+    ],
+    [
+     7.0,
+     2.8
+    ],
+    [
+     7.0,
+     5.6
+    ],
+    [
+     6.75,
+     5.6
+    ]
+   ],
+   "level": 2,
+   "phase": "F1"
+  },
+  {
+   "name": "C-3C",
+   "cat": "OST_StructuralColumns",
+   "bim_cat": "columna",
+   "mat": "concreto",
+   "x1": 5.25,
+   "x2": 5.5,
+   "poly": [
+    [
+     6.75,
+     5.6
+    ],
+    [
+     7.0,
+     5.6
+    ],
+    [
+     7.0,
+     8.4
+    ],
+    [
+     6.75,
+     8.4
+    ]
+   ],
+   "level": 3,
+   "phase": "F2"
+  },
+  {
+   "name": "C-3C",
+   "cat": "OST_StructuralColumns",
+   "bim_cat": "columna",
+   "mat": "concreto",
+   "x1": 5.25,
+   "x2": 5.5,
+   "poly": [
+    [
+     6.75,
+     8.4
+    ],
+    [
+     7.0,
+     8.4
+    ],
+    [
+     7.0,
+     9.4
+    ],
+    [
+     6.75,
+     9.4
+    ]
+   ],
+   "level": 4,
+   "phase": "F2"
+  },
+  {
+   "name": "C-4A",
+   "cat": "OST_StructuralColumns",
+   "bim_cat": "columna",
+   "mat": "concreto",
+   "x1": 7.75,
+   "x2": 8.0,
+   "poly": [
+    [
+     0,
+     -1.0
+    ],
+    [
+     0.4,
+     -1.0
+    ],
+    [
+     0.4,
+     2.8
+    ],
+    [
+     0,
+     2.8
+    ]
+   ],
+   "level": 1,
+   "phase": "F1"
+  },
+  {
+   "name": "C-4A",
+   "cat": "OST_StructuralColumns",
+   "bim_cat": "columna",
+   "mat": "concreto",
+   "x1": 7.75,
+   "x2": 8.0,
+   "poly": [
+    [
+     0,
+     2.8
+    ],
+    [
+     0.4,
+     2.8
+    ],
+    [
+     0.4,
+     5.6
+    ],
+    [
+     0,
+     5.6
+    ]
+   ],
+   "level": 2,
+   "phase": "F1"
+  },
+  {
+   "name": "C-4A",
+   "cat": "OST_StructuralColumns",
+   "bim_cat": "columna",
+   "mat": "concreto",
+   "x1": 7.75,
+   "x2": 8.0,
+   "poly": [
+    [
+     0,
+     5.6
+    ],
+    [
+     0.4,
+     5.6
+    ],
+    [
+     0.4,
+     8.4
+    ],
+    [
+     0,
+     8.4
+    ]
+   ],
+   "level": 3,
+   "phase": "F2"
+  },
+  {
+   "name": "C-4A",
+   "cat": "OST_StructuralColumns",
+   "bim_cat": "columna",
+   "mat": "concreto",
+   "x1": 7.75,
+   "x2": 8.0,
+   "poly": [
+    [
+     0,
+     8.4
+    ],
+    [
+     0.4,
+     8.4
+    ],
+    [
+     0.4,
+     9.4
+    ],
+    [
+     0,
+     9.4
+    ]
+   ],
+   "level": 4,
+   "phase": "F2"
+  },
+  {
+   "name": "C-4B",
+   "cat": "OST_StructuralColumns",
+   "bim_cat": "columna",
+   "mat": "concreto",
+   "x1": 7.75,
+   "x2": 8.0,
+   "poly": [
+    [
+     3.775,
+     -1.0
+    ],
+    [
+     4.175,
+     -1.0
+    ],
+    [
+     4.175,
+     2.8
+    ],
+    [
+     3.775,
+     2.8
+    ]
+   ],
+   "level": 1,
+   "phase": "F1"
+  },
+  {
+   "name": "C-4B",
+   "cat": "OST_StructuralColumns",
+   "bim_cat": "columna",
+   "mat": "concreto",
+   "x1": 7.75,
+   "x2": 8.0,
+   "poly": [
+    [
+     3.775,
+     2.8
+    ],
+    [
+     4.175,
+     2.8
+    ],
+    [
+     4.175,
+     5.6
+    ],
+    [
+     3.775,
+     5.6
+    ]
+   ],
+   "level": 2,
+   "phase": "F1"
+  },
+  {
+   "name": "C-4B",
+   "cat": "OST_StructuralColumns",
+   "bim_cat": "columna",
+   "mat": "concreto",
+   "x1": 7.75,
+   "x2": 8.0,
+   "poly": [
+    [
+     3.775,
+     5.6
+    ],
+    [
+     4.175,
+     5.6
+    ],
+    [
+     4.175,
+     8.4
+    ],
+    [
+     3.775,
+     8.4
+    ]
+   ],
+   "level": 3,
+   "phase": "F2"
+  },
+  {
+   "name": "C-4B",
+   "cat": "OST_StructuralColumns",
+   "bim_cat": "columna",
+   "mat": "concreto",
+   "x1": 7.75,
+   "x2": 8.0,
+   "poly": [
+    [
+     3.775,
+     8.4
+    ],
+    [
+     4.175,
+     8.4
+    ],
+    [
+     4.175,
+     9.4
+    ],
+    [
+     3.775,
+     9.4
+    ]
+   ],
+   "level": 4,
+   "phase": "F2"
+  },
+  {
+   "name": "C-4C",
+   "cat": "OST_StructuralColumns",
+   "bim_cat": "columna",
+   "mat": "concreto",
+   "x1": 7.75,
+   "x2": 8.0,
+   "poly": [
+    [
+     6.6,
+     -1.0
+    ],
+    [
+     7.0,
+     -1.0
+    ],
+    [
+     7.0,
+     2.8
+    ],
+    [
+     6.6,
+     2.8
+    ]
+   ],
+   "level": 1,
+   "phase": "F1"
+  },
+  {
+   "name": "C-4C",
+   "cat": "OST_StructuralColumns",
+   "bim_cat": "columna",
+   "mat": "concreto",
+   "x1": 7.75,
+   "x2": 8.0,
+   "poly": [
+    [
+     6.6,
+     2.8
+    ],
+    [
+     7.0,
+     2.8
+    ],
+    [
+     7.0,
+     5.6
+    ],
+    [
+     6.6,
+     5.6
+    ]
+   ],
+   "level": 2,
+   "phase": "F1"
+  },
+  {
+   "name": "C-4C",
+   "cat": "OST_StructuralColumns",
+   "bim_cat": "columna",
+   "mat": "concreto",
+   "x1": 7.75,
+   "x2": 8.0,
+   "poly": [
+    [
+     6.6,
+     5.6
+    ],
+    [
+     7.0,
+     5.6
+    ],
+    [
+     7.0,
+     8.4
+    ],
+    [
+     6.6,
+     8.4
+    ]
+   ],
+   "level": 3,
+   "phase": "F2"
+  },
+  {
+   "name": "C-4C",
+   "cat": "OST_StructuralColumns",
+   "bim_cat": "columna",
+   "mat": "concreto",
+   "x1": 7.75,
+   "x2": 8.0,
+   "poly": [
+    [
+     6.6,
+     8.4
+    ],
+    [
+     7.0,
+     8.4
+    ],
+    [
+     7.0,
+     9.4
+    ],
+    [
+     6.6,
+     9.4
+    ]
+   ],
+   "level": 4,
+   "phase": "F2"
+  },
+  {
+   "name": "VP-1",
+   "cat": "OST_StructuralFraming",
+   "bim_cat": "viga",
+   "mat": "concreto",
+   "x1": 0.0,
+   "x2": 0.25,
+   "poly": [
+    [
+     0.0,
+     2.4
+    ],
+    [
+     7.0,
+     2.4
+    ],
+    [
+     7.0,
+     2.6
+    ],
+    [
+     0.0,
+     2.6
+    ]
+   ],
+   "level": 2,
+   "phase": "F1"
+  },
+  {
+   "name": "VP-2",
+   "cat": "OST_StructuralFraming",
+   "bim_cat": "viga",
+   "mat": "concreto",
+   "x1": 2.1,
+   "x2": 2.35,
+   "poly": [
+    [
+     0.0,
+     2.4
+    ],
+    [
+     7.0,
+     2.4
+    ],
+    [
+     7.0,
+     2.6
+    ],
+    [
+     0.0,
+     2.6
+    ]
+   ],
+   "level": 2,
+   "phase": "F1"
+  },
+  {
+   "name": "VP-3",
+   "cat": "OST_StructuralFraming",
+   "bim_cat": "viga",
+   "mat": "concreto",
+   "x1": 5.25,
+   "x2": 5.5,
+   "poly": [
+    [
+     0.0,
+     2.4
+    ],
+    [
+     7.0,
+     2.4
+    ],
+    [
+     7.0,
+     2.6
+    ],
+    [
+     0.0,
+     2.6
+    ]
+   ],
+   "level": 2,
+   "phase": "F1"
+  },
+  {
+   "name": "VP-4",
+   "cat": "OST_StructuralFraming",
+   "bim_cat": "viga",
+   "mat": "concreto",
+   "x1": 7.75,
+   "x2": 8.0,
+   "poly": [
+    [
+     0.0,
+     2.4
+    ],
+    [
+     7.0,
+     2.4
+    ],
+    [
+     7.0,
+     2.6
+    ],
+    [
+     0.0,
+     2.6
+    ]
+   ],
+   "level": 2,
+   "phase": "F1"
+  },
+  {
+   "name": "VS-A",
+   "cat": "OST_StructuralFraming",
+   "bim_cat": "viga",
+   "mat": "concreto",
+   "x1": 2.1,
+   "x2": 8.0,
+   "poly": [
+    [
+     0.0,
+     2.4
+    ],
+    [
+     0.25,
+     2.4
+    ],
+    [
+     0.25,
+     2.6
+    ],
+    [
+     0.0,
+     2.6
+    ]
+   ],
+   "level": 2,
+   "phase": "F1"
+  },
+  {
+   "name": "VS-B",
+   "cat": "OST_StructuralFraming",
+   "bim_cat": "viga",
+   "mat": "concreto",
+   "x1": 0.0,
+   "x2": 8.0,
+   "poly": [
+    [
+     3.85,
+     2.4
+    ],
+    [
+     4.1,
+     2.4
+    ],
+    [
+     4.1,
+     2.6
+    ],
+    [
+     3.85,
+     2.6
+    ]
+   ],
+   "level": 2,
+   "phase": "F1"
+  },
+  {
+   "name": "VS-C",
+   "cat": "OST_StructuralFraming",
+   "bim_cat": "viga",
+   "mat": "concreto",
+   "x1": 0.0,
+   "x2": 8.0,
+   "poly": [
+    [
+     6.75,
+     2.4
+    ],
+    [
+     7.0,
+     2.4
+    ],
+    [
+     7.0,
+     2.6
+    ],
+    [
+     6.75,
+     2.6
+    ]
+   ],
+   "level": 2,
+   "phase": "F1"
+  },
+  {
+   "name": "VB-ESC",
+   "cat": "OST_StructuralFraming",
+   "bim_cat": "viga",
+   "mat": "concreto",
+   "x1": 0.25,
+   "x2": 2.1,
+   "poly": [
+    [
+     3.0,
+     2.4
+    ],
+    [
+     3.25,
+     2.4
+    ],
+    [
+     3.25,
+     2.6
+    ],
+    [
+     3.0,
+     2.6
+    ]
+   ],
+   "level": 2,
+   "phase": "F1"
+  },
+  {
+   "name": "VP-1",
+   "cat": "OST_StructuralFraming",
+   "bim_cat": "viga",
+   "mat": "concreto",
+   "x1": 0.0,
+   "x2": 0.25,
+   "poly": [
+    [
+     0.0,
+     5.2
+    ],
+    [
+     7.0,
+     5.2
+    ],
+    [
+     7.0,
+     5.4
+    ],
+    [
+     0.0,
+     5.4
+    ]
+   ],
+   "level": 3,
+   "phase": "F1"
+  },
+  {
+   "name": "VP-2",
+   "cat": "OST_StructuralFraming",
+   "bim_cat": "viga",
+   "mat": "concreto",
+   "x1": 2.1,
+   "x2": 2.35,
+   "poly": [
+    [
+     0.0,
+     5.2
+    ],
+    [
+     7.0,
+     5.2
+    ],
+    [
+     7.0,
+     5.4
+    ],
+    [
+     0.0,
+     5.4
+    ]
+   ],
+   "level": 3,
+   "phase": "F1"
+  },
+  {
+   "name": "VP-3",
+   "cat": "OST_StructuralFraming",
+   "bim_cat": "viga",
+   "mat": "concreto",
+   "x1": 5.25,
+   "x2": 5.5,
+   "poly": [
+    [
+     0.0,
+     5.2
+    ],
+    [
+     7.0,
+     5.2
+    ],
+    [
+     7.0,
+     5.4
+    ],
+    [
+     0.0,
+     5.4
+    ]
+   ],
+   "level": 3,
+   "phase": "F1"
+  },
+  {
+   "name": "VP-4",
+   "cat": "OST_StructuralFraming",
+   "bim_cat": "viga",
+   "mat": "concreto",
+   "x1": 7.75,
+   "x2": 8.0,
+   "poly": [
+    [
+     0.0,
+     5.2
+    ],
+    [
+     7.0,
+     5.2
+    ],
+    [
+     7.0,
+     5.4
+    ],
+    [
+     0.0,
+     5.4
+    ]
+   ],
+   "level": 3,
+   "phase": "F1"
+  },
+  {
+   "name": "VS-A",
+   "cat": "OST_StructuralFraming",
+   "bim_cat": "viga",
+   "mat": "concreto",
+   "x1": 2.1,
+   "x2": 8.0,
+   "poly": [
+    [
+     0.0,
+     5.2
+    ],
+    [
+     0.25,
+     5.2
+    ],
+    [
+     0.25,
+     5.4
+    ],
+    [
+     0.0,
+     5.4
+    ]
+   ],
+   "level": 3,
+   "phase": "F1"
+  },
+  {
+   "name": "VS-B",
+   "cat": "OST_StructuralFraming",
+   "bim_cat": "viga",
+   "mat": "concreto",
+   "x1": 0.0,
+   "x2": 8.0,
+   "poly": [
+    [
+     3.85,
+     5.2
+    ],
+    [
+     4.1,
+     5.2
+    ],
+    [
+     4.1,
+     5.4
+    ],
+    [
+     3.85,
+     5.4
+    ]
+   ],
+   "level": 3,
+   "phase": "F1"
+  },
+  {
+   "name": "VS-C",
+   "cat": "OST_StructuralFraming",
+   "bim_cat": "viga",
+   "mat": "concreto",
+   "x1": 0.0,
+   "x2": 8.0,
+   "poly": [
+    [
+     6.75,
+     5.2
+    ],
+    [
+     7.0,
+     5.2
+    ],
+    [
+     7.0,
+     5.4
+    ],
+    [
+     6.75,
+     5.4
+    ]
+   ],
+   "level": 3,
+   "phase": "F1"
+  },
+  {
+   "name": "VB-ESC",
+   "cat": "OST_StructuralFraming",
+   "bim_cat": "viga",
+   "mat": "concreto",
+   "x1": 0.25,
+   "x2": 2.1,
+   "poly": [
+    [
+     3.0,
+     5.2
+    ],
+    [
+     3.25,
+     5.2
+    ],
+    [
+     3.25,
+     5.4
+    ],
+    [
+     3.0,
+     5.4
+    ]
+   ],
+   "level": 3,
+   "phase": "F1"
+  },
+  {
+   "name": "VP-1",
+   "cat": "OST_StructuralFraming",
+   "bim_cat": "viga",
+   "mat": "concreto",
+   "x1": 0.0,
+   "x2": 0.25,
+   "poly": [
+    [
+     0.0,
+     8.0
+    ],
+    [
+     7.0,
+     8.0
+    ],
+    [
+     7.0,
+     8.2
+    ],
+    [
+     0.0,
+     8.2
+    ]
+   ],
+   "level": 4,
+   "phase": "F2"
+  },
+  {
+   "name": "VP-2",
+   "cat": "OST_StructuralFraming",
+   "bim_cat": "viga",
+   "mat": "concreto",
+   "x1": 2.1,
+   "x2": 2.35,
+   "poly": [
+    [
+     0.0,
+     8.0
+    ],
+    [
+     7.0,
+     8.0
+    ],
+    [
+     7.0,
+     8.2
+    ],
+    [
+     0.0,
+     8.2
+    ]
+   ],
+   "level": 4,
+   "phase": "F2"
+  },
+  {
+   "name": "VP-3",
+   "cat": "OST_StructuralFraming",
+   "bim_cat": "viga",
+   "mat": "concreto",
+   "x1": 5.25,
+   "x2": 5.5,
+   "poly": [
+    [
+     0.0,
+     8.0
+    ],
+    [
+     7.0,
+     8.0
+    ],
+    [
+     7.0,
+     8.2
+    ],
+    [
+     0.0,
+     8.2
+    ]
+   ],
+   "level": 4,
+   "phase": "F2"
+  },
+  {
+   "name": "VP-4",
+   "cat": "OST_StructuralFraming",
+   "bim_cat": "viga",
+   "mat": "concreto",
+   "x1": 7.75,
+   "x2": 8.0,
+   "poly": [
+    [
+     0.0,
+     8.0
+    ],
+    [
+     7.0,
+     8.0
+    ],
+    [
+     7.0,
+     8.2
+    ],
+    [
+     0.0,
+     8.2
+    ]
+   ],
+   "level": 4,
+   "phase": "F2"
+  },
+  {
+   "name": "VS-A",
+   "cat": "OST_StructuralFraming",
+   "bim_cat": "viga",
+   "mat": "concreto",
+   "x1": 2.1,
+   "x2": 8.0,
+   "poly": [
+    [
+     0.0,
+     8.0
+    ],
+    [
+     0.25,
+     8.0
+    ],
+    [
+     0.25,
+     8.2
+    ],
+    [
+     0.0,
+     8.2
+    ]
+   ],
+   "level": 4,
+   "phase": "F2"
+  },
+  {
+   "name": "VS-B",
+   "cat": "OST_StructuralFraming",
+   "bim_cat": "viga",
+   "mat": "concreto",
+   "x1": 0.0,
+   "x2": 8.0,
+   "poly": [
+    [
+     3.85,
+     8.0
+    ],
+    [
+     4.1,
+     8.0
+    ],
+    [
+     4.1,
+     8.2
+    ],
+    [
+     3.85,
+     8.2
+    ]
+   ],
+   "level": 4,
+   "phase": "F2"
+  },
+  {
+   "name": "VS-C",
+   "cat": "OST_StructuralFraming",
+   "bim_cat": "viga",
+   "mat": "concreto",
+   "x1": 0.0,
+   "x2": 8.0,
+   "poly": [
+    [
+     6.75,
+     8.0
+    ],
+    [
+     7.0,
+     8.0
+    ],
+    [
+     7.0,
+     8.2
+    ],
+    [
+     6.75,
+     8.2
+    ]
+   ],
+   "level": 4,
+   "phase": "F2"
+  },
+  {
+   "name": "VB-ESC",
+   "cat": "OST_StructuralFraming",
+   "bim_cat": "viga",
+   "mat": "concreto",
+   "x1": 0.25,
+   "x2": 2.1,
+   "poly": [
+    [
+     3.0,
+     8.0
+    ],
+    [
+     3.25,
+     8.0
+    ],
+    [
+     3.25,
+     8.2
+    ],
+    [
+     3.0,
+     8.2
+    ]
+   ],
+   "level": 4,
+   "phase": "F2"
+  },
+  {
+   "name": "CIMIENTO",
+   "cat": "OST_StructuralFoundation",
+   "bim_cat": "cimentacion",
+   "mat": "cimiento",
+   "x1": 0,
+   "x2": 0.6,
+   "poly": [
+    [
+     0,
+     -1.0
+    ],
+    [
+     12.0,
+     -1.0
+    ],
+    [
+     12.0,
+     -0.3
+    ],
+    [
+     0,
+     -0.3
+    ]
+   ],
+   "level": 1,
+   "phase": "F1"
+  },
+  {
+   "name": "CIMIENTO",
+   "cat": "OST_StructuralFoundation",
+   "bim_cat": "cimentacion",
+   "mat": "cimiento",
+   "x1": 7.4,
+   "x2": 8.0,
+   "poly": [
+    [
+     0,
+     -1.0
+    ],
+    [
+     12.0,
+     -1.0
+    ],
+    [
+     12.0,
+     -0.3
+    ],
+    [
+     0,
+     -0.3
+    ]
+   ],
+   "level": 1,
+   "phase": "F1"
+  },
+  {
+   "name": "CIMIENTO",
+   "cat": "OST_StructuralFoundation",
+   "bim_cat": "cimentacion",
+   "mat": "cimiento",
+   "x1": 0,
+   "x2": 8,
+   "poly": [
+    [
+     0,
+     -1.0
+    ],
+    [
+     0.6,
+     -1.0
+    ],
+    [
+     0.6,
+     -0.3
+    ],
+    [
+     0,
+     -0.3
+    ]
+   ],
+   "level": 1,
+   "phase": "F1"
+  },
+  {
+   "name": "CIMIENTO",
+   "cat": "OST_StructuralFoundation",
+   "bim_cat": "cimentacion",
+   "mat": "cimiento",
+   "x1": 0,
+   "x2": 8,
+   "poly": [
+    [
+     6.55,
+     -1.0
+    ],
+    [
+     7.2,
+     -1.0
+    ],
+    [
+     7.2,
+     -0.3
+    ],
+    [
+     6.55,
+     -0.3
+    ]
+   ],
+   "level": 1,
+   "phase": "F1"
+  },
+  {
+   "name": "CIMIENTO",
+   "cat": "OST_StructuralFoundation",
+   "bim_cat": "cimentacion",
+   "mat": "cimiento",
+   "x1": 0,
+   "x2": 8,
+   "poly": [
+    [
+     11.4,
+     -1.0
+    ],
+    [
+     12.0,
+     -1.0
+    ],
+    [
+     12.0,
+     -0.3
+    ],
+    [
+     11.4,
+     -0.3
+    ]
+   ],
+   "level": 1,
+   "phase": "F1"
+  },
+  {
+   "name": "CIMIENTO",
+   "cat": "OST_StructuralFoundation",
+   "bim_cat": "cimentacion",
+   "mat": "cimiento",
+   "x1": 1.95,
+   "x2": 2.5,
+   "poly": [
+    [
+     0,
+     -1.0
+    ],
+    [
+     7.0,
+     -1.0
+    ],
+    [
+     7.0,
+     -0.3
+    ],
+    [
+     0,
+     -0.3
+    ]
+   ],
+   "level": 1,
+   "phase": "F1"
+  },
+  {
+   "name": "Z-1A",
+   "cat": "OST_StructuralFoundation",
+   "bim_cat": "cimentacion",
+   "mat": "cimiento",
+   "x1": 0,
+   "x2": 0.725,
+   "poly": [
+    [
+     0,
+     -1.6
+    ],
+    [
+     0.8,
+     -1.6
+    ],
+    [
+     0.8,
+     -1.0
+    ],
+    [
+     0,
+     -1.0
+    ]
+   ],
+   "level": 1,
+   "phase": "F1"
+  },
+  {
+   "name": "Z-1B",
+   "cat": "OST_StructuralFoundation",
+   "bim_cat": "cimentacion",
+   "mat": "cimiento",
+   "x1": 0,
+   "x2": 0.725,
+   "poly": [
+    [
+     3.375,
+     -1.6
+    ],
+    [
+     4.575,
+     -1.6
+    ],
+    [
+     4.575,
+     -1.0
+    ],
+    [
+     3.375,
+     -1.0
+    ]
+   ],
+   "level": 1,
+   "phase": "F1"
+  },
+  {
+   "name": "Z-1C",
+   "cat": "OST_StructuralFoundation",
+   "bim_cat": "cimentacion",
+   "mat": "cimiento",
+   "x1": 0,
+   "x2": 0.725,
+   "poly": [
+    [
+     6.2,
+     -1.6
+    ],
+    [
+     7.0,
+     -1.6
+    ],
+    [
+     7.0,
+     -1.0
+    ],
+    [
+     6.2,
+     -1.0
+    ]
+   ],
+   "level": 1,
+   "phase": "F1"
+  },
+  {
+   "name": "Z-2A",
+   "cat": "OST_StructuralFoundation",
+   "bim_cat": "cimentacion",
+   "mat": "cimiento",
+   "x1": 1.625,
+   "x2": 2.825,
+   "poly": [
+    [
+     0,
+     -1.6
+    ],
+    [
+     0.725,
+     -1.6
+    ],
+    [
+     0.725,
+     -1.0
+    ],
+    [
+     0,
+     -1.0
+    ]
+   ],
+   "level": 1,
+   "phase": "F1"
+  },
+  {
+   "name": "Z-2B",
+   "cat": "OST_StructuralFoundation",
+   "bim_cat": "cimentacion",
+   "mat": "cimiento",
+   "x1": 1.625,
+   "x2": 2.825,
+   "poly": [
+    [
+     3.425,
+     -1.6
+    ],
+    [
+     4.625,
+     -1.6
+    ],
+    [
+     4.625,
+     -1.0
+    ],
+    [
+     3.425,
+     -1.0
+    ]
+   ],
+   "level": 1,
+   "phase": "F1"
+  },
+  {
+   "name": "Z-2C",
+   "cat": "OST_StructuralFoundation",
+   "bim_cat": "cimentacion",
+   "mat": "cimiento",
+   "x1": 1.625,
+   "x2": 2.825,
+   "poly": [
+    [
+     6.275,
+     -1.6
+    ],
+    [
+     7.0,
+     -1.6
+    ],
+    [
+     7.0,
+     -1.0
+    ],
+    [
+     6.275,
+     -1.0
+    ]
+   ],
+   "level": 1,
+   "phase": "F1"
+  },
+  {
+   "name": "Z-3A",
+   "cat": "OST_StructuralFoundation",
+   "bim_cat": "cimentacion",
+   "mat": "cimiento",
+   "x1": 4.775,
+   "x2": 5.975,
+   "poly": [
+    [
+     0,
+     -1.6
+    ],
+    [
+     0.725,
+     -1.6
+    ],
+    [
+     0.725,
+     -1.0
+    ],
+    [
+     0,
+     -1.0
+    ]
+   ],
+   "level": 1,
+   "phase": "F1"
+  },
+  {
+   "name": "Z-3B",
+   "cat": "OST_StructuralFoundation",
+   "bim_cat": "cimentacion",
+   "mat": "cimiento",
+   "x1": 4.775,
+   "x2": 5.975,
+   "poly": [
+    [
+     3.425,
+     -1.6
+    ],
+    [
+     4.625,
+     -1.6
+    ],
+    [
+     4.625,
+     -1.0
+    ],
+    [
+     3.425,
+     -1.0
+    ]
+   ],
+   "level": 1,
+   "phase": "F1"
+  },
+  {
+   "name": "Z-3C",
+   "cat": "OST_StructuralFoundation",
+   "bim_cat": "cimentacion",
+   "mat": "cimiento",
+   "x1": 4.775,
+   "x2": 5.975,
+   "poly": [
+    [
+     6.275,
+     -1.6
+    ],
+    [
+     7.0,
+     -1.6
+    ],
+    [
+     7.0,
+     -1.0
+    ],
+    [
+     6.275,
+     -1.0
+    ]
+   ],
+   "level": 1,
+   "phase": "F1"
+  },
+  {
+   "name": "Z-4A",
+   "cat": "OST_StructuralFoundation",
+   "bim_cat": "cimentacion",
+   "mat": "cimiento",
+   "x1": 7.275,
+   "x2": 8,
+   "poly": [
+    [
+     0,
+     -1.6
+    ],
+    [
+     0.8,
+     -1.6
+    ],
+    [
+     0.8,
+     -1.0
+    ],
+    [
+     0,
+     -1.0
+    ]
+   ],
+   "level": 1,
+   "phase": "F1"
+  },
+  {
+   "name": "Z-4B",
+   "cat": "OST_StructuralFoundation",
+   "bim_cat": "cimentacion",
+   "mat": "cimiento",
+   "x1": 7.275,
+   "x2": 8,
+   "poly": [
+    [
+     3.375,
+     -1.6
+    ],
+    [
+     4.575,
+     -1.6
+    ],
+    [
+     4.575,
+     -1.0
+    ],
+    [
+     3.375,
+     -1.0
+    ]
+   ],
+   "level": 1,
+   "phase": "F1"
+  },
+  {
+   "name": "Z-4C",
+   "cat": "OST_StructuralFoundation",
+   "bim_cat": "cimentacion",
+   "mat": "cimiento",
+   "x1": 7.275,
+   "x2": 8,
+   "poly": [
+    [
+     6.2,
+     -1.6
+    ],
+    [
+     7.0,
+     -1.6
+    ],
+    [
+     7.0,
+     -1.0
+    ],
+    [
+     6.2,
+     -1.0
+    ]
+   ],
+   "level": 1,
+   "phase": "F1"
+  },
+  {
+   "name": "MARCO-BASE",
+   "cat": "OST_GenericModel",
+   "bim_cat": "fachada",
+   "mat": "concreto_visto",
+   "x1": 2.15,
+   "x2": 8.0,
+   "poly": [
+    [
+     -0.5,
+     2.6
+    ],
+    [
+     0.0,
+     2.6
+    ],
+    [
+     0.0,
+     2.8
+    ],
+    [
+     -0.5,
+     2.8
+    ]
+   ],
+   "level": 2,
+   "phase": "F1"
+  },
+  {
+   "name": "MARCO-SUP",
+   "cat": "OST_GenericModel",
+   "bim_cat": "fachada",
+   "mat": "concreto_visto",
+   "x1": 2.15,
+   "x2": 8.0,
+   "poly": [
+    [
+     -0.5,
+     8.2
+    ],
+    [
+     0.0,
+     8.2
+    ],
+    [
+     0.0,
+     8.65
+    ],
+    [
+     -0.5,
+     8.65
+    ]
+   ],
+   "level": 4,
+   "phase": "F2"
+  },
+  {
+   "name": "MARCO-DER",
+   "cat": "OST_GenericModel",
+   "bim_cat": "fachada",
+   "mat": "concreto_visto",
+   "x1": 7.75,
+   "x2": 8.0,
+   "poly": [
+    [
+     -0.5,
+     2.6
+    ],
+    [
+     0.0,
+     2.6
+    ],
+    [
+     0.0,
+     2.8
+    ],
+    [
+     -0.5,
+     2.8
+    ]
+   ],
+   "level": 1,
+   "phase": "F1"
+  },
+  {
+   "name": "MARCO-DER",
+   "cat": "OST_GenericModel",
+   "bim_cat": "fachada",
+   "mat": "concreto_visto",
+   "x1": 7.75,
+   "x2": 8.0,
+   "poly": [
+    [
+     -0.5,
+     2.8
+    ],
+    [
+     0.0,
+     2.8
+    ],
+    [
+     0.0,
+     5.6
+    ],
+    [
+     -0.5,
+     5.6
+    ]
+   ],
+   "level": 2,
+   "phase": "F1"
+  },
+  {
+   "name": "MARCO-DER",
+   "cat": "OST_GenericModel",
+   "bim_cat": "fachada",
+   "mat": "concreto_visto",
+   "x1": 7.75,
+   "x2": 8.0,
+   "poly": [
+    [
+     -0.5,
+     5.6
+    ],
+    [
+     0.0,
+     5.6
+    ],
+    [
+     0.0,
+     8.4
+    ],
+    [
+     -0.5,
+     8.4
+    ]
+   ],
+   "level": 3,
+   "phase": "F2"
+  },
+  {
+   "name": "MARCO-DER",
+   "cat": "OST_GenericModel",
+   "bim_cat": "fachada",
+   "mat": "concreto_visto",
+   "x1": 7.75,
+   "x2": 8.0,
+   "poly": [
+    [
+     -0.5,
+     8.4
+    ],
+    [
+     0.0,
+     8.4
+    ],
+    [
+     0.0,
+     8.5
+    ],
+    [
+     -0.5,
+     8.5
+    ]
+   ],
+   "level": 4,
+   "phase": "F2"
+  },
+  {
+   "name": "MARCO-IZQ",
+   "cat": "OST_GenericModel",
+   "bim_cat": "fachada",
+   "mat": "concreto_visto",
+   "x1": 2.15,
+   "x2": 2.4,
+   "poly": [
+    [
+     -0.5,
+     2.6
+    ],
+    [
+     0.0,
+     2.6
+    ],
+    [
+     0.0,
+     2.8
+    ],
+    [
+     -0.5,
+     2.8
+    ]
+   ],
+   "level": 1,
+   "phase": "F1"
+  },
+  {
+   "name": "MARCO-IZQ",
+   "cat": "OST_GenericModel",
+   "bim_cat": "fachada",
+   "mat": "concreto_visto",
+   "x1": 2.15,
+   "x2": 2.4,
+   "poly": [
+    [
+     -0.5,
+     2.8
+    ],
+    [
+     0.0,
+     2.8
+    ],
+    [
+     0.0,
+     5.6
+    ],
+    [
+     -0.5,
+     5.6
+    ]
+   ],
+   "level": 2,
+   "phase": "F1"
+  },
+  {
+   "name": "MARCO-IZQ",
+   "cat": "OST_GenericModel",
+   "bim_cat": "fachada",
+   "mat": "concreto_visto",
+   "x1": 2.15,
+   "x2": 2.4,
+   "poly": [
+    [
+     -0.5,
+     5.6
+    ],
+    [
+     0.0,
+     5.6
+    ],
+    [
+     0.0,
+     8.4
+    ],
+    [
+     -0.5,
+     8.4
+    ]
+   ],
+   "level": 3,
+   "phase": "F2"
+  },
+  {
+   "name": "MARCO-IZQ",
+   "cat": "OST_GenericModel",
+   "bim_cat": "fachada",
+   "mat": "concreto_visto",
+   "x1": 2.15,
+   "x2": 2.4,
+   "poly": [
+    [
+     -0.5,
+     8.4
+    ],
+    [
+     0.0,
+     8.4
+    ],
+    [
+     0.0,
+     8.5
+    ],
+    [
+     -0.5,
+     8.5
+    ]
+   ],
+   "level": 4,
+   "phase": "F2"
+  },
+  {
+   "name": "BARANDA-V04",
+   "cat": "OST_GenericModel",
+   "bim_cat": "baranda",
+   "mat": "vidrio",
+   "x1": 2.6,
+   "x2": 5.0,
+   "poly": [
+    [
+     -0.06,
+     2.9
+    ],
+    [
+     -0.04,
+     2.9
+    ],
+    [
+     -0.04,
+     3.8
+    ],
+    [
+     -0.06,
+     3.8
+    ]
+   ],
+   "level": 2,
+   "phase": "F1"
+  },
+  {
+   "name": "BARANDA-V04",
+   "cat": "OST_GenericModel",
+   "bim_cat": "baranda",
+   "mat": "vidrio",
+   "x1": 2.6,
+   "x2": 5.0,
+   "poly": [
+    [
+     -0.06,
+     5.7
+    ],
+    [
+     -0.04,
+     5.7
+    ],
+    [
+     -0.04,
+     6.6
+    ],
+    [
+     -0.06,
+     6.6
+    ]
+   ],
+   "level": 3,
+   "phase": "F2"
+  },
+  {
+   "name": "LINTERNA",
+   "cat": "OST_GenericModel",
+   "bim_cat": "muro_cortina",
+   "mat": "vidrio",
+   "x1": 0.25,
+   "x2": 2.1,
+   "poly": [
+    [
+     0.2,
+     0.0
+    ],
+    [
+     0.23,
+     0.0
+    ],
+    [
+     0.23,
+     2.8
+    ],
+    [
+     0.2,
+     2.8
+    ]
+   ],
+   "level": 1,
+   "phase": "F1"
+  },
+  {
+   "name": "LINTERNA",
+   "cat": "OST_GenericModel",
+   "bim_cat": "muro_cortina",
+   "mat": "vidrio",
+   "x1": 0.25,
+   "x2": 2.1,
+   "poly": [
+    [
+     0.2,
+     2.8
+    ],
+    [
+     0.23,
+     2.8
+    ],
+    [
+     0.23,
+     5.6
+    ],
+    [
+     0.2,
+     5.6
+    ]
+   ],
+   "level": 2,
+   "phase": "F1"
+  },
+  {
+   "name": "LINTERNA",
+   "cat": "OST_GenericModel",
+   "bim_cat": "muro_cortina",
+   "mat": "vidrio",
+   "x1": 0.25,
+   "x2": 2.1,
+   "poly": [
+    [
+     0.2,
+     5.6
+    ],
+    [
+     0.23,
+     5.6
+    ],
+    [
+     0.23,
+     8.4
+    ],
+    [
+     0.2,
+     8.4
+    ]
+   ],
+   "level": 3,
+   "phase": "F2"
+  },
+  {
+   "name": "LINTERNA",
+   "cat": "OST_GenericModel",
+   "bim_cat": "muro_cortina",
+   "mat": "vidrio",
+   "x1": 0.25,
+   "x2": 2.1,
+   "poly": [
+    [
+     0.2,
+     8.4
+    ],
+    [
+     0.23,
+     8.4
+    ],
+    [
+     0.23,
+     11.0
+    ],
+    [
+     0.2,
+     11.0
+    ]
+   ],
+   "level": 4,
+   "phase": "F2"
+  },
+  {
+   "name": "LINTERNA-MONT",
+   "cat": "OST_GenericModel",
+   "bim_cat": "muro_cortina",
+   "mat": "aluminio",
+   "x1": 0.25,
+   "x2": 0.3,
+   "poly": [
+    [
+     0.15,
+     0.0
+    ],
+    [
+     0.25,
+     0.0
+    ],
+    [
+     0.25,
+     2.8
+    ],
+    [
+     0.15,
+     2.8
+    ]
+   ],
+   "level": 1,
+   "phase": "F1"
+  },
+  {
+   "name": "LINTERNA-MONT",
+   "cat": "OST_GenericModel",
+   "bim_cat": "muro_cortina",
+   "mat": "aluminio",
+   "x1": 0.25,
+   "x2": 0.3,
+   "poly": [
+    [
+     0.15,
+     2.8
+    ],
+    [
+     0.25,
+     2.8
+    ],
+    [
+     0.25,
+     5.6
+    ],
+    [
+     0.15,
+     5.6
+    ]
+   ],
+   "level": 2,
+   "phase": "F1"
+  },
+  {
+   "name": "LINTERNA-MONT",
+   "cat": "OST_GenericModel",
+   "bim_cat": "muro_cortina",
+   "mat": "aluminio",
+   "x1": 0.25,
+   "x2": 0.3,
+   "poly": [
+    [
+     0.15,
+     5.6
+    ],
+    [
+     0.25,
+     5.6
+    ],
+    [
+     0.25,
+     8.4
+    ],
+    [
+     0.15,
+     8.4
+    ]
+   ],
+   "level": 3,
+   "phase": "F2"
+  },
+  {
+   "name": "LINTERNA-MONT",
+   "cat": "OST_GenericModel",
+   "bim_cat": "muro_cortina",
+   "mat": "aluminio",
+   "x1": 0.25,
+   "x2": 0.3,
+   "poly": [
+    [
+     0.15,
+     8.4
+    ],
+    [
+     0.25,
+     8.4
+    ],
+    [
+     0.25,
+     11.0
+    ],
+    [
+     0.15,
+     11.0
+    ]
+   ],
+   "level": 4,
+   "phase": "F2"
+  },
+  {
+   "name": "LINTERNA-MONT",
+   "cat": "OST_GenericModel",
+   "bim_cat": "muro_cortina",
+   "mat": "aluminio",
+   "x1": 1.15,
+   "x2": 1.2,
+   "poly": [
+    [
+     0.15,
+     0.0
+    ],
+    [
+     0.25,
+     0.0
+    ],
+    [
+     0.25,
+     2.8
+    ],
+    [
+     0.15,
+     2.8
+    ]
+   ],
+   "level": 1,
+   "phase": "F1"
+  },
+  {
+   "name": "LINTERNA-MONT",
+   "cat": "OST_GenericModel",
+   "bim_cat": "muro_cortina",
+   "mat": "aluminio",
+   "x1": 1.15,
+   "x2": 1.2,
+   "poly": [
+    [
+     0.15,
+     2.8
+    ],
+    [
+     0.25,
+     2.8
+    ],
+    [
+     0.25,
+     5.6
+    ],
+    [
+     0.15,
+     5.6
+    ]
+   ],
+   "level": 2,
+   "phase": "F1"
+  },
+  {
+   "name": "LINTERNA-MONT",
+   "cat": "OST_GenericModel",
+   "bim_cat": "muro_cortina",
+   "mat": "aluminio",
+   "x1": 1.15,
+   "x2": 1.2,
+   "poly": [
+    [
+     0.15,
+     5.6
+    ],
+    [
+     0.25,
+     5.6
+    ],
+    [
+     0.25,
+     8.4
+    ],
+    [
+     0.15,
+     8.4
+    ]
+   ],
+   "level": 3,
+   "phase": "F2"
+  },
+  {
+   "name": "LINTERNA-MONT",
+   "cat": "OST_GenericModel",
+   "bim_cat": "muro_cortina",
+   "mat": "aluminio",
+   "x1": 1.15,
+   "x2": 1.2,
+   "poly": [
+    [
+     0.15,
+     8.4
+    ],
+    [
+     0.25,
+     8.4
+    ],
+    [
+     0.25,
+     11.0
+    ],
+    [
+     0.15,
+     11.0
+    ]
+   ],
+   "level": 4,
+   "phase": "F2"
+  },
+  {
+   "name": "LINTERNA-MONT",
+   "cat": "OST_GenericModel",
+   "bim_cat": "muro_cortina",
+   "mat": "aluminio",
+   "x1": 2.05,
+   "x2": 2.1,
+   "poly": [
+    [
+     0.15,
+     0.0
+    ],
+    [
+     0.25,
+     0.0
+    ],
+    [
+     0.25,
+     2.8
+    ],
+    [
+     0.15,
+     2.8
+    ]
+   ],
+   "level": 1,
+   "phase": "F1"
+  },
+  {
+   "name": "LINTERNA-MONT",
+   "cat": "OST_GenericModel",
+   "bim_cat": "muro_cortina",
+   "mat": "aluminio",
+   "x1": 2.05,
+   "x2": 2.1,
+   "poly": [
+    [
+     0.15,
+     2.8
+    ],
+    [
+     0.25,
+     2.8
+    ],
+    [
+     0.25,
+     5.6
+    ],
+    [
+     0.15,
+     5.6
+    ]
+   ],
+   "level": 2,
+   "phase": "F1"
+  },
+  {
+   "name": "LINTERNA-MONT",
+   "cat": "OST_GenericModel",
+   "bim_cat": "muro_cortina",
+   "mat": "aluminio",
+   "x1": 2.05,
+   "x2": 2.1,
+   "poly": [
+    [
+     0.15,
+     5.6
+    ],
+    [
+     0.25,
+     5.6
+    ],
+    [
+     0.25,
+     8.4
+    ],
+    [
+     0.15,
+     8.4
+    ]
+   ],
+   "level": 3,
+   "phase": "F2"
+  },
+  {
+   "name": "LINTERNA-MONT",
+   "cat": "OST_GenericModel",
+   "bim_cat": "muro_cortina",
+   "mat": "aluminio",
+   "x1": 2.05,
+   "x2": 2.1,
+   "poly": [
+    [
+     0.15,
+     8.4
+    ],
+    [
+     0.25,
+     8.4
+    ],
+    [
+     0.25,
+     11.0
+    ],
+    [
+     0.15,
+     11.0
+    ]
+   ],
+   "level": 4,
+   "phase": "F2"
+  },
+  {
+   "name": "LINTERNA-TRAV",
+   "cat": "OST_GenericModel",
+   "bim_cat": "muro_cortina",
+   "mat": "aluminio",
+   "x1": 0.25,
+   "x2": 2.1,
+   "poly": [
+    [
+     0.15,
+     2.75
+    ],
+    [
+     0.25,
+     2.75
+    ],
+    [
+     0.25,
+     2.8
+    ],
+    [
+     0.15,
+     2.8
+    ]
+   ],
+   "level": 1,
+   "phase": "F1"
+  },
+  {
+   "name": "LINTERNA-TRAV",
+   "cat": "OST_GenericModel",
+   "bim_cat": "muro_cortina",
+   "mat": "aluminio",
+   "x1": 0.25,
+   "x2": 2.1,
+   "poly": [
+    [
+     0.15,
+     5.55
+    ],
+    [
+     0.25,
+     5.55
+    ],
+    [
+     0.25,
+     5.6
+    ],
+    [
+     0.15,
+     5.6
+    ]
+   ],
+   "level": 2,
+   "phase": "F1"
+  },
+  {
+   "name": "LINTERNA-TRAV",
+   "cat": "OST_GenericModel",
+   "bim_cat": "muro_cortina",
+   "mat": "aluminio",
+   "x1": 0.25,
+   "x2": 2.1,
+   "poly": [
+    [
+     0.15,
+     8.35
+    ],
+    [
+     0.25,
+     8.35
+    ],
+    [
+     0.25,
+     8.4
+    ],
+    [
+     0.15,
+     8.4
+    ]
+   ],
+   "level": 3,
+   "phase": "F2"
+  },
+  {
+   "name": "CELOSIA-LINTERNA",
+   "cat": "OST_GenericModel",
+   "bim_cat": "celosia",
+   "mat": "madera",
+   "x1": 0.28,
+   "x2": 0.32,
+   "poly": [
+    [
+     -0.14,
+     -0.15
+    ],
+    [
+     -0.04,
+     -0.15
+    ],
+    [
+     -0.04,
+     2.8
+    ],
+    [
+     -0.14,
+     2.8
+    ]
+   ],
+   "level": 1,
+   "phase": "F1"
+  },
+  {
+   "name": "CELOSIA-LINTERNA",
+   "cat": "OST_GenericModel",
+   "bim_cat": "celosia",
+   "mat": "madera",
+   "x1": 0.28,
+   "x2": 0.32,
+   "poly": [
+    [
+     -0.14,
+     2.8
+    ],
+    [
+     -0.04,
+     2.8
+    ],
+    [
+     -0.04,
+     5.6
+    ],
+    [
+     -0.14,
+     5.6
+    ]
+   ],
+   "level": 2,
+   "phase": "F1"
+  },
+  {
+   "name": "CELOSIA-LINTERNA",
+   "cat": "OST_GenericModel",
+   "bim_cat": "celosia",
+   "mat": "madera",
+   "x1": 0.28,
+   "x2": 0.32,
+   "poly": [
+    [
+     -0.14,
+     5.6
+    ],
+    [
+     -0.04,
+     5.6
+    ],
+    [
+     -0.04,
+     8.4
+    ],
+    [
+     -0.14,
+     8.4
+    ]
+   ],
+   "level": 3,
+   "phase": "F2"
+  },
+  {
+   "name": "CELOSIA-LINTERNA",
+   "cat": "OST_GenericModel",
+   "bim_cat": "celosia",
+   "mat": "madera",
+   "x1": 0.28,
+   "x2": 0.32,
+   "poly": [
+    [
+     -0.14,
+     8.4
+    ],
+    [
+     -0.04,
+     8.4
+    ],
+    [
+     -0.04,
+     11.15
+    ],
+    [
+     -0.14,
+     11.15
+    ]
+   ],
+   "level": 4,
+   "phase": "F2"
+  },
+  {
+   "name": "CELOSIA-LINTERNA",
+   "cat": "OST_GenericModel",
+   "bim_cat": "celosia",
+   "mat": "madera",
+   "x1": 0.39,
+   "x2": 0.43,
+   "poly": [
+    [
+     -0.14,
+     -0.15
+    ],
+    [
+     -0.04,
+     -0.15
+    ],
+    [
+     -0.04,
+     2.8
+    ],
+    [
+     -0.14,
+     2.8
+    ]
+   ],
+   "level": 1,
+   "phase": "F1"
+  },
+  {
+   "name": "CELOSIA-LINTERNA",
+   "cat": "OST_GenericModel",
+   "bim_cat": "celosia",
+   "mat": "madera",
+   "x1": 0.39,
+   "x2": 0.43,
+   "poly": [
+    [
+     -0.14,
+     2.8
+    ],
+    [
+     -0.04,
+     2.8
+    ],
+    [
+     -0.04,
+     5.6
+    ],
+    [
+     -0.14,
+     5.6
+    ]
+   ],
+   "level": 2,
+   "phase": "F1"
+  },
+  {
+   "name": "CELOSIA-LINTERNA",
+   "cat": "OST_GenericModel",
+   "bim_cat": "celosia",
+   "mat": "madera",
+   "x1": 0.39,
+   "x2": 0.43,
+   "poly": [
+    [
+     -0.14,
+     5.6
+    ],
+    [
+     -0.04,
+     5.6
+    ],
+    [
+     -0.04,
+     8.4
+    ],
+    [
+     -0.14,
+     8.4
+    ]
+   ],
+   "level": 3,
+   "phase": "F2"
+  },
+  {
+   "name": "CELOSIA-LINTERNA",
+   "cat": "OST_GenericModel",
+   "bim_cat": "celosia",
+   "mat": "madera",
+   "x1": 0.39,
+   "x2": 0.43,
+   "poly": [
+    [
+     -0.14,
+     8.4
+    ],
+    [
+     -0.04,
+     8.4
+    ],
+    [
+     -0.04,
+     11.15
+    ],
+    [
+     -0.14,
+     11.15
+    ]
+   ],
+   "level": 4,
+   "phase": "F2"
+  },
+  {
+   "name": "CELOSIA-LINTERNA",
+   "cat": "OST_GenericModel",
+   "bim_cat": "celosia",
+   "mat": "madera",
+   "x1": 0.5,
+   "x2": 0.54,
+   "poly": [
+    [
+     -0.14,
+     -0.15
+    ],
+    [
+     -0.04,
+     -0.15
+    ],
+    [
+     -0.04,
+     2.8
+    ],
+    [
+     -0.14,
+     2.8
+    ]
+   ],
+   "level": 1,
+   "phase": "F1"
+  },
+  {
+   "name": "CELOSIA-LINTERNA",
+   "cat": "OST_GenericModel",
+   "bim_cat": "celosia",
+   "mat": "madera",
+   "x1": 0.5,
+   "x2": 0.54,
+   "poly": [
+    [
+     -0.14,
+     2.8
+    ],
+    [
+     -0.04,
+     2.8
+    ],
+    [
+     -0.04,
+     5.6
+    ],
+    [
+     -0.14,
+     5.6
+    ]
+   ],
+   "level": 2,
+   "phase": "F1"
+  },
+  {
+   "name": "CELOSIA-LINTERNA",
+   "cat": "OST_GenericModel",
+   "bim_cat": "celosia",
+   "mat": "madera",
+   "x1": 0.5,
+   "x2": 0.54,
+   "poly": [
+    [
+     -0.14,
+     5.6
+    ],
+    [
+     -0.04,
+     5.6
+    ],
+    [
+     -0.04,
+     8.4
+    ],
+    [
+     -0.14,
+     8.4
+    ]
+   ],
+   "level": 3,
+   "phase": "F2"
+  },
+  {
+   "name": "CELOSIA-LINTERNA",
+   "cat": "OST_GenericModel",
+   "bim_cat": "celosia",
+   "mat": "madera",
+   "x1": 0.5,
+   "x2": 0.54,
+   "poly": [
+    [
+     -0.14,
+     8.4
+    ],
+    [
+     -0.04,
+     8.4
+    ],
+    [
+     -0.04,
+     11.15
+    ],
+    [
+     -0.14,
+     11.15
+    ]
+   ],
+   "level": 4,
+   "phase": "F2"
+  },
+  {
+   "name": "CELOSIA-LINTERNA",
+   "cat": "OST_GenericModel",
+   "bim_cat": "celosia",
+   "mat": "madera",
+   "x1": 0.61,
+   "x2": 0.65,
+   "poly": [
+    [
+     -0.14,
+     -0.15
+    ],
+    [
+     -0.04,
+     -0.15
+    ],
+    [
+     -0.04,
+     2.8
+    ],
+    [
+     -0.14,
+     2.8
+    ]
+   ],
+   "level": 1,
+   "phase": "F1"
+  },
+  {
+   "name": "CELOSIA-LINTERNA",
+   "cat": "OST_GenericModel",
+   "bim_cat": "celosia",
+   "mat": "madera",
+   "x1": 0.61,
+   "x2": 0.65,
+   "poly": [
+    [
+     -0.14,
+     2.8
+    ],
+    [
+     -0.04,
+     2.8
+    ],
+    [
+     -0.04,
+     5.6
+    ],
+    [
+     -0.14,
+     5.6
+    ]
+   ],
+   "level": 2,
+   "phase": "F1"
+  },
+  {
+   "name": "CELOSIA-LINTERNA",
+   "cat": "OST_GenericModel",
+   "bim_cat": "celosia",
+   "mat": "madera",
+   "x1": 0.61,
+   "x2": 0.65,
+   "poly": [
+    [
+     -0.14,
+     5.6
+    ],
+    [
+     -0.04,
+     5.6
+    ],
+    [
+     -0.04,
+     8.4
+    ],
+    [
+     -0.14,
+     8.4
+    ]
+   ],
+   "level": 3,
+   "phase": "F2"
+  },
+  {
+   "name": "CELOSIA-LINTERNA",
+   "cat": "OST_GenericModel",
+   "bim_cat": "celosia",
+   "mat": "madera",
+   "x1": 0.61,
+   "x2": 0.65,
+   "poly": [
+    [
+     -0.14,
+     8.4
+    ],
+    [
+     -0.04,
+     8.4
+    ],
+    [
+     -0.04,
+     11.15
+    ],
+    [
+     -0.14,
+     11.15
+    ]
+   ],
+   "level": 4,
+   "phase": "F2"
+  },
+  {
+   "name": "CELOSIA-LINTERNA",
+   "cat": "OST_GenericModel",
+   "bim_cat": "celosia",
+   "mat": "madera",
+   "x1": 0.72,
+   "x2": 0.76,
+   "poly": [
+    [
+     -0.14,
+     -0.15
+    ],
+    [
+     -0.04,
+     -0.15
+    ],
+    [
+     -0.04,
+     2.8
+    ],
+    [
+     -0.14,
+     2.8
+    ]
+   ],
+   "level": 1,
+   "phase": "F1"
+  },
+  {
+   "name": "CELOSIA-LINTERNA",
+   "cat": "OST_GenericModel",
+   "bim_cat": "celosia",
+   "mat": "madera",
+   "x1": 0.72,
+   "x2": 0.76,
+   "poly": [
+    [
+     -0.14,
+     2.8
+    ],
+    [
+     -0.04,
+     2.8
+    ],
+    [
+     -0.04,
+     5.6
+    ],
+    [
+     -0.14,
+     5.6
+    ]
+   ],
+   "level": 2,
+   "phase": "F1"
+  },
+  {
+   "name": "CELOSIA-LINTERNA",
+   "cat": "OST_GenericModel",
+   "bim_cat": "celosia",
+   "mat": "madera",
+   "x1": 0.72,
+   "x2": 0.76,
+   "poly": [
+    [
+     -0.14,
+     5.6
+    ],
+    [
+     -0.04,
+     5.6
+    ],
+    [
+     -0.04,
+     8.4
+    ],
+    [
+     -0.14,
+     8.4
+    ]
+   ],
+   "level": 3,
+   "phase": "F2"
+  },
+  {
+   "name": "CELOSIA-LINTERNA",
+   "cat": "OST_GenericModel",
+   "bim_cat": "celosia",
+   "mat": "madera",
+   "x1": 0.72,
+   "x2": 0.76,
+   "poly": [
+    [
+     -0.14,
+     8.4
+    ],
+    [
+     -0.04,
+     8.4
+    ],
+    [
+     -0.04,
+     11.15
+    ],
+    [
+     -0.14,
+     11.15
+    ]
+   ],
+   "level": 4,
+   "phase": "F2"
+  },
+  {
+   "name": "CELOSIA-LINTERNA",
+   "cat": "OST_GenericModel",
+   "bim_cat": "celosia",
+   "mat": "madera",
+   "x1": 0.83,
+   "x2": 0.87,
+   "poly": [
+    [
+     -0.14,
+     -0.15
+    ],
+    [
+     -0.04,
+     -0.15
+    ],
+    [
+     -0.04,
+     2.8
+    ],
+    [
+     -0.14,
+     2.8
+    ]
+   ],
+   "level": 1,
+   "phase": "F1"
+  },
+  {
+   "name": "CELOSIA-LINTERNA",
+   "cat": "OST_GenericModel",
+   "bim_cat": "celosia",
+   "mat": "madera",
+   "x1": 0.83,
+   "x2": 0.87,
+   "poly": [
+    [
+     -0.14,
+     2.8
+    ],
+    [
+     -0.04,
+     2.8
+    ],
+    [
+     -0.04,
+     5.6
+    ],
+    [
+     -0.14,
+     5.6
+    ]
+   ],
+   "level": 2,
+   "phase": "F1"
+  },
+  {
+   "name": "CELOSIA-LINTERNA",
+   "cat": "OST_GenericModel",
+   "bim_cat": "celosia",
+   "mat": "madera",
+   "x1": 0.83,
+   "x2": 0.87,
+   "poly": [
+    [
+     -0.14,
+     5.6
+    ],
+    [
+     -0.04,
+     5.6
+    ],
+    [
+     -0.04,
+     8.4
+    ],
+    [
+     -0.14,
+     8.4
+    ]
+   ],
+   "level": 3,
+   "phase": "F2"
+  },
+  {
+   "name": "CELOSIA-LINTERNA",
+   "cat": "OST_GenericModel",
+   "bim_cat": "celosia",
+   "mat": "madera",
+   "x1": 0.83,
+   "x2": 0.87,
+   "poly": [
+    [
+     -0.14,
+     8.4
+    ],
+    [
+     -0.04,
+     8.4
+    ],
+    [
+     -0.04,
+     11.15
+    ],
+    [
+     -0.14,
+     11.15
+    ]
+   ],
+   "level": 4,
+   "phase": "F2"
+  },
+  {
+   "name": "CELOSIA-LINTERNA",
+   "cat": "OST_GenericModel",
+   "bim_cat": "celosia",
+   "mat": "madera",
+   "x1": 0.94,
+   "x2": 0.98,
+   "poly": [
+    [
+     -0.14,
+     -0.15
+    ],
+    [
+     -0.04,
+     -0.15
+    ],
+    [
+     -0.04,
+     2.8
+    ],
+    [
+     -0.14,
+     2.8
+    ]
+   ],
+   "level": 1,
+   "phase": "F1"
+  },
+  {
+   "name": "CELOSIA-LINTERNA",
+   "cat": "OST_GenericModel",
+   "bim_cat": "celosia",
+   "mat": "madera",
+   "x1": 0.94,
+   "x2": 0.98,
+   "poly": [
+    [
+     -0.14,
+     2.8
+    ],
+    [
+     -0.04,
+     2.8
+    ],
+    [
+     -0.04,
+     5.6
+    ],
+    [
+     -0.14,
+     5.6
+    ]
+   ],
+   "level": 2,
+   "phase": "F1"
+  },
+  {
+   "name": "CELOSIA-LINTERNA",
+   "cat": "OST_GenericModel",
+   "bim_cat": "celosia",
+   "mat": "madera",
+   "x1": 0.94,
+   "x2": 0.98,
+   "poly": [
+    [
+     -0.14,
+     5.6
+    ],
+    [
+     -0.04,
+     5.6
+    ],
+    [
+     -0.04,
+     8.4
+    ],
+    [
+     -0.14,
+     8.4
+    ]
+   ],
+   "level": 3,
+   "phase": "F2"
+  },
+  {
+   "name": "CELOSIA-LINTERNA",
+   "cat": "OST_GenericModel",
+   "bim_cat": "celosia",
+   "mat": "madera",
+   "x1": 0.94,
+   "x2": 0.98,
+   "poly": [
+    [
+     -0.14,
+     8.4
+    ],
+    [
+     -0.04,
+     8.4
+    ],
+    [
+     -0.04,
+     11.15
+    ],
+    [
+     -0.14,
+     11.15
+    ]
+   ],
+   "level": 4,
+   "phase": "F2"
+  },
+  {
+   "name": "CELOSIA-LINTERNA",
+   "cat": "OST_GenericModel",
+   "bim_cat": "celosia",
+   "mat": "madera",
+   "x1": 1.05,
+   "x2": 1.09,
+   "poly": [
+    [
+     -0.14,
+     -0.15
+    ],
+    [
+     -0.04,
+     -0.15
+    ],
+    [
+     -0.04,
+     2.8
+    ],
+    [
+     -0.14,
+     2.8
+    ]
+   ],
+   "level": 1,
+   "phase": "F1"
+  },
+  {
+   "name": "CELOSIA-LINTERNA",
+   "cat": "OST_GenericModel",
+   "bim_cat": "celosia",
+   "mat": "madera",
+   "x1": 1.05,
+   "x2": 1.09,
+   "poly": [
+    [
+     -0.14,
+     2.8
+    ],
+    [
+     -0.04,
+     2.8
+    ],
+    [
+     -0.04,
+     5.6
+    ],
+    [
+     -0.14,
+     5.6
+    ]
+   ],
+   "level": 2,
+   "phase": "F1"
+  },
+  {
+   "name": "CELOSIA-LINTERNA",
+   "cat": "OST_GenericModel",
+   "bim_cat": "celosia",
+   "mat": "madera",
+   "x1": 1.05,
+   "x2": 1.09,
+   "poly": [
+    [
+     -0.14,
+     5.6
+    ],
+    [
+     -0.04,
+     5.6
+    ],
+    [
+     -0.04,
+     8.4
+    ],
+    [
+     -0.14,
+     8.4
+    ]
+   ],
+   "level": 3,
+   "phase": "F2"
+  },
+  {
+   "name": "CELOSIA-LINTERNA",
+   "cat": "OST_GenericModel",
+   "bim_cat": "celosia",
+   "mat": "madera",
+   "x1": 1.05,
+   "x2": 1.09,
+   "poly": [
+    [
+     -0.14,
+     8.4
+    ],
+    [
+     -0.04,
+     8.4
+    ],
+    [
+     -0.04,
+     11.15
+    ],
+    [
+     -0.14,
+     11.15
+    ]
+   ],
+   "level": 4,
+   "phase": "F2"
+  },
+  {
+   "name": "CELOSIA-LINTERNA",
+   "cat": "OST_GenericModel",
+   "bim_cat": "celosia",
+   "mat": "madera",
+   "x1": 1.16,
+   "x2": 1.2,
+   "poly": [
+    [
+     -0.14,
+     -0.15
+    ],
+    [
+     -0.04,
+     -0.15
+    ],
+    [
+     -0.04,
+     2.8
+    ],
+    [
+     -0.14,
+     2.8
+    ]
+   ],
+   "level": 1,
+   "phase": "F1"
+  },
+  {
+   "name": "CELOSIA-LINTERNA",
+   "cat": "OST_GenericModel",
+   "bim_cat": "celosia",
+   "mat": "madera",
+   "x1": 1.16,
+   "x2": 1.2,
+   "poly": [
+    [
+     -0.14,
+     2.8
+    ],
+    [
+     -0.04,
+     2.8
+    ],
+    [
+     -0.04,
+     5.6
+    ],
+    [
+     -0.14,
+     5.6
+    ]
+   ],
+   "level": 2,
+   "phase": "F1"
+  },
+  {
+   "name": "CELOSIA-LINTERNA",
+   "cat": "OST_GenericModel",
+   "bim_cat": "celosia",
+   "mat": "madera",
+   "x1": 1.16,
+   "x2": 1.2,
+   "poly": [
+    [
+     -0.14,
+     5.6
+    ],
+    [
+     -0.04,
+     5.6
+    ],
+    [
+     -0.04,
+     8.4
+    ],
+    [
+     -0.14,
+     8.4
+    ]
+   ],
+   "level": 3,
+   "phase": "F2"
+  },
+  {
+   "name": "CELOSIA-LINTERNA",
+   "cat": "OST_GenericModel",
+   "bim_cat": "celosia",
+   "mat": "madera",
+   "x1": 1.16,
+   "x2": 1.2,
+   "poly": [
+    [
+     -0.14,
+     8.4
+    ],
+    [
+     -0.04,
+     8.4
+    ],
+    [
+     -0.04,
+     11.15
+    ],
+    [
+     -0.14,
+     11.15
+    ]
+   ],
+   "level": 4,
+   "phase": "F2"
+  },
+  {
+   "name": "CELOSIA-LINTERNA",
+   "cat": "OST_GenericModel",
+   "bim_cat": "celosia",
+   "mat": "madera",
+   "x1": 1.27,
+   "x2": 1.31,
+   "poly": [
+    [
+     -0.14,
+     -0.15
+    ],
+    [
+     -0.04,
+     -0.15
+    ],
+    [
+     -0.04,
+     2.8
+    ],
+    [
+     -0.14,
+     2.8
+    ]
+   ],
+   "level": 1,
+   "phase": "F1"
+  },
+  {
+   "name": "CELOSIA-LINTERNA",
+   "cat": "OST_GenericModel",
+   "bim_cat": "celosia",
+   "mat": "madera",
+   "x1": 1.27,
+   "x2": 1.31,
+   "poly": [
+    [
+     -0.14,
+     2.8
+    ],
+    [
+     -0.04,
+     2.8
+    ],
+    [
+     -0.04,
+     5.6
+    ],
+    [
+     -0.14,
+     5.6
+    ]
+   ],
+   "level": 2,
+   "phase": "F1"
+  },
+  {
+   "name": "CELOSIA-LINTERNA",
+   "cat": "OST_GenericModel",
+   "bim_cat": "celosia",
+   "mat": "madera",
+   "x1": 1.27,
+   "x2": 1.31,
+   "poly": [
+    [
+     -0.14,
+     5.6
+    ],
+    [
+     -0.04,
+     5.6
+    ],
+    [
+     -0.04,
+     8.4
+    ],
+    [
+     -0.14,
+     8.4
+    ]
+   ],
+   "level": 3,
+   "phase": "F2"
+  },
+  {
+   "name": "CELOSIA-LINTERNA",
+   "cat": "OST_GenericModel",
+   "bim_cat": "celosia",
+   "mat": "madera",
+   "x1": 1.27,
+   "x2": 1.31,
+   "poly": [
+    [
+     -0.14,
+     8.4
+    ],
+    [
+     -0.04,
+     8.4
+    ],
+    [
+     -0.04,
+     11.15
+    ],
+    [
+     -0.14,
+     11.15
+    ]
+   ],
+   "level": 4,
+   "phase": "F2"
+  },
+  {
+   "name": "CELOSIA-LINTERNA",
+   "cat": "OST_GenericModel",
+   "bim_cat": "celosia",
+   "mat": "madera",
+   "x1": 1.38,
+   "x2": 1.42,
+   "poly": [
+    [
+     -0.14,
+     -0.15
+    ],
+    [
+     -0.04,
+     -0.15
+    ],
+    [
+     -0.04,
+     2.8
+    ],
+    [
+     -0.14,
+     2.8
+    ]
+   ],
+   "level": 1,
+   "phase": "F1"
+  },
+  {
+   "name": "CELOSIA-LINTERNA",
+   "cat": "OST_GenericModel",
+   "bim_cat": "celosia",
+   "mat": "madera",
+   "x1": 1.38,
+   "x2": 1.42,
+   "poly": [
+    [
+     -0.14,
+     2.8
+    ],
+    [
+     -0.04,
+     2.8
+    ],
+    [
+     -0.04,
+     5.6
+    ],
+    [
+     -0.14,
+     5.6
+    ]
+   ],
+   "level": 2,
+   "phase": "F1"
+  },
+  {
+   "name": "CELOSIA-LINTERNA",
+   "cat": "OST_GenericModel",
+   "bim_cat": "celosia",
+   "mat": "madera",
+   "x1": 1.38,
+   "x2": 1.42,
+   "poly": [
+    [
+     -0.14,
+     5.6
+    ],
+    [
+     -0.04,
+     5.6
+    ],
+    [
+     -0.04,
+     8.4
+    ],
+    [
+     -0.14,
+     8.4
+    ]
+   ],
+   "level": 3,
+   "phase": "F2"
+  },
+  {
+   "name": "CELOSIA-LINTERNA",
+   "cat": "OST_GenericModel",
+   "bim_cat": "celosia",
+   "mat": "madera",
+   "x1": 1.38,
+   "x2": 1.42,
+   "poly": [
+    [
+     -0.14,
+     8.4
+    ],
+    [
+     -0.04,
+     8.4
+    ],
+    [
+     -0.04,
+     11.15
+    ],
+    [
+     -0.14,
+     11.15
+    ]
+   ],
+   "level": 4,
+   "phase": "F2"
+  },
+  {
+   "name": "CELOSIA-LINTERNA",
+   "cat": "OST_GenericModel",
+   "bim_cat": "celosia",
+   "mat": "madera",
+   "x1": 1.49,
+   "x2": 1.53,
+   "poly": [
+    [
+     -0.14,
+     -0.15
+    ],
+    [
+     -0.04,
+     -0.15
+    ],
+    [
+     -0.04,
+     2.8
+    ],
+    [
+     -0.14,
+     2.8
+    ]
+   ],
+   "level": 1,
+   "phase": "F1"
+  },
+  {
+   "name": "CELOSIA-LINTERNA",
+   "cat": "OST_GenericModel",
+   "bim_cat": "celosia",
+   "mat": "madera",
+   "x1": 1.49,
+   "x2": 1.53,
+   "poly": [
+    [
+     -0.14,
+     2.8
+    ],
+    [
+     -0.04,
+     2.8
+    ],
+    [
+     -0.04,
+     5.6
+    ],
+    [
+     -0.14,
+     5.6
+    ]
+   ],
+   "level": 2,
+   "phase": "F1"
+  },
+  {
+   "name": "CELOSIA-LINTERNA",
+   "cat": "OST_GenericModel",
+   "bim_cat": "celosia",
+   "mat": "madera",
+   "x1": 1.49,
+   "x2": 1.53,
+   "poly": [
+    [
+     -0.14,
+     5.6
+    ],
+    [
+     -0.04,
+     5.6
+    ],
+    [
+     -0.04,
+     8.4
+    ],
+    [
+     -0.14,
+     8.4
+    ]
+   ],
+   "level": 3,
+   "phase": "F2"
+  },
+  {
+   "name": "CELOSIA-LINTERNA",
+   "cat": "OST_GenericModel",
+   "bim_cat": "celosia",
+   "mat": "madera",
+   "x1": 1.49,
+   "x2": 1.53,
+   "poly": [
+    [
+     -0.14,
+     8.4
+    ],
+    [
+     -0.04,
+     8.4
+    ],
+    [
+     -0.04,
+     11.15
+    ],
+    [
+     -0.14,
+     11.15
+    ]
+   ],
+   "level": 4,
+   "phase": "F2"
+  },
+  {
+   "name": "CELOSIA-LINTERNA",
+   "cat": "OST_GenericModel",
+   "bim_cat": "celosia",
+   "mat": "madera",
+   "x1": 1.6,
+   "x2": 1.64,
+   "poly": [
+    [
+     -0.14,
+     -0.15
+    ],
+    [
+     -0.04,
+     -0.15
+    ],
+    [
+     -0.04,
+     2.8
+    ],
+    [
+     -0.14,
+     2.8
+    ]
+   ],
+   "level": 1,
+   "phase": "F1"
+  },
+  {
+   "name": "CELOSIA-LINTERNA",
+   "cat": "OST_GenericModel",
+   "bim_cat": "celosia",
+   "mat": "madera",
+   "x1": 1.6,
+   "x2": 1.64,
+   "poly": [
+    [
+     -0.14,
+     2.8
+    ],
+    [
+     -0.04,
+     2.8
+    ],
+    [
+     -0.04,
+     5.6
+    ],
+    [
+     -0.14,
+     5.6
+    ]
+   ],
+   "level": 2,
+   "phase": "F1"
+  },
+  {
+   "name": "CELOSIA-LINTERNA",
+   "cat": "OST_GenericModel",
+   "bim_cat": "celosia",
+   "mat": "madera",
+   "x1": 1.6,
+   "x2": 1.64,
+   "poly": [
+    [
+     -0.14,
+     5.6
+    ],
+    [
+     -0.04,
+     5.6
+    ],
+    [
+     -0.04,
+     8.4
+    ],
+    [
+     -0.14,
+     8.4
+    ]
+   ],
+   "level": 3,
+   "phase": "F2"
+  },
+  {
+   "name": "CELOSIA-LINTERNA",
+   "cat": "OST_GenericModel",
+   "bim_cat": "celosia",
+   "mat": "madera",
+   "x1": 1.6,
+   "x2": 1.64,
+   "poly": [
+    [
+     -0.14,
+     8.4
+    ],
+    [
+     -0.04,
+     8.4
+    ],
+    [
+     -0.04,
+     11.15
+    ],
+    [
+     -0.14,
+     11.15
+    ]
+   ],
+   "level": 4,
+   "phase": "F2"
+  },
+  {
+   "name": "CELOSIA-LINTERNA",
+   "cat": "OST_GenericModel",
+   "bim_cat": "celosia",
+   "mat": "madera",
+   "x1": 1.71,
+   "x2": 1.75,
+   "poly": [
+    [
+     -0.14,
+     -0.15
+    ],
+    [
+     -0.04,
+     -0.15
+    ],
+    [
+     -0.04,
+     2.8
+    ],
+    [
+     -0.14,
+     2.8
+    ]
+   ],
+   "level": 1,
+   "phase": "F1"
+  },
+  {
+   "name": "CELOSIA-LINTERNA",
+   "cat": "OST_GenericModel",
+   "bim_cat": "celosia",
+   "mat": "madera",
+   "x1": 1.71,
+   "x2": 1.75,
+   "poly": [
+    [
+     -0.14,
+     2.8
+    ],
+    [
+     -0.04,
+     2.8
+    ],
+    [
+     -0.04,
+     5.6
+    ],
+    [
+     -0.14,
+     5.6
+    ]
+   ],
+   "level": 2,
+   "phase": "F1"
+  },
+  {
+   "name": "CELOSIA-LINTERNA",
+   "cat": "OST_GenericModel",
+   "bim_cat": "celosia",
+   "mat": "madera",
+   "x1": 1.71,
+   "x2": 1.75,
+   "poly": [
+    [
+     -0.14,
+     5.6
+    ],
+    [
+     -0.04,
+     5.6
+    ],
+    [
+     -0.04,
+     8.4
+    ],
+    [
+     -0.14,
+     8.4
+    ]
+   ],
+   "level": 3,
+   "phase": "F2"
+  },
+  {
+   "name": "CELOSIA-LINTERNA",
+   "cat": "OST_GenericModel",
+   "bim_cat": "celosia",
+   "mat": "madera",
+   "x1": 1.71,
+   "x2": 1.75,
+   "poly": [
+    [
+     -0.14,
+     8.4
+    ],
+    [
+     -0.04,
+     8.4
+    ],
+    [
+     -0.04,
+     11.15
+    ],
+    [
+     -0.14,
+     11.15
+    ]
+   ],
+   "level": 4,
+   "phase": "F2"
+  },
+  {
+   "name": "CELOSIA-LINTERNA",
+   "cat": "OST_GenericModel",
+   "bim_cat": "celosia",
+   "mat": "madera",
+   "x1": 1.82,
+   "x2": 1.86,
+   "poly": [
+    [
+     -0.14,
+     -0.15
+    ],
+    [
+     -0.04,
+     -0.15
+    ],
+    [
+     -0.04,
+     2.8
+    ],
+    [
+     -0.14,
+     2.8
+    ]
+   ],
+   "level": 1,
+   "phase": "F1"
+  },
+  {
+   "name": "CELOSIA-LINTERNA",
+   "cat": "OST_GenericModel",
+   "bim_cat": "celosia",
+   "mat": "madera",
+   "x1": 1.82,
+   "x2": 1.86,
+   "poly": [
+    [
+     -0.14,
+     2.8
+    ],
+    [
+     -0.04,
+     2.8
+    ],
+    [
+     -0.04,
+     5.6
+    ],
+    [
+     -0.14,
+     5.6
+    ]
+   ],
+   "level": 2,
+   "phase": "F1"
+  },
+  {
+   "name": "CELOSIA-LINTERNA",
+   "cat": "OST_GenericModel",
+   "bim_cat": "celosia",
+   "mat": "madera",
+   "x1": 1.82,
+   "x2": 1.86,
+   "poly": [
+    [
+     -0.14,
+     5.6
+    ],
+    [
+     -0.04,
+     5.6
+    ],
+    [
+     -0.04,
+     8.4
+    ],
+    [
+     -0.14,
+     8.4
+    ]
+   ],
+   "level": 3,
+   "phase": "F2"
+  },
+  {
+   "name": "CELOSIA-LINTERNA",
+   "cat": "OST_GenericModel",
+   "bim_cat": "celosia",
+   "mat": "madera",
+   "x1": 1.82,
+   "x2": 1.86,
+   "poly": [
+    [
+     -0.14,
+     8.4
+    ],
+    [
+     -0.04,
+     8.4
+    ],
+    [
+     -0.04,
+     11.15
+    ],
+    [
+     -0.14,
+     11.15
+    ]
+   ],
+   "level": 4,
+   "phase": "F2"
+  },
+  {
+   "name": "CELOSIA-LINTERNA",
+   "cat": "OST_GenericModel",
+   "bim_cat": "celosia",
+   "mat": "madera",
+   "x1": 1.93,
+   "x2": 1.97,
+   "poly": [
+    [
+     -0.14,
+     -0.15
+    ],
+    [
+     -0.04,
+     -0.15
+    ],
+    [
+     -0.04,
+     2.8
+    ],
+    [
+     -0.14,
+     2.8
+    ]
+   ],
+   "level": 1,
+   "phase": "F1"
+  },
+  {
+   "name": "CELOSIA-LINTERNA",
+   "cat": "OST_GenericModel",
+   "bim_cat": "celosia",
+   "mat": "madera",
+   "x1": 1.93,
+   "x2": 1.97,
+   "poly": [
+    [
+     -0.14,
+     2.8
+    ],
+    [
+     -0.04,
+     2.8
+    ],
+    [
+     -0.04,
+     5.6
+    ],
+    [
+     -0.14,
+     5.6
+    ]
+   ],
+   "level": 2,
+   "phase": "F1"
+  },
+  {
+   "name": "CELOSIA-LINTERNA",
+   "cat": "OST_GenericModel",
+   "bim_cat": "celosia",
+   "mat": "madera",
+   "x1": 1.93,
+   "x2": 1.97,
+   "poly": [
+    [
+     -0.14,
+     5.6
+    ],
+    [
+     -0.04,
+     5.6
+    ],
+    [
+     -0.04,
+     8.4
+    ],
+    [
+     -0.14,
+     8.4
+    ]
+   ],
+   "level": 3,
+   "phase": "F2"
+  },
+  {
+   "name": "CELOSIA-LINTERNA",
+   "cat": "OST_GenericModel",
+   "bim_cat": "celosia",
+   "mat": "madera",
+   "x1": 1.93,
+   "x2": 1.97,
+   "poly": [
+    [
+     -0.14,
+     8.4
+    ],
+    [
+     -0.04,
+     8.4
+    ],
+    [
+     -0.04,
+     11.15
+    ],
+    [
+     -0.14,
+     11.15
+    ]
+   ],
+   "level": 4,
+   "phase": "F2"
+  },
+  {
+   "name": "CELOSIA-LINTERNA",
+   "cat": "OST_GenericModel",
+   "bim_cat": "celosia",
+   "mat": "madera",
+   "x1": 2.04,
+   "x2": 2.08,
+   "poly": [
+    [
+     -0.14,
+     -0.15
+    ],
+    [
+     -0.04,
+     -0.15
+    ],
+    [
+     -0.04,
+     2.8
+    ],
+    [
+     -0.14,
+     2.8
+    ]
+   ],
+   "level": 1,
+   "phase": "F1"
+  },
+  {
+   "name": "CELOSIA-LINTERNA",
+   "cat": "OST_GenericModel",
+   "bim_cat": "celosia",
+   "mat": "madera",
+   "x1": 2.04,
+   "x2": 2.08,
+   "poly": [
+    [
+     -0.14,
+     2.8
+    ],
+    [
+     -0.04,
+     2.8
+    ],
+    [
+     -0.04,
+     5.6
+    ],
+    [
+     -0.14,
+     5.6
+    ]
+   ],
+   "level": 2,
+   "phase": "F1"
+  },
+  {
+   "name": "CELOSIA-LINTERNA",
+   "cat": "OST_GenericModel",
+   "bim_cat": "celosia",
+   "mat": "madera",
+   "x1": 2.04,
+   "x2": 2.08,
+   "poly": [
+    [
+     -0.14,
+     5.6
+    ],
+    [
+     -0.04,
+     5.6
+    ],
+    [
+     -0.04,
+     8.4
+    ],
+    [
+     -0.14,
+     8.4
+    ]
+   ],
+   "level": 3,
+   "phase": "F2"
+  },
+  {
+   "name": "CELOSIA-LINTERNA",
+   "cat": "OST_GenericModel",
+   "bim_cat": "celosia",
+   "mat": "madera",
+   "x1": 2.04,
+   "x2": 2.08,
+   "poly": [
+    [
+     -0.14,
+     8.4
+    ],
+    [
+     -0.04,
+     8.4
+    ],
+    [
+     -0.04,
+     11.15
+    ],
+    [
+     -0.14,
+     11.15
+    ]
+   ],
+   "level": 4,
+   "phase": "F2"
+  },
+  {
+   "name": "JARDIN-INT",
+   "cat": "OST_Planting",
+   "bim_cat": "jardin",
+   "mat": "canto_rodado",
+   "x1": 0.25,
+   "x2": 2.15,
+   "poly": [
+    [
+     0.25,
+     0.0
+    ],
+    [
+     1.25,
+     0.0
+    ],
+    [
+     1.25,
+     0.1
+    ],
+    [
+     0.25,
+     0.1
+    ]
+   ],
+   "level": 1,
+   "phase": "F1"
+  },
+  {
+   "name": "PLANTA",
+   "cat": "OST_Planting",
+   "bim_cat": "jardin",
+   "mat": "verde",
+   "x1": 0.45,
+   "x2": 0.85,
+   "poly": [
+    [
+     0.45,
+     0.1
+    ],
+    [
+     0.85,
+     0.1
+    ],
+    [
+     0.85,
+     0.85
+    ],
+    [
+     0.45,
+     0.85
+    ]
+   ],
+   "level": 1,
+   "phase": "F1"
+  },
+  {
+   "name": "PLANTA",
+   "cat": "OST_Planting",
+   "bim_cat": "jardin",
+   "mat": "verde",
+   "x1": 1.45,
+   "x2": 1.85,
+   "poly": [
+    [
+     0.55,
+     0.1
+    ],
+    [
+     0.95,
+     0.1
+    ],
+    [
+     0.95,
+     0.65
+    ],
+    [
+     0.55,
+     0.65
+    ]
+   ],
+   "level": 1,
+   "phase": "F1"
+  },
+  {
+   "name": "TANQUE-1100L",
+   "cat": "OST_GenericModel",
+   "bim_cat": "instalaciones",
+   "mat": "tanque",
+   "x1": 0.55,
+   "x2": 1.65,
+   "poly": [
+    [
+     5.55,
+     8.4
+    ],
+    [
+     6.55,
+     8.4
+    ],
+    [
+     6.55,
+     9.85
+    ],
+    [
+     5.55,
+     9.85
+    ]
+   ],
+   "level": 4,
+   "phase": "F2"
+  },
+  {
+   "name": "PANEL-TR4",
+   "cat": "OST_GenericModel",
+   "bim_cat": "cobertura",
+   "mat": "panel_tr4",
+   "x1": 0.0,
+   "x2": 8.0,
+   "poly": [
+    [
+     7.12,
+     3.012
+    ],
+    [
+     9.0,
+     3.2
+    ],
+    [
+     9.0,
+     3.25
+    ],
+    [
+     7.12,
+     3.062
+    ]
+   ],
+   "level": 1,
+   "phase": "F1",
+   "fallback_only": true
+  },
+  {
+   "name": "POLICARBONATO",
+   "cat": "OST_GenericModel",
+   "bim_cat": "cobertura",
+   "mat": "policarbonato",
+   "x1": 0.0,
+   "x2": 8.0,
+   "poly": [
+    [
+     9.0,
+     3.238
+    ],
+    [
+     10.2,
+     3.358
+    ],
+    [
+     10.2,
+     3.37
+    ],
+    [
+     9.0,
+     3.25
+    ]
+   ],
+   "level": 1,
+   "phase": "F1"
+  },
+  {
+   "name": "PANEL-TR4",
+   "cat": "OST_GenericModel",
+   "bim_cat": "cobertura",
+   "mat": "panel_tr4",
+   "x1": 0.0,
+   "x2": 8.0,
+   "poly": [
+    [
+     10.2,
+     3.32
+    ],
+    [
+     12.0,
+     3.5
+    ],
+    [
+     12.0,
+     3.55
+    ],
+    [
+     10.2,
+     3.37
+    ]
+   ],
+   "level": 1,
+   "phase": "F1",
+   "fallback_only": true
+  },
+  {
+   "name": "CORREA 50x100x2",
+   "cat": "OST_StructuralFraming",
+   "bim_cat": "correa",
+   "mat": "acero",
+   "x1": 0.25,
+   "x2": 7.75,
+   "poly": [
+    [
+     7.35,
+     2.935
+    ],
+    [
+     7.45,
+     2.945
+    ],
+    [
+     7.45,
+     3.045
+    ],
+    [
+     7.35,
+     3.035
+    ]
+   ],
+   "level": 1,
+   "phase": "F1"
+  },
+  {
+   "name": "CORREA 50x100x2",
+   "cat": "OST_StructuralFraming",
+   "bim_cat": "correa",
+   "mat": "acero",
+   "x1": 0.25,
+   "x2": 7.75,
+   "poly": [
+    [
+     8.3,
+     3.03
+    ],
+    [
+     8.4,
+     3.04
+    ],
+    [
+     8.4,
+     3.14
+    ],
+    [
+     8.3,
+     3.13
+    ]
+   ],
+   "level": 1,
+   "phase": "F1"
+  },
+  {
+   "name": "CORREA 50x100x2",
+   "cat": "OST_StructuralFraming",
+   "bim_cat": "correa",
+   "mat": "acero",
+   "x1": 0.25,
+   "x2": 7.75,
+   "poly": [
+    [
+     9.25,
+     3.125
+    ],
+    [
+     9.35,
+     3.135
+    ],
+    [
+     9.35,
+     3.235
+    ],
+    [
+     9.25,
+     3.225
+    ]
+   ],
+   "level": 1,
+   "phase": "F1"
+  },
+  {
+   "name": "CORREA 50x100x2",
+   "cat": "OST_StructuralFraming",
+   "bim_cat": "correa",
+   "mat": "acero",
+   "x1": 0.25,
+   "x2": 7.75,
+   "poly": [
+    [
+     9.9,
+     3.19
+    ],
+    [
+     10.0,
+     3.2
+    ],
+    [
+     10.0,
+     3.3
+    ],
+    [
+     9.9,
+     3.29
+    ]
+   ],
+   "level": 1,
+   "phase": "F1"
+  },
+  {
+   "name": "CORREA 50x100x2",
+   "cat": "OST_StructuralFraming",
+   "bim_cat": "correa",
+   "mat": "acero",
+   "x1": 0.25,
+   "x2": 7.75,
+   "poly": [
+    [
+     10.85,
+     3.285
+    ],
+    [
+     10.95,
+     3.295
+    ],
+    [
+     10.95,
+     3.395
+    ],
+    [
+     10.85,
+     3.385
+    ]
+   ],
+   "level": 1,
+   "phase": "F1"
+  },
+  {
+   "name": "CORREA 50x100x2",
+   "cat": "OST_StructuralFraming",
+   "bim_cat": "correa",
+   "mat": "acero",
+   "x1": 0.25,
+   "x2": 7.75,
+   "poly": [
+    [
+     11.8,
+     3.38
+    ],
+    [
+     11.9,
+     3.39
+    ],
+    [
+     11.9,
+     3.49
+    ],
+    [
+     11.8,
+     3.48
+    ]
+   ],
+   "level": 1,
+   "phase": "F1"
+  },
+  {
+   "name": "VIGA 100x200x3",
+   "cat": "OST_StructuralFraming",
+   "bim_cat": "viga_met",
+   "mat": "acero",
+   "x1": 0.325,
+   "x2": 0.425,
+   "poly": [
+    [
+     7.1,
+     2.71
+    ],
+    [
+     11.95,
+     3.195
+    ],
+    [
+     11.95,
+     3.395
+    ],
+    [
+     7.1,
+     2.91
+    ]
+   ],
+   "level": 1,
+   "phase": "F1"
+  },
+  {
+   "name": "VIGA 100x200x3",
+   "cat": "OST_StructuralFraming",
+   "bim_cat": "viga_met",
+   "mat": "acero",
+   "x1": 1.775,
+   "x2": 1.875,
+   "poly": [
+    [
+     7.1,
+     2.71
+    ],
+    [
+     11.95,
+     3.195
+    ],
+    [
+     11.95,
+     3.395
+    ],
+    [
+     7.1,
+     2.91
+    ]
+   ],
+   "level": 1,
+   "phase": "F1"
+  },
+  {
+   "name": "VIGA 100x200x3",
+   "cat": "OST_StructuralFraming",
+   "bim_cat": "viga_met",
+   "mat": "acero",
+   "x1": 3.225,
+   "x2": 3.325,
+   "poly": [
+    [
+     7.1,
+     2.71
+    ],
+    [
+     11.95,
+     3.195
+    ],
+    [
+     11.95,
+     3.395
+    ],
+    [
+     7.1,
+     2.91
+    ]
+   ],
+   "level": 1,
+   "phase": "F1"
+  },
+  {
+   "name": "VIGA 100x200x3",
+   "cat": "OST_StructuralFraming",
+   "bim_cat": "viga_met",
+   "mat": "acero",
+   "x1": 4.675,
+   "x2": 4.775,
+   "poly": [
+    [
+     7.1,
+     2.71
+    ],
+    [
+     11.95,
+     3.195
+    ],
+    [
+     11.95,
+     3.395
+    ],
+    [
+     7.1,
+     2.91
+    ]
+   ],
+   "level": 1,
+   "phase": "F1"
+  },
+  {
+   "name": "VIGA 100x200x3",
+   "cat": "OST_StructuralFraming",
+   "bim_cat": "viga_met",
+   "mat": "acero",
+   "x1": 6.125,
+   "x2": 6.225,
+   "poly": [
+    [
+     7.1,
+     2.71
+    ],
+    [
+     11.95,
+     3.195
+    ],
+    [
+     11.95,
+     3.395
+    ],
+    [
+     7.1,
+     2.91
+    ]
+   ],
+   "level": 1,
+   "phase": "F1"
+  },
+  {
+   "name": "VIGA 100x200x3",
+   "cat": "OST_StructuralFraming",
+   "bim_cat": "viga_met",
+   "mat": "acero",
+   "x1": 7.575,
+   "x2": 7.675,
+   "poly": [
+    [
+     7.1,
+     2.71
+    ],
+    [
+     11.95,
+     3.195
+    ],
+    [
+     11.95,
+     3.395
+    ],
+    [
+     7.1,
+     2.91
+    ]
+   ],
+   "level": 1,
+   "phase": "F1"
+  },
+  {
+   "name": "VIGA 150x300x4",
+   "cat": "OST_StructuralFraming",
+   "bim_cat": "viga_met",
+   "mat": "acero",
+   "x1": 0.25,
+   "x2": 7.75,
+   "poly": [
+    [
+     11.45,
+     2.8525
+    ],
+    [
+     11.6,
+     2.8525
+    ],
+    [
+     11.6,
+     3.1525
+    ],
+    [
+     11.45,
+     3.1525
+    ]
+   ],
+   "level": 1,
+   "phase": "F1"
+  },
+  {
+   "name": "COL 150x150x4",
+   "cat": "OST_StructuralColumns",
+   "bim_cat": "columna_met",
+   "mat": "acero",
+   "x1": 0.4,
+   "x2": 0.55,
+   "poly": [
+    [
+     11.45,
+     0.0
+    ],
+    [
+     11.6,
+     0.0
+    ],
+    [
+     11.6,
+     2.8525
+    ],
+    [
+     11.45,
+     2.8525
+    ]
+   ],
+   "level": 1,
+   "phase": "F1"
+  },
+  {
+   "name": "COL 150x150x4",
+   "cat": "OST_StructuralColumns",
+   "bim_cat": "columna_met",
+   "mat": "acero",
+   "x1": 7.45,
+   "x2": 7.6,
+   "poly": [
+    [
+     11.45,
+     0.0
+    ],
+    [
+     11.6,
+     0.0
+    ],
+    [
+     11.6,
+     2.8525
+    ],
+    [
+     11.45,
+     2.8525
+    ]
+   ],
+   "level": 1,
+   "phase": "F1"
+  },
+  {
+   "name": "ANGULO 100x100x6",
+   "cat": "OST_StructuralFraming",
+   "bim_cat": "viga_met",
+   "mat": "acero",
+   "x1": 0.25,
+   "x2": 7.75,
+   "poly": [
+    [
+     7.0,
+     2.51
+    ],
+    [
+     7.1,
+     2.51
+    ],
+    [
+     7.1,
+     2.71
+    ],
+    [
+     7.0,
+     2.71
+    ]
+   ],
+   "level": 1,
+   "phase": "F1"
+  },
+  {
+   "name": "CANALETA",
+   "cat": "OST_GenericModel",
+   "bim_cat": "canaleta",
+   "mat": "acero_galv",
+   "x1": 0.25,
+   "x2": 7.75,
+   "poly": [
+    [
+     7.0,
+     2.93
+    ],
+    [
+     7.2,
+     2.93
+    ],
+    [
+     7.2,
+     3.12
+    ],
+    [
+     7.0,
+     3.12
+    ]
+   ],
+   "level": 1,
+   "phase": "F1"
+  },
+  {
+   "name": "BAJANTE 3in",
+   "cat": "OST_GenericModel",
+   "bim_cat": "bajante",
+   "mat": "acero_galv",
+   "x1": 0.3,
+   "x2": 0.4,
+   "poly": [
+    [
+     7.05,
+     0.0
+    ],
+    [
+     7.15,
+     0.0
+    ],
+    [
+     7.15,
+     2.93
+    ],
+    [
+     7.05,
+     2.93
+    ]
+   ],
+   "level": 1,
+   "phase": "F1"
+  },
+  {
+   "name": "BAJANTE 3in",
+   "cat": "OST_GenericModel",
+   "bim_cat": "bajante",
+   "mat": "acero_galv",
+   "x1": 7.6,
+   "x2": 7.7,
+   "poly": [
+    [
+     7.05,
+     0.0
+    ],
+    [
+     7.15,
+     0.0
+    ],
+    [
+     7.15,
+     2.93
+    ],
+    [
+     7.05,
+     2.93
+    ]
+   ],
+   "level": 1,
+   "phase": "F1"
+  },
+  {
+   "name": "CELOSIA-POSTERIOR",
+   "cat": "OST_GenericModel",
+   "bim_cat": "celosia",
+   "mat": "celosia_met",
+   "x1": 0.25,
+   "x2": 7.75,
+   "poly": [
+    [
+     11.85,
+     2.4
+    ],
+    [
+     11.9,
+     2.4
+    ],
+    [
+     11.9,
+     2.8525
+    ],
+    [
+     11.85,
+     2.8525
+    ]
+   ],
+   "level": 1,
+   "phase": "F1"
+  },
+  {
+   "name": "BARRA-PARRILLA",
+   "cat": "OST_Furniture",
+   "bim_cat": "mobiliario",
+   "mat": "concreto_visto",
+   "x1": 0.25,
+   "x2": 0.9,
+   "poly": [
+    [
+     8.0,
+     0.0
+    ],
+    [
+     10.4,
+     0.0
+    ],
+    [
+     10.4,
+     0.9
+    ],
+    [
+     8.0,
+     0.9
+    ]
+   ],
+   "level": 1,
+   "phase": "F1"
+  },
+  {
+   "name": "CAMPANA",
+   "cat": "OST_Furniture",
+   "bim_cat": "mobiliario",
+   "mat": "acero",
+   "x1": 0.25,
+   "x2": 0.95,
+   "poly": [
+    [
+     8.6,
+     1.7
+    ],
+    [
+     9.6,
+     1.7
+    ],
+    [
+     9.6,
+     2.1
+    ],
+    [
+     8.6,
+     2.1
+    ]
+   ],
+   "level": 1,
+   "phase": "F1"
+  },
+  {
+   "name": "CHIMENEA",
+   "cat": "OST_Furniture",
+   "bim_cat": "mobiliario",
+   "mat": "acero",
+   "x1": 0.4,
+   "x2": 0.75,
+   "poly": [
+    [
+     8.95,
+     2.1
+    ],
+    [
+     9.3,
+     2.1
+    ],
+    [
+     9.3,
+     4.08
+    ],
+    [
+     8.95,
+     4.08
+    ]
+   ],
+   "level": 1,
+   "phase": "F1"
+  },
+  {
+   "name": "MESA-EXT",
+   "cat": "OST_Furniture",
+   "bim_cat": "mobiliario",
+   "mat": "madera",
+   "x1": 3.05,
+   "x2": 5.05,
+   "poly": [
+    [
+     8.55,
+     0.72
+    ],
+    [
+     9.55,
+     0.72
+    ],
+    [
+     9.55,
+     0.76
+    ],
+    [
+     8.55,
+     0.76
+    ]
+   ],
+   "level": 1,
+   "phase": "F1"
+  },
+  {
+   "name": "MESA-EXT",
+   "cat": "OST_Furniture",
+   "bim_cat": "mobiliario",
+   "mat": "acero",
+   "x1": 3.95,
+   "x2": 4.15,
+   "poly": [
+    [
+     8.95,
+     0.0
+    ],
+    [
+     9.15,
+     0.0
+    ],
+    [
+     9.15,
+     0.72
+    ],
+    [
+     8.95,
+     0.72
+    ]
+   ],
+   "level": 1,
+   "phase": "F1"
+  },
+  {
+   "name": "SILLA",
+   "cat": "OST_Furniture",
+   "bim_cat": "mobiliario",
+   "mat": "madera",
+   "x1": 3.25,
+   "x2": 3.65,
+   "poly": [
+    [
+     8.2,
+     0.0
+    ],
+    [
+     8.6,
+     0.0
+    ],
+    [
+     8.6,
+     0.45
+    ],
+    [
+     8.2,
+     0.45
+    ]
+   ],
+   "level": 1,
+   "phase": "F1"
+  },
+  {
+   "name": "SILLA",
+   "cat": "OST_Furniture",
+   "bim_cat": "mobiliario",
+   "mat": "madera",
+   "x1": 3.85,
+   "x2": 4.25,
+   "poly": [
+    [
+     8.2,
+     0.0
+    ],
+    [
+     8.6,
+     0.0
+    ],
+    [
+     8.6,
+     0.45
+    ],
+    [
+     8.2,
+     0.45
+    ]
+   ],
+   "level": 1,
+   "phase": "F1"
+  },
+  {
+   "name": "SILLA",
+   "cat": "OST_Furniture",
+   "bim_cat": "mobiliario",
+   "mat": "madera",
+   "x1": 4.45,
+   "x2": 4.85,
+   "poly": [
+    [
+     8.2,
+     0.0
+    ],
+    [
+     8.6,
+     0.0
+    ],
+    [
+     8.6,
+     0.45
+    ],
+    [
+     8.2,
+     0.45
+    ]
+   ],
+   "level": 1,
+   "phase": "F1"
+  },
+  {
+   "name": "SILLA",
+   "cat": "OST_Furniture",
+   "bim_cat": "mobiliario",
+   "mat": "madera",
+   "x1": 3.25,
+   "x2": 3.65,
+   "poly": [
+    [
+     9.55,
+     0.0
+    ],
+    [
+     9.95,
+     0.0
+    ],
+    [
+     9.95,
+     0.45
+    ],
+    [
+     9.55,
+     0.45
+    ]
+   ],
+   "level": 1,
+   "phase": "F1"
+  },
+  {
+   "name": "SILLA",
+   "cat": "OST_Furniture",
+   "bim_cat": "mobiliario",
+   "mat": "madera",
+   "x1": 3.85,
+   "x2": 4.25,
+   "poly": [
+    [
+     9.55,
+     0.0
+    ],
+    [
+     9.95,
+     0.0
+    ],
+    [
+     9.95,
+     0.45
+    ],
+    [
+     9.55,
+     0.45
+    ]
+   ],
+   "level": 1,
+   "phase": "F1"
+  },
+  {
+   "name": "SILLA",
+   "cat": "OST_Furniture",
+   "bim_cat": "mobiliario",
+   "mat": "madera",
+   "x1": 4.45,
+   "x2": 4.85,
+   "poly": [
+    [
+     9.55,
+     0.0
+    ],
+    [
+     9.95,
+     0.0
+    ],
+    [
+     9.95,
+     0.45
+    ],
+    [
+     9.55,
+     0.45
+    ]
+   ],
+   "level": 1,
+   "phase": "F1"
+  },
+  {
+   "name": "LAVADERO",
+   "cat": "OST_Furniture",
+   "bim_cat": "mobiliario",
+   "mat": "concreto_visto",
+   "x1": 6.95,
+   "x2": 7.75,
+   "poly": [
+    [
+     10.95,
+     0.0
+    ],
+    [
+     11.75,
+     0.0
+    ],
+    [
+     11.75,
+     0.9
+    ],
+    [
+     10.95,
+     0.9
+    ]
+   ],
+   "level": 1,
+   "phase": "F1"
+  },
+  {
+   "name": "LAVADORA",
+   "cat": "OST_Furniture",
+   "bim_cat": "mobiliario",
+   "mat": "blanco",
+   "x1": 6.25,
+   "x2": 6.85,
+   "poly": [
+    [
+     11.1,
+     0.0
+    ],
+    [
+     11.75,
+     0.0
+    ],
+    [
+     11.75,
+     0.85
+    ],
+    [
+     11.1,
+     0.85
+    ]
+   ],
+   "level": 1,
+   "phase": "F1"
+  },
+  {
+   "name": "CELOSIA-LAV",
+   "cat": "OST_GenericModel",
+   "bim_cat": "celosia",
+   "mat": "madera",
+   "x1": 6.1,
+   "x2": 6.14,
+   "poly": [
+    [
+     10.0,
+     0.0
+    ],
+    [
+     10.08,
+     0.0
+    ],
+    [
+     10.08,
+     2.1
+    ],
+    [
+     10.0,
+     2.1
+    ]
+   ],
+   "level": 1,
+   "phase": "F1"
+  },
+  {
+   "name": "CELOSIA-LAV",
+   "cat": "OST_GenericModel",
+   "bim_cat": "celosia",
+   "mat": "madera",
+   "x1": 6.2,
+   "x2": 6.24,
+   "poly": [
+    [
+     10.0,
+     0.0
+    ],
+    [
+     10.08,
+     0.0
+    ],
+    [
+     10.08,
+     2.1
+    ],
+    [
+     10.0,
+     2.1
+    ]
+   ],
+   "level": 1,
+   "phase": "F1"
+  },
+  {
+   "name": "CELOSIA-LAV",
+   "cat": "OST_GenericModel",
+   "bim_cat": "celosia",
+   "mat": "madera",
+   "x1": 6.3,
+   "x2": 6.34,
+   "poly": [
+    [
+     10.0,
+     0.0
+    ],
+    [
+     10.08,
+     0.0
+    ],
+    [
+     10.08,
+     2.1
+    ],
+    [
+     10.0,
+     2.1
+    ]
+   ],
+   "level": 1,
+   "phase": "F1"
+  },
+  {
+   "name": "CELOSIA-LAV",
+   "cat": "OST_GenericModel",
+   "bim_cat": "celosia",
+   "mat": "madera",
+   "x1": 6.4,
+   "x2": 6.44,
+   "poly": [
+    [
+     10.0,
+     0.0
+    ],
+    [
+     10.08,
+     0.0
+    ],
+    [
+     10.08,
+     2.1
+    ],
+    [
+     10.0,
+     2.1
+    ]
+   ],
+   "level": 1,
+   "phase": "F1"
+  },
+  {
+   "name": "CELOSIA-LAV",
+   "cat": "OST_GenericModel",
+   "bim_cat": "celosia",
+   "mat": "madera",
+   "x1": 6.5,
+   "x2": 6.54,
+   "poly": [
+    [
+     10.0,
+     0.0
+    ],
+    [
+     10.08,
+     0.0
+    ],
+    [
+     10.08,
+     2.1
+    ],
+    [
+     10.0,
+     2.1
+    ]
+   ],
+   "level": 1,
+   "phase": "F1"
+  },
+  {
+   "name": "CELOSIA-LAV",
+   "cat": "OST_GenericModel",
+   "bim_cat": "celosia",
+   "mat": "madera",
+   "x1": 6.6,
+   "x2": 6.64,
+   "poly": [
+    [
+     10.0,
+     0.0
+    ],
+    [
+     10.08,
+     0.0
+    ],
+    [
+     10.08,
+     2.1
+    ],
+    [
+     10.0,
+     2.1
+    ]
+   ],
+   "level": 1,
+   "phase": "F1"
+  },
+  {
+   "name": "CELOSIA-LAV",
+   "cat": "OST_GenericModel",
+   "bim_cat": "celosia",
+   "mat": "madera",
+   "x1": 6.7,
+   "x2": 6.74,
+   "poly": [
+    [
+     10.0,
+     0.0
+    ],
+    [
+     10.08,
+     0.0
+    ],
+    [
+     10.08,
+     2.1
+    ],
+    [
+     10.0,
+     2.1
+    ]
+   ],
+   "level": 1,
+   "phase": "F1"
+  },
+  {
+   "name": "CELOSIA-LAV",
+   "cat": "OST_GenericModel",
+   "bim_cat": "celosia",
+   "mat": "madera",
+   "x1": 6.8,
+   "x2": 6.84,
+   "poly": [
+    [
+     10.0,
+     0.0
+    ],
+    [
+     10.08,
+     0.0
+    ],
+    [
+     10.08,
+     2.1
+    ],
+    [
+     10.0,
+     2.1
+    ]
+   ],
+   "level": 1,
+   "phase": "F1"
+  },
+  {
+   "name": "CELOSIA-LAV",
+   "cat": "OST_GenericModel",
+   "bim_cat": "celosia",
+   "mat": "madera",
+   "x1": 6.9,
+   "x2": 6.94,
+   "poly": [
+    [
+     10.0,
+     0.0
+    ],
+    [
+     10.08,
+     0.0
+    ],
+    [
+     10.08,
+     2.1
+    ],
+    [
+     10.0,
+     2.1
+    ]
+   ],
+   "level": 1,
+   "phase": "F1"
+  },
+  {
+   "name": "CELOSIA-LAV",
+   "cat": "OST_GenericModel",
+   "bim_cat": "celosia",
+   "mat": "madera",
+   "x1": 7.0,
+   "x2": 7.04,
+   "poly": [
+    [
+     10.0,
+     0.0
+    ],
+    [
+     10.08,
+     0.0
+    ],
+    [
+     10.08,
+     2.1
+    ],
+    [
+     10.0,
+     2.1
+    ]
+   ],
+   "level": 1,
+   "phase": "F1"
+  },
+  {
+   "name": "CELOSIA-LAV",
+   "cat": "OST_GenericModel",
+   "bim_cat": "celosia",
+   "mat": "madera",
+   "x1": 7.1,
+   "x2": 7.14,
+   "poly": [
+    [
+     10.0,
+     0.0
+    ],
+    [
+     10.08,
+     0.0
+    ],
+    [
+     10.08,
+     2.1
+    ],
+    [
+     10.0,
+     2.1
+    ]
+   ],
+   "level": 1,
+   "phase": "F1"
+  },
+  {
+   "name": "CELOSIA-LAV",
+   "cat": "OST_GenericModel",
+   "bim_cat": "celosia",
+   "mat": "madera",
+   "x1": 7.2,
+   "x2": 7.24,
+   "poly": [
+    [
+     10.0,
+     0.0
+    ],
+    [
+     10.08,
+     0.0
+    ],
+    [
+     10.08,
+     2.1
+    ],
+    [
+     10.0,
+     2.1
+    ]
+   ],
+   "level": 1,
+   "phase": "F1"
+  },
+  {
+   "name": "CELOSIA-LAV",
+   "cat": "OST_GenericModel",
+   "bim_cat": "celosia",
+   "mat": "madera",
+   "x1": 7.3,
+   "x2": 7.34,
+   "poly": [
+    [
+     10.0,
+     0.0
+    ],
+    [
+     10.08,
+     0.0
+    ],
+    [
+     10.08,
+     2.1
+    ],
+    [
+     10.0,
+     2.1
+    ]
+   ],
+   "level": 1,
+   "phase": "F1"
+  },
+  {
+   "name": "CELOSIA-LAV",
+   "cat": "OST_GenericModel",
+   "bim_cat": "celosia",
+   "mat": "madera",
+   "x1": 7.4,
+   "x2": 7.44,
+   "poly": [
+    [
+     10.0,
+     0.0
+    ],
+    [
+     10.08,
+     0.0
+    ],
+    [
+     10.08,
+     2.1
+    ],
+    [
+     10.0,
+     2.1
+    ]
+   ],
+   "level": 1,
+   "phase": "F1"
+  },
+  {
+   "name": "CELOSIA-LAV",
+   "cat": "OST_GenericModel",
+   "bim_cat": "celosia",
+   "mat": "madera",
+   "x1": 7.5,
+   "x2": 7.54,
+   "poly": [
+    [
+     10.0,
+     0.0
+    ],
+    [
+     10.08,
+     0.0
+    ],
+    [
+     10.08,
+     2.1
+    ],
+    [
+     10.0,
+     2.1
+    ]
+   ],
+   "level": 1,
+   "phase": "F1"
+  },
+  {
+   "name": "CELOSIA-LAV",
+   "cat": "OST_GenericModel",
+   "bim_cat": "celosia",
+   "mat": "madera",
+   "x1": 7.6,
+   "x2": 7.64,
+   "poly": [
+    [
+     10.0,
+     0.0
+    ],
+    [
+     10.08,
+     0.0
+    ],
+    [
+     10.08,
+     2.1
+    ],
+    [
+     10.0,
+     2.1
+    ]
+   ],
+   "level": 1,
+   "phase": "F1"
+  },
+  {
+   "name": "CELOSIA-LAV",
+   "cat": "OST_GenericModel",
+   "bim_cat": "celosia",
+   "mat": "madera",
+   "x1": 7.7,
+   "x2": 7.74,
+   "poly": [
+    [
+     10.0,
+     0.0
+    ],
+    [
+     10.08,
+     0.0
+    ],
+    [
+     10.08,
+     2.1
+    ],
+    [
+     10.0,
+     2.1
+    ]
+   ],
+   "level": 1,
+   "phase": "F1"
+  },
+  {
+   "name": "JARDINERA",
+   "cat": "OST_Planting",
+   "bim_cat": "jardin",
+   "mat": "concreto_visto",
+   "x1": 0.25,
+   "x2": 5.95,
+   "poly": [
+    [
+     11.3,
+     0.0
+    ],
+    [
+     11.75,
+     0.0
+    ],
+    [
+     11.75,
+     0.45
+    ],
+    [
+     11.3,
+     0.45
+    ]
+   ],
+   "level": 1,
+   "phase": "F1"
+  },
+  {
+   "name": "JARDINERA",
+   "cat": "OST_Planting",
+   "bim_cat": "jardin",
+   "mat": "verde",
+   "x1": 0.3,
+   "x2": 5.9,
+   "poly": [
+    [
+     11.35,
+     0.45
+    ],
+    [
+     11.7,
+     0.45
+    ],
+    [
+     11.7,
+     0.6
+    ],
+    [
+     11.35,
+     0.6
+    ]
+   ],
+   "level": 1,
+   "phase": "F1"
+  },
+  {
+   "name": "JARDIN-VERTICAL",
+   "cat": "OST_Planting",
+   "bim_cat": "jardin",
+   "mat": "verde",
+   "x1": 0.6,
+   "x2": 5.9,
+   "poly": [
+    [
+     11.68,
+     0.6
+    ],
+    [
+     11.75,
+     0.6
+    ],
+    [
+     11.75,
+     2.3
+    ],
+    [
+     11.68,
+     2.3
+    ]
+   ],
+   "level": 1,
+   "phase": "F1"
+  },
+  {
+   "name": "SOFA",
+   "cat": "OST_Furniture",
+   "bim_cat": "mobiliario",
+   "mat": "tela",
+   "x1": 6.85,
+   "x2": 7.75,
+   "poly": [
+    [
+     0.9,
+     0.0
+    ],
+    [
+     3.1,
+     0.0
+    ],
+    [
+     3.1,
+     0.75
+    ],
+    [
+     0.9,
+     0.75
+    ]
+   ],
+   "level": 1,
+   "phase": "F1"
+  },
+  {
+   "name": "MESA-CENTRO",
+   "cat": "OST_Furniture",
+   "bim_cat": "mobiliario",
+   "mat": "madera",
+   "x1": 5.6,
+   "x2": 6.4,
+   "poly": [
+    [
+     1.5,
+     0.0
+    ],
+    [
+     2.5,
+     0.0
+    ],
+    [
+     2.5,
+     0.4
+    ],
+    [
+     1.5,
+     0.4
+    ]
+   ],
+   "level": 1,
+   "phase": "F1"
+  },
+  {
+   "name": "MESA-COMEDOR",
+   "cat": "OST_Furniture",
+   "bim_cat": "mobiliario",
+   "mat": "madera",
+   "x1": 2.75,
+   "x2": 4.55,
+   "poly": [
+    [
+     4.95,
+     0.72
+    ],
+    [
+     5.85,
+     0.72
+    ],
+    [
+     5.85,
+     0.76
+    ],
+    [
+     4.95,
+     0.76
+    ]
+   ],
+   "level": 1,
+   "phase": "F1"
+  },
+  {
+   "name": "MUEBLE-COCINA",
+   "cat": "OST_Furniture",
+   "bim_cat": "mobiliario",
+   "mat": "cuarzo",
+   "x1": 7.15,
+   "x2": 7.75,
+   "poly": [
+    [
+     4.85,
+     0.0
+    ],
+    [
+     6.75,
+     0.0
+    ],
+    [
+     6.75,
+     0.9
+    ],
+    [
+     4.85,
+     0.9
+    ]
+   ],
+   "level": 1,
+   "phase": "F1"
+  },
+  {
+   "name": "MUEBLE-COCINA",
+   "cat": "OST_Furniture",
+   "bim_cat": "mobiliario",
+   "mat": "cuarzo",
+   "x1": 5.2,
+   "x2": 7.15,
+   "poly": [
+    [
+     6.15,
+     0.0
+    ],
+    [
+     6.75,
+     0.0
+    ],
+    [
+     6.75,
+     0.9
+    ],
+    [
+     6.15,
+     0.9
+    ]
+   ],
+   "level": 1,
+   "phase": "F1"
+  },
+  {
+   "name": "REFRIGERADORA",
+   "cat": "OST_Furniture",
+   "bim_cat": "mobiliario",
+   "mat": "acero",
+   "x1": 7.05,
+   "x2": 7.75,
+   "poly": [
+    [
+     4.1,
+     0.0
+    ],
+    [
+     4.8,
+     0.0
+    ],
+    [
+     4.8,
+     1.9
+    ],
+    [
+     4.1,
+     1.9
+    ]
+   ],
+   "level": 1,
+   "phase": "F1"
+  },
+  {
+   "name": "ISLA",
+   "cat": "OST_Furniture",
+   "bim_cat": "mobiliario",
+   "mat": "cuarzo",
+   "x1": 5.3,
+   "x2": 6.1,
+   "poly": [
+    [
+     4.55,
+     0.0
+    ],
+    [
+     5.95,
+     0.0
+    ],
+    [
+     5.95,
+     0.92
+    ],
+    [
+     4.55,
+     0.92
+    ]
+   ],
+   "level": 1,
+   "phase": "F1"
+  },
+  {
+   "name": "CAMA 2P",
+   "cat": "OST_Furniture",
+   "bim_cat": "mobiliario",
+   "mat": "tela",
+   "x1": 3.3,
+   "x2": 5.3,
+   "poly": [
+    [
+     1.25,
+     2.8
+    ],
+    [
+     2.85,
+     2.8
+    ],
+    [
+     2.85,
+     3.35
+    ],
+    [
+     1.25,
+     3.35
+    ]
+   ],
+   "level": 2,
+   "phase": "F1"
+  },
+  {
+   "name": "CAMA 2P",
+   "cat": "OST_Furniture",
+   "bim_cat": "mobiliario",
+   "mat": "tela",
+   "x1": 4.0,
+   "x2": 6.0,
+   "poly": [
+    [
+     4.6,
+     2.8
+    ],
+    [
+     6.2,
+     2.8
+    ],
+    [
+     6.2,
+     3.35
+    ],
+    [
+     4.6,
+     3.35
+    ]
+   ],
+   "level": 2,
+   "phase": "F1"
+  },
+  {
+   "name": "CAMA 2P",
+   "cat": "OST_Furniture",
+   "bim_cat": "mobiliario",
+   "mat": "tela",
+   "x1": 3.3,
+   "x2": 5.3,
+   "poly": [
+    [
+     1.25,
+     5.6
+    ],
+    [
+     2.85,
+     5.6
+    ],
+    [
+     2.85,
+     6.15
+    ],
+    [
+     1.25,
+     6.15
+    ]
+   ],
+   "level": 3,
+   "phase": "F2"
+  },
+  {
+   "name": "CAMA 2P",
+   "cat": "OST_Furniture",
+   "bim_cat": "mobiliario",
+   "mat": "tela",
+   "x1": 4.0,
+   "x2": 6.0,
+   "poly": [
+    [
+     4.6,
+     5.6
+    ],
+    [
+     6.2,
+     5.6
+    ],
+    [
+     6.2,
+     6.15
+    ],
+    [
+     4.6,
+     6.15
+    ]
+   ],
+   "level": 3,
+   "phase": "F2"
+  }
+ ],
+ "materials": {
+  "muro_blanco": {
+   "rgb": [
+    244,
+    241,
+    234
+   ],
+   "transparency": 0
+  },
+  "muro_gris": {
+   "rgb": [
+    217,
+    213,
+    204
+   ],
+   "transparency": 0
+  },
+  "muro_int": {
+   "rgb": [
+    239,
+    235,
+    227
+   ],
+   "transparency": 0
+  },
+  "concreto": {
+   "rgb": [
+    185,
+    182,
+    176
+   ],
+   "transparency": 0
+  },
+  "concreto_visto": {
+   "rgb": [
+    143,
+    140,
+    135
+   ],
+   "transparency": 0
+  },
+  "cimiento": {
+   "rgb": [
+    156,
+    149,
+    138
+   ],
+   "transparency": 0
+  },
+  "vidrio": {
+   "rgb": [
+    158,
+    201,
+    220
+   ],
+   "transparency": 65
+  },
+  "aluminio": {
+   "rgb": [
+    58,
+    61,
+    64
+   ],
+   "transparency": 0
+  },
+  "madera": {
+   "rgb": [
+    176,
+    122,
+    69
+   ],
+   "transparency": 0
+  },
+  "madera_osc": {
+   "rgb": [
+    107,
+    69,
+    40
+   ],
+   "transparency": 0
+  },
+  "acero": {
+   "rgb": [
+    47,
+    50,
+    54
+   ],
+   "transparency": 0
+  },
+  "acero_galv": {
+   "rgb": [
+    167,
+    173,
+    178
+   ],
+   "transparency": 0
+  },
+  "panel_tr4": {
+   "rgb": [
+    74,
+    79,
+    85
+   ],
+   "transparency": 0
+  },
+  "policarbonato": {
+   "rgb": [
+    232,
+    242,
+    245
+   ],
+   "transparency": 45
+  },
+  "celosia_met": {
+   "rgb": [
+    59,
+    63,
+    68
+   ],
+   "transparency": 45
+  },
+  "piso_int": {
+   "rgb": [
+    216,
+    205,
+    187
+   ],
+   "transparency": 0
+  },
+  "piso_ext": {
+   "rgb": [
+    201,
+    187,
+    163
+   ],
+   "transparency": 0
+  },
+  "vereda": {
+   "rgb": [
+    189,
+    186,
+    179
+   ],
+   "transparency": 0
+  },
+  "verde": {
+   "rgb": [
+    95,
+    143,
+    78
+   ],
+   "transparency": 0
+  },
+  "canto_rodado": {
+   "rgb": [
+    214,
+    210,
+    200
+   ],
+   "transparency": 0
+  },
+  "tanque": {
+   "rgb": [
+    43,
+    43,
+    43
+   ],
+   "transparency": 0
+  },
+  "tela": {
+   "rgb": [
+    200,
+    194,
+    184
+   ],
+   "transparency": 0
+  },
+  "cuarzo": {
+   "rgb": [
+    235,
+    232,
+    226
+   ],
+   "transparency": 0
+  },
+  "blanco": {
+   "rgb": [
+    250,
+    250,
+    250
+   ],
+   "transparency": 0
+  }
+ },
+ "sections": [
+  {
+   "name": "CORTE A-A",
+   "plane": "x",
+   "c": 1.7,
+   "look": -1,
+   "umin": -1.3,
+   "umax": 12.2,
+   "far": 1.7
+  },
+  {
+   "name": "CORTE B-B",
+   "plane": "x",
+   "c": 4.0,
+   "look": -1,
+   "umin": -1.3,
+   "umax": 12.2,
+   "far": 4.0
+  },
+  {
+   "name": "CORTE C-C",
+   "plane": "y",
+   "c": 2.0,
+   "look": 1,
+   "umin": -0.3,
+   "umax": 8.3,
+   "far": 10.0
+  },
+  {
+   "name": "CORTE D-D",
+   "plane": "y",
+   "c": 9.4,
+   "look": -1,
+   "umin": -0.3,
+   "umax": 8.3,
+   "far": 9.4
+  },
+  {
+   "name": "ELEVACION PRINCIPAL",
+   "plane": "y",
+   "c": -2.0,
+   "look": 1,
+   "umin": -0.3,
+   "umax": 8.3,
+   "far": 15.0
+  },
+  {
+   "name": "ELEVACION POSTERIOR",
+   "plane": "y",
+   "c": 12.5,
+   "look": -1,
+   "umin": -0.3,
+   "umax": 8.3,
+   "far": 15.0
+  }
+ ],
+ "sheets": [
+  {
+   "number": "A-01",
+   "name": "PLANTAS 1er Y 2do PISO",
+   "views": [
+    "PLANTA NPT +0.00",
+    "PLANTA NPT +2.80"
+   ]
+  },
+  {
+   "number": "A-02",
+   "name": "PLANTA 3er PISO Y TECHOS",
+   "views": [
+    "PLANTA NPT +5.60",
+    "PLANTA NPT +8.40"
+   ]
+  },
+  {
+   "number": "A-03",
+   "name": "CORTES LONGITUDINALES",
+   "views": [
+    "CORTE A-A",
+    "CORTE B-B"
+   ]
+  },
+  {
+   "number": "A-04",
+   "name": "CORTES TRANSVERSALES",
+   "views": [
+    "CORTE C-C",
+    "CORTE D-D"
+   ]
+  },
+  {
+   "number": "A-05",
+   "name": "ELEVACIONES",
+   "views": [
+    "ELEVACION PRINCIPAL",
+    "ELEVACION POSTERIOR"
+   ]
+  },
+  {
+   "number": "A-06",
+   "name": "VISTA 3D",
+   "views": [
+    "3D CASA LINTERNA"
+   ]
+  }
+ ]
+}
