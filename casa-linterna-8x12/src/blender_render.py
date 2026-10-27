@@ -621,38 +621,24 @@ def build_car(g, ps):
 
 
 def context(M):
-    """Calle, veredas, sardineles y edificios vecinos para dar escala urbana."""
+    """Casa aislada: calle y veredas al frente, cesped alrededor del lote (sin edificios colindantes)."""
     c = coll("Contexto")
     from model import box
     asph = pbr("Asfalto", "asphalt_02", 3.0, rough=0.85, nstr=0.8)
     side = pbr("Vereda", "concrete_tiles", 2.0, rough=0.85, nstr=0.6)
     curb = pbr("Sardinel", "brushed_concrete", 1.0, tint=(0.85, 0.85, 0.85), rough=0.8)
-    mesh_from_prisms("calle", [box(-40, 48, -9.5, -1.35, -0.45, -0.32, "x", "losa")], asph, c)
-    mesh_from_prisms("vereda", [box(-40, 0, -1.20, 0.0, -0.30, -0.15, "x", "losa"), box(8, 48, -1.20, 0.0, -0.30, -0.15, "x", "losa"),
-                                box(-40, 48, -11.0, -9.65, -0.30, -0.15, "x", "losa")], side, c)
-    mesh_from_prisms("sardinel", [box(-40, 48, -1.35, -1.20, -0.45, -0.15, "x", "losa"), box(-40, 48, -9.65, -9.50, -0.45, -0.15, "x", "losa")], curb, c)
+    grass = pbr("Césped", "leafy_grass", 1.2, tint=(0.62, 0.95, 0.45), rough=0.9, nstr=1.0)
+    mesh_from_prisms("calle", [box(-60, 70, -9.5, -1.35, -0.45, -0.32, "x", "losa")], asph, c)
+    mesh_from_prisms("vereda", [box(-60, 0, -1.20, 0.0, -0.30, -0.15, "x", "losa"), box(8, 70, -1.20, 0.0, -0.30, -0.15, "x", "losa"),
+                                box(-60, 70, -11.0, -9.65, -0.30, -0.15, "x", "losa")], side, c)
+    mesh_from_prisms("sardinel", [box(-60, 70, -1.35, -1.20, -0.45, -0.15, "x", "losa"), box(-60, 70, -9.65, -9.50, -0.45, -0.15, "x", "losa")], curb, c)
     mesh_from_prisms("rampa", [box(0, 8, -1.20, 0.0, -0.30, -0.14, "x", "losa")], M["piso_cochera"], c)
-    ground = pbr("Terreno", color=(0.35, 0.33, 0.30), rough=0.95)
-    mesh_from_prisms("terreno", [box(-60, 70, -60, 80, -0.50, -0.46, "x", "losa")], ground, c)
-    # vecinos: volumenes con ventanas, tarrajeo y color
-    neigh = [(-8.5, 0.0, 3.0, 6.3, (0.86, 0.80, 0.70)), (8.0, 16.5, 1.0, 8.9, (0.80, 0.82, 0.84)),
-             (-17.0, -8.5, 2.0, 5.9, (0.92, 0.88, 0.82)), (16.5, 25.0, 3.0, 6.5, (0.78, 0.74, 0.68))]
-    for i, (x1, x2, yf, h, colr) in enumerate(neigh):
-        mw = pbr(f"Vecino {i}", "painted_plaster_wall", 2.0, tint=colr, rough=0.88, nstr=0.4)
-        mesh_from_prisms(f"vecino{i}", [box(x1, x2, yf, 18.0, -0.30, h, "x", "muro")], mw, c)
-        win = pbr("Ventana vecino", color=(0.05, 0.07, 0.08), rough=0.05, coat=1.0)
-        fr = pbr("Marco vecino", color=(0.12, 0.12, 0.12), rough=0.4)
-        n = max(1, int((x2 - x1) / 3.0))
-        for k in range(n):
-            xa = x1 + (k + 0.5) * (x2 - x1) / n - 0.8
-            for z in [1.0 + 2.8 * j for j in range(int(h / 2.8))]:
-                mesh_from_prisms(f"v{i}{k}{z}", [box(xa, xa + 1.6, yf - 0.03, yf + 0.01, z, z + 1.3, "x", "ventana")], win, c)
-                mesh_from_prisms(f"vf{i}{k}{z}", [box(xa - 0.05, xa + 1.65, yf - 0.06, yf - 0.02, z - 0.05, z, "x", "ventana")], fr, c)
-        if i == 0:     # reja + puerta de cochera del vecino izquierdo
-            gate = pbr("Portón metálico", color=(0.06, 0.06, 0.065), rough=0.4, metallic=0.5)
-            mesh_from_prisms("porton", [box(x1 + 1.0, x1 + 4.0, yf - 0.05, yf, -0.15, 2.4, "x", "puerta")], gate, c)
-    place_asset("street_lamp_01", (13.0, -1.00, -0.15), (13.8, -0.30, 4.6), fit="height", collection=c)
-    place_asset("street_lamp_01", (-9.5, -1.00, -0.15), (-8.7, -0.30, 4.6), fit="height", collection=c)
+    mesh_from_prisms("cesped", [box(-60, 0, 0, 80, -0.40, -0.16, "x", "losa"), box(8, 70, 0, 80, -0.40, -0.16, "x", "losa"),
+                                box(0, 8, LOT_Y, 80, -0.40, -0.16, "x", "losa"), box(-60, 70, -60, -11.0, -0.40, -0.16, "x", "losa")], grass, c)
+    # jardineria alrededor de la casa aislada
+    for (x, y) in ((-0.8, 0.9), (8.8, 0.9), (-0.9, 6.0), (8.9, 6.0), (-0.9, 11.0), (8.9, 11.0), (-0.9, 16.0), (8.9, 16.0)):
+        place_asset("potted_plant_01", (x - 0.35, y - 0.35, -0.16), (x + 0.35, y + 0.35, 1.45), fit="height", collection=c)
+    place_asset("street_lamp_01", (11.0, -1.00, -0.15), (11.8, -0.30, 4.6), fit="height", collection=c)
 
 
 def lights():
@@ -766,8 +752,25 @@ if __name__ == "__main__":
         camera(k, s["eye"], s["tgt"], s["lens"])
     if a.blend:
         p = os.path.join(HERE, "..", "blender", "CasaLinterna.blend")
+        sc = bpy.context.scene
+        sc.camera = bpy.data.objects["Cam calle"]
+        sc.render.engine = "CYCLES"
+        sc.cycles.samples = a.samples
+        sc.cycles.use_denoising = True
+        sc.render.resolution_x, sc.render.resolution_y = (int(v) for v in a.res.split("x"))
+        try:
+            sc.view_settings.view_transform = "AgX"
+            sc.view_settings.look = "AgX - Medium High Contrast"
+        except TypeError:
+            pass
+        for scr in bpy.data.screens:                 # abrir en vista de material desde la camara
+            for area in scr.areas:
+                if area.type == "VIEW_3D":
+                    for sp in area.spaces:
+                        if sp.type == "VIEW_3D":
+                            sp.shading.type = "MATERIAL"
+                            sp.region_3d.view_perspective = "CAMERA"
+        bpy.ops.file.pack_all()
         bpy.ops.wm.save_as_mainfile(filepath=os.path.abspath(p), compress=True)
-        bpy.ops.file.make_paths_relative()
-        bpy.ops.wm.save_mainfile(compress=True)
         print("blend:", p)
     render([k for k in a.shots.split(",") if k], a.samples, tuple(int(v) for v in a.res.split("x")))
