@@ -1,0 +1,415 @@
+{
+  "clase": 6,
+  "titulo": "Compresión: K exacto, rediseño de la brida superior, miembros esbeltos (E7, anchos efectivos) y pandeo torsional y flexotorsional (E4)",
+  "fecha": "miércoles 21 de abril de 2021",
+  "duracion_min": 96,
+  "resumen": "La clase repasa el procedimiento para miembros en compresión: clasificar cada elemento con la Tabla B4.1a, entrar a la Tabla E1.1 y revisar los estados límite que correspondan. Se presenta el K 'exacto' mediante los nomogramas (alignment charts) para pórticos arriostrados y no arriostrados con los factores G de rigidez relativa columna-viga, útil en la verificación. Se rediseña la brida superior del tijeral con 2L 3×3×3/8 (pandeo inelástico, φcPn ≈ 74 kips frente a 46.9 kips) y se comenta la disponibilidad de ángulos en el catálogo de Aceros Arequipa. Se corrige el esfuerzo en el umbral elástico-inelástico (0.39Fy). Luego se estudia la Sección E7 para miembros con elementos esbeltos: área efectiva a partir de anchos efectivos, esfuerzo de pandeo local elástico Fel y coeficientes c1 y c2 de la Tabla E7.1, con la idea del comportamiento post-pandeo. Se explica la Sección E4 (pandeo torsional y flexotorsional) con Cw, J, r̄o y H, y la importancia de orientar bien los ejes locales en programas comerciales. Se resuelven tres ejemplos: canal C15×40 no esbelta, canal armada con alma esbelta y una columna W6×15 de un panel publicitario (K = 2.1). Se anuncia la primera práctica calificada.",
+  "objetivos": [
+    "Al terminar, el estudiante podrá calcular K con los nomogramas a partir de los factores G de los nudos.",
+    "Al terminar, el estudiante podrá iterar el diseño de una brida comprimida de doble ángulo hasta cumplir φcPn ≥ Pu.",
+    "Al terminar, el estudiante podrá calcular el área efectiva de un miembro con elementos esbeltos según la Sección E7 del AISC 360-16.",
+    "Al terminar, el estudiante podrá evaluar el esfuerzo de Euler torsional y flexotorsional (E4) para secciones de doble y simple simetría.",
+    "Al terminar, el estudiante podrá estimar J y Cw con fórmulas aproximadas cuando no hay tablas.",
+    "Al terminar, el estudiante podrá identificar el estado límite que controla la resistencia a compresión de un perfil."
+  ],
+  "temas": [
+    {
+      "titulo": "Repaso del procedimiento de compresión y K exacto con nomogramas",
+      "contenido": "Se resume el camino de diseño a compresión. Primero se discretiza la sección en sus elementos (alas y alma) y se evalúa la esbeltez local de cada uno con la Tabla B4.1a (para flexión existirá la B4.1b), recordando que en zonas sísmicas hay límites más exigentes para pórticos especiales y de ductilidad moderada. Con esa clasificación se entra a la Tabla E1.1: para secciones sin elementos esbeltos se revisan E3 (pandeo flexionante) y E4 (pandeo torsional o flexotorsional); con elementos esbeltos se va además a E7 (pandeo local). En el ejemplo de dobles ángulos se ha revisado solo el pandeo flexionante y falta el flexotorsional. Sobre el factor K: en armaduras K = 1 y en el diseño preliminar se usa el método de los criterios (valores recomendados de la tabla). El llamado K exacto se obtiene con los nomogramas del AISC, uno para pórticos arriostrados (desplazamiento lateral impedido) y otro para pórticos no arriostrados (con desplazamiento lateral). En cada extremo A y B de la columna se calcula G como la razón entre la suma de rigideces EI/L de las columnas y la de las vigas que llegan al nudo; hay valores especiales para base empotrada o articulada. Con GA y GB se lee K en el ábaco correspondiente. Como requiere conocer las secciones de vigas y columnas, se usa sobre todo en la verificación, no en el predimensionamiento.",
+      "formulas": [
+        {
+          "nombre": "Factor de rigidez relativa del nudo",
+          "expresion": "G = Σ(Ic/Lc) / Σ(Ig/Lg)",
+          "variables": "Ic, Lc: inercia y longitud de columnas que llegan al nudo; Ig, Lg: de las vigas en el plano de pandeo"
+        },
+        {
+          "nombre": "Valores prácticos en apoyos",
+          "expresion": "Base empotrada: G ≈ 1.0 ; base articulada: G ≈ 10",
+          "variables": "Recomendaciones del Comentario del AISC"
+        }
+      ],
+      "referencias_norma": [
+        "AISC 360-16 Tabla User Note E1.1",
+        "AISC 360-16 Comentario Apéndice 7, Figuras C-A-7.1 y C-A-7.2 (nomogramas)"
+      ]
+    },
+    {
+      "titulo": "Rediseño de la brida superior y disponibilidad de perfiles en el Perú",
+      "contenido": "En la clase anterior, el 2L 2×2×5/16 resistía solo unos 20 kips. La demanda en compresión se toma ahora como Cu = 46.9 kips (el profesor indica que corresponde a un peralte ajustado respecto del usado antes). Segundo tanteo: 2L 3×3×3/8 con Ag = 4.22 pulg², ry ≈ 1.27 pulg, Lx = 70.9 pulg, Ly = 137.8 pulg y K = 1. La esbeltez que controla es la del eje Y (≈ 108), menor que 200 y menor que el umbral 4.71√(E/Fy) = 133.7, de modo que el pandeo es inelástico. Con Fe ≈ 24.3 ksi se obtiene Fcr = 0.658^(Fy/Fe)·Fy ≈ 19.37 ksi y φcPn ≈ 74 kips, mayor que 46.9 kips: cumple con holgura. El profesor insiste en verificar que el perfil exista comercialmente: en el catálogo de Aceros Arequipa (producto nacional) figuran los ángulos estructurales de lados iguales que se venden en el Perú, y el 3×3×3/8 está disponible; las tablas AISC incluyen muchos perfiles que no se consiguen localmente. Para optimizar se deja de tarea probar el 2L 2½×2½×3/8, que probablemente también cumpla. También corrige la gráfica de pandeo: el esfuerzo crítico en el umbral KL/r = 4.71√(E/Fy) es 0.39Fy (no 0.15Fy como se dijo antes). A la izquierda del umbral el pandeo es inelástico (primero fluye y luego pandea, lo deseable) y a la derecha elástico (pandea de pronto, sin fluir).",
+      "formulas": [
+        {
+          "nombre": "Esfuerzo crítico en el umbral",
+          "expresion": "Fcr = 0.658^2.25·Fy ≈ 0.39·Fy (para Fy/Fe = 2.25)",
+          "variables": "Corresponde a KL/r = 4.71√(E/Fy)"
+        }
+      ],
+      "referencias_norma": [
+        "AISC 360-16 E3-2 y E3-3",
+        "Catálogo de productos de Aceros Arequipa (ángulos estructurales)"
+      ]
+    },
+    {
+      "titulo": "Miembros con elementos esbeltos: Sección E7 y anchos efectivos",
+      "contenido": "Si algún elemento es esbelto se aplica la Sección E7. La resistencia nominal es el menor valor que resulta de los estados límite de pandeo flexionante, torsional o flexotorsional en interacción con el pandeo local: Pn = Fcr·Ae, donde Fcr se calcula con E3 o E4 (para un ángulo simple, solo con E3) y Ae es el área efectiva, suma de los anchos efectivos multiplicados por sus espesores. La sección E7.1 aplica a todos los miembros excepto HSS circulares (redondos), que tienen su propia sección E7.2. Para un elemento de ancho b: si λ ≤ λr·√(Fy/Fcr), el ancho efectivo es el ancho completo (be = b). Si λ es mayor, be = b·(1 − c1·√(Fel/Fcr))·√(Fel/Fcr), donde Fel = (c2·λr/λ)²·Fy es el esfuerzo de pandeo local elástico. Los coeficientes de ajuste por imperfecciones c1 y c2 están en la Tabla E7.1: para elementos atiesados excepto paredes de HSS cuadrados y rectangulares, c1 = 0.18 y c2 = 1.31; para paredes de HSS rectangulares, c1 = 0.20 y c2 = 1.38; para todos los demás elementos (alas no atiesadas), c1 = 0.22 y c2 = 1.49. El concepto físico es el comportamiento post-pandeo: la parte central del elemento esbelto pandea y deja de tomar carga, mientras que las zonas cercanas a los bordes apoyados siguen trabajando; por eso el área efectiva es siempre menor que la geométrica.",
+      "formulas": [
+        {
+          "nombre": "Resistencia nominal con elementos esbeltos",
+          "expresion": "Pn = Fcr·Ae",
+          "variables": "Fcr: de E3 o E4; Ae: Σ(be·t)"
+        },
+        {
+          "nombre": "Ancho efectivo completo",
+          "expresion": "Si λ ≤ λr·√(Fy/Fcr): be = b",
+          "variables": "λ = b/t del elemento"
+        },
+        {
+          "nombre": "Ancho efectivo reducido",
+          "expresion": "Si λ > λr·√(Fy/Fcr): be = b·(1 − c1·√(Fel/Fcr))·√(Fel/Fcr)",
+          "variables": "c1: coeficiente de la Tabla E7.1"
+        },
+        {
+          "nombre": "Esfuerzo de pandeo local elástico",
+          "expresion": "Fel = (c2·λr/λ)²·Fy",
+          "variables": "c2: coeficiente de la Tabla E7.1"
+        }
+      ],
+      "referencias_norma": [
+        "AISC 360-16 Sección E7, ecuaciones E7-1, E7-2, E7-3, E7-4",
+        "AISC 360-16 Tabla E7.1",
+        "AISC 360-16 Sección E7.2 (HSS circulares)"
+      ]
+    },
+    {
+      "titulo": "Pandeo torsional y flexotorsional (Sección E4)",
+      "contenido": "La Sección E4 aplica a miembros sin elementos esbeltos de simple simetría, asimétricos y algunos de doble simetría (por ejemplo, en cruz o armados) cuando la longitud no arriostrada torsional supera la lateral. La resistencia es Pn = Fcr·Ag, con Fcr de las mismas ecuaciones E3-2 o E3-3, pero usando el esfuerzo de Euler torsional o flexotorsional en lugar de π²E/(KL/r)². Para ángulos simples se exige b/t > 0.71√(E/Fy) para que aplique (en el Perú solo se venden ángulos de lados iguales). Hay tres expresiones: (a) doble simetría, pandeo torsional; (b) simple simetría, pandeo flexotorsional combinando Fey y Fez con el factor H (caso de la canal o el doble ángulo, con Y como eje de simetría); (c) secciones asimétricas, donde Fe es la menor raíz de una ecuación cúbica que se resuelve por tanteo. Intervienen la constante de alabeo Cw, la constante torsional J (ambas en las tablas), el módulo de corte G = 11,200 ksi, el radio polar de giro respecto al centro de corte r̄o (también en tablas o calculado con las coordenadas xo, yo del centro de corte) y la constante flexional H. Cuando no hay tablas, J se aproxima con Σ(b·t³)/3 y, para secciones I, Cw con Iy·ho²/4, donde ho es la distancia entre centroides de las alas.",
+      "formulas": [
+        {
+          "nombre": "Doble simetría (E4-2)",
+          "expresion": "Fe = [π²·E·Cw/(Kz·L)² + G·J] · 1/(Ix + Iy)",
+          "variables": "Cw: constante de alabeo (pulg⁶); J: constante torsional (pulg⁴); G = 11,200 ksi; Kz·L: longitud efectiva torsional"
+        },
+        {
+          "nombre": "Simple simetría, eje Y de simetría (E4-3)",
+          "expresion": "Fe = (Fey + Fez)/(2H) · [1 − √(1 − 4·Fey·Fez·H/(Fey + Fez)²)]",
+          "variables": "Fey = π²E/(KyLy/ry)²; H = 1 − (xo² + yo²)/r̄o²"
+        },
+        {
+          "nombre": "Esfuerzo torsional",
+          "expresion": "Fez = [π²·E·Cw/(Kz·L)² + G·J] / (Ag·r̄o²)",
+          "variables": "r̄o² = xo² + yo² + (Ix + Iy)/Ag"
+        },
+        {
+          "nombre": "Constante torsional aproximada",
+          "expresion": "J ≈ Σ(b·t³)/3",
+          "variables": "b, t: ancho y espesor de cada elemento"
+        },
+        {
+          "nombre": "Constante de alabeo aproximada (sección I)",
+          "expresion": "Cw ≈ Iy·ho²/4",
+          "variables": "ho: distancia entre centroides de las alas"
+        }
+      ],
+      "referencias_norma": [
+        "AISC 360-16 Sección E4, ecuaciones E4-1 a E4-11",
+        "AISC 360-16 Sección E5 (ángulos simples)"
+      ]
+    },
+    {
+      "titulo": "Ejes locales en programas comerciales y longitudes no arriostradas",
+      "contenido": "En los programas comerciales de análisis (SAP2000, ETABS y similares) cada elemento tiene ejes locales con origen en el centroide: los ejes X e Y en el plano de la sección y el eje Z a lo largo del miembro. El profesor dibuja un perfil H en el espacio y una canal y muestra cómo la orientación con que se coloca el perfil define cuál es la dirección fuerte (giro alrededor de X) y cuál la débil (alrededor de Y). Si el perfil se rota, el sistema de arriostres puede quedar restringiendo una u otra dirección, y por tanto cambia qué longitud corresponde a Lx, Ly y Lz. Para la longitud torsional Lz conviene tomar la más desfavorable (la más larga, por ejemplo Lz = Lx) aunque el eje débil tenga una longitud menor. Si no se considera correctamente la orientación, los resultados del programa pueden ser cualquier cosa. En la práctica, al asignar en el programa las longitudes no arriostradas o los factores de longitud efectiva, deben corresponder a los ejes locales del elemento y no a los ejes globales del modelo.",
+      "formulas": [],
+      "referencias_norma": []
+    },
+    {
+      "titulo": "Ejemplo: canal C15×40 no esbelta usada como brida (pandeo flexionante)",
+      "contenido": "Se clasifica una canal C15×40 de acero A36: d = 15 pulg, tf = 0.65 pulg, tw = 0.52 pulg, bf = 3.52 pulg. La altura del alma se obtiene quitando los dos espesores de ala: h ≈ 15 − 2·0.65 = 13.7 pulg, por lo que h/tw = 26.3 < 1.49√(E/Fy) = 42.29, alma no esbelta. Ala: b/t = 3.52/0.65 = 5.42 < 0.56√(E/Fy) = 15.89, no esbelta. La Tabla E1.1 indica revisar E3 y E4. Se supone que la canal se usa como brida de 236 pulg con arriostres a tercios fuera del plano y, como condición extrema, comportamiento en voladizo (K = 2). En el plano K·L/rx ≈ 86; fuera del plano K·(L/3)/ry ≈ 178 < 200, que controla. Como 178 > 133.7, el pandeo es elástico: Fe ≈ 9.0 ksi, Fcr = 0.877·9.0 ≈ 7.9 ksi; con Ag = 11.8 pulg², φcPn = 0.9·7.9·11.8 ≈ 83 kips. La demanda debe ser menor que 83 kips.",
+      "formulas": [],
+      "referencias_norma": [
+        "AISC 360-16 Tabla B4.1a, E3"
+      ]
+    },
+    {
+      "titulo": "Ejemplo: canal armada con alma esbelta (E3, E4 y E7)",
+      "contenido": "Canal armada con alas de 3×1/2 pulg y alma de 12×0.2 pulg (A36), Ag = 2·3·0.5 + 12·0.2 = 5.4 pulg². Ala: b/t = 6 < 15.89, no esbelta; alma: h/t = 60 > 42.29, esbelta, así que el perfil es esbelto. Se calculan las propiedades dividiendo la sección en tres rectángulos: centroide con Σ(A·x)/ΣA, inercias propias y transporte con Steiner, radios de giro. Con L = 80 pulg y K = 1 la esbeltez que reporta la hoja es muy baja (≈ 17), por lo que Fe es muy alto (≈ 990 ksi) y Fcr ≈ 35.45 ksi (pandeo inelástico, casi Fy). Para el pandeo flexotorsional (simple simetría) se estiman J ≈ Σ(b·t³)/3, ho = 12.5 pulg (distancia entre centroides de alas), Cw ≈ Iy·ho²/4, r̄o y H, y se obtiene un Fe ≈ 987 ksi con Fcr ≈ 35.45 ksi, prácticamente igual. Luego se aplica E7: el ala conserva su ancho (be = 3 pulg); el alma, con c1 = 0.18 y c2 = 1.31, tiene Fel = (1.31·42.29/60)²·36 ≈ 30.7 ksi y un ancho efectivo be ≈ 9.3 pulg en vez de 12 pulg. El área efectiva baja de 5.4 a 4.86 pulg²: una franja del alma pandea y deja de colaborar (post-pandeo). El profesor obtuvo φcPn ≈ 134 kips usando el esfuerzo de pandeo local (≈ 30.7 ksi) como esfuerzo crítico. Según E7-1 la resistencia debería calcularse con el Fcr de E3/E4: φcPn = 0.9·35.45·4.86 ≈ 155 kips. Se menciona que este perfil no debería obtenerse doblando una plancha, sino como canal soldada.",
+      "formulas": [
+        {
+          "nombre": "Centroide de sección compuesta",
+          "expresion": "x̄ = Σ(Ai·xi) / ΣAi",
+          "variables": "Ai: área de cada rectángulo; xi: posición de su centroide"
+        },
+        {
+          "nombre": "Teorema de Steiner",
+          "expresion": "I = Σ(Ii + Ai·di²)",
+          "variables": "Ii: inercia propia; di: distancia del centroide parcial al centroide total"
+        }
+      ],
+      "referencias_norma": [
+        "AISC 360-16 E3, E4 (E4-3) y E7",
+        "AISC 360-16 Tabla E7.1"
+      ]
+    },
+    {
+      "titulo": "Ejemplo: columna W6×15 de un panel publicitario",
+      "contenido": "Columna en voladizo de 120 pulg con carga axial en el centroide: peso del panel D = 0.5 kips, carga viva 0.1 kips y viento 0.25 kips (solo se considera en las combinaciones, sin efecto lateral en este ejemplo). Combinaciones: 1.4D = 0.70; 1.2D + 1.6L = 0.76; 1.2D + 0.5L + 1.3W = 0.98 kips, que controla. Se propone W6×15: bf/2tf = 11.5 < 15.89 y h/tw ≈ 21.6 < 42.29, sección no esbelta. Al ser un panel empotrado en la base y libre arriba, K = 2.1. Esbeltez que controla en el eje débil: K·L/ry ≈ 173 < 200, pandeo elástico; Fe ≈ 9.5 ksi, Fcr = 0.877·Fe ≈ 8.3 ksi y φcPn = 0.9·8.3·4.43 ≈ 33 kips, muy superior a 0.98 kips. Para el pandeo torsional (doble simetría, E4-2) se toman de tablas Ix, Iy, Cw y J, con G = 11,200 ksi, y se obtiene Fe ≈ 70 ksi. El profesor obtuvo 245 kips; la aplicación correcta de E3-2 con Fe = 70 ksi (Fy/Fe = 0.51, inelástico) da Fcr ≈ 29 ksi y φcPn ≈ 116 kips. En cualquier caso controla el pandeo flexionante con 33 kips.",
+      "formulas": [
+        {
+          "nombre": "Combinaciones usadas",
+          "expresion": "1.4D ; 1.2D + 1.6L ; 1.2D + 0.5L + 1.3W",
+          "variables": "Combinaciones de la Norma E.090"
+        }
+      ],
+      "referencias_norma": [
+        "Norma E.090, combinaciones de carga",
+        "AISC 360-16 E3 y E4-2",
+        "AISC 360-16 Comentario Apéndice 7 (K = 2.1 empotrado-libre)"
+      ]
+    }
+  ],
+  "ejemplos": [
+    {
+      "titulo": "Brida superior con 2L 3×3×3/8",
+      "enunciado": "Cu = 46.9 kips; 2L 3×3×3/8 A36: Ag = 4.22 pulg², ry = 1.27 pulg; Lx = 70.9 pulg, Ly = 137.8 pulg, K = 1. Verificar por pandeo flexionante.",
+      "pasos": [
+        "K·Ly/ry = 137.8/1.27 ≈ 108.5 (controla; menor que 200).",
+        "4.71·√(29000/36) = 133.7 > 108.5 → pandeo inelástico.",
+        "Fe = π²·29000/108.5² ≈ 24.3 ksi.",
+        "Fcr = 0.658^(36/24.3)·36 = 0.538·36 ≈ 19.37 ksi.",
+        "φcPn = 0.9·19.37·4.22 ≈ 73.6 kips."
+      ],
+      "resultado": "φcPn ≈ 74 kips ≥ 46.9 kips: cumple (falta verificar E4 flexotorsional)."
+    },
+    {
+      "titulo": "Canal C15×40 no esbelta (A36)",
+      "enunciado": "C15×40: d = 15, tf = 0.65, tw = 0.52, bf = 3.52 pulg, Ag = 11.8 pulg². L = 236 pulg, K = 2, arriostres a tercios fuera del plano. Calcular φcPn por pandeo flexionante.",
+      "pasos": [
+        "h = 15 − 2·0.65 = 13.7 pulg; h/tw = 26.3 < 42.29 → alma no esbelta.",
+        "b/t = 3.52/0.65 = 5.42 < 15.89 → ala no esbelta.",
+        "K·Lx/rx ≈ 2·236/5.43 ≈ 86; K·(L/3)/ry ≈ 2·78.7/0.883 ≈ 178 (controla).",
+        "178 > 133.7 → elástico: Fe = π²·29000/178.2² ≈ 9.0 ksi.",
+        "Fcr = 0.877·9.0 ≈ 7.9 ksi; φcPn = 0.9·7.9·11.8 ≈ 83 kips."
+      ],
+      "resultado": "φcPn ≈ 83 kips."
+    },
+    {
+      "titulo": "Canal armada con alma esbelta",
+      "enunciado": "Alas 3×1/2 pulg, alma 12×0.2 pulg, A36, Ag = 5.4 pulg², L = 80 pulg, K = 1. Determinar el área efectiva y la resistencia.",
+      "pasos": [
+        "Ala: 3/0.5 = 6 < 15.89 (no esbelta). Alma: 12/0.2 = 60 > 42.29 (esbelta).",
+        "E3 y E4: Fe muy alto (≈ 990 ksi) → Fcr ≈ 35.45 ksi.",
+        "Alma: λr·√(Fy/Fcr) = 42.29·√(36/35.45) ≈ 42.6 < 60 → se reduce.",
+        "Fel = (1.31·42.29/60)²·36 ≈ 30.7 ksi; √(Fel/Fcr) ≈ 0.930.",
+        "be = 12·(1 − 0.18·0.930)·0.930 ≈ 9.3 pulg.",
+        "Ae = 2·3·0.5 + 9.3·0.2 ≈ 4.86 pulg².",
+        "Clase: φcPn ≈ 0.9·30.7·4.86 ≈ 134 kips; con E7-1 (Fcr de E3/E4): 0.9·35.45·4.86 ≈ 155 kips."
+      ],
+      "resultado": "Ae ≈ 4.86 pulg² (vs Ag = 5.4); φcPn ≈ 134 kips según la clase (≈ 155 kips aplicando estrictamente Pn = Fcr·Ae)."
+    },
+    {
+      "titulo": "Columna W6×15 de panel publicitario",
+      "enunciado": "Altura 120 pulg, empotrada en la base y libre arriba (K = 2.1), D = 0.5, L = 0.1, W = 0.25 kips, A36. W6×15: A = 4.43 pulg², ry = 1.46 pulg.",
+      "pasos": [
+        "Pu = máx(0.70; 0.76; 1.2·0.5 + 0.5·0.1 + 1.3·0.25 = 0.975) ≈ 0.98 kips.",
+        "bf/2tf = 11.5 < 15.89; h/tw ≈ 21.6 < 42.29 → no esbelta.",
+        "K·L/ry = 2.1·120/1.46 ≈ 173 > 133.7 → elástico.",
+        "Fe ≈ 9.5 ksi; Fcr = 0.877·9.5 ≈ 8.3 ksi; φcPn = 0.9·8.3·4.43 ≈ 33 kips.",
+        "Torsional (E4-2): Fe ≈ 70 ksi → Fcr = 0.658^(36/70)·36 ≈ 29 ksi → φcPn ≈ 116 kips (en clase se reportó 245 kips).",
+        "Controla el pandeo flexionante."
+      ],
+      "resultado": "φcPn ≈ 33 kips (pandeo flexionante) ≫ Pu = 0.98 kips."
+    }
+  ],
+  "conceptos_clave": [
+    {
+      "termino": "K exacto (nomogramas)",
+      "definicion": "Factor de longitud efectiva obtenido de los ábacos de alineamiento con GA y GB, para pórticos arriostrados o no arriostrados."
+    },
+    {
+      "termino": "Factor G",
+      "definicion": "Relación entre la suma de rigideces I/L de las columnas y la de las vigas que llegan a un nudo."
+    },
+    {
+      "termino": "Área efectiva (Ae) en compresión",
+      "definicion": "Suma de anchos efectivos por espesores; descuenta la porción de elementos esbeltos que pandea localmente."
+    },
+    {
+      "termino": "Ancho efectivo (be)",
+      "definicion": "Ancho reducido de un elemento esbelto que sigue colaborando después del pandeo local."
+    },
+    {
+      "termino": "Comportamiento post-pandeo",
+      "definicion": "Capacidad de una placa esbelta de seguir tomando carga tras el pandeo local, concentrando esfuerzos cerca de sus bordes apoyados."
+    },
+    {
+      "termino": "Fel",
+      "definicion": "Esfuerzo de pandeo local elástico del elemento: (c2·λr/λ)²·Fy."
+    },
+    {
+      "termino": "Constante de alabeo Cw",
+      "definicion": "Propiedad que mide la rigidez de la sección al alabeo en torsión no uniforme (pulg⁶)."
+    },
+    {
+      "termino": "Constante torsional J",
+      "definicion": "Rigidez a torsión de St. Venant; para secciones abiertas de paredes delgadas ≈ Σ(b·t³)/3."
+    },
+    {
+      "termino": "Pandeo flexotorsional",
+      "definicion": "Pandeo global que combina flexión y torsión, típico de secciones de simple simetría o asimétricas (canales, ángulos, T)."
+    },
+    {
+      "termino": "r̄o",
+      "definicion": "Radio polar de giro respecto al centro de corte: r̄o² = xo² + yo² + (Ix + Iy)/Ag."
+    },
+    {
+      "termino": "Constante flexional H",
+      "definicion": "H = 1 − (xo² + yo²)/r̄o², interviene en el pandeo flexotorsional de secciones de simple simetría."
+    }
+  ],
+  "preguntas": [
+    {
+      "pregunta": "El esfuerzo crítico en el límite entre pandeo inelástico y elástico (KL/r = 4.71√(E/Fy)) es aproximadamente:",
+      "opciones": [
+        "0.15·Fy",
+        "0.658·Fy",
+        "0.877·Fy",
+        "0.39·Fy"
+      ],
+      "correcta": 3,
+      "explicacion": "En ese punto Fy/Fe = 2.25 y Fcr = 0.658^2.25·Fy ≈ 0.39Fy (corrección hecha en clase)."
+    },
+    {
+      "pregunta": "¿Por qué el K de los nomogramas se usa principalmente en la verificación y no en el predimensionamiento?",
+      "opciones": [
+        "Porque siempre da K = 1",
+        "Porque requiere conocer las inercias de vigas y columnas ya diseñadas",
+        "Porque solo aplica a armaduras",
+        "Porque la norma lo prohíbe"
+      ],
+      "correcta": 1,
+      "explicacion": "G depende de las rigideces I/L de columnas y vigas, que solo se conocen tras dimensionarlas."
+    },
+    {
+      "pregunta": "Para un miembro con elementos esbeltos (E7), la resistencia nominal es:",
+      "opciones": [
+        "Pn = Fy·Ag",
+        "Pn = Fcr·Ag",
+        "Pn = Fcr·Ae",
+        "Pn = Fel·Ag"
+      ],
+      "correcta": 2,
+      "explicacion": "E7-1: Pn = Fcr·Ae, con Fcr de E3 o E4 y Ae a partir de los anchos efectivos."
+    },
+    {
+      "pregunta": "Para el alma de una canal (elemento atiesado, no pared de HSS), los coeficientes de la Tabla E7.1 son:",
+      "opciones": [
+        "c1 = 0.18, c2 = 1.31",
+        "c1 = 0.22, c2 = 1.49",
+        "c1 = 0.20, c2 = 1.38",
+        "c1 = 0.45, c2 = 0.56"
+      ],
+      "correcta": 0,
+      "explicacion": "Caso (a) de la Tabla E7.1: elementos atiesados excepto paredes de HSS rectangulares, c1 = 0.18 y c2 = 1.31."
+    },
+    {
+      "pregunta": "¿Qué significa físicamente que el área efectiva de la canal armada baje de 5.4 a 4.86 pulg²?",
+      "opciones": [
+        "Que el ala fluyó",
+        "Que una franja central del alma pandeó localmente y deja de colaborar",
+        "Que hay agujeros en el alma",
+        "Que el perfil es compacto"
+      ],
+      "correcta": 1,
+      "explicacion": "Es el comportamiento post-pandeo: el alma esbelta pandea en su zona central y solo las franjas cercanas a las alas siguen trabajando."
+    },
+    {
+      "pregunta": "La aproximación J ≈ Σ(b·t³)/3 sirve para:",
+      "opciones": [
+        "El momento de inercia del eje débil",
+        "La constante de alabeo",
+        "La constante torsional de secciones abiertas de paredes delgadas",
+        "El radio polar de giro"
+      ],
+      "correcta": 2,
+      "explicacion": "Es la constante de torsión de St. Venant para secciones abiertas formadas por rectángulos delgados."
+    },
+    {
+      "pregunta": "En la fórmula aproximada Cw ≈ Iy·ho²/4, ho es:",
+      "opciones": [
+        "El peralte total d",
+        "La altura libre del alma h",
+        "El espesor del alma",
+        "La distancia entre centroides de las alas"
+      ],
+      "correcta": 3,
+      "explicacion": "ho = d − tf; en la canal armada ho = 12 + 0.25 + 0.25 = 12.5 pulg."
+    },
+    {
+      "pregunta": "¿Qué sección del AISC 360 trata el pandeo flexotorsional de una canal no esbelta?",
+      "opciones": [
+        "E3",
+        "E5",
+        "E7",
+        "E4"
+      ],
+      "correcta": 3,
+      "explicacion": "E4 trata el pandeo torsional y flexotorsional de miembros sin elementos esbeltos; E5 trata los ángulos simples."
+    },
+    {
+      "pregunta": "Para la columna W6×15 del panel publicitario se usó K = 2.1 porque:",
+      "opciones": [
+        "Está empotrada en la base y libre en la cabeza (valor recomendado)",
+        "Es una armadura",
+        "Está articulada en ambos extremos",
+        "Es un pórtico arriostrado"
+      ],
+      "correcta": 0,
+      "explicacion": "Empotrado-libre: valor teórico 2.0 y recomendado 2.1."
+    },
+    {
+      "pregunta": "Al modelar en SAP2000/ETABS, ¿por qué es crítico orientar bien los ejes locales del perfil?",
+      "opciones": [
+        "Porque define cuál es la dirección fuerte y débil y qué arriostres restringen cada eje",
+        "Porque cambia el peso propio",
+        "Porque cambia el módulo E",
+        "No tiene importancia"
+      ],
+      "correcta": 0,
+      "explicacion": "Una orientación errónea asigna mal las longitudes Lx, Ly, Lz y las inercias, y los resultados no tienen sentido."
+    },
+    {
+      "pregunta": "Si el pandeo flexionante da 33 kips y el torsional 116 kips, la resistencia de diseño es:",
+      "opciones": [
+        "116 kips",
+        "33 kips",
+        "74.5 kips",
+        "149 kips"
+      ],
+      "correcta": 1,
+      "explicacion": "Se toma el menor de los estados límite aplicables: controla el pandeo flexionante."
+    }
+  ],
+  "ejercicios_propuestos": [
+    "Verifique la brida superior del tijeral (Cu = 46.9 kips, Lx = 70.9 pulg, Ly = 137.8 pulg, K = 1, A36) con 2L 2½×2½×3/8 por pandeo flexionante usando las tablas AISC.",
+    "Para la canal armada de clase (alas 3×1/2, alma 12×0.2, A36), recalcule el área efectiva y φcPn si el espesor del alma se aumenta a 0.25 pulg.",
+    "Calcule J ≈ Σ(b·t³)/3 y Cw ≈ Iy·ho²/4 para un perfil soldado con alas de 8×1/2 pulg y alma de 12×5/16 pulg y compárelos con un W de propiedades similares.",
+    "Una columna de un pórtico no arriostrado tiene GA = 1.0 (base empotrada) y GB = 2.0. Obtenga K del nomograma y calcule φcPn de una W8×31 de 4 m en A36.",
+    "Repita el ejemplo del panel publicitario con una altura de 180 pulg y determine si la W6×15 cumple KL/r ≤ 200; si no cumple, proponga otro perfil."
+  ],
+  "avisos": [
+    "Primera práctica calificada al día siguiente (jueves) a las 2 de la tarde, sobre todo lo visto: dimensionamiento, planchas, tracción y compresión.",
+    "Tarea: verificar la brida superior con 2L 2½×2½×3/8.",
+    "Se recomienda revisar el catálogo de Aceros Arequipa para confirmar que los perfiles propuestos se venden en el Perú.",
+    "Se usan hojas Excel para todos los cálculos y se comenta el uso de programas comerciales (SAP2000, ETABS) y la orientación de ejes locales."
+  ],
+  "notas_transcripcion": [
+    "'sección e', 'e y e' se refieren a las secciones E3, E4 y E7 del AISC 360-16 (los números se pierden en la transcripción).",
+    "'1 por 3 octavos' se interpretó como 2L 3×3×3/8 (Ag = 4.22 pulg²), confirmado más adelante como '3 por 3 por 3 octavos'.",
+    "La demanda pasa de 50.8 kips (clase 5) a 46.9 kips; el profesor la atribuye a un peralte ajustado ('el 0.85 del peralte actual'). Se respetó 46.9 kips.",
+    "'longitud de 120 kips' en el ejemplo del panel se interpretó como 120 pulg.",
+    "En la canal armada la transcripción dice 'kl entre r 1701'; se interpretó como 17.01. Ese valor implica un miembro muy corto o un radio de giro alto; se reporta tal como en clase.",
+    "En la canal armada el profesor usó el esfuerzo de pandeo local (≈ 30.7 ksi, transcrito como '39 KSI') como esfuerzo crítico y obtuvo 134 kips; se indica también el valor según E7-1 (≈ 155 kips).",
+    "En la W6×15 el profesor reportó Fcr = 61.45 ksi y φcPn = 245 kips para el pandeo torsional; ese Fcr supera Fy, lo que no es posible. Con E3-2 se obtiene ≈ 29 ksi y ≈ 116 kips. La conclusión (controla el flexionante, 33 kips) no cambia.",
+    "'G considero como el 40%' se interpretó como el módulo de corte G = 11,200 ksi (≈ 0.39E).",
+    "Para la clasificación del alma de la canal se escuchó '0.56 ... 42.29'; el límite correcto para almas es 1.49√(E/Fy) = 42.29.",
+    "El inicio y la toma de lista incluyen comentarios personales del profesor sobre su salud (neumonía); se omitieron."
+  ]
+}

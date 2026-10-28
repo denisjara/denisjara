@@ -1,0 +1,417 @@
+{
+  "clase": 9,
+  "titulo": "Introducción al diseño de vigas: compacidad, estados límite en flexión, Cb y pandeo lateral torsional",
+  "fecha": "lunes 3 de mayo de 2021",
+  "duracion_min": 99,
+  "resumen": "La clase abre el capítulo de flexión (vigas). Se explica el comportamiento momento-rotación de una sección de acero: régimen elástico (ley de Hooke, M = S·σ), primera fluencia (My = Fy·Sx), plastificación parcial y momento plástico (Mp = Fy·Zx), con la formación de la rótula plástica. Con esa curva se interpretan los límites λp y λr de la Tabla B4.1b para clasificar las alas y el alma como compactas, no compactas o esbeltas. Se presenta el ensayo de flexión con cargas en los tercios, que da una zona central de flexión pura y es la base de las fórmulas de la norma. Se enumeran los cuatro estados límite en flexión y los requisitos de corte y deflexión (L/300 por carga viva), junto con la Tabla F1.1 para saber qué estados revisar. Se predimensiona un W12×58 para una viga con 60 kips al centro, se explica el factor Cb y la longitud no arriostrada Lb, y se presentan rts, Lp, Lr y las tres zonas del pandeo lateral torsional, con su aplicación en una hoja de cálculo.",
+  "objetivos": [
+    "Al terminar, el estudiante podrá describir la curva momento-rotación de una sección de acero e identificar My, la plastificación parcial y Mp.",
+    "Al terminar, el estudiante podrá clasificar las alas y el alma de un perfil en flexión como compactos, no compactos o esbeltos con la Tabla B4.1b.",
+    "Al terminar, el estudiante podrá enumerar los estados límite en flexión y usar la Tabla F1.1 para elegir cuáles revisar.",
+    "Al terminar, el estudiante podrá predimensionar una viga por fluencia (Zx requerido) y verificar φMn = 0.90·Fy·Zx.",
+    "Al terminar, el estudiante podrá definir la longitud no arriostrada Lb y calcular el factor de gradiente de momento Cb.",
+    "Al terminar, el estudiante podrá calcular Lp, Lr y rts y determinar en qué zona del pandeo lateral torsional se encuentra una viga."
+  ],
+  "temas": [
+    {
+      "titulo": "Comportamiento en flexión: curva momento-rotación, My, Mp y rótula plástica",
+      "contenido": "Cuando una viga simplemente apoyada se carga, sus extremos giran y las secciones rotan: una parte queda comprimida y otra traccionada, con un ángulo θ. Las deformaciones medidas con sensores, divididas entre la longitud de referencia, dan la deformación unitaria. Mientras rige la ley de Hooke (σ = E·ε), el esfuerzo máximo se obtiene con el módulo de sección elástico S = I/(d/2), y el momento es M = σ·S. Ese es el tramo elástico de la curva momento-rotación (punto verde en la lámina del profesor). Si la carga aumenta, llega un momento en que la fibra extrema alcanza Fy. Es el último punto de validez de la ley de Hooke y define el momento de primera fluencia, My = Fy·Sx. Más allá, el comportamiento es inelástico: la fluencia avanza desde las fibras extremas hacia el interior, 'carcomiendo' la zona elástica, y se tiene un momento de plastificación intermedia M″ con una rotación θ″. Cuando toda la sección (compresión y tracción) ha fluido, se alcanza el momento plástico Mp = Fy·Zx, donde Zx es el módulo plástico (momento estático de las áreas respecto del eje neutro plástico). Según el profesor, el factor de forma Zx/Sx está típicamente entre 1.10 y 1.30. Mp es lo máximo que resiste una sección de acero. Al alcanzarlo se forma la rótula plástica y empieza la caída de resistencia, es decir, el colapso.",
+      "formulas": [
+        {
+          "nombre": "Ley de Hooke",
+          "expresion": "σ = E·ε",
+          "variables": "E = 29000 ksi; ε: deformación unitaria"
+        },
+        {
+          "nombre": "Módulo de sección elástico",
+          "expresion": "Sx = Ix/(d/2)",
+          "variables": "Ix: inercia (in⁴); d: peralte (in)"
+        },
+        {
+          "nombre": "Momento de primera fluencia",
+          "expresion": "My = Fy·Sx",
+          "variables": "Fy: fluencia (ksi)"
+        },
+        {
+          "nombre": "Momento plástico",
+          "expresion": "Mp = Fy·Zx ; Zx = Σ Ai·|yi|",
+          "variables": "Zx: módulo plástico (in³); yi: distancia del centroide de cada área al eje neutro plástico"
+        },
+        {
+          "nombre": "Factor de forma",
+          "expresion": "f = Zx/Sx ≈ 1.10 a 1.30",
+          "variables": "adimensional (≈ 1.10-1.15 en perfiles I sobre el eje fuerte)"
+        }
+      ],
+      "referencias_norma": [
+        "AISC 360-16 Sección F2.1 (fluencia, Mn = Mp = Fy·Zx)"
+      ]
+    },
+    {
+      "titulo": "Clasificación por compacidad en flexión: Tabla B4.1b",
+      "contenido": "En compresión se usó la Tabla B4.1a. En flexión se usa la Tabla B4.1b, de relaciones ancho-espesor para elementos comprimidos de miembros sujetos a flexión. La flexión siempre comprime una parte del perfil, que puede pandear localmente. Hay dos límites. Si λ ≤ λp, el elemento es compacto: la sección desarrolla toda la curva hasta Mp y su colapso es dúctil. Si λp < λ ≤ λr, es no compacto: alcanza la fluencia pero no llega a Mp y se queda en un punto intermedio. Si λ > λr, es esbelto: falla en el rango elástico 'sin avisar', por pandeo local, sin las grandes deformaciones que anuncian la falla en una sección dúctil. Para aplicar la tabla se discretiza la sección. En un canal, por ejemplo, las alas tienen λf = b/tf y el alma λw = h/tw. Los casos 10 a 14 corresponden a elementos no rigidizados (alas) y el resto a rigidizados (almas, platabandas). Para alas de perfiles I laminados, λp = 0.38·√(E/Fy) y λr = 1.0·√(E/Fy). Para el alma en flexión, λp = 3.76·√(E/Fy) y λr = 5.70·√(E/Fy). En perfiles soldados (armados), el λr del ala usa kc: λr = 0.95·√(kc·E/FL). El profesor aclara que en el Perú se usan sobre todo perfiles soldados, porque hay pocos laminados, y por eso su hoja calcula los límites de perfiles soldados.",
+      "formulas": [
+        {
+          "nombre": "Ala de perfil I laminado (caso 10)",
+          "expresion": "λ = bf/(2·tf) ; λp = 0.38·√(E/Fy) ; λr = 1.0·√(E/Fy)",
+          "variables": "bf, tf: ancho y espesor del ala"
+        },
+        {
+          "nombre": "Ala de perfil I soldado (caso 11)",
+          "expresion": "λp = 0.38·√(E/Fy) ; λr = 0.95·√(kc·E/FL)",
+          "variables": "kc = 4/√(h/tw) entre 0.35 y 0.76; FL ≈ 0.7·Fy"
+        },
+        {
+          "nombre": "Alma en flexión de perfil I doblemente simétrico (caso 15)",
+          "expresion": "λ = h/tw ; λp = 3.76·√(E/Fy) ; λr = 5.70·√(E/Fy)",
+          "variables": "h: altura libre del alma; tw: espesor del alma"
+        }
+      ],
+      "referencias_norma": [
+        "AISC 360-16 Tabla B4.1b",
+        "AISC 360-16 Sección B4.1"
+      ]
+    },
+    {
+      "titulo": "Ensayo de flexión con cargas en los tercios y videos de laboratorio",
+      "contenido": "El control de calidad de vigas se hace con el ensayo normalizado ASTM que el profesor llama 'de tres puntos'. Una gata aplica la carga sobre una viga de reparto muy rígida que, mediante rodillos, la transmite a la viga ensayada en los tercios de la luz. El diagrama de corte resultante es nulo en el tercio central y el de momento es constante allí, es decir, hay flexión pura. Por eso todas las fórmulas de las normas se basan en esta condición. Con sensores en el centro y en los apoyos se mide la deformación y el giro, y se construyen las curvas momento-curvatura y carga-deflexión (P-δ). El profesor explica que ASTM (que él llama American Society of Testing Machinery; en realidad es American Society for Testing and Materials) rige los protocolos de ensayo a nivel mundial. En el Perú, INDECOPI tiene a cargo la normalización e INACAL certifica los laboratorios, sobre la base de la ASTM. Se muestra un video de un ensayo a escala natural de una losa colaborante en el CISMID: la deformación casi no se nota al principio, luego la viga fluye y se deforma mucho, avisando la falla, hasta terminar en forma de 'carita feliz'. También pueden hacerse ensayos con especímenes pequeños en una máquina universal. Un segundo video muestra un canal simplemente apoyado con carga al centro y ciclos de desplazamiento creciente: el perfil sale de su plano y se tuerce por la compresión. Es el pandeo lateral torsional. El perfil queda torcido de forma permanente, aunque sigue tomando carga.",
+      "formulas": [],
+      "referencias_norma": [
+        "ASTM (ensayos de flexión con cargas en los tercios)",
+        "INDECOPI / INACAL (normalización y acreditación en el Perú)"
+      ]
+    },
+    {
+      "titulo": "Estados límite en flexión, corte, deflexión y Tabla F1.1",
+      "contenido": "Una viga tiene cuatro estados límite en flexión: (1) fluencia, Mn = Mp; (2) pandeo lateral torsional, en el que el perfil se sale de su plano y se tuerce; (3) pandeo local del ala comprimida, que se ondula; (4) fluencia del ala en tracción, que aplica a ciertas secciones. Se calcula un momento nominal para cada estado y la resistencia de la viga es el menor. Además hay que revisar el corte, Vu ≤ φv·Vn con Vn = 0.6·Fy·Aw·Cv (el profesor anticipa φ = 0.9; el tema se verá luego), y la deflexión por carga viva, que según el profesor debe ser como máximo L/300 para que no sea perceptible a simple vista. La Tabla F1.1 del Capítulo F funciona como un 'recetario'. Para perfiles I o canales con ala y alma compactas, solo se revisan fluencia y pandeo lateral torsional (Sección F2). Con alma compacta y ala no compacta o esbelta, se revisan pandeo lateral torsional y pandeo local del ala (F3). Con alma no compacta o esbelta y cualquier ala, se revisan los cuatro estados (F4/F5). Hay además secciones para flexión en el eje débil, tubos rectangulares y circulares, secciones T, ángulos dobles, ángulos simples, barras sólidas y secciones asimétricas, en las que hay que revisar todos los estados límite aplicables.",
+      "formulas": [
+        {
+          "nombre": "Resistencia a flexión",
+          "expresion": "Mu ≤ φb·Mn ; φb = 0.90 ; Mn = mín(Mn,fluencia ; Mn,PLT ; Mn,PLA ; Mn,TFY)",
+          "variables": "PLT: pandeo lateral torsional; PLA: pandeo local del ala; TFY: fluencia del ala en tracción"
+        },
+        {
+          "nombre": "Resistencia a corte (anticipo)",
+          "expresion": "Vu ≤ φv·Vn ; Vn = 0.6·Fy·Aw·Cv1",
+          "variables": "Aw = d·tw; Cv1: coeficiente de corte del alma"
+        },
+        {
+          "nombre": "Deflexión por carga viva (criterio de clase)",
+          "expresion": "ΔL ≤ L/300",
+          "variables": "L: luz de la viga"
+        }
+      ],
+      "referencias_norma": [
+        "AISC 360-16 Tabla F1.1 (User Note)",
+        "AISC 360-16 Secciones F2 a F5",
+        "AISC 360-16 Cap. G (corte)",
+        "AISC 360-16 Cap. L (serviciabilidad)"
+      ]
+    },
+    {
+      "titulo": "Predimensionamiento por fluencia de una viga: ejemplo W12×58",
+      "contenido": "Rara vez el primer perfil propuesto funciona, igual que en compresión: hay que iterar. Ejemplo: viga simplemente apoyada con una carga última de 60 kips al centro y luz de 160 in. Cada reacción es de 30 kips y el momento máximo es Mu = 30·80 = 2400 kip·in. Por fluencia, Mu ≤ 0.90·Fy·Zx, así que Zx,req = 2400/(0.9·36) = 74.1 in³. En la tabla de perfiles W (ordenada por peso), en la columna Zx, se buscan perfiles con más de 74 in³, como W12×53, W12×58 o W12×65, y se toma uno un poco por encima: W12×58, con Zx = 86.4 in³. La tabla ya trae bf/2tf = 7.82 y h/tw = 27.0. Con Fy = 36 ksi, λp,ala = 0.38·√(29000/36) ≈ 10.8 y λp,alma = 3.76·√(29000/36) ≈ 107. Como 7.82 < 10.8 y 27.0 < 107, la sección es compacta, y por la Tabla F1.1 solo hay que revisar fluencia y pandeo lateral torsional. Fluencia: φMn = 0.90·36·86.4 ≈ 2799 kip·in ≥ 2400 kip·in, que cumple. Falta revisar el pandeo lateral torsional, que depende de Lb y Cb.",
+      "formulas": [
+        {
+          "nombre": "Módulo plástico requerido",
+          "expresion": "Zx,req = Mu/(φb·Fy)",
+          "variables": "Mu en kip·in; Fy en ksi; Zx en in³"
+        },
+        {
+          "nombre": "Momento máximo, viga simple con carga al centro",
+          "expresion": "Mu = Pu·L/4",
+          "variables": "Pu: carga puntual; L: luz"
+        }
+      ],
+      "referencias_norma": [
+        "AISC 360-16 Sección F2.1",
+        "AISC Steel Construction Manual, Tabla 1-1 (perfiles W)"
+      ]
+    },
+    {
+      "titulo": "Longitud no arriostrada Lb y factor de gradiente de momento Cb",
+      "contenido": "Las fórmulas de la norma vienen de ensayos con momento uniforme (flexión pura). En una estructura real el diagrama de momentos varía, por ejemplo con momentos negativos en los extremos y positivo al centro. El factor Cb corrige ese gradiente. Punto que según el profesor suele confundir a los alumnos: Cb no se calcula sobre la luz de la viga sino sobre la longitud no arriostrada Lb, la distancia entre puntos donde el ala comprimida está impedida de desplazarse lateralmente o de girar. En un techo con vigas en los ejes A, B y C, las viguetas y un sistema de arriostres en diagonal forman puntos de arriostre. Si se arriostra a la mitad, Lb = L/2, y si se arriostra en los tercios, Lb = L/3. La lógica es simple: para que la viga no se salga de su plano, 'se la apuntala'. Las viguetas solas no bastan; deben trabajar con los arriostres. Cada tramo no arriostrado tiene su propio Cb, pero normalmente se calcula en el tramo con el mayor momento. Cb = 12.5·Mmáx/(2.5·Mmáx + 3·MA + 4·MB + 3·MC), con valores absolutos: Mmáx es el máximo del tramo y MA, MB y MC son los momentos a 1/4, 1/2 y 3/4 del tramo Lb. Un alumno pidió repetir la explicación y el profesor la dibujó: una viga con viguetas y arriostres en sus puntos medios, que impiden que la sección rote fuera del plano, de modo que Lb = L/2.",
+      "formulas": [
+        {
+          "nombre": "Factor de gradiente de momento",
+          "expresion": "Cb = 12.5·Mmáx/(2.5·Mmáx + 3·MA + 4·MB + 3·MC)",
+          "variables": "Mmáx: momento máximo absoluto en Lb; MA, MB, MC: momentos absolutos a Lb/4, Lb/2 y 3Lb/4"
+        }
+      ],
+      "referencias_norma": [
+        "AISC 360-16 Sección F1, ecuación F1-1",
+        "AISC 360-16 Apéndice 6 (arriostramiento de vigas)"
+      ]
+    },
+    {
+      "titulo": "Pandeo lateral torsional: rts, Lp, Lr y las tres zonas",
+      "contenido": "La parte del perfil que tiende a salirse del plano es el ala comprimida con alrededor de un tercio del alma comprimida. Su radio de giro efectivo es rts, que puede aproximarse con una fórmula que combina el área del alma (h·tw) y la del ala (bf·tf). Lp es la longitud no arriostrada hasta la cual la viga alcanza el momento plástico: Lp = 1.76·ry·√(E/Fy). Lr es la longitud a partir de la cual el pandeo es elástico (corresponde a 0.7·Fy·Sx). Depende de rts, E, Fy, J (aprox. Σ b·t³/3), Sx, ho (distancia entre centroides de las alas) y c (1.0 para perfiles I doblemente simétricos; para canales tiene su propia fórmula). Zonas: (1) si Lb ≤ Lp, no se aplica el pandeo lateral torsional y Mn = Mp; (2) si Lp < Lb ≤ Lr, pandeo inelástico con interpolación lineal entre Mp y 0.7·Fy·Sx, amplificada por Cb y limitada a Mp; (3) si Lb > Lr, pandeo elástico con Mn = Fcr·Sx ≤ Mp, donde Fcr depende de Cb, Lb/rts, J·c/(Sx·ho). El profesor aplica todo en su hoja Excel al W12×58 (bf = 10.0 in, tf = 0.64 in, d = 12.2 in, tw = 0.36 in). Obtiene λf = 7.8 < 10.8 y, con h = d − 2·tf, λw ≈ 30 < 106-110 (compacto con límites de perfil soldado o laminado). El Z calculado a mano es ≈ 83 in³, un poco menor que el de la tabla (86.4) porque no incluye los filetes de la unión ala-alma, y da Mp ≈ 2989 kip·in; con S calculado a mano, My ≈ 2702 kip·in. Con arriostres en los tercios, Lb = 160/3 = 53.3 in, y se evalúa Cb en el tramo central (momentos en x = 66.7, 80 y 93.3 in). Lp = 1.76·ry·√(E/Fy) ≈ 126 in > Lb = 53.3 in, así que se está en la zona 1, no rige el pandeo lateral torsional y Mn = Mp. Queda pendiente verificar la deflexión.",
+      "formulas": [
+        {
+          "nombre": "Radio de giro efectivo (aproximación)",
+          "expresion": "rts = bf/√(12·(1 + (1/6)·(h·tw)/(bf·tf)))",
+          "variables": "bf, tf: ala; h, tw: alma"
+        },
+        {
+          "nombre": "Longitud límite plástica",
+          "expresion": "Lp = 1.76·ry·√(E/Fy)",
+          "variables": "ry: radio de giro respecto al eje débil"
+        },
+        {
+          "nombre": "Longitud límite inelástica",
+          "expresion": "Lr = 1.95·rts·(E/(0.7·Fy))·√( J·c/(Sx·ho) + √( (J·c/(Sx·ho))² + 6.76·(0.7·Fy/E)² ) )",
+          "variables": "J: constante torsional; c = 1 (perfil I doblemente simétrico); ho: distancia entre centroides de alas; Sx: módulo elástico"
+        },
+        {
+          "nombre": "Zona 2 (inelástica)",
+          "expresion": "Mn = Cb·[Mp − (Mp − 0.7·Fy·Sx)·(Lb − Lp)/(Lr − Lp)] ≤ Mp",
+          "variables": "Lp < Lb ≤ Lr"
+        },
+        {
+          "nombre": "Zona 3 (elástica)",
+          "expresion": "Mn = Fcr·Sx ≤ Mp ; Fcr = (Cb·π²·E/(Lb/rts)²)·√(1 + 0.078·(J·c/(Sx·ho))·(Lb/rts)²)",
+          "variables": "Lb > Lr"
+        },
+        {
+          "nombre": "Constante torsional aproximada",
+          "expresion": "J ≈ Σ b·t³/3",
+          "variables": "b, t de cada plancha"
+        }
+      ],
+      "referencias_norma": [
+        "AISC 360-16 Sección F2.2, ecuaciones F2-2 a F2-8"
+      ]
+    }
+  ],
+  "ejemplos": [
+    {
+      "titulo": "Predimensionamiento y verificación por fluencia de una viga simple",
+      "enunciado": "Viga simplemente apoyada de 160 in de luz con una carga última puntual Pu = 60 kips al centro. Acero A36 (Fy = 36 ksi, E = 29000 ksi). Seleccionar un perfil W y verificar compacidad y fluencia.",
+      "pasos": [
+        "Reacciones: 30 kips cada una. Mu = 30·80 = 2400 kip·in.",
+        "Zx,req = 2400/(0.9·36) = 74.1 in³.",
+        "De la tabla: W12×58 con Zx = 86.4 in³, bf/2tf = 7.82, h/tw = 27.0.",
+        "λp,ala = 0.38·√(29000/36) = 10.8 > 7.82: ala compacta.",
+        "λp,alma = 3.76·√(29000/36) = 107 > 27.0: alma compacta. Perfil compacto: se revisan fluencia y pandeo lateral torsional (Tabla F1.1).",
+        "φMn = 0.9·36·86.4 = 2799 kip·in ≥ 2400 kip·in: cumple por fluencia."
+      ],
+      "resultado": "W12×58 compacto con φMn = 2799 kip·in > Mu = 2400 kip·in. Falta revisar el pandeo lateral torsional y la deflexión."
+    },
+    {
+      "titulo": "Cb y pandeo lateral torsional del W12×58 arriostrado en los tercios",
+      "enunciado": "Para la viga anterior, arriostrada lateralmente en los tercios (Lb = 53.3 in), calcular Cb en el tramo central y determinar la zona de pandeo lateral torsional (ry ≈ 2.51 in).",
+      "pasos": [
+        "Tramo central entre x = 53.3 y 106.7 in. Puntos a 1/4, 1/2 y 3/4: x = 66.7, 80 y 93.3 in.",
+        "Con la carga puntual: MA = 30·66.7 = 2000, MB = 2400 = Mmáx, MC = 2000 kip·in.",
+        "Cb = 12.5·2400/(2.5·2400 + 3·2000 + 4·2400 + 3·2000) = 30000/27600 ≈ 1.09.",
+        "(En clase la hoja usó una carga repartida equivalente de 60 kips en 160 in, con MA = MC ≈ 1166.7 y MB = Mmáx = 1200 kip·in, y Cb ≈ 1.01.)",
+        "Lp = 1.76·2.51·√(29000/36) ≈ 125-126 in.",
+        "Lb = 53.3 in < Lp: zona 1, no rige el pandeo lateral torsional y Mn = Mp."
+      ],
+      "resultado": "Lb < Lp, así que Mn = Mp (≈ 2989 kip·in con el Z de la hoja, 3110 kip·in con el Z de tabla). La viga cumple en flexión. Tarea: verificar la deflexión."
+    }
+  ],
+  "conceptos_clave": [
+    {
+      "termino": "Momento de primera fluencia (My)",
+      "definicion": "Momento con el que la fibra extrema alcanza Fy. My = Fy·Sx, límite del comportamiento elástico."
+    },
+    {
+      "termino": "Momento plástico (Mp)",
+      "definicion": "Momento con toda la sección en fluencia. Mp = Fy·Zx. Es la máxima resistencia de la sección y en él se forma la rótula plástica."
+    },
+    {
+      "termino": "Sección compacta",
+      "definicion": "Sección cuyos elementos tienen λ ≤ λp: puede desarrollar Mp con capacidad de rotación."
+    },
+    {
+      "termino": "Sección no compacta",
+      "definicion": "Sección con λp < λ ≤ λr: fluye parcialmente pero no llega a Mp."
+    },
+    {
+      "termino": "Sección esbelta",
+      "definicion": "Sección con λ > λr: falla por pandeo local en el rango elástico, sin aviso."
+    },
+    {
+      "termino": "Pandeo lateral torsional",
+      "definicion": "Estado límite en el que la viga, por la compresión del ala, se desplaza lateralmente y se tuerce fuera de su plano."
+    },
+    {
+      "termino": "Longitud no arriostrada (Lb)",
+      "definicion": "Distancia entre puntos que impiden el desplazamiento lateral del ala comprimida o el giro de la sección. Sobre ella se calcula Cb."
+    },
+    {
+      "termino": "Factor Cb",
+      "definicion": "Coeficiente de gradiente de momento que ajusta la resistencia al pandeo lateral torsional cuando el momento no es uniforme en Lb."
+    },
+    {
+      "termino": "Lp y Lr",
+      "definicion": "Longitudes límite: hasta Lp la viga alcanza Mp; entre Lp y Lr el pandeo es inelástico; más allá de Lr es elástico."
+    },
+    {
+      "termino": "rts",
+      "definicion": "Radio de giro efectivo del ala comprimida con parte del alma, usado en Lr y en Fcr del pandeo lateral torsional."
+    },
+    {
+      "termino": "Ensayo con cargas en los tercios",
+      "definicion": "Ensayo de vigas con cargas en los tercios de la luz, que produce flexión pura en el tercio central y es la base de las fórmulas de la norma."
+    }
+  ],
+  "preguntas": [
+    {
+      "pregunta": "¿Qué representa My = Fy·Sx en la curva momento-rotación?",
+      "opciones": [
+        "El momento plástico",
+        "El último punto de comportamiento elástico, cuando fluye la fibra extrema",
+        "El momento de pandeo lateral torsional",
+        "El momento de colapso"
+      ],
+      "correcta": 1,
+      "explicacion": "Es el momento de primera fluencia; a partir de ahí el comportamiento es inelástico."
+    },
+    {
+      "pregunta": "Según la clase, el cociente Zx/Sx (factor de forma) suele estar entre:",
+      "opciones": [
+        "0.80 y 0.95",
+        "1.10 y 1.30",
+        "1.50 y 2.00",
+        "2.00 y 3.00"
+      ],
+      "correcta": 1,
+      "explicacion": "El profesor indica que el módulo plástico es 1.10 a 1.30 veces el elástico."
+    },
+    {
+      "pregunta": "Un ala tiene λp < λ ≤ λr según la Tabla B4.1b. ¿Cómo se clasifica?",
+      "opciones": [
+        "Compacta",
+        "Esbelta",
+        "No compacta",
+        "Rigidizada"
+      ],
+      "correcta": 2,
+      "explicacion": "Entre λp y λr el elemento es no compacto."
+    },
+    {
+      "pregunta": "λp para el ala de un perfil I laminado en flexión con Fy = 36 ksi es aproximadamente:",
+      "opciones": [
+        "10.8",
+        "15.8",
+        "28.4",
+        "106.7"
+      ],
+      "correcta": 0,
+      "explicacion": "0.38·√(29000/36) = 0.38·28.4 ≈ 10.8."
+    },
+    {
+      "pregunta": "¿Por qué los ensayos de vigas cargan en los tercios de la luz?",
+      "opciones": [
+        "Para maximizar el corte",
+        "Para tener flexión pura (corte nulo y momento constante) en el tercio central",
+        "Para provocar pandeo local",
+        "Para simular una carga repartida exacta"
+      ],
+      "correcta": 1,
+      "explicacion": "En el tercio central no hay corte y el momento es constante, que es la condición de las fórmulas de la norma."
+    },
+    {
+      "pregunta": "Según la Tabla F1.1, para un perfil I con ala y alma compactas, ¿qué estados límite se revisan?",
+      "opciones": [
+        "Los cuatro estados límite",
+        "Solo pandeo local del ala",
+        "Fluencia y pandeo lateral torsional",
+        "Fluencia del ala en tracción y pandeo local del alma"
+      ],
+      "correcta": 2,
+      "explicacion": "Es el caso F2: solo fluencia y pandeo lateral torsional."
+    },
+    {
+      "pregunta": "Una viga simple de 160 in con 60 kips al centro (A36) requiere un Zx mínimo de:",
+      "opciones": [
+        "66.7 in³",
+        "74.1 in³",
+        "86.4 in³",
+        "83.3 in³"
+      ],
+      "correcta": 1,
+      "explicacion": "Mu = 2400 kip·in y Zx = 2400/(0.9·36) = 74.1 in³."
+    },
+    {
+      "pregunta": "El factor Cb se evalúa sobre:",
+      "opciones": [
+        "La luz total de la viga",
+        "La longitud no arriostrada Lb",
+        "La longitud del voladizo",
+        "La distancia entre puntos de inflexión"
+      ],
+      "correcta": 1,
+      "explicacion": "Cb se calcula con los momentos dentro del tramo no arriostrado Lb."
+    },
+    {
+      "pregunta": "Un tramo Lb tiene Mmáx = MB = 2400 y MA = MC = 2000 kip·in. ¿Cuánto vale Cb?",
+      "opciones": [
+        "1.00",
+        "1.09",
+        "1.14",
+        "1.32"
+      ],
+      "correcta": 1,
+      "explicacion": "Cb = 12.5·2400/(2.5·2400 + 3·2000 + 4·2400 + 3·2000) = 30000/27600 ≈ 1.09."
+    },
+    {
+      "pregunta": "Si Lb ≤ Lp en una viga compacta, ¿cuál es Mn?",
+      "opciones": [
+        "Mn = 0.7·Fy·Sx",
+        "Mn = Fcr·Sx",
+        "Mn = Mp = Fy·Zx",
+        "Mn = Cb·My"
+      ],
+      "correcta": 2,
+      "explicacion": "En la zona 1 no rige el pandeo lateral torsional y la viga alcanza el momento plástico."
+    },
+    {
+      "pregunta": "Lp = 1.76·ry·√(E/Fy) usa ry, que es:",
+      "opciones": [
+        "El radio de giro respecto del eje fuerte",
+        "El radio de giro respecto del eje débil",
+        "El radio de giro efectivo rts",
+        "El radio de giro polar"
+      ],
+      "correcta": 1,
+      "explicacion": "Lp depende del radio de giro respecto del eje débil (y)."
+    },
+    {
+      "pregunta": "Límite de deflexión por carga viva indicado en clase:",
+      "opciones": [
+        "L/180",
+        "L/240",
+        "L/300",
+        "L/500"
+      ],
+      "correcta": 2,
+      "explicacion": "El profesor indicó L/300 como criterio general para que la deflexión no sea perceptible."
+    }
+  ],
+  "ejercicios_propuestos": [
+    "Verifique la deflexión por carga viva de la viga W12×58 del ejemplo (L = 160 in, Ix = 475 in⁴), suponiendo que 25 kips de la carga al centro son carga viva de servicio, con el límite L/300 (tarea dejada en clase).",
+    "Una viga simple de 24 ft con carga última repartida wu = 2.5 kip/ft (A36) se arriostra solo en los apoyos. Predimensione un perfil W por fluencia, clasifique su compacidad, calcule Cb, Lp y Lr y determine φMn.",
+    "Calcule Cb para un tramo no arriostrado con momentos en los extremos de −800 y +400 kip·in y variación lineal (evalúe MA, MB y MC).",
+    "Para un perfil soldado con alas de 10 in × 1/2 in y alma de 16 in × 5/16 in (Fy = 36 ksi), clasifique ala y alma con la Tabla B4.1b (incluya kc) e indique qué estados límite exige la Tabla F1.1.",
+    "Calcule rts, Lp y Lr de un W16×40 (A36) y determine en qué zona de pandeo lateral torsional está con Lb = 10 ft y con Lb = 25 ft."
+  ],
+  "avisos": [
+    "Tarea: verificar la deflexión de la viga W12×58 del ejemplo y presentarla el miércoles.",
+    "Se usa la hoja Excel de propiedades de secciones armadas (presentada en la clase anterior), ampliada con λp, λr, Cb, Lp y Lr. Se recomienda que cada alumno haga la suya.",
+    "Se mostraron videos de un ensayo de losa colaborante en el CISMID y de pandeo lateral torsional de un canal.",
+    "Se pasó lista (5 ausentes de 37). El profesor recomendó cuidarse del COVID-19."
+  ],
+  "notas_transcripcion": [
+    "La fecha sale de 'hoy es tres del cinco' y de la mención al 'día miércoles' siguiente: lunes 3 de mayo de 2021.",
+    "'Tabla BA' y 'tabla B' son las Tablas B4.1a y B4.1b. 'CV/cuad' es Cb y 'LV' es Lb. En el corte, 'Cb' es el coeficiente Cv.",
+    "Para el alma el profesor dijo '1.76 ... 95'. Lo correcto para el alma en flexión es λp = 3.76·√(E/Fy) ≈ 107. La conclusión (compacta) no cambia.",
+    "La hoja muestra Z ≈ 83 in³ calculado a mano frente a 86.4 de la tabla (no incluye los filetes de la unión ala-alma). El 'valor 107' mencionado para la tabla no coincide con el W12×58 y se omitió.",
+    "Para calcular Cb, la hoja usó una carga repartida 'equivalente' de 60 kips en 160 in (Mmáx = 1200 kip·in), distinta de la carga puntual del enunciado (Mmáx = 2400 kip·in). Se presentan ambos valores de Cb.",
+    "El profesor dijo φ = 0.9 para el corte. El AISC 360-16 usa φv = 1.0 para almas de perfiles I laminados con h/tw ≤ 2.24·√(E/Fy) y 0.9 en los demás casos.",
+    "ASTM se presentó como 'American Society of Testing Machinery'; su nombre correcto es American Society for Testing and Materials. 'Sismit' es el CISMID-UNI.",
+    "Como límite de deflexión el profesor dio L/300. El AISC (Comentario del Cap. L) suele citar L/360 para carga viva en pisos."
+  ]
+}

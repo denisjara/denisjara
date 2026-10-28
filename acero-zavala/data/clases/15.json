@@ -1,0 +1,175 @@
+{
+  "clase": 15,
+  "titulo": "Vigas monosimétricas (F4) y vigas con alma esbelta (F5); secciones cajón, tubos y campo de tensión",
+  "fecha": "lunes 17 de mayo de 2021 (inferida: se menciona la clase del 'miércoles 12 de la semana pasada')",
+  "duracion_min": 97,
+  "resumen": "El profesor repasa la tabla resumen del Capítulo F. Explica que el tipo de alma es la clave para clasificar: con alma compacta la sección cae en F2 o F3, con alma no compacta en F4, y con alma esbelta en F5, el único caso de alma esbelta. Menciona también los casos de flexión en el eje débil, HSS cuadrados y rectangulares, tubos circulares, ángulos simples y barras. Explica gráficamente cómo Cb > 1 eleva la curva Mn–Lb, con el tope en Mp. Resuelve una sección monosimétrica con alas distintas (15 × 3/8 y 14 × 3/8 in) y alma de 18 × 3/8 in con las ecuaciones de F4. Calcula centroide, hc, Sxc, Sxt, Rpc, rt, Lp y Lr, y revisa los cuatro estados límite: fluencia del ala comprimida, LTB, FLB y fluencia del ala en tracción. Con Lb = 550 in gobierna el LTB elástico. Luego desarrolla F5: el factor de reducción Rpg, el esfuerzo crítico en tres zonas con Lp = 1.1rt√(E/Fy) y Lr = πrt√(E/0.7Fy), el FLB y la fluencia del ala en tracción. Lo aplica en Excel a una viga de alma 45 × 1/4 in (h/tw = 180) con alas iguales y luego distintas. Resume F7 (cajón/HSS) y F8 (tubos). Hace preguntas orales a los alumnos sobre Sx frente a Zx, el significado de Lr y el uso de rts o rt. Cierra con el campo de tensión en almas muy peraltadas, con la anécdota del viaducto de la Línea 1 del Metro de Lima.",
+  "objetivos": [
+    "Al terminar, el estudiante podrá clasificar una viga en F2, F3, F4 o F5 a partir de la esbeltez de su alma y de sus alas.",
+    "Al terminar, el estudiante podrá calcular las propiedades de una sección I monosimétrica (centroide, hc, hp, Sxc, Sxt, Iyc) y aplicar los estados límite de F4.",
+    "Al terminar, el estudiante podrá calcular Rpg y el esfuerzo crítico Fcr para LTB y FLB de vigas con alma esbelta según F5.",
+    "Al terminar, el estudiante podrá explicar el efecto de Cb > 1 sobre la curva Mn–Lb y el significado de Lp y Lr.",
+    "Al terminar, el estudiante podrá reconocer las particularidades de F7 (secciones cajón/HSS) y F8 (tubos), y la condición a/h ≤ 3 del campo de tensión."
+  ],
+  "temas": [
+    {
+      "titulo": "Repaso de la tabla del Capítulo F: el alma define el caso",
+      "contenido": "Para diseñar una viga se propone una sección y se revisa su relación ancho/espesor con la Tabla B4.1b. Si la viga pertenece a un pórtico especial o moderado, hay que cumplir además los límites sísmicos. Los estados límite posibles en flexión son la fluencia, el pandeo lateral-torsional, el pandeo local del ala comprimida y la fluencia del ala en tracción. Además se verifican corte y deflexión. El corte lo toma el alma y rara vez controla, salvo con cargas puntuales. El profesor da una regla práctica: mirar siempre el alma primero. Con alma compacta la sección es F2 (alas compactas) o F3 (alas no compactas o esbeltas). Con alma no compacta, F4, que también cubre las secciones monosimétricas. Con alma esbelta, F5, el único caso de alma esbelta de toda la tabla. Completan la tabla F6 (perfiles I y canales en el eje débil, sin restricción de alma), F7 (HSS cuadrados y rectangulares, y secciones cajón), F8 (tubos circulares), F10 (ángulos simples, que prácticamente no tienen alma) y F11 (barras cuadradas y redondas, donde solo se revisan fluencia y LTB). Para cualquier perfil no listado se revisan todos los estados límite aplicables (F13). Recuerda también que con losas o placas colaborantes conectadas al ala comprimida, Lb = 0 y el LTB no se revisa.",
+      "formulas": [],
+      "referencias_norma": ["AISC 360-16 Tabla User Note F1.1", "AISC 360-16 Tabla B4.1b", "AISC 360-16 F6, F7, F8, F10, F11"]
+    },
+    {
+      "titulo": "Curva Mn–Lb y efecto de Cb > 1",
+      "contenido": "La curva base, con Cb = 1, tiene una meseta en Mp hasta Lp (zona 1). Entre Lp y Lr cae linealmente hasta Mr = 0.7·Fy·Sx (zona 2, pandeo inelástico). Después de Lr sigue una curva elástica (zona 3). Con Cb > 1, las ordenadas de las zonas 2 y 3 se multiplican por Cb, lo que da una curva ficticia por encima. Como ningún momento puede superar Mp, la meseta de Mp se prolonga hasta cortar esa curva amplificada, y desde ese punto manda la curva con Cb. En consecuencia, para un mismo Lb > Lp, la resistencia es mayor. Al final de la clase el profesor pregunta a los alumnos cuál es la longitud limitante para tener pandeo inelástico con Lb = 200 in. La respuesta es Lr: es la frontera entre el comportamiento inelástico y el elástico, y para que Lb = 200 in fuera el límite, Lr tendría que valer 200 in. También aclara que Sx es el módulo de sección elástico y Zx el plástico.",
+      "formulas": [
+        {"nombre": "Momento límite inelástico", "expresion": "Mr = 0.7·Fy·Sx", "variables": "Sx: módulo de sección elástico"},
+        {"nombre": "Zona 2 con Cb", "expresion": "Mn = Cb·[Mp − (Mp − 0.7FySx)·(Lb − Lp)/(Lr − Lp)] ≤ Mp", "variables": "Cb ≥ 1: factor de gradiente de momento"}
+      ],
+      "referencias_norma": ["AISC 360-16 F2.2", "AISC 360-16 Comentario F1 (figura de Mn vs Lb con Cb > 1)"]
+    },
+    {
+      "titulo": "Propiedades de secciones I monosimétricas (alas diferentes)",
+      "contenido": "En una sección con alas distintas, que en clase se llama sección híbrida, el centroide elástico y el eje neutro plástico no coinciden. Ambos se desplazan hacia el ala mayor. Primero se calculan las áreas y la posición del centroide, y a partir de ahí: hc, el doble de la distancia del centroide a la cara interior del ala comprimida; hp, el doble de la distancia del eje neutro plástico a esa misma cara; Ix, Sxc = Ix/yc y Sxt = Ix/yt. En el eje débil se calcula Iyc (inercia del ala comprimida) y la relación Iyc/Iy, que debe ser mayor que 0.23 para aplicar F4 con J calculado. La compacidad del alma de estas secciones se evalúa con el caso 16 de la Tabla B4.1b, con hc y hp. El profesor hace los cálculos en Excel con el teorema de Steiner. Remarca que la hoja de clase está sujeta a revisión y que los alumnos deben incorporar estas fórmulas en las suyas.",
+      "formulas": [
+        {"nombre": "Distancia hc", "expresion": "hc = 2·(yc − tfc)", "variables": "yc: distancia del centroide a la fibra extrema comprimida; tfc: espesor del ala comprimida"},
+        {"nombre": "Ubicación del ENP (alma en el rango)", "expresion": "hp/2 = (A − 2·Afc)/(2·tw) medido desde la cara interior del ala comprimida (si el ENP cae en el alma)", "variables": "A: área total; Afc: área del ala comprimida; tw: espesor del alma"},
+        {"nombre": "Límite compacto del alma monosimétrica (caso 16)", "expresion": "λpw = (hc/hp)·√(E/Fy) / (0.54·Mp/My − 0.09)² ≤ λrw = 5.70·√(E/Fy)", "variables": "My: momento de primera fluencia"},
+        {"nombre": "Módulos elásticos", "expresion": "Sxc = Ix/yc;  Sxt = Ix/yt", "variables": "yc, yt: distancias del centroide a las fibras extremas comprimida y traccionada"}
+      ],
+      "referencias_norma": ["AISC 360-16 Tabla B4.1b caso 16", "AISC 360-16 F4"]
+    },
+    {
+      "titulo": "Estados límite de F4 aplicados a la sección monosimétrica",
+      "contenido": "Ejemplo: ala superior comprimida de 15 × 3/8 in, ala inferior de 14 × 3/8 in y alma de 18 × 3/8 in, todo en A36 y cortado de la misma plancha de 3/8. El alma resulta compacta (48 < λpw ≈ 105.8). Las alas son no compactas (λfc ≈ 20 y λft ≈ 18.7, frente a λpf = 10.79 y λrf ≈ 24). Iyc/Iy = 0.639 > 0.23, de modo que Rpc = Mp/Myc ≈ 1.07, Myc = Fy·Sxc ≈ 4521 kip·in y la fluencia del ala comprimida da Mn = Rpc·Myc ≈ 4851 kip·in. Para el LTB: rt = bfc/√(12(1 + aw/6)) ≈ 4.65 in, FL = 0.7Fy = 25.2 ksi, J ≈ Σbt³/3, Lp ≈ 145.1 in y Lr ≈ 537.5 in. Con Lb = 550 in > Lr se usa Fcr elástico con Cb = 1: Fcr ≈ 24.19 ksi y Mn = Fcr·Sxc ≈ 3037 kip·in. El FLB, con Rpc·Myc, FL·Sxc y las esbelteces del ala, da Mn ≈ 3553 kip·in. Como Sxt/Sxc = 0.92 < 1, aplica la fluencia del ala en tracción, con Mn = Rpt·Myt ≈ 4166 kip·in. Gobierna el LTB, con Mn ≈ 3037 kip·in. El profesor adelanta que en F5 ya no se usan Rpc ni Rpt sino Rpg.",
+      "formulas": [
+        {"nombre": "Fluencia del ala comprimida", "expresion": "Mn = Rpc·Myc = Rpc·Fy·Sxc", "variables": "Rpc: factor de plastificación del alma"},
+        {"nombre": "LTB elástico F4 (Lb > Lr)", "expresion": "Fcr = Cb·π²·E/(Lb/rt)² · √[1 + 0.078·(J/(Sxc·ho))·(Lb/rt)²];  Mn = Fcr·Sxc ≤ Rpc·Myc", "variables": "rt: radio de giro efectivo; ho: distancia entre centroides de alas"},
+        {"nombre": "FLB F4 ala no compacta", "expresion": "Mn = Rpc·Myc − (Rpc·Myc − FL·Sxc)·(λ − λpf)/(λrf − λpf)", "variables": "λ = bfc/(2tfc)"},
+        {"nombre": "Fluencia del ala en tracción", "expresion": "Mn = Rpt·Myt = Rpt·Fy·Sxt  (aplica solo si Sxt < Sxc)", "variables": "Rpt: factor de plastificación para el ala traccionada"}
+      ],
+      "referencias_norma": ["AISC 360-16 F4.1 a F4.4 (ecuaciones F4-1 a F4-15)"]
+    },
+    {
+      "titulo": "Sección F5: vigas I con alma esbelta (Rpg y Fcr)",
+      "contenido": "Cuando h/tw > 5.70√(E/Fy), el alma es esbelta y se aplica F5, con un factor de reducción por flexión del alma esbelta, Rpg ≤ 1, que depende de aw y de hc/tw. Fluencia del ala comprimida: Mn = Rpg·Fy·Sxc. Pandeo lateral-torsional: Mn = Rpg·Fcr·Sxc, con tres zonas. En la zona 1 (Lb ≤ Lp), Fcr = Fy, lo que ya es fluencia, así que el LTB no aplica. En la zona 2, Fcr = Cb[Fy − 0.3Fy(Lb − Lp)/(Lr − Lp)] ≤ Fy. En la zona 3, Fcr = Cb·π²·E/(Lb/rt)² ≤ Fy. El profesor corrige en su diapositiva el cuadrado que faltaba en Lb/rt. Las longitudes límite se simplifican a Lp = 1.1rt√(E/Fy) y Lr = π·rt·√(E/0.7Fy). Pandeo local del ala comprimida: Mn = Rpg·Fcr·Sxc. No aplica si el ala es compacta. Con ala no compacta, Fcr = Fy − 0.3Fy(λ − λpf)/(λrf − λpf). Con ala esbelta, Fcr = 0.9·E·kc/λ², con kc = 4/√(h/tw). Fluencia del ala en tracción: no aplica si Sxt ≥ Sxc, por ejemplo con alas iguales. Si Sxt < Sxc, Mn = Fy·Sxt.",
+      "formulas": [
+        {"nombre": "Factor Rpg (F5-6)", "expresion": "Rpg = 1 − [aw/(1200 + 300·aw)]·(hc/tw − 5.7·√(E/Fy)) ≤ 1.0", "variables": "aw = hc·tw/(bfc·tfc) ≤ 10"},
+        {"nombre": "Fluencia del ala comprimida (F5-1)", "expresion": "Mn = Rpg·Fy·Sxc", "variables": "Sxc: módulo elástico referido al ala comprimida"},
+        {"nombre": "LTB F5 (F5-2 a F5-4)", "expresion": "Mn = Rpg·Fcr·Sxc;  Fcr = Cb·[Fy − 0.3·Fy·(Lb − Lp)/(Lr − Lp)] ≤ Fy (Lp < Lb ≤ Lr);  Fcr = Cb·π²·E/(Lb/rt)² ≤ Fy (Lb > Lr)", "variables": "rt: radio de giro efectivo"},
+        {"nombre": "Longitudes límite F5", "expresion": "Lp = 1.1·rt·√(E/Fy);  Lr = π·rt·√(E/(0.7·Fy))", "variables": "E = 29000 ksi"},
+        {"nombre": "FLB F5", "expresion": "Fcr = Fy − 0.3·Fy·(λ − λpf)/(λrf − λpf) (ala no compacta);  Fcr = 0.9·E·kc/λ² (ala esbelta)", "variables": "λ = bfc/(2tfc); kc = 4/√(h/tw)"},
+        {"nombre": "Fluencia del ala en tracción (F5-10)", "expresion": "Mn = Fy·Sxt (solo si Sxt < Sxc)", "variables": "Sxt: módulo elástico referido al ala traccionada"}
+      ],
+      "referencias_norma": ["AISC 360-16 F5 (ecuaciones F5-1 a F5-10)"]
+    },
+    {
+      "titulo": "Ejemplo F5 en Excel: alma esbelta con alas iguales y distintas",
+      "contenido": "Se propone una sección con alma de 45 in × 1/4 in (d = 45.5 in, h/tw = 180 > 5.70√(E/Fy) = 161.8, alma esbelta) y alas de 8 × 1/4 in (λf = 16, con λpf = 10.79 y λrf ≈ 19.1, ala no compacta). Luego se cambia el ala inferior a 6 × 1/4 in para obtener una sección monosimétrica. En la hoja, el profesor ordena el cálculo en bloques. Primero, áreas, brazos al eje xt, centroide (≈ 23.52 in desde la fibra inferior), módulo plástico Z y Mp. Segundo, inercias propias más Steiner para Ix e Iy. Tercero, yc, hc, Sxc, Sxt y My = Fy·Sx (primera fluencia), y aclara que no debe confundirse con Myc. Rpc y Rpt no se usan en F5. Con aw = hc·tw/(bfc·tfc) obtiene Rpg ≈ 0.977. Fluencia del ala comprimida: Mn = Rpg·Fy·Sxc, menor que Mp, así que se acepta. LTB con Lb = 200 in: rt ≈ 2.21 in, Lp ≈ 69 in y Lr ≈ 235 in. Como cae en la zona 2, Fcr ≈ 27.5 ksi y Mn = Rpg·Fcr·Sxc. El FLB, con ala no compacta, da Fcr ≈ 29.2 ksi y una resistencia algo mayor. Como Sxt/Sxc ≈ 0.93, aplica la fluencia del ala en tracción, Mn = Fy·Sxt. En ambas versiones, alas iguales y distintas, gobierna el pandeo lateral-torsional. La demanda debe ser menor que φ veces ese valor.",
+      "formulas": [
+        {"nombre": "Momento de primera fluencia", "expresion": "My = Fy·Sx", "variables": "Distinto de Myc = Fy·Sxc"}
+      ],
+      "referencias_norma": ["AISC 360-16 F5"]
+    },
+    {
+      "titulo": "Secciones cajón/HSS (F7) y tubos circulares (F8)",
+      "contenido": "En secciones cajón o HSS rectangulares, que pueden ser de plancha doblada o soldada y estar 'paradas' o 'echadas', la fluencia es Mn = Mp = Fy·Z respecto al eje de flexión. La relación clave es b/t del ala comprimida. Con el cajón echado, el ala comprimida es la cara mayor; con el cajón parado, la menor. Con alas no compactas, Mn se interpola entre Mp y Fy·S. Con alas esbeltas, se usa un módulo de sección efectivo Se, calculado con el ancho efectivo be del ala comprimida, y el coeficiente es distinto para HSS y para cajones armados. Para el pandeo local del alma: no aplica si es compacta, hay una fórmula de interpolación si es no compacta, y si es esbelta se usan Rpg y un Fcr con kc = 4. El LTB, que solo es relevante en secciones muy alargadas, usa J, el área bruta y ry, con expresiones de Lp y Lr distintas de las de los perfiles I. En tubos circulares (F8) se usa el módulo plástico Z para la fluencia y la relación D/t, con el diámetro exterior, para el pandeo local de paredes delgadas.",
+      "formulas": [
+        {"nombre": "Fluencia HSS/cajón (F7-1)", "expresion": "Mn = Mp = Fy·Z", "variables": "Z: módulo plástico respecto al eje de flexión"},
+        {"nombre": "FLB HSS ala no compacta (F7-2)", "expresion": "Mn = Mp − (Mp − Fy·S)·(3.57·(b/t)·√(Fy/E) − 4.0) ≤ Mp", "variables": "b/t: relación ancho/espesor del ala comprimida"},
+        {"nombre": "Ala esbelta (F7-3)", "expresion": "Mn = Fy·Se;  be = 1.92·t·√(E/Fy)·[1 − (0.38/(b/t))·√(E/Fy)] ≤ b  (HSS)", "variables": "Se: módulo de sección efectivo con ancho efectivo be"},
+        {"nombre": "LTB HSS (F7-10 a F7-13)", "expresion": "Lp = 0.13·E·ry·√(J·Ag)/Mp;  Lr = 2·E·ry·√(J·Ag)/(0.7·Fy·Sx)", "variables": "J: constante torsional; Ag: área bruta"}
+      ],
+      "referencias_norma": ["AISC 360-16 F7 (HSS cuadrados y rectangulares, secciones cajón)", "AISC 360-16 F8 (HSS circulares)"]
+    },
+    {
+      "titulo": "Campo de tensión en almas muy peraltadas (G2.2) y anécdota del viaducto de la Línea 1",
+      "contenido": "El profesor retoma lo que quedó pendiente en corte. Hasta ahora se usó solo la resistencia sin acción de campo de tensión (Cv1). En almas muy peraltadas y esbeltas, el alma inevitablemente se pandea bajo carga, pero puede seguir resistiendo mediante un flujo diagonal de tensiones anclado en los atiesadores y las alas: es la acción de campo de tensión, con Cv2. La norma la permite en paneles interiores con a/h ≤ 3, es decir, con atiesadores separados no más de tres veces el peralte del alma. Como ejemplo cita el viaducto de la Línea 1 del Metro de Lima (segunda etapa, hacia San Juan de Lurigancho, pasando Puente Nuevo). Su sección armada, de peralte variable, parece un tubo rectangular, pero son perfiles de borde con planchas como almas de unos 2 m de alto, más que una persona. Esas almas trabajan con un leve ondulado por pandeo que de lejos no se percibe, y su resistencia se basa en el campo de tensión.",
+      "formulas": [
+        {"nombre": "Corte con campo de tensión (G2-7/G2-8)", "expresion": "Vn = 0.6·Fy·Aw·[Cv2 + (1 − Cv2)/(1.15·√(1 + (a/h)²))]  (si h/tw > 1.10√(kvE/Fy)), válido para a/h ≤ 3", "variables": "Cv2: coeficiente de pandeo por corte del alma; a: separación entre atiesadores"}
+      ],
+      "referencias_norma": ["AISC 360-16 G2.2 (acción de campo de tensión)", "AISC 360-16 G2.3 (atiesadores transversales)"]
+    }
+  ],
+  "ejemplos": [
+    {
+      "titulo": "Sección monosimétrica con alas no compactas (F4)",
+      "enunciado": "Sección soldada A36 (Fy = 36 ksi, E = 29000 ksi): ala comprimida (superior) de 15 × 3/8 in, ala traccionada de 14 × 3/8 in, alma de 18 × 3/8 in. Lb = 550 in y Cb = 1. Determinar Mn.",
+      "pasos": [
+        "Compacidad del alma: h/tw = 18/0.375 = 48 < λpw ≈ 105.8 → compacta.",
+        "Alas: λfc ≈ 15/0.75 = 20, λft = 14/0.75 = 18.7; λpf = 10.79, λrf ≈ 24 → no compactas. Al ser monosimétrica, se aplica F4.",
+        "Propiedades: Sxc ≈ 125.6 in³; Iyc/Iy = 0.639 > 0.23; Myc = 36 × Sxc ≈ 4521 kip·in; Rpc = Mp/Myc ≈ 1.07.",
+        "Fluencia del ala comprimida: Mn = Rpc·Myc ≈ 4851 kip·in.",
+        "LTB: rt ≈ 4.65 in; FL = 25.2 ksi; Lp ≈ 145.1 in; Lr ≈ 537.5 in. Lb = 550 > Lr → Fcr elástico ≈ 24.19 ksi → Mn = Fcr·Sxc ≈ 3037 kip·in.",
+        "FLB (ala no compacta): Mn ≈ 3553 kip·in.",
+        "Fluencia del ala en tracción: Sxt/Sxc = 0.92 < 1 → aplica → Mn ≈ 4166 kip·in.",
+        "Mn = mín(4851, 3037, 3553, 4166) = 3037 kip·in (LTB)."
+      ],
+      "resultado": "Mn ≈ 3037 kip·in, gobernado por el pandeo lateral-torsional elástico. φMn ≈ 2733 kip·in."
+    },
+    {
+      "titulo": "Viga con alma esbelta (F5)",
+      "enunciado": "Sección soldada A36 con alma de 45 × 1/4 in (d = 45.5 in) y alas de 8 × 1/4 in. Variante: ala inferior de 6 × 1/4 in. Lb = 200 in y Cb = 1. Evaluar los estados límite de F5.",
+      "pasos": [
+        "Alma: h/tw = 45/0.25 = 180 > 5.70√(E/Fy) = 161.8 → esbelta → F5.",
+        "Ala: λ = 8/(2 × 0.25) = 16; λpf = 10.79; kc = 4/√180 = 0.30 → se usa 0.35 → λrf = 0.95√(0.35 × 29000/25.2) ≈ 19.1 → no compacta.",
+        "Centroide de la variante con alas distintas ≈ 23.52 in desde la fibra inferior; se obtienen Ix, Sxc, Sxt, hc y aw.",
+        "Rpg = 1 − aw/(1200 + 300aw)·(hc/tw − 161.8) ≈ 0.977.",
+        "Fluencia del ala comprimida: Mn = Rpg·Fy·Sxc, menor que Mp → aceptado.",
+        "LTB: rt ≈ 2.21 in; Lp = 1.1 × 2.21 × 28.38 ≈ 69 in; Lr = π × 2.21 × √(29000/25.2) ≈ 235 in; 69 < 200 < 235 → zona 2.",
+        "Fcr = 36 − 0.3 × 36 × (200 − 69)/(235 − 69) ≈ 27.5 ksi → Mn = Rpg·Fcr·Sxc.",
+        "FLB: Fcr = 36 − 10.8 × (16 − 10.79)/(19.1 − 10.79) ≈ 29.2 ksi → Mn = Rpg·Fcr·Sxc, mayor que el de LTB.",
+        "Fluencia del ala en tracción: Sxt/Sxc ≈ 0.93 < 1 → aplica, Mn = Fy·Sxt, mayor que el de LTB."
+      ],
+      "resultado": "Gobierna el LTB, con Fcr ≈ 27.5 ksi y Mn = 0.977 × 27.5 × Sxc. En la hoja da 45.03 frente a 58.88 (fluencia), 47.76 (FLB) y 56.35 (TFY), en las unidades de la hoja."
+    }
+  ],
+  "conceptos_clave": [
+    {"termino": "Alma esbelta", "definicion": "Alma con h/tw > 5.70√(E/Fy). Lleva la viga a la sección F5, la única de alma esbelta para perfiles I."},
+    {"termino": "Rpg", "definicion": "Factor de reducción de resistencia a flexión por alma esbelta (F5), siempre ≤ 1. Considera la pérdida de efectividad del alma comprimida."},
+    {"termino": "Rpc / Rpt", "definicion": "Factores de plastificación del alma para el ala comprimida y la traccionada (F4). En F5 no se usan."},
+    {"termino": "Sección monosimétrica (llamada 'híbrida' en clase)", "definicion": "Sección I con alas de distinto tamaño. Su centroide y su ENP se desplazan hacia el ala mayor y Sxc ≠ Sxt."},
+    {"termino": "Sx frente a Zx", "definicion": "Sx es el módulo de sección elástico, que determina la primera fluencia. Zx es el módulo plástico, que determina Mp."},
+    {"termino": "Lr", "definicion": "Longitud no arriostrada que separa el pandeo lateral-torsional inelástico del elástico."},
+    {"termino": "rts frente a rt", "definicion": "rts es el radio de giro efectivo de F2 y F3, en secciones doblemente simétricas. rt se usa en F4 y F5, en función del ala comprimida y de aw."},
+    {"termino": "Acción de campo de tensión", "definicion": "Resistencia poscrítica al corte de almas pandeadas mediante una banda diagonal de tracción anclada en los atiesadores. Requiere a/h ≤ 3 en paneles interiores."},
+    {"termino": "Sección cajón (box section)", "definicion": "Sección cerrada rectangular o cuadrada formada por plancha doblada o soldada. Se diseña con F7."}
+  ],
+  "preguntas": [
+    {"pregunta": "Una viga I soldada tiene h/tw = 180 con Fy = 36 ksi. ¿Qué sección del Capítulo F aplica?", "opciones": ["F2", "F3", "F4", "F5"], "correcta": 3, "explicacion": "180 > 5.70√(29000/36) = 161.8, así que el alma es esbelta y aplica F5."},
+    {"pregunta": "¿Qué factor reduce la resistencia por alma esbelta en F5?", "opciones": ["Rpc", "Rpt", "Rpg", "Rh"], "correcta": 2, "explicacion": "En F5 se usa Rpg = 1 − aw/(1200 + 300aw)(hc/tw − 5.7√(E/Fy)) ≤ 1."},
+    {"pregunta": "En F5, ¿cuánto vale Lr?", "opciones": ["1.1·rt·√(E/Fy)", "π·rt·√(E/(0.7Fy))", "1.95·rts·E/(0.7Fy)·√(...)", "1.76·ry·√(E/Fy)"], "correcta": 1, "explicacion": "La sección F5 simplifica Lr a π·rt·√(E/FL), con FL = 0.7Fy."},
+    {"pregunta": "Si Lb ≤ Lp en una viga F5, el LTB:", "opciones": ["Gobierna siempre", "No aplica, porque Fcr = Fy equivale a fluencia del ala comprimida", "Se calcula con Fcr elástico", "Requiere Cb = 0"], "correcta": 1, "explicacion": "En la zona 1 el esfuerzo crítico es Fy, lo que corresponde al estado límite de fluencia."},
+    {"pregunta": "¿Cuándo aplica el estado límite de fluencia del ala en tracción?", "opciones": ["Siempre", "Solo cuando Sxt < Sxc", "Solo cuando Sxt > Sxc", "Solo en secciones con alas iguales"], "correcta": 1, "explicacion": "Si Sxt ≥ Sxc, por ejemplo con alas iguales o con el ala traccionada mayor, el estado límite no aplica."},
+    {"pregunta": "¿Qué efecto tiene Cb > 1 en la curva Mn–Lb?", "opciones": ["Reduce Mp", "Multiplica las zonas inelástica y elástica, con tope en Mp", "Desplaza Lp a cero", "Elimina la zona elástica"], "correcta": 1, "explicacion": "Las ordenadas de las zonas 2 y 3 se multiplican por Cb, pero Mn no puede superar Mp. La meseta se prolonga hasta cortar la curva amplificada."},
+    {"pregunta": "¿Qué representa Zx?", "opciones": ["El módulo de sección elástico", "El radio de giro efectivo", "El módulo de sección plástico", "La constante de alabeo"], "correcta": 2, "explicacion": "Zx es el módulo plástico (Mp = Fy·Zx). Sx es el elástico."},
+    {"pregunta": "En una sección I con alas distintas, el centroide se desplaza:", "opciones": ["Hacia el ala menor", "Hacia el ala mayor", "Queda siempre a d/2", "Hacia el alma"], "correcta": 1, "explicacion": "El área mayor atrae al centroide y al eje neutro plástico."},
+    {"pregunta": "¿Qué condición exige AISC para considerar la acción de campo de tensión en paneles interiores?", "opciones": ["a/h ≤ 3", "a/h ≥ 3", "h/tw ≤ 2.24√(E/Fy)", "kv = 5.34"], "correcta": 0, "explicacion": "La sección G2.2 permite el campo de tensión en paneles interiores con a/h ≤ 3."},
+    {"pregunta": "En una sección cajón 'echada' sometida a flexión, el ala comprimida es:", "opciones": ["La cara más corta", "La cara más larga", "Cualquiera de las almas", "No hay ala comprimida"], "correcta": 1, "explicacion": "Echada, la cara ancha queda horizontal y es la que se comprime. Por eso su b/t controla."},
+    {"pregunta": "En F4 y F5 se usa como radio de giro para el LTB:", "opciones": ["rts", "ry", "rt", "rx"], "correcta": 2, "explicacion": "rt = bfc/√(12(1 + aw/6)). rts es propio de F2 y F3."},
+    {"pregunta": "En el ejemplo F4 con Lb = 550 in y Lr ≈ 537 in, ¿en qué zona del LTB se trabaja?", "opciones": ["Zona 1 (plástica)", "Zona 2 (inelástica)", "Zona 3 (elástica)", "No aplica el LTB"], "correcta": 2, "explicacion": "Lb > Lr implica pandeo lateral-torsional elástico."}
+  ],
+  "ejercicios_propuestos": [
+    "Calcule Rpg, Lp, Lr y φMn de una viga soldada A36 con alma de 60 × 5/16 in y alas de 14 × 3/4 in, con Lb = 300 in y Cb = 1.",
+    "Para una sección monosimétrica A36 con ala superior de 12 × 1/2 in, ala inferior de 8 × 1/2 in y alma de 24 × 1/4 in, ubique el centroide y el ENP y calcule hc, hp, Sxc, Sxt y Iyc/Iy.",
+    "Rehaga el ejemplo F5 de clase (alma de 45 × 1/4 in, alas de 8 × 1/4 in) con Lb = 300 in y Cb = 1.14. ¿Qué estado límite gobierna?",
+    "Un HSS 12×6×1/4 (b/t de la cara de 12 in igual a 48, Fy = 46 ksi) se flecta 'echado'. Clasifique el ala comprimida y estime Mn según F7.",
+    "Determine la separación máxima de atiesadores que permite usar campo de tensión en un alma de 80 in × 3/8 in y calcule kv y Cv2 con a = 2h (Fy = 50 ksi)."
+  ],
+  "avisos": [
+    "Próxima práctica calificada con materia hasta F5 (en el audio se mencionan el jueves y el miércoles).",
+    "Atiesadores en la próxima clase.",
+    "Un alumno (Renzo Campos) reportó que la grabación del miércoles 12 de mayo se ve solo 45 segundos aunque marca 1 h 35 min. El profesor lo reportará al centro de cómputo.",
+    "Ese día hubo 14 ausentes de 37. El profesor hizo preguntas orales sin respuesta y pidió a los alumnos leer la norma y complementar las clases con lectura.",
+    "Hojas Excel: cada problema requiere su propia hoja, y la de clase está sujeta a revisión."
+  ],
+  "notas_transcripcion": [
+    "Los números de sección se pierden en el audio ('el F'). Según el contexto: F2/F3 con alma compacta, F4 con alma no compacta o monosimétrica, F5 con alma esbelta, F7 cajón/HSS, F8 tubos.",
+    "'55º' se interpretó como Lb (longitud no arriostrada) y 'IEC' como Iyc o Sxc según el contexto. 'RPG' = Rpg. 'SELKIAO' es ininteligible y se interpretó como la distancia yc.",
+    "El profesor llama 'híbrida' a la sección con alas distintas. En AISC, 'híbrida' se refiere a aceros distintos; el término correcto aquí es 'monosimétrica'.",
+    "En el ejemplo F4, λfc se oye como '21' (15/0.75 = 20). Los momentos se oyen como '48.51', '30 con 37', '35.53', '41.66' y se interpretaron como 4851, 3037, 3553 y 4166 kip·in, coherentes con Myc = 4521 y Sxc ≈ 125.6 in³.",
+    "En el ejemplo F5, los momentos de la hoja (58.88, 45.03, 47.76, 56.35, 74.29 para Mp) no son coherentes en unidades con Myc ≈ 6028 y Mp ≈ 7004 mencionados antes. Se reportan como valores de la hoja sin unidad confirmada.",
+    "El profesor dice que en el caso F5 calculó rt 'con la fórmula antigua' y que la diferencia con la moderna es de unas décimas.",
+    "La fecha no se dice explícitamente. Se infirió el lunes 17 de mayo de 2021 porque se menciona la clase del 'miércoles 12 de la semana pasada' (la clase 14, perdida en la grabación).",
+    "Al cerrar, el profesor comenta la segunda vuelta electoral de junio de 2021; es un tema no técnico y se omite."
+  ]
+}

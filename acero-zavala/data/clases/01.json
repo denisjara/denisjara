@@ -1,0 +1,349 @@
+{
+  "clase": 1,
+  "titulo": "Introducción al curso: el acero estructural, su fabricación, ensayo de tracción y aplicaciones",
+  "fecha": null,
+  "duracion_min": 91,
+  "resumen": "Primera sesión del curso Diseño en Acero (sección G, UNI). El profesor Carlos Zavala presenta las reglas del curso (clase cerrada, cámara encendida en prácticas), el sistema de evaluación F (prácticas, trabajos escalonados, examen parcial peso 1 y final peso 2) y a los jefes de práctica. Comparte su trayectoria profesional (SISMID/CISMID, estudios en Skopje y Japón, proyectos de salud, vivienda y plantas industriales) y consejos para la vida profesional: valorar a todo el equipo de obra, aprender idiomas, ahorrar, evitar créditos caros, estudiar en épocas de baja inversión y desconfiar de los resultados de los programas. En la parte técnica distingue el acero estructural del acero de refuerzo, describe el acero A36 (Fy = 36 ksi, Fu = 58 ksi, E = 29 000 ksi), el proceso de laminado en caliente en la siderúrgica y el ensayo de tracción (zona elástica, fluencia con efecto Lüders, endurecimiento por deformación, estricción y rotura, ductilidad). Presenta los productos de acero (perfiles laminados, soldados y plegados en frío, placa colaborante), la nomenclatura de perfiles W y VS, las propiedades, ventajas y desventajas del acero, numerosos ejemplos de obras y las normas aplicables (E.020, E.030, E.090 y AISC 360).",
+  "objetivos": [
+    "Al terminar, el estudiante podrá distinguir el acero estructural del acero de refuerzo corrugado y explicar por qué este último no debe usarse para estructuras metálicas.",
+    "Al terminar, el estudiante podrá describir las propiedades mecánicas nominales del acero A36 (Fy, Fu, E) y su origen en la siderúrgica.",
+    "Al terminar, el estudiante podrá interpretar la curva esfuerzo-deformación de un ensayo de tracción: rango elástico, fluencia superior e inferior, efecto Lüders, endurecimiento por deformación, estricción y rotura.",
+    "Al terminar, el estudiante podrá definir la ductilidad como relación de deformaciones y calcular deformaciones de fluencia y elongación porcentual.",
+    "Al terminar, el estudiante podrá identificar las partes de un perfil I (alas, alma, d, bf, tf, tw, h) e interpretar designaciones como W8x13 o VS 18x44.",
+    "Al terminar, el estudiante podrá enumerar ventajas, desventajas y aplicaciones típicas de las estructuras de acero, así como las normas que gobiernan su diseño en el Perú."
+  ],
+  "temas": [
+    {
+      "titulo": "Organización del curso y sistema de evaluación",
+      "contenido": "El curso Diseño en Acero de la sección G está a cargo del Ing. Carlos Zavala Toledo, con Carlos Vega como jefe de práctica y Jairo Cueva reemplazando temporalmente al Ing. Moscoso. La clase es cerrada: solo participan alumnos matriculados en la sección, por razones de seguridad, y se pasa lista en cada sesión. Para preguntar, el alumno levanta la mano virtual y enciende su cámara; en las prácticas la cámara encendida es obligatoria por motivos de evaluación y control, por lo que todos deben conseguir una antes de la primera práctica (la semana siguiente). La evaluación sigue el sistema F de la UNI: siete prácticas calificadas más una octava nota que el profesor asigna por intervención y asistencia; esta octava nota no se anula y sirve para levantar el promedio de prácticas, del cual se consideran seis notas. Además hay tres trabajos escalonados que se promedian y no se anulan, un examen parcial de peso 1 y un examen final de peso 2. El profesor insiste en que el material que sube al aula virtual (normas, lecturas) debe leerse en casa porque no todo puede cubrirse en clase. También advierte que su estilo es coloquial y 'de barrio', y anima a los estudiantes a ser firmes ('bravos') cuando una situación de obra lo requiera, sabiendo adaptar el lenguaje al público (obreros, abogados, clientes).",
+      "formulas": [],
+      "referencias_norma": []
+    },
+    {
+      "titulo": "Trayectoria del profesor y consejos para la vida profesional del ingeniero civil",
+      "contenido": "El profesor relata que ingresó a la UNI en 1978, en un país convulsionado (gobierno militar, terrorismo, desabastecimiento), y que allí aprendió a valorar a las personas por su capacidad y no por su origen. Con una beca estudió ingeniería antisísmica en el Instituto de Sismología de Skopje (Macedonia, antigua Yugoslavia); luego hizo la maestría en la UNI mientras trabajaba en el Ministerio de Salud y en una constructora (su primera obra fue el mercado de frutas de La Parada). Se incorporó al CISMID (centro de investigación sísmica y mitigación de desastres de la FIC, nacido de la cooperación Perú-Japón, impulsado por los ingenieros Morales y Kuroiwa) hacia 1986-1987, y después estudió cinco años en Japón con un año de investigación en una corporación japonesa. A su retorno trabajó en proyectos de salud, vivienda, control de calidad de estructuras de acero y diseño de plantas industriales y galpones, además de ensayos de laboratorio. Sus consejos: (1) la obra es una cadena humana; hay que valorar al maestro de obra, obreros y proveedores; (2) aprender idiomas (inglés, japonés, mandarín, etc.); (3) la carga de trabajo en el Perú es cíclica, casi sinusoidal, con caídas al inicio y final de cada gobierno porque la inversión se detiene; en esas épocas conviene estudiar; (4) ahorrar en las épocas de bonanza; (5) cuidarse de créditos 'a sola firma' con tasas de 34 % a 70 % anual, y gastar en tarjeta como máximo un tercio del ingreso; (6) pensar todo en términos de material, mano de obra y equipo, como en costos y presupuestos, incluso con hojas de cálculo libres; (7) desconfiar de los programas de cómputo: si se ingresa basura, sale basura; y (8) seguir leyendo de todo durante toda la vida. Cita a su maestro Luis Zapata Baglietto: la ciencia en el Perú no paga, por lo que hay que combinarla con trabajo profesional.",
+      "formulas": [],
+      "referencias_norma": []
+    },
+    {
+      "titulo": "El acero estructural: tipos, composición y propiedades del A36",
+      "contenido": "El acero estructural es el que sale de la siderúrgica en forma de perfiles, planchas, ángulos, tubos y barras para formar estructuras como puentes (tableros reticulados, tirantes y cables), pórticos de edificios con vigas, columnas y viguetas, o estructuras mixtas singulares como el estadio 'Nido de Pájaro' de Pekín. No debe confundirse con el acero de refuerzo, que trabaja junto con el concreto. El acero estructural de uso en edificios es un acero al carbono de bajo contenido de carbono; la 'receta' varía con la cantidad de carbono y de elementos de aleación como molibdeno, cobre, níquel, fósforo o circonio, con lo que se obtienen distintos grados (aceros de alta resistencia y baja aleación, aceros para perfiles plegados en frío que vienen en bobinas, aceros de aleación para piezas de máquinas, etc.). En el curso se usará el acero ASTM A36, cuyas propiedades nominales son: esfuerzo de fluencia Fy = 36 ksi (aprox. 2530 kg/cm²), resistencia mínima a la rotura Fu = 58 ksi y módulo de elasticidad E = 29 000 ksi (aprox. 2.04×10^6 kg/cm²). El profesor muestra un video de laminado en caliente: el acero se recalienta en un horno con varias zonas de control de temperatura y luego se comprime entre rodillos (mill stands) que ejercen fuerzas de decenas de millones de newtons hasta lograr el espesor y forma finales. Existen trenes de laminación de dos rodillos (para perfiles largos), de tres rodillos, de cuatro rodillos con rodillos de respaldo (para planchas, mayor precisión) y universales con rodillos horizontales y verticales para vigas de ala ancha. El proceso está controlado por computadora, con tolerancias del orden de ±50 micras, y finalmente el producto se enfría según su uso.",
+      "formulas": [
+        {
+          "nombre": "Conversión de Fy del A36",
+          "expresion": "Fy = 36 ksi ≈ 36 × 70.3 ≈ 2530 kg/cm²",
+          "variables": "Fy: esfuerzo de fluencia; 1 ksi ≈ 70.3 kg/cm²"
+        },
+        {
+          "nombre": "Deformación unitaria de fluencia",
+          "expresion": "εy = Fy / E = 36 / 29000 ≈ 0.00124",
+          "variables": "εy: deformación de fluencia (adimensional); Fy y E en ksi"
+        }
+      ],
+      "referencias_norma": [
+        "ASTM A36 (Fy = 36 ksi, Fu = 58-80 ksi)",
+        "AISC 360, Sección A3.1 (materiales de acero estructural)"
+      ]
+    },
+    {
+      "titulo": "Ensayo de tracción y curva esfuerzo-deformación",
+      "contenido": "El control de calidad del acero se hace mediante el ensayo de tracción. En el video se ensaya una probeta cilíndrica de acero al carbono de 10 mm de diámetro y 100 mm de longitud calibrada, con marcas a intervalos regulares. La probeta se sujeta por sus extremos roscados en las mordazas y se coloca un extensómetro cuyos dos brazos miden la elongación real de la longitud calibrada, lo cual es distinto del desplazamiento del cabezal de la máquina (el profesor recalca esta diferencia). La probeta se alarga a velocidad normalizada y se registra la fuerza. En el diagrama fuerza-elongación: (1) al inicio la fuerza crece rápido y en forma proporcional: es el rango elástico, donde al descargar se regresa por la misma recta; (2) se alcanza el punto de fluencia superior (ReH, máxima fuerza elástica), cae al punto de fluencia inferior (ReL) y se produce una meseta con pequeñas oscilaciones llamada efecto Lüders, donde la pieza se elonga a fuerza casi constante; si se descarga después de la fluencia queda una deformación permanente; (3) luego viene el endurecimiento por deformación, la resistencia sube hasta la fuerza máxima Fm, con deformación uniforme a lo largo de la probeta (se alarga y adelgaza manteniendo su forma cilíndrica); (4) tras el máximo se forma una estricción o estrangulamiento localizado del área y la probeta se rompe. Los esfuerzos se calculan dividiendo las fuerzas entre el área inicial S0: fluencia superior, fluencia inferior y resistencia a la tracción Rm. Juntando los fragmentos con ayuda de las marcas se determina el alargamiento porcentual después de la rotura (alrededor de 30 % en el ejemplo), que depende de la relación longitud/diámetro de la probeta, y la reducción de área en la zona de fractura. En la notación del curso, el punto de fluencia es Fy con deformación εy, el máximo es Fu con εu, y la rotura ocurre en εmax; la ductilidad se define como la relación εmax/εy. La gran zona inelástica del acero es deseable porque da tiempo a evacuar antes de un colapso.",
+      "formulas": [
+        {
+          "nombre": "Esfuerzo de ingeniería",
+          "expresion": "σ = F / S0",
+          "variables": "F: fuerza aplicada (kN o kgf); S0: área inicial de la sección (mm² o cm²)"
+        },
+        {
+          "nombre": "Deformación unitaria",
+          "expresion": "ε = ΔL / L0",
+          "variables": "ΔL: alargamiento medido por el extensómetro; L0: longitud calibrada inicial (100 mm en el ejemplo)"
+        },
+        {
+          "nombre": "Ley de Hooke (rango elástico)",
+          "expresion": "σ = E · ε",
+          "variables": "E: módulo de elasticidad (29 000 ksi para el acero)"
+        },
+        {
+          "nombre": "Ductilidad",
+          "expresion": "μ = εmax / εy",
+          "variables": "εmax: deformación en la rotura; εy: deformación de fluencia"
+        },
+        {
+          "nombre": "Alargamiento porcentual después de la rotura",
+          "expresion": "A% = (Lu − L0) / L0 × 100",
+          "variables": "Lu: longitud calibrada final medida juntando los fragmentos; L0: longitud inicial"
+        },
+        {
+          "nombre": "Reducción de área",
+          "expresion": "Z% = (S0 − Su) / S0 × 100",
+          "variables": "Su: área mínima en la zona de fractura; S0: área inicial"
+        }
+      ],
+      "referencias_norma": [
+        "ASTM A370 / ISO 6892-1 (ensayo de tracción de materiales metálicos)"
+      ]
+    },
+    {
+      "titulo": "Productos de acero y nomenclatura de perfiles",
+      "contenido": "La siderúrgica produce barras, ángulos, perfiles redondos y hexagonales, planchas, perfiles de ala ancha (W), canales en U, tubos y otros productos. La barra corrugada no es acero estructural: está hecha para trabajar con concreto, es menos dúctil y de difícil soldabilidad; armar estructuras metálicas con barras corrugadas es, en palabras del profesor, una 'brutalidad' propia de construcciones informales, aunque pueda verse en rejas de ventanas o en losas. Los perfiles pueden ser laminados en caliente (formados directamente en la siderúrgica), soldados (armados a partir de planchas cortadas y unidas con soldadura) o plegados en frío (formados a partir de bobinas mediante dobladoras). En el Perú son muy frecuentes los perfiles soldados: de una plancha se cortan franjas A para las dos alas y una franja B para el alma. Nomenclatura de un perfil I: alas (superior e inferior), alma (zona central), peralte total d (externo), peralte del alma h (interno), ancho del ala bf, espesor del ala tf y espesor del alma tw. En la designación de un perfil laminado W8x13, el primer número es el peralte nominal aproximado en pulgadas (no exactamente d) y el segundo el peso en libras por pie. Análogamente, una viga soldada VS 18x44 indica peralte y peso. Más adelante, en compresión, se verá la importancia de las relaciones ancho/espesor (bf/2tf, h/tw). Un producto plegado en frío muy usado es la placa colaborante (steel deck), que actúa como encofrado perdido de las losas y explica la rapidez constructiva de los edificios metálicos.",
+      "formulas": [
+        {
+          "nombre": "Relaciones ancho-espesor (adelanto)",
+          "expresion": "λf = bf / (2·tf) ; λw = h / tw",
+          "variables": "bf: ancho del ala; tf: espesor del ala; h: peralte libre del alma; tw: espesor del alma"
+        }
+      ],
+      "referencias_norma": [
+        "AISC 360-16, Tabla B4.1 (relaciones ancho-espesor, se verá en compresión)"
+      ]
+    },
+    {
+      "titulo": "Propiedades mecánicas, ventajas y desventajas del acero",
+      "contenido": "Propiedades: alta resistencia y gran confiabilidad, porque el material es fabricado y controlado en la siderúrgica; ductilidad, es decir, gran capacidad de deformación inelástica antes de romperse; tenacidad, o capacidad de absorber energía antes de la fractura, que se evalúa con el ensayo de impacto Charpy; resistencia a la fatiga, entendida como la pérdida de resistencia ante cargas repetitivas un gran número de veces (por ejemplo, golpes o saltos frecuentes sobre una viga); durabilidad, siempre que haya buen mantenimiento; soldabilidad; posibilidad de lograr alta resistencia y facilidad y rapidez de montaje. Ventajas: es un material ideal para zonas sísmicas; los edificios de acero pesan mucho menos que los de concreto, por lo que las fuerzas sísmicas son bastante menores para una configuración similar; gran flexibilidad arquitectónica para formas inusuales; economía en acabados con fachadas ligeras y muros secos; rapidez de construcción. Desventajas: el costo elevado de los perfiles; insumos como pernos y pintura que encarecen la obra; la necesidad de mantenimiento con pintura anticorrosiva si no está protegido; la protección contra fuego cuando hay personas que pernoctan (hoteles, viviendas), que incrementa en alrededor de 5 % el costo de fabricación; y problemas de vibración y transmisión de ruido entre pisos, que se mitigan colocando lana de alta densidad entre el falso cielo raso y la losa de placa colaborante, como se hace en hoteles.",
+      "formulas": [],
+      "referencias_norma": [
+        "ASTM E23 (ensayo Charpy)",
+        "AISC 360-16, Apéndice 3 (fatiga) y Apéndice 4 (diseño ante incendio)"
+      ]
+    },
+    {
+      "titulo": "Aplicaciones de las estructuras de acero",
+      "contenido": "Con acero se pueden construir: torres como la Torre Eiffel, la Torre de Tokio o el Tokyo Skytree; campamentos mineros o petroleros; tijerales para coliseos (techo del Coliseo de La Punta, Coliseo Amauta cuya cobertura fue diseñada por Luis Zapata Baglietto con las primeras versiones de SAP, refuerzos de los coliseos Gran Chimú de Trujillo y otros para los Juegos Panamericanos, que exigieron mayor capacidad por el peso de las luminarias); estructuras con tensores y cables; galpones que sirven de iglesias, depósitos, locales comunales u hospitales COVID; aeropuertos con grandes arcos sobre los que se apoyan viguetas y coberturas plásticas; restaurantes de comida rápida con columnas circulares, pórticos, viguetas y placa colaborante; hangares de gran luz con muchos elementos pequeños; grifos, cuyas góndolas son estructuras metálicas sobre columnas que trabajan como péndulo invertido; torres de alta tensión hechas con armaduras de elementos pequeños; puentes en arco y estructuras monumentales como el estadio olímpico de Pekín o el Allianz Arena de Múnich (258 m × 227 m × 50 m de altura), cuyas tribunas son pórticos de contrapeso y su cubierta está hecha de muchos elementos pequeños, o las cúpulas geodésicas de Buckminster Fuller (Epcot Center). El profesor comenta que la industria minera paga bien estos diseños, pero advierte sobre la informalidad de algunos clientes. Un punto clave para el Perú: se fabrica solo una docena de perfiles y ángulos pequeños (ángulos de hasta 4\"x4\"); tamaños mayores hay que importarlos, por eso se usan mucho estructuras con elementos pequeños, como el clásico galpón de ángulos.",
+      "formulas": [],
+      "referencias_norma": []
+    },
+    {
+      "titulo": "Cargas y normativa aplicable",
+      "contenido": "Las cargas que actúan sobre un edificio dependen de su uso, de la zona geográfica y del tipo de suelo, y se obtienen de las normas peruanas del Reglamento Nacional de Edificaciones: la Norma E.020 de Cargas (que incluye los requisitos de viento) y la Norma E.030 de Diseño Sismorresistente. Para el diseño en acero la norma peruana vigente, la E.090 Estructuras Metálicas, está basada en la especificación norteamericana LRFD de fines de los años noventa (el profesor la califica de obsoleta). Hace unos seis años se envió un borrador de actualización basado en ANSI/AISC 360, que aún no se aprueba. Por ello el curso seguirá la norma americana AISC 360 (método LRFD), con recomendaciones adicionales para zonas sísmicas. En la siguiente clase se estudiarán las cargas en detalle. El profesor recalca que las normas de cargas fijan valores mínimos, que el diseñador puede aumentar según su criterio, y que el diseño de los elementos de acero se hará verificando que la resistencia de diseño, calculada con la especificación AISC, supere las demandas obtenidas del análisis. Como anticipo, menciona que el estudio de cargas (muerta, viva, viento y sismo) será el primer tema técnico, pues sin conocer la demanda no tiene sentido dimensionar perfiles.",
+      "formulas": [],
+      "referencias_norma": [
+        "Norma E.020 Cargas (RNE)",
+        "Norma E.030 Diseño Sismorresistente (RNE)",
+        "Norma E.090 Estructuras Metálicas (RNE)",
+        "ANSI/AISC 360 Specification for Structural Steel Buildings"
+      ]
+    }
+  ],
+  "ejemplos": [
+    {
+      "titulo": "Ensayo de tracción de una probeta de acero al carbono (video de clase)",
+      "enunciado": "Probeta cilíndrica de diámetro inicial 10 mm y longitud calibrada 100 mm, ensayada a tracción con extensómetro. Tras la rotura, el alargamiento después de la fractura resulta aproximadamente 30 %. Determinar el área inicial, la longitud final aproximada y la interpretación de las fuerzas características.",
+      "pasos": [
+        "Área inicial: S0 = π·d²/4 = π·(10 mm)²/4 = 78.5 mm².",
+        "Las fuerzas registradas FeH (fluencia superior), FeL (fluencia inferior) y Fm (máxima) se dividen entre S0 para obtener ReH, ReL y Rm.",
+        "Alargamiento después de la rotura A = 30 %: Lu = L0·(1 + 0.30) = 100 × 1.30 = 130 mm.",
+        "El alargamiento depende de la relación L0/d (aquí 100/10 = 10), por lo que solo es comparable entre probetas de igual proporción."
+      ],
+      "resultado": "S0 ≈ 78.5 mm²; Lu ≈ 130 mm; ReH, ReL y Rm se obtienen como F/S0."
+    }
+  ],
+  "conceptos_clave": [
+    {
+      "termino": "Acero estructural",
+      "definicion": "Acero al carbono de bajo contenido de carbono producido en siderúrgica en forma de perfiles, planchas y tubos para construir estructuras; distinto del acero de refuerzo para concreto."
+    },
+    {
+      "termino": "ASTM A36",
+      "definicion": "Acero estructural al carbono usado en el curso: Fy = 36 ksi, Fu = 58 ksi, E = 29 000 ksi."
+    },
+    {
+      "termino": "Esfuerzo de fluencia (Fy)",
+      "definicion": "Esfuerzo en el que el material deja el comportamiento lineal elástico y comienza a deformarse plásticamente."
+    },
+    {
+      "termino": "Resistencia a la rotura (Fu)",
+      "definicion": "Esfuerzo máximo de ingeniería alcanzado en el ensayo de tracción, al final del endurecimiento por deformación."
+    },
+    {
+      "termino": "Efecto Lüders",
+      "definicion": "Meseta de fluencia con pequeñas oscilaciones de fuerza en la que la probeta se elonga a fuerza casi constante, típica de aceros al carbono con punto de fluencia definido."
+    },
+    {
+      "termino": "Endurecimiento por deformación",
+      "definicion": "Tramo posterior a la meseta de fluencia en que la resistencia vuelve a subir hasta el máximo Fu."
+    },
+    {
+      "termino": "Estricción",
+      "definicion": "Reducción localizada del área de la probeta después de alcanzar la carga máxima, que precede a la rotura."
+    },
+    {
+      "termino": "Ductilidad",
+      "definicion": "Capacidad de deformarse inelásticamente antes de romper; en el curso se mide como εmax/εy."
+    },
+    {
+      "termino": "Tenacidad",
+      "definicion": "Capacidad de absorber energía antes de la fractura; se evalúa con el ensayo de impacto Charpy."
+    },
+    {
+      "termino": "Fatiga",
+      "definicion": "Pérdida de resistencia del material ante la aplicación repetida de cargas un gran número de ciclos."
+    },
+    {
+      "termino": "Perfil soldado",
+      "definicion": "Perfil armado a partir de planchas cortadas (alas y alma) unidas con soldadura, muy usado en el Perú."
+    },
+    {
+      "termino": "Perfil plegado en frío",
+      "definicion": "Perfil formado doblando en frío lámina de acero proveniente de bobinas."
+    },
+    {
+      "termino": "Placa colaborante",
+      "definicion": "Lámina de acero plegada que sirve de encofrado perdido y trabaja con la losa de concreto en edificios metálicos."
+    },
+    {
+      "termino": "W8x13",
+      "definicion": "Perfil laminado de ala ancha de peralte nominal aproximado de 8 pulgadas y peso de 13 lb/pie."
+    }
+  ],
+  "preguntas": [
+    {
+      "pregunta": "¿Cuáles son las propiedades nominales del acero A36 indicadas en clase?",
+      "opciones": [
+        "Fy = 50 ksi, Fu = 65 ksi, E = 29 000 ksi",
+        "Fy = 36 ksi, Fu = 58 ksi, E = 29 000 ksi",
+        "Fy = 36 ksi, Fu = 50 ksi, E = 20 000 ksi",
+        "Fy = 42 ksi, Fu = 60 ksi, E = 29 000 ksi"
+      ],
+      "correcta": 1,
+      "explicacion": "El A36 tiene fluencia de 36 ksi, rotura mínima de 58 ksi y módulo elástico de 29 000 ksi."
+    },
+    {
+      "pregunta": "En el ensayo de tracción, la meseta de fluencia con pequeñas oscilaciones de fuerza se denomina:",
+      "opciones": [
+        "Estricción",
+        "Endurecimiento por deformación",
+        "Efecto Lüders",
+        "Efecto Bauschinger"
+      ],
+      "correcta": 2,
+      "explicacion": "El efecto Lüders es la elongación a fuerza casi constante con fluctuaciones, tras el punto de fluencia superior."
+    },
+    {
+      "pregunta": "¿Por qué en el ensayo de tracción se usa un extensómetro en lugar del desplazamiento del cabezal?",
+      "opciones": [
+        "Porque el cabezal no se mueve durante el ensayo",
+        "Porque el extensómetro mide la elongación real de la longitud calibrada, que difiere del movimiento del cabezal",
+        "Porque el extensómetro mide la fuerza",
+        "Porque así se evita el efecto Lüders"
+      ],
+      "correcta": 1,
+      "explicacion": "El movimiento del cabezal incluye deformaciones de mordazas y extremos; el extensómetro mide solo la longitud calibrada."
+    },
+    {
+      "pregunta": "Según la definición del curso, la ductilidad es:",
+      "opciones": [
+        "Fu / Fy",
+        "εmax / εy",
+        "E / Fy",
+        "εy / εmax"
+      ],
+      "correcta": 1,
+      "explicacion": "Se definió como la relación entre la deformación máxima (rotura) y la deformación de fluencia."
+    },
+    {
+      "pregunta": "¿Cuál de las siguientes afirmaciones sobre la barra corrugada es correcta según el profesor?",
+      "opciones": [
+        "Es el acero estructural más económico para galpones",
+        "Es acero estructural si se precalienta antes de soldar",
+        "No es acero estructural: está diseñada para trabajar con concreto, es poco dúctil y de difícil soldabilidad",
+        "Es equivalente al A36 si tiene el mismo diámetro"
+      ],
+      "correcta": 2,
+      "explicacion": "La barra corrugada es acero de refuerzo; usarla para estructuras metálicas es una mala práctica."
+    },
+    {
+      "pregunta": "En la designación W8x13, el número 13 representa:",
+      "opciones": [
+        "El peralte exacto en pulgadas",
+        "El ancho del ala en centímetros",
+        "El peso en libras por pie",
+        "El espesor del alma en dieciseisavos de pulgada"
+      ],
+      "correcta": 2,
+      "explicacion": "El primer número es el peralte nominal aproximado y el segundo el peso por unidad de longitud (lb/pie)."
+    },
+    {
+      "pregunta": "¿Qué ensayo se utiliza para evaluar la tenacidad del acero?",
+      "opciones": [
+        "Ensayo Charpy",
+        "Ensayo de dureza Brinell",
+        "Ensayo de compresión diametral",
+        "Ensayo de doblado"
+      ],
+      "correcta": 0,
+      "explicacion": "La tenacidad (energía absorbida antes de la fractura) se mide con el ensayo de impacto Charpy."
+    },
+    {
+      "pregunta": "Una razón por la que las fuerzas sísmicas en edificios de acero son menores que en edificios de concreto de configuración similar es:",
+      "opciones": [
+        "El acero tiene menor módulo de elasticidad",
+        "El acero no se fatiga",
+        "El edificio de acero pesa mucho menos y la fuerza sísmica es proporcional al peso",
+        "El acero no requiere conexiones"
+      ],
+      "correcta": 2,
+      "explicacion": "La cortante basal es un porcentaje del peso; al ser más liviano, el edificio de acero recibe menos fuerza sísmica."
+    },
+    {
+      "pregunta": "¿Cuál es aproximadamente el incremento de costo de fabricación por proteger contra fuego una estructura metálica donde pernoctan personas, según el profesor?",
+      "opciones": [
+        "1 %",
+        "5 %",
+        "20 %",
+        "50 %"
+      ],
+      "correcta": 1,
+      "explicacion": "El profesor indicó que la protección contra fuego incrementa alrededor de 5 % el costo de fabricación."
+    },
+    {
+      "pregunta": "¿Qué norma de diseño seguirá principalmente el curso y por qué?",
+      "opciones": [
+        "E.060, porque es la norma de concreto vigente",
+        "E.090 vigente, por ser la más actualizada",
+        "AISC 360 (LRFD), porque la E.090 vigente se basa en la especificación de fines de los 90 y la actualización aún no se aprueba",
+        "Eurocódigo 3, por ser obligatorio en el Perú"
+      ],
+      "correcta": 2,
+      "explicacion": "El profesor considera obsoleta la E.090 y el borrador basado en AISC 360 aún no se aprueba."
+    },
+    {
+      "pregunta": "Durante el tramo de endurecimiento por deformación antes de la carga máxima, la probeta:",
+      "opciones": [
+        "Se alarga y adelgaza uniformemente manteniendo su forma cilíndrica",
+        "Presenta estricción localizada",
+        "Recupera su longitud original al descargar",
+        "Se acorta"
+      ],
+      "correcta": 0,
+      "explicacion": "Hasta la fuerza máxima la deformación es uniforme; la estricción aparece después del máximo."
+    }
+  ],
+  "ejercicios_propuestos": [
+    "Una probeta de acero A36 de 12.7 mm de diámetro y 50 mm de longitud calibrada fluye a 3.2 t y rompe a 5.3 t; su longitud final es 65 mm. Calcule Fy, Fu (en kg/cm² y ksi), el alargamiento porcentual y compare con los valores nominales del A36.",
+    "Calcule la deformación de fluencia εy del acero A36 (E = 29 000 ksi) y la ductilidad μ si la deformación de rotura es εmax = 0.25. Comente qué significa ese valor para la seguridad de los ocupantes.",
+    "Una viga soldada se arma con dos planchas de ala de 200 × 12.7 mm y una plancha de alma de 400 × 6.4 mm. Indique d, h, bf, tf, tw, calcule el área y el peso por metro (densidad 7850 kg/m³) y las relaciones bf/2tf y h/tw.",
+    "Elabore una tabla comparativa de ventajas y desventajas de un edificio de oficinas de 5 pisos en acero frente a uno de concreto armado, incluyendo peso, fuerzas sísmicas, protección contra fuego, corrosión, vibraciones y plazo de construcción."
+  ],
+  "avisos": [
+    "Clase cerrada: solo alumnos matriculados en la sección G; se pasa lista en cada clase.",
+    "Para preguntar: levantar la mano y encender la cámara.",
+    "Las prácticas se rinden con cámara encendida; conseguir una cámara antes de la primera práctica (la semana siguiente).",
+    "Sistema de evaluación F: 7 prácticas + práctica 8 por intervención y asistencia (no se anula); se consideran 6 notas de práctica; 3 trabajos escalonados promediados (no se anulan); examen parcial peso 1 y examen final peso 2.",
+    "Jefes de práctica: Carlos Vega y Jairo Cueva (reemplaza al Ing. Moscoso).",
+    "El material del aula virtual (normas E.020, E.030, lecturas) debe leerse en casa.",
+    "Se usará como referencia de diseño la especificación ANSI/AISC 360 (LRFD)."
+  ],
+  "notas_transcripcion": [
+    "Gran parte de la clase (pase de lista nominal y anécdotas personales) no tiene contenido técnico; se resumió brevemente.",
+    "La transcripción omite los números de designación ASTM ('el acero A', 'los A o A'); se interpretó que el acero del curso es ASTM A36 por los valores dados (Fy 36 ksi, Fu 58 ksi). Los demás grados mencionados genéricamente (alta resistencia, plegados, piezas de máquina) no se identificaron con certeza.",
+    "'Influencia KSI' se interpretó como 'fluencia 36 ksi'.",
+    "'SISMIT/CISMIT' corresponde al CISMID (Centro Peruano Japonés de Investigaciones Sísmicas y Mitigación de Desastres).",
+    "'Prueba de Sharpie' corresponde al ensayo Charpy.",
+    "'ANSI 360' corresponde a ANSI/AISC 360; 'norma americana del año 99' se interpretó como la especificación AISC LRFD de 1999 en la que se basa la E.090.",
+    "'Ingeniero Bugminster, alemán' se refiere a Richard Buckminster Fuller (estadounidense) y sus cúpulas geodésicas; 'Epco Center' es Epcot Center.",
+    "'Luis Zapata Baglieto / Balito' corresponde al Ing. Luis Zapata Baglietto.",
+    "'ángulos de X, más de 4 por 4 hay que importarlo' se interpretó como que en el Perú se fabrican ángulos hasta 4\"x4\".",
+    "No se menciona la fecha explícita; por la clase 02 ('el día lunes'), esta clase sería un lunes de abril de 2021."
+  ]
+}

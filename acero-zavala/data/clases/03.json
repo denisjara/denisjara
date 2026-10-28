@@ -1,0 +1,428 @@
+{
+  "clase": 3,
+  "titulo": "Galpones o naves industriales: configuración, cargas de viento, dimensionamiento de tijerales y coberturas, y prediseño de viguetas de celosía",
+  "fecha": null,
+  "duracion_min": 93,
+  "resumen": "La clase aplica los conceptos de cargas a una nave industrial (galpón). Se describe su configuración: columnas en ejes paralelos, tijerales apoyados sobre ellas, viguetas dobles y simples que unen las armaduras y arriostres de conjunto colocados en la brida comprimida entre viguetas dobles; se nombran los miembros del tijeral (bridas superior e inferior, montantes y diagonales). Se dan criterios prácticos: peralte del tijeral H = L/11 para Lima, separación entre pórticos de 5 a 7 m (óptima cerca de 6 m) y pendiente mínima de la cobertura según la región. Se resuelve el cálculo de viento para un galpón de 24 m de luz y columnas de 12 m en Piura (V = 120 km/h), con coeficientes de presión exterior e interior para cada superficie. Luego se muestra cómo definir las dimensiones útiles a partir del terreno según los requerimientos del cliente (jardines, circulación de cargadores frontales, rampa, estacionamiento de camiones, cerco), el número de armaduras, la longitud inclinada del techo, la combinación de planchas de fibrocemento con sus traslapes y el descuento por cumbrera. Finalmente se estiman cargas (D = 35, L = 30 kg/m²), la carga de servicio por pórtico y se predimensiona la brida inferior de una vigueta de celosía con la analogía de la viga simplemente apoyada, obteniéndose una barra lisa de 1/2\" de acero A36.",
+  "objetivos": [
+    "Al terminar, el estudiante podrá identificar los componentes de un galpón (columnas, tijerales, viguetas dobles y simples, arriostres de conjunto, cobertura) y los miembros de un tijeral.",
+    "Al terminar, el estudiante podrá predimensionar el peralte de un tijeral (H ≈ L/11 en Lima) y elegir la separación entre pórticos (5 a 7 m).",
+    "Al terminar, el estudiante podrá calcular las cargas de viento sobre las paredes y faldones de un galpón con la E.020.",
+    "Al terminar, el estudiante podrá definir las dimensiones útiles del galpón a partir del terreno y los requerimientos del cliente.",
+    "Al terminar, el estudiante podrá determinar la pendiente, la longitud inclinada del techo y la combinación de planchas de cobertura considerando traslapes y cumbrera.",
+    "Al terminar, el estudiante podrá estimar la carga por pórtico y predimensionar la brida en tracción de una vigueta de celosía con Tu = Mu/(0.95d) y Ag ≥ Tu/(0.9Fy)."
+  ],
+  "temas": [
+    {
+      "titulo": "Componentes y configuración de un galpón (nave industrial)",
+      "contenido": "El galpón o nave industrial es una estructura frecuente en minas, iglesias, cines, depósitos y hasta coliseos. Su tamaño se define a partir de la luz que debe cubrir. Se plantean columnas (por ejemplo, columnas de sección cajón) en los puntos A y B de un eje 1, y se repite la misma configuración en los ejes 2, 3, 4... hasta cubrir la longitud en la otra dirección. Sobre las columnas de cada eje se apoya un tijeral metálico. Como un tijeral aislado se volcaría con un simple empuje lateral, los tijerales se unen entre sí mediante viguetas. Se recomienda colocar viguetas dobles en el borde (eje de apoyo), en la cumbrera y en ejes intermedios cada dos o tres paños, y viguetas simples en los ejes restantes; si el número de paños es impar la distribución no resulta perfectamente regular. Los ejes de las viguetas se designan con letras (A, B, C... con la cumbrera en el eje central F) y la separación entre ellos sobre el faldón determina la longitud útil de la cobertura. Además se necesitan arriostres de conjunto, porque sin ellos un viento fuerte o un sismo tumba la estructura, que es muy liviana. Los arriostres de conjunto se colocan en forma de diagonales en el plano de la brida comprimida, entre las líneas de viguetas dobles. Ante la pregunta de un alumno (Lucano), el profesor precisa que bajo cargas de gravedad el tijeral se deforma como una viga: la brida superior queda en compresión y la inferior en tracción, por lo que normalmente se arriostra la superior; pero en otros casos, como un voladizo o una inversión de esfuerzos, la brida comprimida cambia y el arriostre debe ubicarse donde esté la compresión. Los miembros del tijeral son: brida inferior (cordón horizontal), brida superior (cordones inclinados que forman el triángulo), montantes (verticales) y diagonales.",
+      "formulas": [],
+      "referencias_norma": []
+    },
+    {
+      "titulo": "Geometría y predimensionamiento del tijeral",
+      "contenido": "En el ejemplo de clase la luz es L = 24 m y la altura de columna 12 m. El peralte total del tijeral en la cumbrera se predimensiona como H = L/11, criterio válido para Lima (clima seco con pendientes pequeñas); para otras ciudades se debe trabajar con el peralte y la pendiente requerida por la cobertura según la lluvia. El tijeral puede tener un peralte en el apoyo (h, por ejemplo con 'ventana' o montante extremo) además de la parte inclinada; un tijeral con peralte en los apoyos resulta más económico porque tiene mejor brazo de palanca que uno que termina en punta (peralte cero en el apoyo, que sale antieconómico). La altura de la cumbrera es la altura de columna más el peralte H. El ángulo de inclinación α del faldón se obtiene del triángulo formado por el peralte y la semiluz: tan α = H/(L/2). Para L = 24 m, H = 24/11 = 2.18 m y α = arctan(2.18/12) ≈ 10°. Para el depósito del Callao (L = 28.6 m) se usa H = 28.6/11 = 2.60 m; con una pendiente mínima de 10 % sobre la semiluz de 14.3 m, la parte inclinada sube unos 1.40 m, de modo que el peralte en el apoyo es h ≈ 2.60 − 1.40 = 1.20 m.",
+      "formulas": [
+        {
+          "nombre": "Peralte del tijeral (Lima)",
+          "expresion": "H ≈ L / 11",
+          "variables": "H: peralte total en la cumbrera (m); L: luz del tijeral (m)"
+        },
+        {
+          "nombre": "Ángulo del faldón",
+          "expresion": "α = arctan( H / (L/2) )",
+          "variables": "H: altura de la parte inclinada; L/2: semiluz"
+        },
+        {
+          "nombre": "Altura de cumbrera",
+          "expresion": "H̄ = Hcol + H",
+          "variables": "Hcol: altura de la columna; H: peralte en la cumbrera"
+        }
+      ],
+      "referencias_norma": []
+    },
+    {
+      "titulo": "Cálculo de cargas de viento en un galpón (Piura)",
+      "contenido": "Galpón de 24 m de luz, columnas de 12 m y α ≈ 10°, en Piura con velocidad básica V = 120 km/h (mayor que el mínimo de 75 km/h de la norma). La velocidad se corrige con la altura: para las paredes se usa la altura de columna (12 m > 10 m) y para los faldones la altura de la cumbrera (12 + 2.182 = 14.182 m). Los coeficientes se obtienen de la Tabla 4 de la E.020 (presión exterior) y de la Tabla 5 (presión interior, ±0.3 si hay aberturas por donde entra el viento). Superficie A (pared a barlovento): Cpe = +0.8. Superficie B (pared a sotavento): Cpe = −0.6. Superficie C (faldón a barlovento, < 15°): Cpe = +0.3 o −0.7. Superficie D (faldón a sotavento): Cpe = −0.6. Con Cpi = +0.3: A: 0.8 − 0.3 = 0.5; B: −0.6 + 0.3 = −0.3 (según se tomó en clase); C: 0.3 − 0.3 = 0 o −0.7 − 0.3 = −1.0; D: −0.6 + 0.3 = −0.3. Se adoptan los más desfavorables de la clase: A = 0.5, B = −0.3, C = −1.0, D = −0.3. Las presiones resultan ph = 0.005·C·Vh²: A = +39 kg/m² (presión), B = −23.4 kg/m², C = −83.96 kg/m² y D = −25.2 kg/m² (succiones). El profesor señala que se puede trabajar con velocidad variable o con la más desfavorable en todo el elemento, y que en un programa comercial estas posibilidades se ingresan como estados de carga distintos según los lados atacados por el viento. También reprende a quien no encontraba los coeficientes: las tablas 5.4 y 5.5 estaban en las diapositivas de la clase anterior y deben leerse.",
+      "formulas": [
+        {
+          "nombre": "Velocidad de diseño",
+          "expresion": "Vh = V·(h/10)^0.22",
+          "variables": "V: velocidad básica (km/h); h: altura (m)"
+        },
+        {
+          "nombre": "Presión de viento",
+          "expresion": "ph = 0.005·C·Vh²",
+          "variables": "ph en kg/m²; C = Cpe − Cpi; Vh en km/h"
+        }
+      ],
+      "referencias_norma": [
+        "Norma E.020, Artículo 12 (viento)",
+        "Norma E.020, Tabla 4 (coeficientes de forma) y Tabla 5 (presión interior)"
+      ]
+    },
+    {
+      "titulo": "Definición de las dimensiones útiles del galpón a partir del terreno y del cliente",
+      "contenido": "El área del terreno no es el área del tijeral. Primero se verifican las dimensiones del lote (largo y ancho) con la ficha registral de Registros Públicos, por razones legales: no se puede invadir el terreno vecino. Además, el lote no siempre es rectangular; si tiene forma irregular, habrá varios tipos de tijerales distintos y no se puede presupuestar replicando uno solo. Luego se descuentan las áreas que exige el cliente, quien es el que paga y define el programa. En el ejemplo, el cliente pide: jardines con árboles (ecoamigable) para el descanso de los trabajadores, 2 m de ancho en los costados y al fondo; circulación interior y exterior de cargadores frontales, unos 3 m según la marca; una rampa de descarga de al menos 6 m; estacionamiento de camiones de 7 m frente a la nave; y un cerco perimétrico de ladrillo en soga (≈ 15 cm) con columnas de al menos 30 × 30 cm, más la puerta (≈ 30 cm). Así, a cada costado se descuentan 2 + 3 + 0.30 = 5.30 m, al fondo 5.30 m y en el frontis 6 + 7 + 0.30 = 13.30 m. En el ejemplo de un depósito en la Av. Argentina (Callao), las dimensiones útiles resultaron 28.60 m de ancho (luz del tijeral) y 109 m de largo, por lo que el terreno debió ser de 28.60 + 2 × 5.30 = 39.20 m de ancho y 109 + 5.30 + 13.30 = 127.60 m de largo. Se recalca que al tamaño del tijeral se llega conversando con el cliente.",
+      "formulas": [
+        {
+          "nombre": "Ancho del terreno",
+          "expresion": "B_terreno = L_tijeral + 2·(jardín + circulación + cerco)",
+          "variables": "L_tijeral: luz útil; descuentos laterales (2 + 3 + 0.30 m en el ejemplo)"
+        },
+        {
+          "nombre": "Largo del terreno",
+          "expresion": "S_terreno = S_útil + descuento_fondo + descuento_frontis",
+          "variables": "descuento_fondo = 5.30 m; descuento_frontis = 13.30 m (rampa, camiones, puerta)"
+        }
+      ],
+      "referencias_norma": []
+    },
+    {
+      "titulo": "Separación y número de pórticos",
+      "contenido": "La separación entre pórticos o armaduras, s, debe estar entre 5 y 7 m; fuera de ese rango la estructura sale cara. El valor óptimo es cercano a 6 m, según un estudio del propio profesor publicado en la Revista del Ingeniero Civil del Colegio de Ingenieros (diciembre de 1990) para condiciones de Lima. Como casi nunca resulta exactamente 6 m, se asume (tantea) un número de pórticos n y se calcula s = longitud/(n − 1), iterando hasta quedar en el rango. En el ejemplo, con una longitud de 109 m y n = 20 armaduras, s = 109/19 = 5.737 m; con 19 o 18 armaduras se obtendrían otros valores. La separación elegida define también la luz de las viguetas y el ancho tributario de cada tijeral: separaciones mayores reducen el número de tijerales y columnas pero obligan a viguetas más peraltadas y pesadas, mientras que separaciones menores multiplican tijerales, columnas, cimentaciones y conexiones; el óptimo económico surge del balance entre ambos efectos. El número de pórticos es la variable de tanteo, y se recomienda resolverlo en una hoja de cálculo.",
+      "formulas": [
+        {
+          "nombre": "Separación entre pórticos",
+          "expresion": "s = Lnave / (n − 1), con 5 m ≤ s ≤ 7 m (óptimo ≈ 6 m)",
+          "variables": "Lnave: longitud útil de la nave (m); n: número de pórticos o armaduras"
+        }
+      ],
+      "referencias_norma": []
+    },
+    {
+      "titulo": "Cobertura: pendiente mínima, traslapes y número de planchas",
+      "contenido": "La pendiente del techo la fija el tipo de cobertura y la región, para que el agua escurra; si se empoza, pone en riesgo una estructura tan delgada y liviana. El profesor presenta una tabla de traslapes y pendientes mínimas para planchas de fibrocemento (Eternit) y calamina en costa seca, costa norte, sierra y selva; para otras coberturas (canalón, Precor PTR, etc.) rige lo que recomienda el fabricante. Para Lima (costa seca) se usa una pendiente mínima del 10 % y un traslape de 13 a 16 cm (se toma 13 cm). La longitud inclinada del faldón, Q, se obtiene por Pitágoras con la semiluz entre ejes (14 m) y la subida (1.40 m): Q ≈ 14.07 m. La longitud útil de una plancha es su longitud menos medio traslape a cada lado, es decir, menos un traslape completo cuando la cobertura es modular: una plancha de 6 pies (6 × 12 × 2.54 ≈ 183 cm) tiene 183 − 13 = 170 cm útiles, y una de 7 pies (≈ 213 cm) tiene 200 cm útiles. Combinar planchas es un tanteo que conviene hacer en hoja de cálculo: cantidad de cada tipo, longitud parcial y diferencia con Q. En el ejemplo se eligieron 6 planchas de 6 pies y 2 de 7 pies (6 × 170 + 2 × 200 = 1420 cm), con un exceso de unos 13 cm que se reparte proporcionalmente aumentando los traslapes. En la cumbrera se coloca un accesorio tipo 'sombrero' fijado con tirafones a la vigueta, por lo que se descuentan unos 10 cm de la longitud a cubrir.",
+      "formulas": [
+        {
+          "nombre": "Longitud inclinada del faldón",
+          "expresion": "Q = √( (L/2)² + Hinc² )",
+          "variables": "L/2: semiluz entre ejes de columnas (m); Hinc: subida del faldón (m)"
+        },
+        {
+          "nombre": "Longitud útil de plancha",
+          "expresion": "Lútil = Lplancha − t/2 − t/2 = Lplancha − t",
+          "variables": "Lplancha: longitud nominal (cm); t: traslape (cm)"
+        },
+        {
+          "nombre": "Condición de cobertura",
+          "expresion": "Σ ni·Lútil,i ≥ Q − descuento cumbrera",
+          "variables": "ni: número de planchas del tipo i; descuento de cumbrera ≈ 10 cm"
+        }
+      ],
+      "referencias_norma": [
+        "Recomendaciones del fabricante de coberturas (Eternit, Precor)"
+      ]
+    },
+    {
+      "titulo": "Estimación de cargas por pórtico",
+      "contenido": "Para el galpón se consideran: peso de las planchas de fibrocemento 15 kg/m² y peso de la estructura metálica 20 kg/m², valor típico para tijerales de 20 a 30 m de luz (a lo más 25 kg/m²). La carga muerta resulta 35 kg/m² y la carga viva de techo 30 kg/m². Si se tomara solo la muerta más 15 kg/m² se estaría por defecto; lo crítico es D + L = 35 + 30 = 65 kg/m². Multiplicando por el ancho tributario de cada pórtico, s = 5.737 m, se obtiene la carga de servicio lineal w = 65 × 5.737 ≈ 372.9 kg/m. Esta carga de servicio no es la carga última, pero siempre hay que conocerla porque con ella se verifican las deflexiones; con ella se pueden empezar los tanteos de diseño del tijeral. Para el diseño, a estas cargas se aplican los factores de la combinación gravitacional (1.2 para la muerta y 1.6 para la viva de techo) y se agregan los estados de viento calculados previamente, que en galpones livianos con grandes succiones pueden controlar el diseño e incluso invertir los esfuerzos en las bridas.",
+      "formulas": [
+        {
+          "nombre": "Carga lineal de servicio por pórtico",
+          "expresion": "w = (D + Lr)·s",
+          "variables": "D: carga muerta (kg/m²); Lr: carga viva de techo (kg/m²); s: separación entre pórticos (m)"
+        },
+        {
+          "nombre": "Carga última (combinación gravitacional)",
+          "expresion": "wu = 1.2·D + 1.6·L",
+          "variables": "D y L como cargas lineales (kg/m)"
+        }
+      ],
+      "referencias_norma": [
+        "Norma E.020 (carga viva de techo 30 kg/m² para coberturas livianas)",
+        "Norma E.090, Sección 1.4 / AISC 360 B2 (combinaciones)"
+      ]
+    },
+    {
+      "titulo": "Prediseño de una vigueta de celosía",
+      "contenido": "La vigueta se apoya sobre la brida superior de dos tijerales consecutivos (por ejemplo, los de los ejes 4 y 5). Aunque la separación entre ejes es 5.737 m, para el cálculo se usa una luz de 5.50 m, porque la vigueta no llega a los ejes sino a las caras de apoyo. Se factoriza la carga con 1.2 de la muerta y 1.6 de la viva (en este ejemplo con valores de 40 y 30 kg/m² aproximadamente) y se obtiene wu = 136 kg/m. El peralte de la vigueta se predimensiona como la luz entre 20 (≈ 0.275 m, se usa 0.25 m). La vigueta se modela como una viga simplemente apoyada: el momento máximo es Mu = wu·L²/8 y se descompone en un par de fuerzas, compresión en la brida superior y tracción en la inferior, separadas por un brazo de aproximadamente 0.95 del peralte. Así, Tu = Mu/(0.95·d) = 2165 kg. Para la brida inferior se usa barra lisa de acero A36 (Fy = 36 ksi ≈ 2530 kg/cm²). Por fluencia en el área bruta, Tu ≤ φ·Pn = 0.90·Fy·Ag, con lo que se requiere Ag ≥ 2165/(0.90 × 2530) ≈ 0.95 cm². Como ese valor no es comercial, se elige una barra lisa de 1/2\" (Ag = 1.27 cm²). La brida comprimida y las diagonales se verán con el tema de compresión; la fuerza en una diagonal puede estimarse a mano con la longitud de la diagonal, el peralte y la inclinación, sin necesidad de computadora. De esta forma se obtiene una celosía muy económica con elementos pequeños.",
+      "formulas": [
+        {
+          "nombre": "Peralte de vigueta",
+          "expresion": "d ≈ L / 20",
+          "variables": "L: luz de la vigueta (m)"
+        },
+        {
+          "nombre": "Momento último en viga simplemente apoyada",
+          "expresion": "Mu = wu·L² / 8",
+          "variables": "wu: carga última lineal (kg/m); L: luz (m)"
+        },
+        {
+          "nombre": "Fuerza en las bridas",
+          "expresion": "Tu = Cu = Mu / (0.95·d)",
+          "variables": "d: peralte de la vigueta (m); 0.95d: brazo de palanca aproximado"
+        },
+        {
+          "nombre": "Fluencia en área bruta (tracción)",
+          "expresion": "Tu ≤ φt·Pn = 0.90·Fy·Ag  →  Ag ≥ Tu / (0.90·Fy)",
+          "variables": "Fy: esfuerzo de fluencia (kg/cm²); Ag: área bruta (cm²); φt = 0.90"
+        }
+      ],
+      "referencias_norma": [
+        "AISC 360-16, Sección D2, ecuación D2-1 (Pn = Fy·Ag, φt = 0.90)"
+      ]
+    }
+  ],
+  "ejemplos": [
+    {
+      "titulo": "Cargas de viento en un galpón en Piura",
+      "enunciado": "Galpón de luz L = 24 m, peralte del tijeral H = L/11, columnas de 12 m, ubicado en Piura con V = 120 km/h. Coeficientes: pared barlovento +0.8, pared sotavento −0.6, faldón barlovento +0.3/−0.7, faldón sotavento −0.6, presión interior ±0.3. Calcular las presiones de diseño en cada superficie.",
+      "pasos": [
+        "H = 24/11 = 2.182 m; α = arctan(2.182/12) ≈ 10.3° < 15°.",
+        "Paredes (h = 12 m): Vh = 120·(12/10)^0.22 = 120 × 1.041 = 124.9 km/h.",
+        "Faldones (h = 12 + 2.182 = 14.182 m): Vh = 120·(14.182/10)^0.22 = 120 × 1.080 = 129.58 km/h.",
+        "Coeficientes netos adoptados: A = 0.8 − 0.3 = 0.5; B = −0.6 + 0.3 = −0.3; C = −0.7 − 0.3 = −1.0; D = −0.6 + 0.3 = −0.3.",
+        "A: ph = 0.005 × 0.5 × 124.9² = 39.0 kg/m² (presión).",
+        "B: ph = 0.005 × (−0.3) × 124.9² = −23.4 kg/m² (succión).",
+        "C: ph = 0.005 × (−1.0) × 129.58² = −83.96 kg/m² (succión).",
+        "D: ph = 0.005 × (−0.3) × 129.58² = −25.2 kg/m² (succión)."
+      ],
+      "resultado": "Pared barlovento +39 kg/m²; pared sotavento −23.4 kg/m²; faldón barlovento −84 kg/m²; faldón sotavento −25.2 kg/m²."
+    },
+    {
+      "titulo": "Dimensiones del terreno, número de pórticos y cobertura de un depósito en el Callao",
+      "enunciado": "Depósito con dimensiones útiles de 28.60 m (luz) × 109 m (largo). Descuentos: 5.30 m a cada costado y al fondo, 13.30 m en el frontis. Determinar el terreno necesario, la separación entre pórticos con 20 armaduras, la geometría del tijeral con pendiente mínima de 10 % y la combinación de planchas de 6 y 7 pies con traslape de 13 cm.",
+      "pasos": [
+        "Ancho de terreno: 28.60 + 2 × 5.30 = 39.20 m; largo: 109 + 5.30 + 13.30 = 127.60 m.",
+        "Separación: s = 109/(20 − 1) = 5.737 m (dentro de 5 a 7 m).",
+        "Peralte: H = 28.6/11 = 2.60 m; subida del faldón con 10 % sobre ≈ 14 m: ≈ 1.40 m; peralte en apoyo h = 2.60 − 1.40 = 1.20 m.",
+        "Longitud inclinada: Q = √(14² + 1.40²) = 14.07 m.",
+        "Longitud útil: plancha de 6' = 183 − 13 = 170 cm; plancha de 7' = 213 − 13 = 200 cm.",
+        "Tanteo: 6 × 170 + 2 × 200 = 1420 cm ≥ 1407 cm; el exceso (≈ 13 cm) se reparte en los traslapes; se considera además ≈ 10 cm de descuento por cumbrera."
+      ],
+      "resultado": "Terreno 39.20 × 127.60 m; s = 5.737 m; H = 2.60 m (h = 1.20 m); Q = 14.07 m; 6 planchas de 6' + 2 planchas de 7' por faldón."
+    },
+    {
+      "titulo": "Carga de servicio por pórtico",
+      "enunciado": "Cobertura de fibrocemento 15 kg/m², estructura metálica 20 kg/m², carga viva de techo 30 kg/m², separación entre pórticos 5.737 m. Calcular la carga lineal de servicio sobre cada tijeral.",
+      "pasos": [
+        "D = 15 + 20 = 35 kg/m²; L = 30 kg/m².",
+        "D + L = 65 kg/m².",
+        "w = 65 × 5.737 = 372.9 kg/m."
+      ],
+      "resultado": "w de servicio ≈ 373 kg/m por tijeral (para verificar deflexiones)."
+    },
+    {
+      "titulo": "Predimensionamiento de la brida inferior de una vigueta de celosía",
+      "enunciado": "Vigueta de celosía de luz de cálculo 5.50 m, carga última wu = 136 kg/m, peralte 0.25 m, brida inferior de barra lisa A36 (Fy = 2530 kg/cm²). Determinar la barra necesaria.",
+      "pasos": [
+        "Mu = wu·L²/8 = 136 × 5.50²/8 = 514.3 kg·m.",
+        "Brazo: 0.95 × 0.25 = 0.2375 m.",
+        "Tu = 514.3/0.2375 = 2165 kg.",
+        "Ag ≥ Tu/(0.90·Fy) = 2165/(0.90 × 2530) = 0.95 cm².",
+        "Se elige el valor comercial inmediato superior: barra lisa de 1/2\" con Ag = 1.27 cm²."
+      ],
+      "resultado": "Brida inferior: barra lisa de 1/2\" de acero A36 (1.27 cm² ≥ 0.95 cm²)."
+    }
+  ],
+  "conceptos_clave": [
+    {
+      "termino": "Galpón / nave industrial",
+      "definicion": "Estructura de una planta con tijerales sobre columnas que cubre grandes luces; usada en minas, depósitos, iglesias, coliseos."
+    },
+    {
+      "termino": "Tijeral",
+      "definicion": "Armadura metálica triangulada que salva la luz del galpón y se apoya en las columnas."
+    },
+    {
+      "termino": "Brida superior e inferior",
+      "definicion": "Cordones del tijeral o vigueta; bajo gravedad la superior trabaja en compresión y la inferior en tracción."
+    },
+    {
+      "termino": "Montante",
+      "definicion": "Miembro vertical del tijeral."
+    },
+    {
+      "termino": "Diagonal",
+      "definicion": "Miembro inclinado del alma del tijeral que conecta las bridas."
+    },
+    {
+      "termino": "Vigueta",
+      "definicion": "Elemento (a menudo de celosía) que une los tijerales y soporta la cobertura; puede ser simple o doble."
+    },
+    {
+      "termino": "Arriostre de conjunto",
+      "definicion": "Sistema de diagonales en el plano de la brida comprimida, entre viguetas dobles, que estabiliza el conjunto de tijerales ante viento y sismo."
+    },
+    {
+      "termino": "Cumbrera",
+      "definicion": "Línea más alta del techo a dos aguas; también el accesorio de cobertura que la sella."
+    },
+    {
+      "termino": "Traslape",
+      "definicion": "Superposición entre planchas de cobertura consecutivas para evitar filtraciones; depende de la región y la pendiente."
+    },
+    {
+      "termino": "Longitud útil de plancha",
+      "definicion": "Longitud nominal menos el traslape; es la longitud efectiva que cubre cada plancha."
+    },
+    {
+      "termino": "Separación entre pórticos (s)",
+      "definicion": "Distancia entre armaduras; recomendada entre 5 y 7 m, óptima cerca de 6 m."
+    },
+    {
+      "termino": "Carga de servicio",
+      "definicion": "Carga sin factorizar, usada para verificar deflexiones."
+    }
+  ],
+  "preguntas": [
+    {
+      "pregunta": "¿Dónde se colocan los arriostres de conjunto de un galpón?",
+      "opciones": [
+        "Siempre en la brida inferior",
+        "En el plano de la brida comprimida, entre líneas de viguetas dobles",
+        "Solo en las columnas extremas",
+        "En el alma de cada vigueta"
+      ],
+      "correcta": 1,
+      "explicacion": "Se ubican en la brida que está en compresión (normalmente la superior), entre viguetas dobles."
+    },
+    {
+      "pregunta": "¿Qué criterio de peralte para tijerales en Lima indicó el profesor?",
+      "opciones": [
+        "H = L/11",
+        "H = L/20",
+        "H = L/30",
+        "H = L/5"
+      ],
+      "correcta": 0,
+      "explicacion": "Para Lima el peralte del tijeral se predimensiona como la luz entre 11."
+    },
+    {
+      "pregunta": "La separación recomendable entre pórticos de un galpón es:",
+      "opciones": [
+        "10 a 12 m",
+        "Igual a la luz del tijeral",
+        "2 a 3 m",
+        "5 a 7 m, óptimo cerca de 6 m"
+      ],
+      "correcta": 3,
+      "explicacion": "Fuera de 5 a 7 m la estructura resulta antieconómica; el óptimo para Lima es cercano a 6 m."
+    },
+    {
+      "pregunta": "Con V = 120 km/h, ¿cuál es la velocidad de diseño a 12 m de altura según la E.020?",
+      "opciones": [
+        "≈ 130 km/h",
+        "120 km/h",
+        "≈ 125 km/h",
+        "≈ 144 km/h"
+      ],
+      "correcta": 2,
+      "explicacion": "Vh = 120·(12/10)^0.22 ≈ 124.9 km/h."
+    },
+    {
+      "pregunta": "Con C = −1.0 y Vh = 129.58 km/h, la presión de viento es:",
+      "opciones": [
+        "−84 kg/m²",
+        "−42 kg/m²",
+        "+84 kg/m²",
+        "−168 kg/m²"
+      ],
+      "correcta": 0,
+      "explicacion": "ph = 0.005 × (−1.0) × 129.58² ≈ −83.96 kg/m² (succión)."
+    },
+    {
+      "pregunta": "Una nave de 114 m de longitud útil se resuelve con 20 armaduras. La separación es:",
+      "opciones": [
+        "6.00 m",
+        "5.43 m",
+        "6.33 m",
+        "5.70 m"
+      ],
+      "correcta": 0,
+      "explicacion": "s = 114/(20 − 1) = 6.00 m."
+    },
+    {
+      "pregunta": "La longitud útil de una plancha de 7 pies con traslape de 15 cm es aproximadamente:",
+      "opciones": [
+        "198 cm",
+        "183 cm",
+        "213 cm",
+        "205.5 cm"
+      ],
+      "correcta": 0,
+      "explicacion": "7 pies ≈ 213 cm; 213 − 15 = 198 cm."
+    },
+    {
+      "pregunta": "¿Por qué se usa una luz de 5.50 m y no 5.737 m para calcular la vigueta?",
+      "opciones": [
+        "Para incluir el traslape de la cobertura",
+        "Por un error de redondeo",
+        "Porque la vigueta se apoya en las bridas y no llega hasta los ejes; se usa la luz entre apoyos",
+        "Porque la norma lo exige"
+      ],
+      "correcta": 2,
+      "explicacion": "La longitud de apoyo real es algo menor que la distancia entre ejes."
+    },
+    {
+      "pregunta": "En la analogía de viga para una vigueta de celosía, la fuerza en la brida inferior se estima como:",
+      "opciones": [
+        "Tu = Mu·d",
+        "Tu = Mu/(0.95·d)",
+        "Tu = wu·L/2",
+        "Tu = 0.9·Fy·Ag"
+      ],
+      "correcta": 1,
+      "explicacion": "El momento se descompone en un par de fuerzas con brazo ≈ 0.95 del peralte."
+    },
+    {
+      "pregunta": "Si Tu = 3000 kg y Fy = 2530 kg/cm², el área bruta mínima por fluencia (φ = 0.90) es:",
+      "opciones": [
+        "1.32 cm²",
+        "1.07 cm²",
+        "2.37 cm²",
+        "1.19 cm²"
+      ],
+      "correcta": 0,
+      "explicacion": "Ag = 3000/(0.90 × 2530) = 1.32 cm²."
+    },
+    {
+      "pregunta": "¿Cuál es el primer paso para definir las dimensiones del galpón según el profesor?",
+      "opciones": [
+        "Calcular la carga de sismo",
+        "Elegir la cobertura",
+        "Escoger el perfil de las columnas",
+        "Verificar el terreno con la ficha de Registros Públicos y luego descontar lo que requiere el cliente"
+      ],
+      "correcta": 3,
+      "explicacion": "Se verifica legalmente el terreno y luego se descuentan jardines, circulación, rampa, estacionamiento y cerco."
+    },
+    {
+      "pregunta": "La carga muerta típica considerada para la estructura metálica de un tijeral de 20 a 30 m de luz es:",
+      "opciones": [
+        "250 kg/m²",
+        "5 kg/m²",
+        "20 a 25 kg/m²",
+        "100 kg/m²"
+      ],
+      "correcta": 2,
+      "explicacion": "El profesor estimó 20 kg/m² (hasta 25 kg/m²) para este tipo de estructuras."
+    }
+  ],
+  "ejercicios_propuestos": [
+    "Un galpón en Arequipa tiene 30 m de luz, columnas de 9 m y peralte H = L/11. Con V = 85 km/h y los coeficientes vistos en clase (paredes +0.8/−0.6, faldones +0.3/−0.7 y −0.6, Cpi = ±0.3), calcule las presiones de viento más desfavorables en cada superficie.",
+    "Un cliente tiene un terreno de 45 m × 140 m según Registros Públicos y pide jardines de 2 m perimetrales, circulación de cargadores de 3.5 m a los costados, rampa de 6 m y patio de camiones de 8 m en el frontis, y cerco con columnas de 0.30 m. Determine las dimensiones útiles del galpón y el número de pórticos para que s quede entre 5 y 7 m, lo más cercano a 6 m.",
+    "Para el galpón del ejercicio anterior en costa seca (pendiente mínima 10 %, traslape 14 cm), calcule la longitud inclinada del faldón y proponga una combinación de planchas de 6, 7 y 8 pies que la cubra con el menor desperdicio, considerando 10 cm de descuento por cumbrera.",
+    "Predimensione la brida inferior de barra lisa A36 de una vigueta de celosía de 6.0 m de luz, separadas 1.50 m, con D = 40 kg/m² y Lr = 30 kg/m², usando d = L/20, Tu = Mu/(0.95d) y Ag ≥ Tu/(0.9Fy). Elija el diámetro comercial.",
+    "Calcule la carga lineal de servicio y la carga última (1.2D + 1.6Lr) sobre cada tijeral del galpón del ejercicio 2, con cobertura de 15 kg/m², estructura de 22 kg/m² y Lr = 30 kg/m²."
+  ],
+  "avisos": [
+    "Leer siempre el material subido al aula virtual (las tablas de viento 5.4 y 5.5 estaban en la presentación de la clase anterior).",
+    "Se recomienda hacer los tanteos de planchas y separaciones con una hoja de cálculo (Excel).",
+    "En programas de cómputo comerciales las distintas hipótesis de viento se ingresan como estados de carga separados.",
+    "Repetir en casa el ejemplo del tijeral con los valores de carga indicados.",
+    "La compresión (brida superior y diagonales) se verá en la siguiente clase."
+  ],
+  "notas_transcripcion": [
+    "En el cálculo de viento, la transcripción dice '0,6 0,5 para el lado A'; se interpretó C = 0.5 (0.8 − 0.3). Nótese que con Cpi = −0.3 el caso más desfavorable de presión en A sería 1.1; el profesor solo consideró Cpi = +0.3 para A.",
+    "La presión en D se transcribe como '25'; el cálculo da −25.2 kg/m².",
+    "El profesor dice 'Q de 1.407'; se interpretó como 14.07 m (o 1407 cm), longitud inclinada del faldón.",
+    "Las dimensiones del depósito '28.60% 9' / 's-109' corresponden a 28.60 m × 109 m. El profesor menciona 'L sobre 11, 28 entre 11 que me da 2.54/2.55 ... aproximo a 2.60'.",
+    "El terreno se calcula en clase como '119.6' y '127.6'; con los descuentos dichos el ancho sería 28.60 + 2 × 5.30 = 39.20 m (el '119.6' parece corresponder a 109 + 2 × 5.30 y es una confusión de ejes). Se reportó la interpretación coherente.",
+    "Para la vigueta, las cargas factorizadas se dictan de forma confusa ('1,2 de 46 de 55... estoy poniendo 40 y 50'); se tomó wu = 136 kg/m tal como se indicó. El ancho tributario no se menciona.",
+    "El área requerida se dice 0.92 cm²; con 2165/(0.9 × 2530) resulta 0.95 cm²; la conclusión (barra lisa de 1/2\", 1.27 cm²) no cambia.",
+    "El peralte de la vigueta se indica como L/20 pero en el cálculo se usa 0.25 m (L/20 = 0.275 m).",
+    "'Plancha de ternit' corresponde a planchas de fibrocemento Eternit; 'dieta doble' = vigueta doble; 'tejeral' = tijeral; 'a fondo' = tirafón."
+  ]
+}

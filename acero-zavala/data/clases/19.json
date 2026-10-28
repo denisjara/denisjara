@@ -1,0 +1,383 @@
+{
+ "clase": 19,
+ "titulo": "Método aproximado de segundo orden (B1-B2, Apéndice 8) y conceptos de uniones ligados al sistema estructural",
+ "fecha": "lunes 7 de junio de 2021",
+ "duracion_min": 84,
+ "resumen": "La clase cierra el tema de flexocompresión con el método aproximado de análisis de segundo orden del Apéndice 8 del AISC 360 (amplificadores B1 y B2). El profesor explica cómo separar una combinación sísmica (1.2D + 0.5L + 0.2S + E) en un análisis sin traslación (cargas de gravedad, nt) y otro con traslación lateral (sismo o viento, lt), la inversión de esfuerzos por el carácter cíclico del sismo, y el protocolo de cálculo: Cm, Pe1, B1, Pstory, Pmf, RM, Pe,story y B2, hasta obtener Mr y Pr. Luego inicia el tema de uniones: la tabla de sistemas estructurales en acero de la Norma E.030 (R0, Ia, Ip), la evolución histórica de la idealización de uniones (voladizos con capiteles, uniones rígidas, uniones semirrígidas), el concepto de fusible en pórticos resistentes a momento, arriostrados concéntricos y excéntricos (enlace), el diseño de una unión simple con plancha de asiento y su soldadura, y la descomposición de las fuerzas en una unión viga-columna resistente a momento (par de fuerzas M/d, reparto de carga axial, clip de ángulos para el corte, atiesadores diseñados como elementos en compresión). Termina con consultas sobre las cargas de la góndola del trabajo escalonado.",
+ "objetivos": [
+  "Al terminar, el estudiante podrá separar una combinación de carga en casos sin traslación (nt) y con traslación lateral (lt) para el análisis aproximado de segundo orden.",
+  "Al terminar, el estudiante podrá calcular Cm, Pe1, B1, RM, Pe,story y B2 y obtener Mr = B1·Mnt + B2·Mlt y Pr = Pnt + B2·Plt según el Apéndice 8 del AISC 360.",
+  "Al terminar, el estudiante podrá identificar los sistemas estructurales de acero de la Norma E.030 y el uso de R = R0·Ia·Ip.",
+  "Al terminar, el estudiante podrá distinguir uniones simples, semirrígidas y rígidas y relacionarlas con el sistema estructural y su elemento fusible.",
+  "Al terminar, el estudiante podrá dimensionar una plancha de asiento (unión simple) y su soldadura, y descomponer las fuerzas de una unión viga-columna para diseñar planchas, clips y atiesadores."
+ ],
+ "temas": [
+  {
+   "titulo": "Separación del análisis en casos sin traslación (nt) y con traslación (lt)",
+   "contenido": "El profesor parte de una combinación sísmica del tipo 1.2D + 0.5L + 0.2S + E (muerta, viva, nieve y sismo) y explica que, para aplicar el método aproximado de segundo orden, la combinación debe dividirse (splitting) en dos análisis. El primero agrupa todas las cargas de gravedad (1.2D, 0.5L y 0.2S), que por sí solas no producen desplazamiento lateral del entrepiso; se denomina caso sin traslación o 'no translation' (nt). El segundo contiene la acción lateral (sismo o, en otra combinación, viento), que sí produce traslación del entrepiso; se denomina 'lateral translation' (lt). Los resultados del caso nt se amplifican con B1 y los del caso lt con B2, de modo que los momentos y cargas axiales resultantes incluyan de forma aproximada el efecto P-Delta. Insiste en que el sismo es una acción cíclica: la fuerza F = m·a cambia de signo porque la aceleración proviene del movimiento ondulatorio del suelo. Por ello debe analizarse el sismo hacia la derecha y hacia la izquierda. En el pórtico de ejemplo, bajo gravedad ambas columnas están comprimidas; con sismo hacia la derecha una columna recibe compresión adicional y la otra tracción, y al invertirse el sentido del sismo los papeles se intercambian. A este fenómeno lo llama inversión de esfuerzos: un mismo elemento puede estar comprimido en un instante y traccionado en otro, o con momento positivo y luego negativo. La regla de diseño es tomar siempre la solicitación más desfavorable de todas las combinaciones y sentidos.",
+   "formulas": [
+    {
+     "nombre": "Combinación sísmica usada como ejemplo",
+     "expresion": "U = 1.2·D + 0.5·L + 0.2·S + 1.0·E",
+     "variables": "D carga muerta, L carga viva, S carga de nieve, E sismo"
+    },
+    {
+     "nombre": "Resistencias requeridas de segundo orden",
+     "expresion": "Mr = B1·Mnt + B2·Mlt ;  Pr = Pnt + B2·Plt",
+     "variables": "Mnt, Pnt: resultados de primer orden del caso sin traslación; Mlt, Plt: resultados del caso con traslación lateral; B1, B2 amplificadores"
+    }
+   ],
+   "referencias_norma": [
+    "AISC 360-16 Apéndice 8 (análisis de segundo orden aproximado), ecuaciones A-8-1 y A-8-2"
+   ]
+  },
+  {
+   "titulo": "Cálculo del amplificador B1 (efecto P-δ del elemento)",
+   "contenido": "B1 considera la amplificación por la deformación del propio elemento entre sus extremos (P-δ). Para calcularlo primero se obtiene el coeficiente Cm. Si el elemento no tiene cargas transversales entre apoyos, Cm = 0.6 − 0.4·(M1/M2), donde M1 es el menor y M2 el mayor de los momentos de extremo. El signo del cociente depende de la curvatura: en curvatura simple el cociente es negativo y en curvatura doble es positivo (lo que reduce Cm). Si hay cargas transversales sobre el elemento, el profesor indica que se toma Cm = 1 (de forma conservadora); en la clase su descripción oral mezcla ambos casos, por lo que se registra la regla correcta del AISC. Como ejemplo de carga sobre el elemento menciona una columna que contiene la tierra de un jardín y recibe presión lateral. El coeficiente α vale 1.0 cuando se trabaja con combinaciones LRFD (cargas amplificadas) y 1.6 en ASD (cargas de servicio). La carga crítica de Euler del elemento Pe1 = π²·EI*/(K1·L)² se evalúa en el plano de flexión, con la longitud efectiva usada al diseñar la columna; el profesor recuerda que la rigidez efectiva puede reducirse por comportamiento inelástico (τb) cuando la esbeltez es alta, por lo que el valor de KL/r adoptado es importante. Como B1 depende de Pr, y Pr depende de B2, el orden de cálculo es: primero B2, luego Pr, luego B1 y finalmente Mr. B1 debe ser al menos 1.0.",
+   "formulas": [
+    {
+     "nombre": "Coeficiente Cm (sin cargas transversales)",
+     "expresion": "Cm = 0.6 − 0.4·(M1/M2)",
+     "variables": "M1 momento menor y M2 momento mayor en extremos; M1/M2 negativo en curvatura simple y positivo en curvatura doble"
+    },
+    {
+     "nombre": "Carga de Euler del elemento",
+     "expresion": "Pe1 = π²·EI*/(K1·L)²",
+     "variables": "EI* rigidez a flexión (0.8·τb·EI en el método directo; EI en otros), K1 = 1 para el caso sin traslación, L longitud del elemento"
+    },
+    {
+     "nombre": "Amplificador B1",
+     "expresion": "B1 = Cm / (1 − α·Pr/Pe1) ≥ 1.0",
+     "variables": "α = 1.0 (LRFD) o 1.6 (ASD); Pr = Pnt + B2·Plt"
+    }
+   ],
+   "referencias_norma": [
+    "AISC 360-16 Apéndice 8, sección 8.2.1, ecuaciones A-8-3 a A-8-5"
+   ]
+  },
+  {
+   "titulo": "Cálculo del amplificador B2 (efecto P-Δ del entrepiso)",
+   "contenido": "B2 se calcula a nivel de entrepiso, no de un elemento aislado: deben conocerse todas las cargas axiales de todas las columnas del piso. Pstory es la suma de las cargas verticales que soporta el entrepiso: en el ejemplo, las cargas de gravedad de ambas columnas más las cargas axiales que aparecen por el caso lateral (compresión C en una y tracción T en la otra). Pmf es la carga vertical total en las columnas que forman parte de los pórticos resistentes a momento en la dirección analizada; el profesor la ilustra con las fuerzas axiales del caso lateral. Con ellas se obtiene RM = 1 − 0.15·(Pmf/Pstory), que varía entre 0.85 (todo el entrepiso es pórtico de momento) y 1.0 (sistemas arriostrados). Luego Pe,story = RM·H·L/ΔH, donde H es el cortante de entrepiso producido por las fuerzas laterales usadas para calcular ΔH, L es la altura del entrepiso y ΔH el desplazamiento relativo de primer orden. Finalmente B2 = 1/(1 − α·Pstory/Pe,story) ≥ 1. Ante preguntas, el profesor aclara que si hubiese cinco pórticos paralelos o más crujías, Pstory crece con todas las columnas, Pmf también crece y cambian H y ΔH; y que si C y T casi se anulan, el término de Pmf tiene poca influencia y RM se acerca a 1. Califica el método de laborioso pero indispensable para poder estimar a mano, sin computadora, la amplificación P-Delta.",
+   "formulas": [
+    {
+     "nombre": "Factor RM",
+     "expresion": "RM = 1 − 0.15·(Pmf/Pstory)",
+     "variables": "Pmf carga vertical en columnas de pórticos de momento; Pstory carga vertical total del entrepiso"
+    },
+    {
+     "nombre": "Carga crítica del entrepiso",
+     "expresion": "Pe,story = RM·H·L/ΔH",
+     "variables": "H cortante de entrepiso (kips), L altura de entrepiso (in), ΔH deriva de primer orden (in)"
+    },
+    {
+     "nombre": "Amplificador B2",
+     "expresion": "B2 = 1 / (1 − α·Pstory/Pe,story) ≥ 1.0",
+     "variables": "α = 1.0 en LRFD"
+    }
+   ],
+   "referencias_norma": [
+    "AISC 360-16 Apéndice 8, sección 8.2.2, ecuaciones A-8-6 a A-8-8"
+   ]
+  },
+  {
+   "titulo": "Sistemas estructurales de acero en la Norma E.030 y factor de reducción R",
+   "contenido": "Al iniciar el tema de uniones, el profesor muestra una reproducción de la Tabla N° 7 de la Norma E.030 (Diseño Sismorresistente), donde figuran los sistemas estructurales de acero admitidos en el Perú: pórticos especiales, intermedios y ordinarios resistentes a momento; pórticos con arriostres concéntricos especiales y ordinarios; y pórticos con arriostres excéntricos. Cada uno tiene un coeficiente básico de reducción R0. El coeficiente final es R = R0·Ia·Ip, donde Ia (Tabla N° 8) penaliza irregularidades en altura e Ip (Tabla N° 9) irregularidades en planta. La fuerza sísmica se aproxima como una fracción del peso del edificio, V = (Z·U·C·S/R)·P (el profesor la resume como ZU/R por el peso), así que R es determinante: cada sistema conduce a una demanda distinta. Explica luego qué se espera de cada nivel de ductilidad: los sistemas especiales deben poder desarrollar el momento plástico; los intermedios superan la primera fluencia sin necesariamente llegar al plástico; los ordinarios se espera que lleguen a la fluencia y poco más. En los arriostrados especiales se espera que el arriostre alcance su esfuerzo crítico en rango inelástico; en los ordinarios, que falle en el rango elástico. Concluye que el tipo de unión está ligado al sistema estructural: cada sistema exige uniones distintas.",
+   "formulas": [
+    {
+     "nombre": "Coeficiente de reducción sísmica",
+     "expresion": "R = R0·Ia·Ip",
+     "variables": "R0 coeficiente básico (Tabla 7 E.030), Ia factor de irregularidad en altura (Tabla 8), Ip factor de irregularidad en planta (Tabla 9)"
+    },
+    {
+     "nombre": "Fuerza cortante en la base",
+     "expresion": "V = (Z·U·C·S / R)·P",
+     "variables": "Z factor de zona, U uso, C amplificación sísmica, S suelo, P peso sísmico"
+    }
+   ],
+   "referencias_norma": [
+    "Norma E.030 Diseño Sismorresistente, Tablas N° 7, 8 y 9",
+    "AISC 341 (sistemas SMF, IMF, OMF, SCBF, OCBF, EBF)"
+   ]
+  },
+  {
+   "titulo": "Evolución histórica de la idealización de uniones: rígidas, semirrígidas y simples",
+   "contenido": "El profesor narra cómo ha cambiado la forma de idealizar uniones. Hacia los años 50 y 60 en Lima, las columnas se calculaban como grandes voladizos y las vigas como simplemente apoyadas sobre capiteles. En los 70, con la computadora digital y las calculadoras programables, se generalizó el análisis de pórticos con uniones rígidas: todo el momento de la viga pasa a la columna y el nudo está en equilibrio. Entre 1985 y 1995 los ensayos de laboratorio mostraron que las uniones reales son semirrígidas: en el nudo hay rotación y disipación de energía, y el momento que llega a la columna es solo entre el 75% y el 95% del de la viga. A la pérdida ΔM contribuyen la falta de control de calidad, de sujeción o soldadura incompleta. Señala que, aun sabiéndolo, los cálculos siguen suponiendo transferencia total, lo que considera un error conceptual. La unión simple (dibujada en verde) prácticamente no tiene capacidad de transmitir momento (a lo más alrededor del 5%), así que se desprecia el momento y se diseña solo para cortante. Las uniones rígidas o semirrígidas se diseñan para transmitir momento y permitir cierta disipación de energía.",
+   "formulas": [],
+   "referencias_norma": [
+    "AISC 360-16 B3.4 (clasificación de conexiones simples y de momento FR/PR)"
+   ]
+  },
+  {
+   "titulo": "Elementos fusibles según el sistema estructural",
+   "contenido": "Cada sistema estructural tiene un elemento designado para fallar y disipar energía (fusible), y la unión debe diseñarse de acuerdo con ello. En los pórticos resistentes a momento se espera que fallen las vigas en sus extremos, nunca las columnas, porque si fallan las columnas la estructura colapsa. En los pórticos arriostrados concéntricamente los fusibles son los arriostres: deben diseñarse para fallar y disipar energía, y ser más 'débiles' que el pórtico, porque si no fallaría el pórtico. El profesor advierte que poner arriostres no hace a la estructura 'súper fuerte': es fuerte mientras los arriostres resistan. En los pórticos con arriostres excéntricos, una alternativa que respeta la arquitectura (permite colocar ventanas entre los arriostres, ya que los arquitectos rechazan las cruces en fachada), el tramo de viga entre arriostres se llama enlace (link) y es el fusible principal; puede fluir por corte o por flexión en rango inelástico. En segunda instancia los arriostres pueden actuar como fusibles. Columnas y vigas fuera del enlace deben permanecer sin daño. Lo recomendable es que la falla se concentre en el enlace.",
+   "formulas": [],
+   "referencias_norma": [
+    "AISC 341-16 Cap. E (pórticos de momento), F2 (SCBF), F3 (EBF, enlaces)"
+   ]
+  },
+  {
+   "titulo": "Diseño de una unión simple con plancha de asiento (ménsula)",
+   "contenido": "Como ejemplo de unión simple, el profesor muestra una columna con una plancha proyectada (asiento) sobre la que se apoya la viga. La viga solo transmite cortante V: en la viga actúa sobre el alma y en la plancha produce flexión como un voladizo corto. Suponiendo que la viga ya está diseñada, falta diseñar la plancha. En una sección de corte la plancha es un rectángulo b×t con área A = b·t, módulo elástico S = b·t²/6, módulo plástico Z = b·t²/4 e inercia I = b·t³/12. El momento actuante es V por el brazo (V·L, con L la distancia de la carga a la cara de la columna). Se verifica Vu ≤ φVn en cortante y Mu ≤ φMn en flexión. La plancha puede sobresalir de la viga o ser algo más angosta (como máximo en el tamaño del filete de soldadura). Luego se diseña la soldadura de la plancha a la columna, alrededor de la plancha: se calcula φRn por unidad de longitud y se multiplica por la suma de longitudes de cordón efectivas. Los cordones paralelos a la carga trabajan; si no alcanzan, se agregan cordones adicionales hasta que φRn·ΣLw ≥ Vu. El profesor lo presenta como diseño por criterio de ingeniería de un pequeño voladizo.",
+   "formulas": [
+    {
+     "nombre": "Propiedades de la plancha",
+     "expresion": "A = b·t ; S = b·t²/6 ; Z = b·t²/4 ; I = b·t³/12",
+     "variables": "b ancho y t espesor de la plancha (in)"
+    },
+    {
+     "nombre": "Flexión de la plancha",
+     "expresion": "Mu = Vu·e ≤ φb·Mn = 0.90·Fy·Z",
+     "variables": "e brazo desde la cara de la columna al punto de aplicación de la reacción"
+    },
+    {
+     "nombre": "Soldadura",
+     "expresion": "φRn(por unidad de longitud)·ΣLw ≥ Vu",
+     "variables": "φRn = 0.75·0.60·FEXX·0.707·w para filete; ΣLw suma de longitudes efectivas"
+    }
+   ],
+   "referencias_norma": [
+    "AISC 360-16 J2.4 (resistencia de soldaduras)",
+    "AISC 360-16 J4 (elementos de conexión)"
+   ]
+  },
+  {
+   "titulo": "Unión viga-columna resistente a momento: descomposición de fuerzas",
+   "contenido": "El análisis estructural se hace sobre los ejes de los elementos, y el programa entrega momentos, cortantes y axiales en el nudo, pero no diseña la unión: el ingeniero debe interpretarla, crearla y diseñarla pieza por pieza. Las fuerzas que la viga entrega al nudo actúan en sentido contrario sobre la unión (si el corte de la viga va hacia arriba, sobre la unión va hacia abajo; un momento horario en la viga es antihorario en la unión). El momento se descompone en un par de fuerzas en las alas, T = C = M/d, separadas el peralte d de la viga. A esa fuerza se le suma la parte de la carga axial que toma el ala, en proporción Af/A. Así se conocen la compresión en un ala y la tracción en la otra, que sirven para diseñar la plancha de ala y su conexión, y los atiesadores de continuidad de la columna. El ala traccionada puede deformar localmente el ala de la columna, por lo que la tracción suele ser más crítica para la plancha proyectada. El cortante se asigna a un clip de dos ángulos (la mitad a cada ángulo), con el que se diseñan los ángulos y la soldadura o pernos tanto del lado de la viga como del de la columna; en la columna ese corte llega como carga axial. El atiesador se diseña como un elemento en compresión: longitud aproximadamente igual al peralte libre de la columna, sección bst×tst propuesta y carga C; se verifica KL/r ≤ 200 y φPn ≥ C, además de su soldadura. Recalca llevar una memoria o bitácora de cálculo para poder reconstruir el razonamiento.",
+   "formulas": [
+    {
+     "nombre": "Par de fuerzas en alas",
+     "expresion": "T = C = Mu/d ± Pu·(Af/A)",
+     "variables": "Mu momento en la cara, d peralte de la viga, Pu axial de la viga, Af área del ala, A área total"
+    },
+    {
+     "nombre": "Corte en clip de dos ángulos",
+     "expresion": "V por ángulo = Vu/2",
+     "variables": "Vu cortante de la viga"
+    },
+    {
+     "nombre": "Atiesador como columna",
+     "expresion": "K·Lst/rst ≤ 200 ; C ≤ φc·Pn",
+     "variables": "Lst longitud del atiesador, rst radio de giro de la sección del atiesador"
+    }
+   ],
+   "referencias_norma": [
+    "AISC 360-16 J10 (fuerzas concentradas en alas y almas, atiesadores)",
+    "AISC 360-16 Cap. E (compresión)"
+   ]
+  },
+  {
+   "titulo": "Consulta del trabajo escalonado: cargas de la góndola",
+   "contenido": "Al final un alumno pregunta cómo obtener las cargas de gravedad de la góndola del trabajo escalonado. El profesor indica que son el peso propio de la estructura más el de la cubierta que va encima, y que no basta con un peso por metro cuadrado genérico: la góndola tiene planchas de cubierta soportadas por una estructura con tijerales, viguetas y arriostres, como lo enseñado en clase. Las columnas pueden ser armadas en celosía con ángulos o tubulares, y suelen revestirse con plástico, acrílico o drywall, de modo que no se ve la estructura. Todo debe modelarse como armaduras y metrarse de acuerdo con la forma escogida. Agrega que la góndola es, en esencia, un conjunto de armaduras arriba y abajo unidas por viguetas y arriostres, apoyada en columnas que pueden resolverse como secciones armadas en celosía (ángulos en las esquinas unidos por diagonales) o como tubos. La parte superior suele resolverse con un tijeral. La forma concreta depende de la propuesta arquitectónica de cada grupo, así que las cargas deben salir del metrado de esa estructura: pesos de planchas de cubierta, perfiles de tijerales y viguetas, arriostres y recubrimientos. Es una aplicación directa de los temas de armaduras, elementos en tracción, compresión y uniones vistos en el curso.",
+   "formulas": [],
+   "referencias_norma": [
+    "Norma E.020 Cargas"
+   ]
+  }
+ ],
+ "ejemplos": [
+  {
+   "titulo": "Protocolo B1-B2 para una columna de pórtico simple con sismo",
+   "enunciado": "Pórtico de una crujía con dos columnas, cargas de gravedad que producen axiales P en cada columna y una fuerza sísmica F que genera una deriva Δ, compresión C en una columna y tracción T en la otra. Se pide describir el cálculo de Mr y Pr para la columna comprimida (el ejemplo fue cualitativo, sin valores numéricos).",
+   "pasos": [
+    "Separar la combinación 1.2D + 0.5L + 0.2S + E en caso nt (gravedad) y caso lt (sismo), en ambos sentidos.",
+    "Pstory = suma de las axiales de gravedad de todas las columnas del entrepiso más las del caso lateral (C y −T).",
+    "Pmf = axiales en las columnas del pórtico de momento (C y T en el ejemplo); RM = 1 − 0.15·Pmf/Pstory.",
+    "Pe,story = RM·H·L/ΔH, con H = F, L = altura del entrepiso y ΔH = Δ.",
+    "B2 = 1/(1 − Pstory/Pe,story) ≥ 1; luego Pr = Pnt + B2·Plt.",
+    "Cm = 0.6 − 0.4·M1/M2 (o 1.0 con cargas transversales); Pe1 = π²EI*/(K1L)²; B1 = Cm/(1 − Pr/Pe1) ≥ 1.",
+    "Mr = B1·Mnt + B2·Mlt; diseñar con la condición más desfavorable entre sismo a la derecha y a la izquierda."
+   ],
+   "resultado": "Se obtienen Mr y Pr amplificados que incluyen aproximadamente el efecto P-Delta para usarlos en la ecuación de interacción H1-1."
+  }
+ ],
+ "conceptos_clave": [
+  {
+   "termino": "Caso nt (no translation)",
+   "definicion": "Análisis con las cargas de gravedad, que no producen traslación lateral del entrepiso; se amplifica con B1."
+  },
+  {
+   "termino": "Caso lt (lateral translation)",
+   "definicion": "Análisis con cargas laterales (sismo o viento) que producen deriva; se amplifica con B2."
+  },
+  {
+   "termino": "Inversión de esfuerzos",
+   "definicion": "Cambio de signo de las solicitaciones de un elemento (compresión a tracción, momento positivo a negativo) por el carácter cíclico del sismo."
+  },
+  {
+   "termino": "Cm",
+   "definicion": "Coeficiente de momento equivalente que considera la forma del diagrama de momentos entre extremos; 0.6 − 0.4·M1/M2 sin cargas transversales."
+  },
+  {
+   "termino": "Pstory",
+   "definicion": "Carga vertical total soportada por el entrepiso, incluidas las columnas que no forman parte del sistema lateral."
+  },
+  {
+   "termino": "RM",
+   "definicion": "Factor que considera la influencia de P-δ sobre P-Δ: 1 − 0.15·Pmf/Pstory."
+  },
+  {
+   "termino": "Unión semirrígida",
+   "definicion": "Unión que transmite solo una fracción del momento (aprox. 75% a 95%) por la rotación y la disipación de energía en el nudo."
+  },
+  {
+   "termino": "Unión simple",
+   "definicion": "Unión que solo transmite cortante; su capacidad de momento se desprecia."
+  },
+  {
+   "termino": "Fusible",
+   "definicion": "Elemento diseñado para fluir y disipar energía: vigas en pórticos de momento, arriostres en sistemas concéntricos, enlace en sistemas excéntricos."
+  },
+  {
+   "termino": "Enlace (link)",
+   "definicion": "Tramo de viga entre las conexiones de los arriostres en un pórtico excéntricamente arriostrado; fluye por corte o flexión."
+  },
+  {
+   "termino": "Par de fuerzas en alas",
+   "definicion": "Descomposición del momento de la viga en una tracción y una compresión M/d en las alas para diseñar la unión."
+  }
+ ],
+ "preguntas": [
+  {
+   "pregunta": "En el método aproximado del Apéndice 8, ¿qué resultados se amplifican con B2?",
+   "opciones": [
+    "Los del análisis de cargas de gravedad sin traslación",
+    "Los del análisis con traslación lateral (sismo o viento)",
+    "Solo las cargas axiales de gravedad",
+    "Los momentos debidos a cargas transversales en el tramo"
+   ],
+   "correcta": 1,
+   "explicacion": "B2 amplifica Mlt y Plt, obtenidos del análisis con traslación lateral del entrepiso (efecto P-Δ)."
+  },
+  {
+   "pregunta": "Para un elemento sin cargas transversales en curvatura doble con M1/M2 = +0.5, Cm vale:",
+   "opciones": [
+    "0.8",
+    "1.0",
+    "0.4",
+    "0.6"
+   ],
+   "correcta": 2,
+   "explicacion": "Cm = 0.6 − 0.4·(0.5) = 0.4; en curvatura doble el cociente es positivo."
+  },
+  {
+   "pregunta": "¿Cuál es el orden correcto de cálculo en el protocolo B1-B2?",
+   "opciones": [
+    "B1, Mr, B2, Pr",
+    "B2, Pr, B1, Mr",
+    "Pr, Mr, B1, B2",
+    "B1, B2, Mr, Pr"
+   ],
+   "correcta": 1,
+   "explicacion": "B1 depende de Pr = Pnt + B2·Plt, por eso primero se calcula B2, luego Pr, luego B1 y finalmente Mr."
+  },
+  {
+   "pregunta": "En combinaciones LRFD, el coeficiente α de las expresiones de B1 y B2 vale:",
+   "opciones": [
+    "1.6",
+    "0.9",
+    "0.75",
+    "1.0"
+   ],
+   "correcta": 3,
+   "explicacion": "α = 1.0 en LRFD y 1.6 en ASD."
+  },
+  {
+   "pregunta": "El factor RM = 1 − 0.15·Pmf/Pstory toma su valor mínimo (0.85) cuando:",
+   "opciones": [
+    "Todas las columnas del entrepiso pertenecen a pórticos de momento",
+    "El sistema es totalmente arriostrado",
+    "No existen cargas de gravedad",
+    "La deriva es nula"
+   ],
+   "correcta": 0,
+   "explicacion": "Si Pmf = Pstory, RM = 0.85; en sistemas arriostrados Pmf = 0 y RM = 1."
+  },
+  {
+   "pregunta": "Según la Norma E.030, el coeficiente R que se usa para la fuerza sísmica es:",
+   "opciones": [
+    "R0 / (Ia·Ip)",
+    "R0 + Ia + Ip",
+    "R0·Ia·Ip",
+    "Solo R0 de la Tabla 7"
+   ],
+   "correcta": 2,
+   "explicacion": "R = R0·Ia·Ip, donde Ia e Ip reducen R por irregularidades en altura y en planta."
+  },
+  {
+   "pregunta": "Según lo expuesto en clase, los ensayos de 1985-1995 mostraron que en una unión 'rígida' real el momento transmitido a la columna es aproximadamente:",
+   "opciones": [
+    "El 100% del momento de la viga",
+    "Entre el 75% y el 95% del momento de la viga",
+    "Menos del 5% del momento de la viga",
+    "El doble del momento de la viga"
+   ],
+   "correcta": 1,
+   "explicacion": "Las uniones son en realidad semirrígidas y parte del momento se pierde en el nudo por rotación y disipación."
+  },
+  {
+   "pregunta": "En un pórtico con arriostres excéntricos, el fusible principal es:",
+   "opciones": [
+    "La columna",
+    "La placa base",
+    "El enlace de la viga entre arriostres",
+    "La losa"
+   ],
+   "correcta": 2,
+   "explicacion": "El enlace fluye por corte o flexión y concentra la disipación de energía; vigas fuera del enlace y columnas deben permanecer elásticas."
+  },
+  {
+   "pregunta": "Una viga de peralte d = 18 in transmite Mu = 2700 kip·in sin carga axial. La fuerza de tracción en el ala para diseñar la plancha es:",
+   "opciones": [
+    "150 kips",
+    "48600 kips",
+    "75 kips",
+    "300 kips"
+   ],
+   "correcta": 0,
+   "explicacion": "T = Mu/d = 2700/18 = 150 kips."
+  },
+  {
+   "pregunta": "En una unión simple de asiento, la plancha proyectada se diseña principalmente para:",
+   "opciones": [
+    "Tracción pura",
+    "Flexión como voladizo corto y cortante debidos a la reacción de la viga",
+    "Torsión",
+    "Pandeo lateral torsional"
+   ],
+   "correcta": 1,
+   "explicacion": "La reacción V aplicada a una distancia de la cara genera momento V·e y cortante en la plancha."
+  },
+  {
+   "pregunta": "¿Por qué debe analizarse el sismo en ambos sentidos?",
+   "opciones": [
+    "Porque la norma exige duplicar la carga",
+    "Porque la fuerza sísmica cambia de signo y genera inversión de esfuerzos en los elementos",
+    "Porque el peso cambia con el sentido",
+    "Porque B1 depende del sentido"
+   ],
+   "correcta": 1,
+   "explicacion": "F = m·a cambia de signo; una columna comprimida puede pasar a tracción y viceversa."
+  }
+ ],
+ "ejercicios_propuestos": [
+  "Un entrepiso de 3.5 m (138 in) de altura tiene Pstory = 1800 kips, Pmf = 900 kips, cortante de entrepiso H = 120 kips y deriva de primer orden ΔH = 0.40 in. Calcule RM, Pe,story y B2 (LRFD).",
+  "Una columna W12x65 (A992, Ix = 533 in⁴) de 14 ft, sin cargas transversales, tiene Mnt de extremos 60 y 40 kip·ft en curvatura doble, Pnt = 300 kips, Plt = 40 kips y B2 = 1.15. Calcule Pr, Cm, Pe1 (K1 = 1, EI* = 0.8EI) y B1.",
+  "Diseñe una plancha de asiento A36 de b = 6 in para una reacción Vu = 25 kips aplicada a 2.5 in de la cara de la columna: determine el espesor t necesario por flexión plástica (φ = 0.90) y la longitud de filete de 1/4 in E70XX requerida.",
+  "Una viga W18x50 (d = 18.0 in, A = 14.7 in², Af = 7.5·0.57 in²) llega a una columna con Mu = 200 kip·ft y Pu = 30 kips. Calcule las fuerzas de tracción y compresión en las alas incluyendo el reparto de la carga axial.",
+  "Un atiesador de continuidad de 3.5 in × 3/8 in y 14 in de longitud recibe C = 60 kips. Verifique KL/r ≤ 200 y su resistencia φcPn con K = 0.75 y acero A36."
+ ],
+ "avisos": [
+  "Se toma asistencia en clase: asistieron 15 de 37 alumnos (lunes 7 de junio).",
+  "El profesor denunció un intento de acceso remoto a su computadora durante la clase; bloqueó la sesión y lo comunicó al área de cómputo.",
+  "Trabajo escalonado: diseñar la góndola con su cubierta, tijerales, viguetas y arriostres; metrar con la estructura real, no con un peso genérico por m².",
+  "La próxima clase es el miércoles."
+ ],
+ "notas_transcripcion": [
+  "La transcripción dice 'B' para ambos amplificadores; se interpretó como B1 (no traslacional) y B2 (traslacional) según el Apéndice 8 del AISC 360.",
+  "'dwd más 0.5 dwl más 0 2 ds' se interpretó como 1.2D + 0.5L + 0.2S + E.",
+  "'p story', 'PMF', 'P Euler story' se interpretaron como Pstory, Pmf y Pe,story.",
+  "El profesor asocia oralmente la fórmula de Cm al caso con cargas sobre el elemento; según AISC, Cm = 0.6 − 0.4·M1/M2 aplica sin cargas transversales y Cm = 1.0 (conservador) con ellas. Se registró la regla del AISC.",
+  "'Tabla número 7 de la norma de sismo ... la 0 30' corresponde a la Norma E.030; 'IA' e 'IP' son Ia e Ip.",
+  "'atizador' / 'asesador' = atiesador; 'disquetrizar' = discretizar; 'Fi por Bn' = φVn."
+ ]
+}

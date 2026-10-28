@@ -1,0 +1,375 @@
+{
+  "clase": 16,
+  "titulo": "Resistencia al corte en vigas: atiesadores, platabandas y acción de campo de tensiones (flujo de corte)",
+  "fecha": "miércoles 19 de mayo de 2021",
+  "duracion_min": 102,
+  "resumen": "La clase completa el corte en vigas según el Capítulo G del AISC 360. Se repasa el caso sin flujo de corte, φVn = φ·0.6·Fy·Aw·Cv1, incluido el caso de perfiles laminados con h/tw ≤ 2.24√(E/Fy) (φ = 1, Cv1 = 1). Con una viga soldada A36 (ala de 8 in, alma de 18⅜ × 5/16 in) se muestra que no requiere atiesadores y que colocarlos con a = h no cambia la resistencia (111.6 kips): el atiesador solo confina el panel de corte. Para ganar resistencia se usan platabandas, ilustradas con la anécdota de una fábrica que cambió sus máquinas sin consultar a un ingeniero. Luego se presenta el diseño con flujo de corte (campo de tensiones), en el que la viga trabaja como un reticulado; se dan los límites para Cv2 y las condiciones 2Aw/(Afc+Aft) ≤ 2.5 y h/bf ≤ 6. Finalmente se plantean los requisitos del atiesador intermedio (b/t, Ist ≥ Ist2 + (Ist1 − Ist2)ρw) con una viga de 420 in cuyo primer atiesador no cumple y queda como tarea.",
+  "objetivos": [
+    "Al terminar, el estudiante podrá calcular la resistencia al corte de vigas laminadas y soldadas sin acción de campo de tensiones, determinando kv, Cv1 y φ.",
+    "Al terminar, el estudiante podrá decidir si una viga soldada requiere atiesadores transversales usando el límite h/tw ≤ 2.46√(E/Fy).",
+    "Al terminar, el estudiante podrá explicar por qué los atiesadores no incrementan la resistencia al corte cuando Cv = 1 y cuándo conviene usar platabandas.",
+    "Al terminar, el estudiante podrá calcular la resistencia al corte con acción de campo de tensiones (Cv2 y las dos expresiones de Vn según las condiciones geométricas).",
+    "Al terminar, el estudiante podrá dimensionar un atiesador transversal intermedio verificando la relación ancho/espesor y la inercia mínima Ist."
+  ],
+  "temas": [
+    {
+      "titulo": "Repaso: corte en vigas sin flujo de corte (caso estándar)",
+      "contenido": "El profesor parte de una viga simplemente apoyada con una carga concentrada de 20 kips al centro. De las tablas de vigas se obtiene que el cortante en los apoyos es P/2 y que el diagrama cambia de signo bajo la carga; el momento máximo es PL/4 (en el ejemplo, unos 2100 kip·in). El objetivo del diseño es que Vu ≤ φVn en todas las secciones críticas, recordando siempre que es el alma la que resiste el corte. En el caso estándar (sin flujo de corte) la resistencia la da solo el alma: Vn = 0.6·Fy·Aw·Cv1. Primero se verifica si se necesitan atiesadores; si no se necesitan, kv = 5.34. Si se colocan, se define su espaciamiento a (usualmente se arranca con a = h, el peralte libre del alma) y kv = 5 + 5/(a/h)²; pero si a/h > 3 el atiesador no tiene efecto en la resistencia, pues kv vuelve a 5.34, como si no existiera. Con kv se evalúa Cv1. Hay un caso especial: en perfiles laminados (rolados) con h/tw ≤ 2.24√(E/Fy) se toma φ = 1.0 y Cv1 = 1, de modo que φVn = 1.0·0.6·Fy·Aw. Este caso solo vale para perfiles laminados; para perfiles soldados se usa la expresión general con φ = 0.90, donde Cv1 = 1 si h/tw ≤ 1.10√(kv·E/Fy) y, si es mayor, Cv1 = 1.10√(kv·E/Fy)/(h/tw). El profesor comenta además el criterio práctico de selección de planchas: se arman los perfiles con los espesores disponibles en el mercado (5/16, 1/2, 3/4 in...), y conviene hacer un estudio de mercado, pues los proveedores a veces ofrecen saldos o mermas de planchas a buen precio.",
+      "formulas": [
+        {
+          "nombre": "Resistencia nominal al corte sin campo de tensiones",
+          "expresion": "Vn = 0.6·Fy·Aw·Cv1",
+          "variables": "Fy: esfuerzo de fluencia del alma (ksi); Aw = d·tw (laminados) o h·tw (soldados, según el curso) en in²; Cv1: coeficiente de corte del alma"
+        },
+        {
+          "nombre": "Caso laminado compacto en corte",
+          "expresion": "Si h/tw ≤ 2.24·√(E/Fy): φv = 1.00 y Cv1 = 1.0",
+          "variables": "h: peralte libre del alma; tw: espesor del alma; E = 29000 ksi"
+        },
+        {
+          "nombre": "Coeficiente de pandeo por corte",
+          "expresion": "kv = 5.34 (sin atiesadores o a/h > 3); kv = 5 + 5/(a/h)² (con atiesadores, a/h ≤ 3)",
+          "variables": "a: distancia libre entre atiesadores transversales; h: peralte libre del alma"
+        },
+        {
+          "nombre": "Coeficiente Cv1",
+          "expresion": "Cv1 = 1.0 si h/tw ≤ 1.10·√(kv·E/Fy); Cv1 = 1.10·√(kv·E/Fy)/(h/tw) si h/tw > 1.10·√(kv·E/Fy)",
+          "variables": "kv adimensional; E y Fy en ksi"
+        },
+        {
+          "nombre": "Límite de necesidad de atiesadores",
+          "expresion": "No se requieren atiesadores si h/tw ≤ 2.46·√(E/Fy) (o si Vu ≤ φVn con kv = 5.34)",
+          "variables": "Para A36: 2.46·√(29000/36) ≈ 69.8"
+        }
+      ],
+      "referencias_norma": [
+        "AISC 360-16 Cap. G, Sección G2.1 (ecuaciones G2-1 a G2-4)",
+        "AISC 360-16 G2.2 (límite 2.46√(E/Fy) para atiesadores)"
+      ]
+    },
+    {
+      "titulo": "Ejemplo: viga soldada sin atiesadores y efecto de colocarlos",
+      "contenido": "Se propone una viga soldada de A36 con alas de 8 in y alma de 18⅜ in, con espesor de 5/16 in en ala y alma. La esbeltez del alma es h/tw = 18.375/0.3125 = 58.8. Como es soldada, φ = 0.90 y Cv1 debe calcularse. Primero se compara con 2.46√(E/Fy) = 69.8: como 58.8 < 69.8 no se necesitan atiesadores y kv = 5.34. El límite 1.10√(kv·E/Fy) = 1.10√(5.34·29000/36) ≈ 72.1, mayor que 58.8, por lo que Cv1 = 1. La resistencia de diseño es φVn = 0.9·0.6·36·(18.375·0.3125)·1 ≈ 111.6 kips, muy superior a la demanda (10 kips en apoyos y, según el profesor, 20 kips en el punto de carga). Luego se analiza qué pasaría si, por seguridad, se colocaran atiesadores con a = h: kv = 5 + 5/1² = 10 y el límite sube a 1.10√(10·29000/36) ≈ 98.7. Como h/tw = 58.8 sigue siendo menor, Cv1 sigue siendo 1 y la resistencia no cambia (111.6 kips), porque Aw, Fy y φ no variaron. La conclusión central es que la función del atiesador no es dar resistencia sino confinar el panel de corte (la zona del alma entre atiesadores) para evitar su pandeo local. Si se quiere más resistencia hay que aumentar el área del alma.",
+      "formulas": [
+        {
+          "nombre": "Resistencia de diseño (LRFD)",
+          "expresion": "φVn = 0.90·0.6·Fy·(h·tw)·Cv1",
+          "variables": "φ = 0.90 para perfiles soldados"
+        }
+      ],
+      "referencias_norma": [
+        "AISC 360-16 G2.1"
+      ]
+    },
+    {
+      "titulo": "Platabandas (doubler plates) para incrementar la resistencia al corte",
+      "contenido": "Para aumentar la resistencia al corte se adosan al alma planchas paralelas a ella, llamadas platabandas o 'plata bandas' (doubler plates). Equivalen a agregar otra alma a los costados, de modo que crece el área del alma Aw y, con ella, Vn. Pueden coexistir con los atiesadores: en planta se ve el ala, el alma, la platabanda soldada al alma y luego los atiesadores. Ante la pregunta de un alumno sobre si sería más caro que escoger desde el inicio un alma más gruesa, el profesor responde que no necesariamente, porque la platabanda solo se coloca en las zonas del diagrama de cortante donde la demanda supera la resistencia (por ejemplo cerca de los apoyos con carga repartida), y no a todo lo largo. El profesor relató el caso de una fábrica cuyos dueños reemplazaron máquinas antiguas (representadas por una carga de 20) por máquinas nuevas más pesadas (30) sin consultar a un ingeniero; el techo empezó a ceder y tuvieron que apuntalar la viga y luego reforzarla. Lo correcto habría sido llamar al ingeniero antes: se habría diseñado una platabanda e instalado en un fin de semana, evitando parar la fábrica dos o tres semanas. Introduce así el concepto de pérdida por tiempo no trabajado (lucro cesante), que en los negocios suele ser mucho más costoso que el refuerzo. También mencionó que los ingenieros suelen ser llamados cuando el daño ya ocurrió.",
+      "formulas": [
+        {
+          "nombre": "Área de alma reforzada",
+          "expresion": "Aw,ref = h·(tw + n·tp)",
+          "variables": "tp: espesor de cada platabanda; n: número de platabandas (1 o 2)"
+        }
+      ],
+      "referencias_norma": []
+    },
+    {
+      "titulo": "Diseño con flujo de corte (acción de campo de tensiones)",
+      "contenido": "En vigas muy peraltadas (por ejemplo las vigas de los puentes del tren en Evitamiento) es casi inevitable que el alma presente un leve pandeo local entre atiesadores. Diseñar con flujo de corte significa aceptar ese pandeo del panel y aprovechar la resistencia post-pandeo: la viga trabaja como un tijeral, donde las alas son las bridas en tracción y compresión, los atiesadores son los montantes y los paneles del alma actúan como diagonales en tracción. El profesor indica que podría aproximarse el área de esa diagonal como una franja del alma (longitud de la diagonal/4 por el espesor) y resolver el reticulado, pero que la norma ofrece una alternativa directa. Para ello se usa el coeficiente Cv2, con dos límites: 1.10√(kv·E/Fy) y 1.37√(kv·E/Fy). Si h/tw es menor que el primero, Cv2 = 1; si está entre ambos, Cv2 = 1.10√(kv·E/Fy)/(h/tw); y si supera el segundo, Cv2 = 1.51·kv·E/((h/tw)²·Fy). Luego, si h/tw ≤ 1.10√(kv·E/Fy), Vn = 0.6·Fy·Aw (factor Z = 1). Si es mayor, hay dos casos: cuando 2Aw/(Afc + Aft) ≤ 2.5 y h/bfc ≤ 6 y h/bft ≤ 6, se usa la expresión con 1.15√(1 + (a/h)²) en el denominador; en cualquier otro caso se usa la expresión con 1.15[a/h + √(1 + (a/h)²)]. Para decidir hay que calcular el área del alma y las áreas de las alas en compresión y en tracción.",
+      "formulas": [
+        {
+          "nombre": "Coeficiente Cv2",
+          "expresion": "Cv2 = 1.0 si h/tw ≤ 1.10√(kv·E/Fy); Cv2 = 1.10√(kv·E/Fy)/(h/tw) si 1.10√(kv·E/Fy) < h/tw ≤ 1.37√(kv·E/Fy); Cv2 = 1.51·kv·E/((h/tw)²·Fy) si h/tw > 1.37√(kv·E/Fy)",
+          "variables": "kv, E, Fy como antes"
+        },
+        {
+          "nombre": "Vn con campo de tensiones (caso geométrico favorable)",
+          "expresion": "Vn = 0.6·Fy·Aw·[Cv2 + (1 − Cv2)/(1.15·√(1 + (a/h)²))], si 2Aw/(Afc+Aft) ≤ 2.5, h/bfc ≤ 6 y h/bft ≤ 6",
+          "variables": "Afc, Aft: áreas del ala en compresión y tracción (in²); bfc, bft: anchos de ala"
+        },
+        {
+          "nombre": "Vn con campo de tensiones (otros casos)",
+          "expresion": "Vn = 0.6·Fy·Aw·[Cv2 + (1 − Cv2)/(1.15·(a/h + √(1 + (a/h)²)))]",
+          "variables": "a/h: relación de aspecto del panel"
+        },
+        {
+          "nombre": "Sin reducción",
+          "expresion": "Vn = 0.6·Fy·Aw si h/tw ≤ 1.10√(kv·E/Fy)",
+          "variables": ""
+        }
+      ],
+      "referencias_norma": [
+        "AISC 360-16 G2.2 (ecuaciones G2-7, G2-8, G2-9)",
+        "AISC 360-16 G2.1(b)(2) para Cv2 (ecuaciones G2-9 a G2-11)"
+      ]
+    },
+    {
+      "titulo": "Requisitos del atiesador transversal intermedio",
+      "contenido": "El atiesador no da resistencia: limita el panel de corte de dimensiones a × h. Para dimensionarlo se hace un corte horizontal (corte Q-Q) y se observa el alma con los atiesadores a uno o ambos lados; el eje de referencia ST pasa por el plano medio del alma. El ancho b del atiesador está limitado por b ≤ bf/2 − tw/2, y es recomendable que su espesor tst sea igual al del alma. Con dos planchas, la inercia respecto al eje del alma es Ist = tst·(2b + tw)³/12 (con una sola plancha la inercia es distinta). Requisitos: (A) la relación ancho-espesor debe cumplir b/tst ≤ 0.56√(E/Fyst). (B) La inercia debe cumplir Ist ≥ Ist2 + (Ist1 − Ist2)·ρw, donde Ist1 es la inercia mínima para desarrollar el campo de tensiones, Ist2 es la inercia mínima para el pandeo del alma sin campo de tensiones, ρst = máx(Fyw/Fyst, 1) y ρw es la máxima relación de cortantes en los paneles a cada lado del atiesador (se toma Vr como el mayor cortante actuante en esos paneles, obtenido del diagrama). Usualmente ρst = 1, porque al perfil de A36 se le sueldan planchas de A36, aunque en obra se pueden usar retazos o ángulos sobrantes como atiesadores; en ese caso el ingeniero de obra debe consultar al proyectista mediante el cuaderno de obra, a través de la supervisión, y el diseñador lo verifica rápidamente con sus hojas de cálculo. Sobre la soldadura, el profesor mencionó la recomendación de la norma ligada a 4tw a 6tw: las soldaduras del atiesador al alma se terminan a una distancia de entre 4 y 6 veces tw del pie de la soldadura alma-ala.",
+      "formulas": [
+        {
+          "nombre": "Ancho máximo del atiesador",
+          "expresion": "b ≤ bf/2 − tw/2",
+          "variables": "bf: ancho del ala; tw: espesor del alma (in)"
+        },
+        {
+          "nombre": "Esbeltez del atiesador",
+          "expresion": "(b/t)st ≤ 0.56·√(E/Fyst)",
+          "variables": "Fyst: fluencia del atiesador (ksi)"
+        },
+        {
+          "nombre": "Inercia del par de atiesadores",
+          "expresion": "Ist = tst·(2b + tw)³/12",
+          "variables": "Respecto al eje en el plano medio del alma (in⁴)"
+        },
+        {
+          "nombre": "Inercia requerida",
+          "expresion": "Ist ≥ Ist2 + (Ist1 − Ist2)·ρw",
+          "variables": "ρw = máx[(Vr − Vc2)/(Vc1 − Vc2)] ≥ 0 en los paneles adyacentes"
+        },
+        {
+          "nombre": "Ist1",
+          "expresion": "Ist1 = (h⁴·ρst^1.3/40)·(Fyw/E)^1.5",
+          "variables": "ρst = máx(Fyw/Fyst, 1.0)"
+        },
+        {
+          "nombre": "Ist2",
+          "expresion": "Ist2 = [2.5/(a/h)² − 2]·bp·tw³ ≥ 0.5·bp·tw³",
+          "variables": "bp: el menor entre a y h (en esta clase el profesor lo reemplazó por b; se corrige en la clase 17)"
+        }
+      ],
+      "referencias_norma": [
+        "AISC 360-16 G2.3 (ecuaciones G2-12 a G2-15)"
+      ]
+    },
+    {
+      "titulo": "Ejemplo de viga con flujo de corte y propuesta inicial de atiesador",
+      "contenido": "Se analiza una viga soldada A36 con alas de 12 × ¾ in, alma de 33 × 5/16 in y luz de 420 in (unos 10.7 m), con carga uniforme que produce Mu = 11,025 kip·in al centro y Vu = 105 kips en los apoyos (el cortante va disminuyendo hacia el centro). h/tw = 105.6 > 69.8, por lo que necesita atiesadores; se buscó a propósito un alma esbelta para que intervenga el flujo de corte. En flexión la sección es compacta (ala y alma), con Mp = 13,997 kip·in y My = 12,652 kip·in; φMn = 0.9·13,997 = 12,598 > 11,025 kip·in, conforme. En corte: Aw = 10.31 in², con a = h, kv = 10, límite 1 = 98.7 y límite 2 = 123; como h/tw cae entre ambos, Cv2 = 0.935. La resistencia sin campo de tensiones fue 208.25 kips y con campo de tensiones 213.48 kips según la hoja de cálculo (cifra que se corregiría en la clase 18). Se concluyó que la viga cumple el corte (Vu = 105 kips). Para el atiesador se propuso tst = tw = 5/16 in y b = 3 in (bmáx = 6 − 0.156 = 5.84 in). Ist = 0.3125·(6.3125)³/12 = 6.55 in⁴; b/t = 9.6 ≤ 15.89, cumple (A). Con Ist1 = 1.297 in⁴, ρw = 20.66 y Ist2 calculado con b, la inercia requerida resultó 25.33 in⁴ > 6.55 in⁴: no cumple. Se dejó de tarea probar b = 5.75 in (y, si no alcanza, aumentar el espesor a ½ in).",
+      "formulas": [
+        {
+          "nombre": "Relación de cortantes",
+          "expresion": "ρw = (Vr − Vc2)/(Vc1 − Vc2)",
+          "variables": "Vr: cortante actuante en el panel; Vc1, Vc2: resistencias disponibles con y sin campo de tensiones"
+        }
+      ],
+      "referencias_norma": [
+        "AISC 360-16 G2.2, G2.3",
+        "AISC 360-16 F2 (flexión, sección compacta)"
+      ]
+    }
+  ],
+  "ejemplos": [
+    {
+      "titulo": "Resistencia al corte de viga soldada 8 × 18⅜ × 5/16 in (A36)",
+      "enunciado": "Viga simplemente apoyada con P = 20 kips al centro. Sección soldada A36: alas de 8 in, alma h = 18.375 in, tw = tf = 5/16 in. Verificar el corte sin atiesadores y con atiesadores a = h.",
+      "pasos": [
+        "h/tw = 18.375/0.3125 = 58.8",
+        "Límite de atiesadores: 2.46√(29000/36) = 69.8 > 58.8 → no requiere atiesadores, kv = 5.34",
+        "1.10√(5.34·29000/36) = 72.1 > 58.8 → Cv1 = 1",
+        "Aw = 18.375·0.3125 = 5.74 in²; φVn = 0.9·0.6·36·5.74·1 = 111.6 kips",
+        "Demanda: Vu = 10 kips en apoyos (20 kips según el profesor en el punto de carga) < 111.6 kips → conforme",
+        "Con atiesadores a = h: kv = 5 + 5/1² = 10; límite = 1.10√(10·29000/36) = 98.7 > 58.8 → Cv1 = 1, φVn sigue siendo 111.6 kips"
+      ],
+      "resultado": "φVn = 111.6 kips con o sin atiesadores; los atiesadores no aumentan la resistencia cuando Cv1 = 1."
+    },
+    {
+      "titulo": "Viga 12 × ¾ / 33 × 5/16 in con flujo de corte: flexión, corte y primer tanteo de atiesador",
+      "enunciado": "Viga soldada A36, L = 420 in, alas 12 × 0.75 in, alma 33 × 0.3125 in, Mu = 11,025 kip·in, Vu = 105 kips. Verificar flexión y corte y proponer atiesadores intermedios con a = h = 33 in.",
+      "pasos": [
+        "Flexión: Zx ≈ 388.8 in³, Mp = 36·388.8 = 13,997 kip·in; sección compacta, φMn = 0.9·13,997 = 12,598 kip·in > 11,025 → OK",
+        "h/tw = 105.6 > 69.8 → requiere atiesadores; con a = h: kv = 10",
+        "Límite 1 = 1.10√(10·29000/36) = 98.7; límite 2 = 1.37√(10·29000/36) = 123 → Cv2 = 98.7/105.6 = 0.935",
+        "Aw = 33·0.3125 = 10.31 in²; 0.6·Fy·Aw = 222.7 kips; Vn sin campo de tensiones = 222.7·0.935 = 208.25 kips",
+        "2Aw/(Afc+Aft) = 20.62/18 = 1.15 ≤ 2.5 y h/bf = 2.75 ≤ 6 (la hoja de clase daba 4.58 por un error de fórmula y usó la otra expresión: Vn = 213.48 kips)",
+        "Atiesador propuesto: 2 PL 3 × 5/16 in; b/t = 9.6 ≤ 0.56√(29000/36) = 15.89 → cumple (A)",
+        "Ist = 0.3125·(2·3 + 0.3125)³/12 = 6.55 in⁴",
+        "Ist1 = (33⁴/40)·(36/29000)^1.5 = 1.297 in⁴; ρw calculado en clase = (105 − 213.48)/(208.25 − 213.48) = 20.66",
+        "Inercia requerida (con bp = b = 3 in) ≈ 25.33 in⁴ > 6.55 in⁴ → no cumple"
+      ],
+      "resultado": "La viga cumple en flexión y en corte, pero el atiesador de 3 × 5/16 in no cumple la inercia; queda de tarea probar b = 5.75 in."
+    }
+  ],
+  "conceptos_clave": [
+    {
+      "termino": "Panel de corte",
+      "definicion": "Porción del alma comprendida entre dos atiesadores transversales consecutivos y las alas, de dimensiones a × h."
+    },
+    {
+      "termino": "Atiesador transversal intermedio",
+      "definicion": "Plancha (o ángulo) soldada perpendicularmente al alma que confina el panel de corte para controlar el pandeo local; no incrementa directamente la resistencia al corte."
+    },
+    {
+      "termino": "Platabanda (doubler plate)",
+      "definicion": "Plancha adosada paralela al alma que aumenta el área efectiva de corte Aw y, por tanto, la resistencia al corte."
+    },
+    {
+      "termino": "Flujo de corte / campo de tensiones",
+      "definicion": "Comportamiento post-pandeo del alma en el que los paneles desarrollan diagonales en tracción y la viga trabaja como un reticulado (alas = bridas, atiesadores = montantes)."
+    },
+    {
+      "termino": "kv",
+      "definicion": "Coeficiente de pandeo del alma por corte: 5.34 sin atiesadores (o a/h > 3) y 5 + 5/(a/h)² con atiesadores."
+    },
+    {
+      "termino": "Cv1 / Cv2",
+      "definicion": "Coeficientes de corte del alma: Cv1 para la resistencia sin campo de tensiones y Cv2 (pandeo por corte) para la expresión con campo de tensiones."
+    },
+    {
+      "termino": "ρw",
+      "definicion": "Relación máxima de cortantes (Vr − Vc2)/(Vc1 − Vc2) en los paneles adyacentes al atiesador, que interpola la inercia requerida entre Ist2 e Ist1."
+    },
+    {
+      "termino": "Estudio de mercado",
+      "definicion": "Búsqueda de precios y disponibilidad de planchas y perfiles con proveedores para definir económicamente las secciones armadas."
+    },
+    {
+      "termino": "Tiempo no trabajado",
+      "definicion": "Pérdida económica por paralización de un negocio; suele superar con creces el costo de un refuerzo preventivo."
+    }
+  ],
+  "preguntas": [
+    {
+      "pregunta": "En una viga soldada de A36 con h/tw = 58.8, ¿qué ocurre con φVn si se agregan atiesadores con a = h?",
+      "opciones": [
+        "Aumenta porque kv pasa de 5.34 a 10",
+        "No cambia, porque Cv1 ya era 1 y Aw no varía",
+        "Disminuye por la soldadura",
+        "Aumenta al doble porque se forman dos paneles"
+      ],
+      "correcta": 1,
+      "explicacion": "Con h/tw menor que 1.10√(kvE/Fy) Cv1 = 1 en ambos casos; la resistencia depende de 0.6FyAw, que no cambia."
+    },
+    {
+      "pregunta": "¿Cuál es la manera correcta de incrementar la resistencia al corte de una viga existente en una zona localizada?",
+      "opciones": [
+        "Colocar más atiesadores transversales",
+        "Reducir el espaciamiento a por debajo de h/2",
+        "Soldar platabandas paralelas al alma",
+        "Aumentar el ancho de las alas"
+      ],
+      "correcta": 2,
+      "explicacion": "Las platabandas aumentan el área del alma Aw, que es la que resiste el corte."
+    },
+    {
+      "pregunta": "Para perfiles laminados con h/tw ≤ 2.24√(E/Fy), los valores de φv y Cv1 son:",
+      "opciones": [
+        "φv = 1.00 y Cv1 = 1.0",
+        "φv = 0.90 y Cv1 = 1.0",
+        "φv = 0.75 y Cv1 = 0.9",
+        "φv = 1.00 y Cv1 calculado con kv = 5.34"
+      ],
+      "correcta": 0,
+      "explicacion": "Es el caso especial de la sección G2.1(a) del AISC 360: φ = 1.00 y Cv1 = 1.0."
+    },
+    {
+      "pregunta": "Si en una viga soldada se colocan atiesadores con a/h = 3.5, el coeficiente kv vale:",
+      "opciones": [
+        "5 + 5/3.5²",
+        "10",
+        "1.0",
+        "5.34"
+      ],
+      "correcta": 3,
+      "explicacion": "Para a/h > 3 se toma kv = 5.34, igual que sin atiesadores; el atiesador no aporta a la resistencia."
+    },
+    {
+      "pregunta": "En el modelo de reticulado para el flujo de corte, los atiesadores transversales representan:",
+      "opciones": [
+        "Las bridas",
+        "Las diagonales en tracción",
+        "Los montantes",
+        "Los apoyos"
+      ],
+      "correcta": 2,
+      "explicacion": "Las alas son las bridas, los paneles del alma las diagonales y los atiesadores los montantes."
+    },
+    {
+      "pregunta": "Para A36, el límite 2.46√(E/Fy) que define la necesidad de atiesadores vale aproximadamente:",
+      "opciones": [
+        "58.8",
+        "69.8",
+        "98.7",
+        "123"
+      ],
+      "correcta": 1,
+      "explicacion": "2.46·√(29000/36) = 2.46·28.38 ≈ 69.8."
+    },
+    {
+      "pregunta": "¿Cuál de las siguientes condiciones NO forma parte de los requisitos para usar la expresión de campo de tensiones con 1.15√(1+(a/h)²)?",
+      "opciones": [
+        "2Aw/(Afc+Aft) ≤ 2.5",
+        "h/bfc ≤ 6",
+        "h/bft ≤ 6",
+        "a/h ≤ 1.0"
+      ],
+      "correcta": 3,
+      "explicacion": "Las condiciones son la relación de áreas ≤ 2.5 y h/bf ≤ 6 para ambas alas; a/h ≤ 1 no es requisito."
+    },
+    {
+      "pregunta": "Con h/tw entre 1.10√(kvE/Fy) y 1.37√(kvE/Fy), Cv2 vale:",
+      "opciones": [
+        "1.10√(kvE/Fy)/(h/tw)",
+        "1.0",
+        "1.51kvE/((h/tw)²Fy)",
+        "0.6"
+      ],
+      "correcta": 0,
+      "explicacion": "En el rango intermedio de inelasticidad Cv2 = 1.10√(kvE/Fy)/(h/tw)."
+    },
+    {
+      "pregunta": "El límite de esbeltez del atiesador transversal es:",
+      "opciones": [
+        "b/t ≤ 1.49√(E/Fy)",
+        "b/t ≤ 0.56√(E/Fyst)",
+        "b/t ≤ 0.38√(E/Fy)",
+        "b/t ≤ 2.46√(E/Fy)"
+      ],
+      "correcta": 1,
+      "explicacion": "AISC 360-16 G2.3 exige (b/t)st ≤ 0.56√(E/Fyst), unos 15.9 para A36."
+    },
+    {
+      "pregunta": "El ancho máximo de cada plancha de atiesador en una viga con bf = 12 in y tw = 5/16 in es aproximadamente:",
+      "opciones": [
+        "6.00 in",
+        "12.0 in",
+        "5.84 in",
+        "3.00 in"
+      ],
+      "correcta": 2,
+      "explicacion": "b ≤ bf/2 − tw/2 = 6 − 0.156 = 5.84 in."
+    },
+    {
+      "pregunta": "Según la anécdota del profesor, ¿qué debió hacerse antes de cambiar las máquinas antiguas por otras más pesadas?",
+      "opciones": [
+        "Colocar un puntal permanente",
+        "Agregar atiesadores en toda la viga",
+        "Reducir la carga viva del techo",
+        "Consultar a un ingeniero para reforzar la viga, por ejemplo con platabandas"
+      ],
+      "correcta": 3,
+      "explicacion": "Un refuerzo preventivo planificado (platabandas) habría sido mucho más barato que paralizar la fábrica."
+    }
+  ],
+  "ejercicios_propuestos": [
+    "Repita el diseño del atiesador del ejemplo (viga 12 × ¾ / 33 × 5/16 in, A36, a = h = 33 in, Vr = 105 kips) con b = 5.75 in y tst = 5/16 in; si no cumple, pruebe tst = ½ in.",
+    "Calcule φVn de una viga soldada A36 con alma de 24 × ¼ in sin atiesadores; luego con atiesadores a = 24 in y a = 48 in. Comente qué casos cambian la resistencia.",
+    "Una viga laminada W18×50 (d = 17.99 in, tw = 0.355 in, A992) tiene Vu = 140 kips. Verifique si cumple el caso φ = 1.0, Cv1 = 1 y calcule φVn.",
+    "Para una viga soldada A36 con alas 14 × 1 in y alma 40 × 5/16 in, a = 40 in, calcule Cv2 y Vn con campo de tensiones verificando las condiciones geométricas.",
+    "Una viga con φVn = 120 kips debe resistir Vu = 160 kips en los tramos extremos. Dimensione una platabanda de A36 (una a cada lado) sobre un alma de 30 × 5/16 in, con Cv1 = 1."
+  ],
+  "avisos": [
+    "El profesor trabaja con hojas de cálculo en Excel para corte y atiesadores (hoja de la sección G).",
+    "Tarea: rehacer la verificación del atiesador con b = 5.75 in y, si no pasa, con espesor de ½ in.",
+    "Asistencia: 13 ausentes de 37; el profesor recomienda cuidarse por la pandemia de COVID-19."
+  ],
+  "notas_transcripcion": [
+    "'BN', 'BU', 'BC' se interpretaron como Vn, Vu, Vc (cortante); 'CB'/'CV' como Cv; 'KB' como kv; 'TB' como tw; 'FIE' como φ.",
+    "'atizadores', 'atesadores' = atiesadores; 'plata banda' = platabanda (doubler plate); 'Sismit' = CISMID.",
+    "'224' y '246' se interpretaron como los factores 2.24 y 2.46 de √(E/Fy).",
+    "El profesor dice que bajo la carga concentrada Vu = 20 kips; en rigor el cortante a cada lado vale P/2 = 10 kips, aunque el salto en el diagrama es de 20 kips.",
+    "La sección dice 'viga 420' y 'eso son metros, más o menos 10 metros': se interpreta L = 420 in (≈ 10.7 m).",
+    "El valor 4.58 de la relación 2Aw/(Afc+Aft) y Vc = 213.48 kips provienen de un error de la hoja de Excel que se corrigió en la clase 18 (el valor correcto es ≈ 1.15 y la resistencia con campo de tensiones resulta ≈ 217 kips nominal, ≈ 195 kips de diseño).",
+    "En el cálculo de ρw el profesor usó Vc1 = 213.48 (con campo de tensiones) y Vc2 = 208.25 en orden invertido respecto a la definición del AISC 360-16. Según la norma, si Vr < Vc2 entonces ρw = 0 y basta con Ist ≥ Ist2. Se registra el procedimiento de la clase, señalando la diferencia.",
+    "La recomendación de 'longitud de soldadura entre 4 y 6 tw' se interpretó como la regla del AISC sobre dónde terminar la soldadura del atiesador al alma (entre 4tw y 6tw del pie de la soldadura alma-ala)."
+  ]
+}

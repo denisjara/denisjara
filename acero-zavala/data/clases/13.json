@@ -1,0 +1,170 @@
+{
+  "clase": 13,
+  "titulo": "Pandeo local del ala comprimida (F3) e introducción a vigas I con alma no compacta (F4)",
+  "fecha": "lunes 10 de mayo de 2021",
+  "duracion_min": 106,
+  "resumen": "El profesor repasa el procedimiento de diseño a flexión: proponer una sección, clasificar alas y alma con la Tabla B4.1b (incluidos los límites sísmicos para pórticos ordinarios, intermedios y especiales) y revisar los estados límite que correspondan, además de corte y deflexión. Introduce el pandeo local del ala comprimida (FLB) de la sección F3, que aplica a perfiles I de alma compacta con alas no compactas o esbeltas. Muestra un video de laboratorio donde se ve el ondulado local del ala, y explica que el fenómeno aparece típicamente en zonas de momento negativo, como sobre apoyos con volados. Presenta la ecuación de interpolación lineal para ala no compacta y la ecuación elástica 0.9·E·kc·Sx/λ² para ala esbelta, con kc = 4/√(h/tw) entre 0.35 y 0.76. Resuelve con hoja Excel una viga con volado (Lb = 60 in, Cb = 1.3 y 1.96) y una viga simplemente apoyada de 180 in arriostrada a los tercios. En la segunda revisa corte, deflexión, LTB y FLB, y muestra cómo cambia la resistencia al variar el ancho del ala. Finalmente plantea una viga de techo de acero A572 Gr. 50 que soporta máquinas reciprocantes (impacto 50%), cuya sección resulta con ala y alma no compactas. Con ella introduce la sección F4: aw, rt, Sxc, Myc, Rpc y las nuevas Lp y Lr.",
+  "objetivos": [
+    "Al terminar, el estudiante podrá identificar cuándo aplica el estado límite de pandeo local del ala comprimida según la clasificación de la sección.",
+    "Al terminar, el estudiante podrá calcular Mn por FLB para alas no compactas y esbeltas, incluido el coeficiente kc de secciones armadas.",
+    "Al terminar, el estudiante podrá elegir el Cb que corresponde al tramo no arriostrado donde está el momento máximo, en vigas con momentos positivos y negativos.",
+    "Al terminar, el estudiante podrá incorporar cargas de máquinas con impacto y predimensionar una viga de techo de gran luz.",
+    "Al terminar, el estudiante podrá reconocer una sección F4 (alma no compacta) y calcular aw, rt, Sxc, Myc y Rpc."
+  ],
+  "temas": [
+    {
+      "titulo": "Repaso: clasificación de la sección y estados límite en flexión",
+      "contenido": "Diseñar una viga por flexión implica verificarla por corte, por flexión y por deflexión. Si falta alguna de las tres, el diseño no está completo. El proceso empieza proponiendo una sección y clasificando sus elementos con la Tabla B4.1b. Las alas son elementos no atiesados, con un borde libre. Las almas son elementos atiesados, con ambos bordes rigidizados. Cada elemento se clasifica como compacto, no compacto o esbelto, y con eso se clasifica el perfil. El profesor recuerda que, si la viga forma parte de un sistema sismorresistente, hay que respetar además los límites más exigentes de la norma sísmica: los pórticos ordinarios cumplen la Tabla B4.1b, mientras que los intermedios y especiales deben cumplir los límites de ductilidad moderada y alta. De la tabla resumen del Capítulo F (Tabla User Note F1.1) se deduce el caso. Con ala y alma compactas (F2) se revisan solo fluencia y LTB. Con alma compacta y ala no compacta o esbelta (F3) se suma el pandeo local del ala comprimida. Recuerda también que Cb se calcula con los momentos a 1/4, 1/2 y 3/4 de cada tramo no arriostrado.",
+      "formulas": [
+        {"nombre": "Condición de diseño (LRFD)", "expresion": "Mu ≤ φb·Mn;  φb = 0.90", "variables": "Mn: menor resistencia nominal entre los estados límite aplicables"}
+      ],
+      "referencias_norma": ["AISC 360-16 Tabla B4.1b", "AISC 360-16 Tabla User Note F1.1", "AISC 341-16 Tabla D1.1 (límites para miembros de ductilidad moderada y alta)"]
+    },
+    {
+      "titulo": "Fenómeno del pandeo local del ala comprimida y zonas de momento negativo",
+      "contenido": "El profesor proyecta un video de un ensayo de flexión en tres puntos sobre un perfil tipo W8. La viga apoya en rodillos, tiene una celda de carga al centro, sensores de deflexión y topes. Al crecer la carga, el ala comprimida de la zona central empieza a ondularse localmente: es el pandeo local del ala comprimida. El fenómeno se da cuando el ala comprimida es demasiado esbelta para su nivel de compresión. Puede gobernar en zonas de momento negativo. Por ejemplo, en una viga con volado el momento negativo sobre el apoyo deja la compresión en el ala inferior y, según la longitud del volado, puede superar al momento positivo. Si el perfil propuesto tiene alas no compactas o esbeltas, esta compresión puede controlar el diseño por encima de la fluencia o del LTB. El profesor advierte que este tipo de falla depende mucho de las condiciones locales.",
+      "formulas": [],
+      "referencias_norma": ["AISC 360-16 F3"]
+    },
+    {
+      "titulo": "FLB con ala no compacta y ala esbelta (F3.2)",
+      "contenido": "Para ala no compacta (λpf < λ ≤ λrf), la resistencia se obtiene por interpolación lineal entre Mp y 0.7·Fy·Sx, usando relaciones de esbeltez en vez de longitudes. La fórmula es análoga a la zona 2 del LTB. Para ala esbelta (λ > λrf) la resistencia es elástica: Mn = 0.9·E·kc·Sx/λ². Aquí λ = bf/(2tf), y kc es el coeficiente de pandeo de placa de secciones armadas, kc = 4/√(h/tw), acotado entre 0.35 y 0.76. Para perfiles laminados se usan λrf = 1.0√(E/Fy) y la fórmula esbelta con kc implícito (0.69E/Fy·Sx/λ² para F3). Para perfiles soldados, el límite no compacto/esbelto del ala depende de kc: λrf = 0.95√(kc·E/FL), con FL = 0.7·Fy en secciones doblemente simétricas. El profesor muestra en la hoja Excel que, al ensanchar el ala de 6 in a 10.8 in, sigue siendo no compacta pero Mn baja. Con 12 in pasa a esbelta y hay que cambiar a la fórmula elástica (Mn ≈ 452). Con 16 in, λ ≈ 42.7 y la resistencia cae aún más. Su conclusión es que ensanchar el ala no conviene si la vuelve esbelta.",
+      "formulas": [
+        {"nombre": "FLB ala no compacta (F3-1)", "expresion": "Mn = Mp − (Mp − 0.7·Fy·Sx)·(λ − λpf)/(λrf − λpf)", "variables": "λ = bf/(2tf); λpf, λrf: límites compacto y no compacto del ala (Tabla B4.1b)"},
+        {"nombre": "FLB ala esbelta (F3-2)", "expresion": "Mn = 0.9·E·kc·Sx/λ²", "variables": "kc: coeficiente de pandeo de placa; Sx: módulo elástico (in³)"},
+        {"nombre": "Coeficiente kc", "expresion": "kc = 4/√(h/tw),  0.35 ≤ kc ≤ 0.76", "variables": "h/tw: esbeltez del alma"},
+        {"nombre": "Límite λr del ala en secciones armadas", "expresion": "λrf = 0.95·√(kc·E/FL), FL = 0.7·Fy", "variables": "FL: esfuerzo nominal de flexión del ala comprimida al iniciarse el pandeo inelástico"}
+      ],
+      "referencias_norma": ["AISC 360-16 F3.2 (ecuaciones F3-1 y F3-2)", "AISC 360-16 Tabla B4.1b caso 11 (alas de secciones armadas) y nota [a] (kc)"]
+    },
+    {
+      "titulo": "Elección del Cb en vigas con tramos de momento positivo y negativo",
+      "contenido": "En la viga con volado (luz entre apoyos de 180 in, volado de 60 in y arriostres cada 60 in), el profesor calcula Cb en cada tramo no arriostrado. En el tramo central da 1.3. En los volados se toma Cb = 1. En el tramo junto al apoyo, donde el diagrama pasa de positivo a negativo, Cb sube a 1.96, porque el gradiente de momento es grande: positivo a 1/4, casi nulo a 1/2 y negativo a 3/4, con el máximo en el extremo negativo. Un alumno pregunta qué Cb usar. El profesor responde que lo correcto es evaluar cada tramo no arriostrado con su propio Cb y su propio momento. Lo que no se debe hacer es tomar el mayor Cb, sino usar el Cb del tramo donde está el momento máximo que se verifica. En una memoria de cálculo recomienda presentar todos los tramos, para que nadie pueda objetar que se omitió el que resultaba crítico.",
+      "formulas": [
+        {"nombre": "Factor de gradiente de momento", "expresion": "Cb = 12.5·Mmax / (2.5·Mmax + 3·MA + 4·MB + 3·MC)", "variables": "Momentos en valor absoluto dentro del tramo no arriostrado"}
+      ],
+      "referencias_norma": ["AISC 360-16 F1 (ecuación F1-1)", "AISC 360-16 Comentario F1 (Cb = 1.0 en volados sin arriostre en el extremo)"]
+    },
+    {
+      "titulo": "Viga simplemente apoyada con ala no compacta: corte, deflexión, LTB y FLB en Excel",
+      "contenido": "El segundo ejemplo es una viga simplemente apoyada de 180 in, arriostrada a los tercios (Lb = 60 in), con Mu máximo ≈ 275.4 kip·in al centro y reacciones de 6.12 kip. La sección soldada tiene alas de 6 × 3/16 in (λf = 16), alma con h = 15 in y tw = 3/16 in (h/tw = 80). Corte: sin atiesadores, kv = 5.34, y el umbral 1.10√(kvE/Fy) = 72.15 es menor que 80, así que Cv1 = 72.15/80 ≈ 0.90. Resulta Vn = 0.6 × 36 × 15 × 0.1875 × 0.90 ≈ 54 kip y φVn ≈ 49 kip, frente a Vu ≈ 6 kip. Deflexión: Δ = 5wL⁴/(384EI) ≈ 0.23 in ≤ L/300 = 0.60 in. LTB: Lb = 60 in apenas supera Lp ≈ 57 in. La ecuación da Mn ≈ 1025, mayor que Mp, así que se limita a Mp. FLB: ala no compacta (10.79 < 16 < 21.55) y Mn ≈ 802 kip·in. Gobierna el FLB: φMn = 0.9 × 802 ≈ 722 kip·in ≥ 275 kip·in. El profesor arma la hoja con celdas que comparan demanda y resistencia y devuelven OK o CAMBIA.",
+      "formulas": [
+        {"nombre": "Deflexión máxima (simplemente apoyada)", "expresion": "Δ = 5·w·L⁴/(384·E·I) ≤ Δlím", "variables": "w: carga de servicio; Δlím ≈ L/300"},
+        {"nombre": "Resistencia nominal final", "expresion": "Mn = mín(Mn,fluencia; Mn,LTB; Mn,FLB)", "variables": "Se elige el menor de los estados límite aplicables"}
+      ],
+      "referencias_norma": ["AISC 360-16 F3", "AISC 360-16 G2.1"]
+    },
+    {
+      "titulo": "Cargas de máquinas reciprocantes e impacto; predimensionamiento de viga de techo A572 Gr. 50",
+      "contenido": "El tercer problema es la planta de un techo con vigas en los ejes 1, 2, 3 y A, B, C. Se diseña la viga del eje B, sobre la que se apoyan máquinas reciprocantes de 5 t cada una. La máquina se considera carga viva, porque puede retirarse para repararla. Al vibrar, golpea la estructura, y se aplica un impacto del 50%: PL = 1.5 × 5 = 7.5 t ≈ 16.5 kip, convirtiendo t × 1000 × 2.2/1000. Como cada máquina queda centrada entre dos vigas, el eje recibe la mitad, 8.25 kip. Se suma una carga viva de mantenimiento de 100 kg/m² sobre el ancho tributario, y como carga muerta el peso propio del perfil más una plancha de 1/2 in que sirve de apoyo a las máquinas. El acero es A572 Gr. 50 (Fy = 50 ksi, Fu = 65 ksi, √(E/Fy) = 24.08), lo que cambia todos los límites que dependen de √(E/Fy). Luz de 680 in ≈ 17 m, así que d ≈ L/14 ≈ 1.2 m ≈ 48 in. El ancho del ala se estima en unos 16 in y se usa tf = tw = 1/2 in. Resulta λf = 16 (no compacta) y h/tw = 47/0.5 = 94, mayor que λpw = 3.76√(E/Fy) ≈ 90.5 y menor que λrw = 5.70√(E/Fy) ≈ 137: alma no compacta. Con kc = 4/√94 ≈ 0.41, la sección queda en la sección F4 de la norma.",
+      "formulas": [
+        {"nombre": "Carga viva con impacto", "expresion": "PL,diseño = (1 + I)·PL = 1.5·PL (máquina reciprocante, I = 50%)", "variables": "PL: peso de la máquina; I: factor de impacto"},
+        {"nombre": "Conversión de unidades usada", "expresion": "kip = t × 1000 × 2.2/1000", "variables": "1 t = 1000 kg ≈ 2200 lb = 2.2 kip"}
+      ],
+      "referencias_norma": ["ASCE 7 / Norma E.020 (impacto en apoyos de maquinaria reciprocante: 50%)", "ASTM A572 Gr. 50"]
+    },
+    {
+      "titulo": "Sección F4: vigas I con alma no compacta (Rpc, Myc, rt, aw)",
+      "contenido": "Cuando el alma es no compacta ya no se usan directamente Mp ni rts. Las propiedades se refieren a la fibra extrema comprimida: el eje xc pasa por el borde comprimido y el eje xt por el borde traccionado. Con ellos se obtienen Sxc = Ix/yc y Sxt = Ix/yt, que son distintos en secciones monosimétricas, con alas diferentes (el profesor las llama híbridas). En ese caso, para la compacidad del alma se usa el caso 16 de la Tabla B4.1b en lugar del 15, porque el eje neutro se desplaza hacia el ala mayor. Se define aw = hc·tw/(bfc·tfc), la relación entre el área del alma comprimida y el área del ala comprimida, y con ella el radio de giro efectivo rt. La fluencia del ala comprimida se evalúa con Myc = Fy·Sxc multiplicado por el factor de plastificación del alma Rpc. Si h/tw ≤ λpw, Rpc = Mp/Myc. Si no, se interpola linealmente y nunca se supera Mp/Myc. Se exige además Iyc/Iy > 0.23. Para el LTB se usan Lp = 1.1·rt·√(E/Fy) y una nueva expresión de Lr en función de FL, J, Sxc y ho. En el ejemplo A572 Gr. 50, con Lb = 340 in (arriostre a mitad de los 680 in), aw ≈ 2.94, rt ≈ 3.82 in y Lp = 1.1 × 3.82 × 24.08 ≈ 101 in. La clase terminó mientras se calculaba Lr.",
+      "formulas": [
+        {"nombre": "Relación de áreas", "expresion": "aw = hc·tw/(bfc·tfc)", "variables": "hc: doble de la distancia del centroide a la cara interior del ala comprimida; bfc, tfc: ancho y espesor del ala comprimida"},
+        {"nombre": "Radio de giro efectivo (F4-11)", "expresion": "rt = bfc / √[12·(1 + aw/6)]", "variables": "bfc: ancho del ala comprimida"},
+        {"nombre": "Fluencia del ala comprimida (F4-1)", "expresion": "Mn = Rpc·Myc = Rpc·Fy·Sxc", "variables": "Sxc: módulo elástico referido al ala comprimida"},
+        {"nombre": "Factor de plastificación del alma (F4-9b)", "expresion": "Rpc = [Mp/Myc − (Mp/Myc − 1)·(λ − λpw)/(λrw − λpw)] ≤ Mp/Myc  (si λ > λpw);  Rpc = Mp/Myc si λ ≤ λpw", "variables": "λ = hc/tw; Mp = Fy·Zx ≤ 1.6·Fy·Sx"},
+        {"nombre": "Longitudes límite F4", "expresion": "Lp = 1.1·rt·√(E/Fy);  Lr = 1.95·rt·(E/FL)·√{ J/(Sxc·ho) + √[ (J/(Sxc·ho))² + 6.76·(FL/E)² ] }", "variables": "J: constante torsional; ho: distancia entre centroides de alas; FL = 0.7Fy (si Sxt/Sxc ≥ 0.7)"}
+      ],
+      "referencias_norma": ["AISC 360-16 F4 (ecuaciones F4-1, F4-7, F4-8, F4-9, F4-11)", "AISC 360-16 Tabla B4.1b caso 16 (almas de secciones I monosimétricas)", "AISC 360-16 F4.2 (Iyc/Iy ≤ 0.23 → J = 0)"]
+    }
+  ],
+  "ejemplos": [
+    {
+      "titulo": "Viga con volado: FLB en zona de momento negativo",
+      "enunciado": "Viga soldada A36 con luz entre apoyos de 180 in y volado de 60 in, arriostrada cada 60 in (Lb = 60 in). Sección: alas de 6 × 3/16 in, alma con h = 9.13 in y tw = 3/16 in (d ≈ 9.5 in). Verificar flexión y deflexión.",
+      "pasos": [
+        "Cb por tramo: tramo central 1.3, volado 1.0, tramo con cambio de signo 1.96 (allí está el momento negativo máximo).",
+        "Compacidad: λf = 6/(2 × 0.1875) = 16, con λpf = 10.79 y λrf = 0.95√(kc·E/FL) = 24.4 (kc = 4/√48.7 = 0.57) → ala no compacta.",
+        "Alma: h/tw ≈ 48.7 < λpw ≈ 106 → alma compacta → caso F3 (revisar LTB y FLB).",
+        "Deflexión: Δmáx = 0.54 in ≤ Δlím = 0.60 in → cumple.",
+        "LTB: Lb = 60 in < Lp = 65.2 in (Lr ≈ 185 in) → no aplica; Mn = Mp.",
+        "FLB: Mn = Mp − (Mp − 0.7FySx)(16 − 10.79)/(24.4 − 10.79) ≈ 442 kip·in.",
+        "φMn = 0.9 × 442 ≈ 398 kip·in ≥ Mu(negativo) ≈ 304 kip·in → cumple."
+      ],
+      "resultado": "Gobierna el FLB: φMn ≈ 398 kip·in > Mu ≈ 304 kip·in. El perfil funciona."
+    },
+    {
+      "titulo": "Viga simplemente apoyada arriostrada a los tercios con ala no compacta",
+      "enunciado": "Viga soldada A36, L = 180 in, arriostres a los tercios (Lb = 60 in), Mu = 275.4 kip·in, Vu ≈ 6.1 kip. Sección: alas de 6 × 3/16 in; alma con h = 15 in y tw = 3/16 in. Verificar corte, deflexión y flexión.",
+      "pasos": [
+        "Corte: sin atiesadores, kv = 5.34 → 1.10√(5.34 × 29000/36) = 72.15 < h/tw = 80 → Cv1 = 72.15/80 = 0.90.",
+        "Vn = 0.6 × 36 × (15 × 0.1875) × 0.90 ≈ 54 kip; φVn = 0.9 × 54 ≈ 49 kip ≥ 6 kip → cumple.",
+        "Deflexión: Δ = 5wL⁴/(384EI) ≈ 0.23 in ≤ L/300 = 0.60 in → cumple.",
+        "LTB: Lb = 60 in > Lp ≈ 57 in; la ecuación da Mn ≈ 1025 kip·in > Mp → Mn = Mp.",
+        "FLB: kc = 4/√80 = 0.447 → λrf = 21.55; 10.79 < 16 < 21.55 → ala no compacta → Mn ≈ 802 kip·in.",
+        "Mn = mín(Mp, Mp, 802) = 802 kip·in; φMn = 0.9 × 802 ≈ 722 kip·in ≥ 275.4 kip·in → cumple.",
+        "Variantes: con bf = 10.8 in (aún no compacta) Mn baja; con bf = 12 in el ala pasa a esbelta y Mn = 0.9EkcSx/λ² ≈ 452 kip·in."
+      ],
+      "resultado": "Gobierna el FLB, con φMn ≈ 722 kip·in. Cumple por corte (49 kip), por deflexión (0.23 in) y por flexión."
+    },
+    {
+      "titulo": "Viga de techo con máquinas reciprocantes (planteamiento F4)",
+      "enunciado": "Viga continua del eje B de un techo, acero A572 Gr. 50, luz de 680 in (17 m) con arriostre a mitad (Lb = 340 in). Máquinas reciprocantes de 5 t (impacto 50%) apoyadas entre ejes; carga viva de mantenimiento de 100 kg/m²; plancha de apoyo de 1/2 in. Predimensionar y clasificar la sección.",
+      "pasos": [
+        "Carga de máquina con impacto: 1.5 × 5 t = 7.5 t ≈ 16.5 kip; el eje B recibe la mitad, 8.25 kip.",
+        "Peralte: L = 17 m → d ≈ L/14 ≈ 1.2 m ≈ 48 in; bf ≈ 16 in; tf = tw = 1/2 in; h ≈ 47 in.",
+        "Ala: λf = 16/(2 × 0.5) = 16 → no compacta para Gr. 50.",
+        "Alma: h/tw = 94; λpw = 3.76 × 24.08 ≈ 90.5 < 94 < λrw = 5.70 × 24.08 ≈ 137 → alma no compacta → caso F4.",
+        "kc = 4/√94 ≈ 0.41 (dentro de 0.35–0.76); ho ≈ 47.5 in; J ≈ Σ b·t³/3.",
+        "Iyc/Iy > 0.23 → se calculan Sxc, Myc y Rpc (Rpc queda limitado a Mp/Myc).",
+        "aw ≈ 2.94; rt ≈ 3.82 in; Lp = 1.1 × 3.82 × 24.08 ≈ 101 in < Lb = 340 in. Lr quedó pendiente."
+      ],
+      "resultado": "La sección es no compacta en ala y alma (caso F4). Lp ≈ 101 in. El cálculo de Lr y Mn por LTB quedó para la clase siguiente."
+    }
+  ],
+  "conceptos_clave": [
+    {"termino": "Pandeo local del ala comprimida (FLB)", "definicion": "Ondulación local del ala comprimida cuando su relación bf/2tf supera el límite compacto. Reduce Mn por debajo de Mp."},
+    {"termino": "kc", "definicion": "Coeficiente de pandeo de placa del ala en secciones armadas, igual a 4/√(h/tw) y acotado entre 0.35 y 0.76. Recoge la interacción ala-alma."},
+    {"termino": "FL", "definicion": "Esfuerzo nominal de flexión en el ala comprimida al que empieza el pandeo inelástico. Vale 0.7Fy en secciones doblemente simétricas."},
+    {"termino": "Sxc / Sxt", "definicion": "Módulos elásticos de la sección referidos a la fibra extrema comprimida y a la traccionada. Son distintos en secciones monosimétricas."},
+    {"termino": "Myc", "definicion": "Momento de fluencia del ala comprimida, Fy·Sxc."},
+    {"termino": "Rpc", "definicion": "Factor de plastificación del alma (F4). Escala Myc hasta, como máximo, Mp."},
+    {"termino": "aw", "definicion": "Relación entre el área del alma comprimida (hc·tw) y el área del ala comprimida (bfc·tfc)."},
+    {"termino": "rt", "definicion": "Radio de giro efectivo para LTB en F4 y F5, calculado con el ala comprimida y un sexto del alma comprimida."},
+    {"termino": "Impacto en máquinas reciprocantes", "definicion": "Incremento del 50% de la carga viva de la máquina para considerar su efecto dinámico sobre la estructura."}
+  ],
+  "preguntas": [
+    {"pregunta": "¿En qué caso del Capítulo F se debe revisar el pandeo local del ala comprimida además del LTB, con alma compacta?", "opciones": ["F2: ala y alma compactas", "F3: alma compacta y ala no compacta o esbelta", "F7: secciones HSS", "F11: barras rectangulares"], "correcta": 1, "explicacion": "La sección F3 corresponde a perfiles I con alma compacta y alas no compactas o esbeltas. Sus estados límite son LTB y FLB."},
+    {"pregunta": "¿Cuál es el rango admisible de kc en secciones armadas?", "opciones": ["0.35 ≤ kc ≤ 0.76", "0.5 ≤ kc ≤ 1.0", "1.0 ≤ kc ≤ 4.0", "kc ≥ 0.76"], "correcta": 0, "explicacion": "La nota de la Tabla B4.1b define kc = 4/√(h/tw) con 0.35 ≤ kc ≤ 0.76."},
+    {"pregunta": "Para un ala esbelta en un perfil soldado (F3), Mn por FLB es:", "opciones": ["Mp", "0.7·Fy·Sx", "0.9·E·kc·Sx/λ²", "Fy·Zx·Cb"], "correcta": 2, "explicacion": "La ecuación F3-2 da la resistencia elástica 0.9·E·kc·Sx/λ²."},
+    {"pregunta": "¿Por qué el FLB puede gobernar en una viga con volado?", "opciones": ["Porque el volado elimina el corte", "Porque el momento negativo sobre el apoyo puede ser el mayor y comprime el ala inferior", "Porque en los volados Cb siempre es mayor que 2", "Porque la deflexión del volado es cero"], "correcta": 1, "explicacion": "El momento negativo invierte la compresión al ala inferior y puede superar al momento positivo."},
+    {"pregunta": "¿Qué Cb debe usarse al verificar un tramo no arriostrado?", "opciones": ["El mayor Cb de toda la viga", "Siempre Cb = 1", "El Cb del tramo donde se ubica el momento máximo que se verifica", "El promedio de todos los Cb"], "correcta": 2, "explicacion": "Cada tramo se verifica con su propio Cb. Usar el mayor Cb de la viga no es correcto."},
+    {"pregunta": "En los volados sin arriostre en el extremo libre, el profesor toma Cb igual a:", "opciones": ["1.67", "1.0", "1.3", "2.27"], "correcta": 1, "explicacion": "En voladizos se toma conservadoramente Cb = 1.0."},
+    {"pregunta": "Una máquina reciprocante de 5 t con 50% de impacto se diseña con:", "opciones": ["5 t", "6 t", "7.5 t", "10 t"], "correcta": 2, "explicacion": "PL = (1 + 0.5) × 5 = 7.5 t."},
+    {"pregunta": "Para A572 Gr. 50, ¿cuánto vale √(E/Fy)?", "opciones": ["28.38", "24.08", "20.0", "32.5"], "correcta": 1, "explicacion": "√(29000/50) = 24.08."},
+    {"pregunta": "Una viga I soldada con h/tw = 94 y Fy = 50 ksi tiene un alma:", "opciones": ["Compacta, porque 94 < 106.7", "Esbelta, porque 94 > 90.5", "No compacta, porque 90.5 < 94 < 137", "No se puede clasificar"], "correcta": 2, "explicacion": "λpw = 3.76 × 24.08 = 90.5 y λrw = 5.70 × 24.08 = 137.3, así que el alma es no compacta y aplica F4."},
+    {"pregunta": "En F4, la fluencia del ala comprimida se calcula como:", "opciones": ["Mn = Fy·Zx", "Mn = Rpc·Fy·Sxc", "Mn = Rpg·Fy·Sxc", "Mn = Fy·Sxt"], "correcta": 1, "explicacion": "La ecuación F4-1 es Mn = Rpc·Myc = Rpc·Fy·Sxc."},
+    {"pregunta": "¿Cuál es la expresión de Lp en la sección F4?", "opciones": ["1.76·ry·√(E/Fy)", "1.1·rt·√(E/Fy)", "π·rt·√(E/0.7Fy)", "1.95·rts·E/0.7Fy"], "correcta": 1, "explicacion": "En F4 (y F5), Lp = 1.1·rt·√(E/Fy)."},
+    {"pregunta": "Si al ensanchar el ala de una viga soldada esta pasa de no compacta a esbelta, ¿qué ocurre con Mn por FLB?", "opciones": ["Aumenta siempre", "No cambia", "Disminuye, y se pasa a la fórmula elástica 0.9EkcSx/λ²", "Se iguala a Mp"], "correcta": 2, "explicacion": "El ejemplo de clase mostró que la resistencia cae (≈ 452) al volverse esbelta el ala."}
+  ],
+  "ejercicios_propuestos": [
+    "Calcule Mn por FLB de una viga soldada A36 con alas de 10 × 1/4 in y alma de 16 × 3/16 in. Determine kc, λrf y la clasificación del ala.",
+    "En una viga de 240 in con volado de 80 in y arriostres cada 80 in, con carga uniforme wu = 0.1 kip/in, calcule el Cb de cada tramo no arriostrado e identifique el tramo crítico.",
+    "Rehaga el ejemplo de la viga simplemente apoyada (L = 180 in, Lb = 60 in) con bf = 12 in y tf = 3/16 in, y verifique que el ala resulta esbelta. Calcule φMn.",
+    "Para la viga de techo A572 Gr. 50 (d = 48 in, bf = 16 in, tf = tw = 1/2 in), calcule Sxc, Myc, Mp, Rpc, rt, Lp y Lr según F4.",
+    "Una máquina reciprocante de 3 t se apoya al centro de una viga simplemente apoyada de 6 m. Calcule la carga de diseño con impacto y el momento último con 1.2D + 1.6L, suponiendo D = 0.3 t/m."
+  ],
+  "avisos": [
+    "Se usan hojas Excel por problema. El profesor advierte que cada hoja sirve solo para su problema y que hay que armar una nueva para cada caso. Comparte la hoja al final de la clase.",
+    "Se mostró un video de ensayo de laboratorio de una viga W8 con pandeo local del ala.",
+    "Hubo 11 ausentes ese lunes, día siguiente al Día de la Madre. La próxima clase es el miércoles.",
+    "El profesor recuerda considerar los requisitos sísmicos (pórticos ordinarios, intermedios y especiales) en la clasificación de las secciones."
+  ],
+  "notas_transcripcion": [
+    "'CV' en contexto de flexión se interpretó como Cb. 'LV' como Lb. 'el F' se refiere a distintas secciones del Capítulo F (F2, F3, F4), cuyo número no se capta en el audio.",
+    "'MYC' = Myc; 'SXC' = Sxc; 'AB' = aw; 'RT' = rt; 'RPC' = Rpc; 'eje 90°' se interpretó como eje xc (fibra extrema comprimida) y 'XT' como xt.",
+    "En el ejemplo de la viga con volado aparecen dos valores de Mp (517 y 459.74) y Lr '1.85 con 12'; se interpretó Lr ≈ 185 in. El profesor dice '398 es menor que 304' cuando quiso decir mayor.",
+    "En el ejemplo F4, el audio indica Rpc calculado = 0.57 frente a una 'relación' de 0.43. Esos valores parecen invertidos (Mp/Myc debe ser > 1). Se registró solo la conclusión cualitativa: Rpc queda limitado a Mp/Myc y Mn tiende a Mp.",
+    "'16.5' se interpretó como la conversión de 7.5 t a kip (7.5 × 2.2), no como una amplificación por 1.6.",
+    "El profesor menciona 'lambda P era 80' para el alma A572 Gr. 50. Por fórmula, λpw = 3.76 × 24.08 = 90.5. Se usó el valor normativo.",
+    "Las secciones con alas diferentes se llaman en clase 'vigas híbridas'. En AISC, 'híbrida' significa aceros distintos en alas y alma; para alas diferentes el término correcto es 'monosimétrica'."
+  ]
+}

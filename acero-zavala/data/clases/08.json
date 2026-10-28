@@ -1,0 +1,427 @@
+{
+  "clase": 8,
+  "titulo": "Diseño de uniones soldadas (filete, soldadura balanceada, simbología) y uniones empernadas",
+  "fecha": null,
+  "duracion_min": 107,
+  "resumen": "Se continúa con las uniones. Primero se resuelve un ejemplo completo de soldadura de filete: un ángulo L2½×2×5/16 soldado a una plancha que debe transmitir 170 kips. Se eligen los tamaños mínimo y máximo con la Tabla J2.4 y la Sección J2.2b, se calcula la resistencia por pulgada del metal de aporte (Tabla J2.5) y del metal base (Sección J4: fluencia y rotura por corte), se toma la menor y se obtiene la longitud de cordones iguales. Luego se plantea la soldadura balanceada, que reparte las longitudes según la posición del centroide del ángulo, y se explica la simbología normalizada de soldadura junto con los tipos de junta y la soldadura de penetración precalificada. Se describe cómo una unión viga-columna en cajón (pórtico OMF) transmite el corte por ángulos en el alma y el momento como un par de fuerzas en planchas de ala. En la segunda parte se tratan los pernos: tipos, partes, pretensión mínima y métodos de ajuste, juntas de aplastamiento y de deslizamiento crítico, modos de falla, resistencias nominales con rosca incluida o excluida, dimensiones de agujeros, espaciamientos y distancias a bordes. Cierra con un ejemplo de unión empernada a tracción.",
+  "objetivos": [
+    "Al terminar, el estudiante podrá determinar los tamaños mínimo y máximo de un filete según el espesor de las partes conectadas.",
+    "Al terminar, el estudiante podrá calcular la resistencia por unidad de longitud de un filete como el menor valor entre el metal de aporte y el metal base.",
+    "Al terminar, el estudiante podrá dimensionar longitudes de cordones iguales y de cordones balanceados por equilibrio de fuerzas y momentos.",
+    "Al terminar, el estudiante podrá leer e indicar soldaduras en planos con la simbología normalizada.",
+    "Al terminar, el estudiante podrá distinguir juntas de aplastamiento y de deslizamiento crítico, los métodos de pretensión y los modos de falla de uniones empernadas.",
+    "Al terminar, el estudiante podrá calcular la resistencia a corte de un perno y el número de pernos necesario, verificando espaciamientos y distancias al borde."
+  ],
+  "temas": [
+    {
+      "titulo": "Tamaño de filete y resistencia por pulgada: metal de aporte frente a metal base",
+      "contenido": "Se repasa que la resistencia de la soldadura es el menor valor entre el metal de aporte y el metal base (Tabla J2.5, equivalente a la tabla 10.2.5 de la propuesta de norma), y que la tabla de electrodos compatibles adapta las recomendaciones del AISC a la norma peruana. Ejemplo: un ángulo L2½×2×5/16 montado sobre una plancha de 3/8 in, soldado solo con cordones laterales, porque un único lado del ángulo está en contacto con la plancha. La carga es de 170 kips. Tamaño mínimo: se entra a la Tabla J2.4 con el espesor de la parte más delgada, 5/16 in. Como está entre 1/4 y 1/2 in, el mínimo es 3/16 in. Tamaño máximo en bordes: si t < 1/4 in, el máximo es t; si t ≥ 1/4 in, es t − 1/16 in. Con 5/16 in se obtiene 1/4 in. El diseñador elige dentro de ese rango, en este caso SW = 1/4 in, con garganta te = 0.707·0.25 = 0.177 in. La carga debe pasar del centroide de un elemento al del otro. Metal de aporte (E70XX): φ = 0.75 y Fnw = 0.60·70 = 42 ksi. Sobre la garganta, por pulgada, φRn = 0.75·0.60·70·0.177 ≈ 5.57 kips/in. Si se usara el cateto, saldría 7.87 kips/in, pero controla la garganta. Metal base (A36, Fy = 36 ksi, Fu = 58 ksi), Sección J4.2. Fluencia por corte: φ = 1.00, 0.60·36·(0.25·1) = 5.40 kips/in. Rotura por corte: φ = 0.75, 0.60·58·(0.25·1) = 6.52 kips/in. Controla el metal base, con 5.40 kips/in. Como resistencia de diseño del cordón se toma 5.40 kips/in. El profesor también repasa la Sección J4: tracción en elementos de conexión (fluencia φ = 0.90·Fy·Ag, rotura φ = 0.75·Fu·Ae), corte (fluencia φ = 1.00·0.60·Fy·Agv, rotura φ = 0.75·0.60·Fu·Anv), bloque de corte (sobre todo con pernos: un plano en tracción y otros en corte, descontando agujeros) y compresión en elementos de conexión (si KL/r ≤ 25, φ = 0.90·Fy·Ag; si no, se aplica el Capítulo E). Los cordones transversales, con tracción respecto a su eje, pueden despreciarse y se les pone el tamaño mínimo.",
+      "formulas": [
+        {
+          "nombre": "Tamaño mínimo de filete (Tabla J2.4)",
+          "expresion": "t ≤ 1/4 in → 1/8 in ; 1/4 < t ≤ 1/2 → 3/16 in ; 1/2 < t ≤ 3/4 → 1/4 in ; t > 3/4 → 5/16 in",
+          "variables": "t: espesor de la parte más delgada"
+        },
+        {
+          "nombre": "Tamaño máximo de filete en bordes",
+          "expresion": "SWmáx = t si t < 1/4 in ; SWmáx = t − 1/16 in si t ≥ 1/4 in",
+          "variables": "t: espesor del borde del material"
+        },
+        {
+          "nombre": "Metal de aporte por pulgada",
+          "expresion": "φRn = 0.75·0.60·FEXX·(0.707·SW)",
+          "variables": "FEXX = 70 ksi (E70XX); SW en in; resultado en kips/in"
+        },
+        {
+          "nombre": "Metal base: fluencia por corte",
+          "expresion": "φRn = 1.00·0.60·Fy·Agv",
+          "variables": "Agv: área bruta en corte (SW·1 in por pulgada)"
+        },
+        {
+          "nombre": "Metal base: rotura por corte",
+          "expresion": "φRn = 0.75·0.60·Fu·Anv",
+          "variables": "Anv: área neta en corte (igual a la efectiva en soldadura)"
+        },
+        {
+          "nombre": "Elementos de conexión en tracción",
+          "expresion": "φRn = 0.90·Fy·Ag ; φRn = 0.75·Fu·Ae",
+          "variables": "Ae: área neta efectiva"
+        },
+        {
+          "nombre": "Elementos de conexión en compresión",
+          "expresion": "Si KL/r ≤ 25: φPn = 0.90·Fy·Ag ; si KL/r > 25: Capítulo E",
+          "variables": "KL/r: esbeltez del elemento de conexión"
+        }
+      ],
+      "referencias_norma": [
+        "AISC 360-16 Tabla J2.4",
+        "AISC 360-16 Sección J2.2b",
+        "AISC 360-16 Tabla J2.5",
+        "AISC 360-16 Sección J4.1, J4.2, J4.3 (bloque de corte), J4.4",
+        "Propuesta E.090 tabla 10.2.5"
+      ]
+    },
+    {
+      "titulo": "Longitud de cordones iguales y soldadura balanceada",
+      "contenido": "Con φRn = 5.40 kips/in, el caso más simple supone dos cordones laterales de igual longitud LW. Por equilibrio, Pu = 2·φRn·LW, así que LW = 170/(2·5.4) = 15.74 in. Ese número 'no es ingenieril' (nadie suelda 15.74), por lo que se redondea a 16 in. En los extremos transversales basta un cordón de tamaño mínimo y longitud constructiva (el profesor pone 2·SW = 1/2 in). Soldadura balanceada: si se quiere que las longitudes sean distintas, de modo que la resultante de los cordones coincida con la línea de acción de la carga (el centroide del ángulo), se necesita la posición del centroide, que sale de la tabla de perfiles, en la pestaña de ángulos simples (x̄, ȳ). Para el L2½×2×5/16 el centroide está a unos 0.55 in del borde de referencia, medido en el ancho de 2½ in. El ángulo también debe ubicarse de modo que su centroide coincida con el eje de la plancha (8 in de ancho). Se plantean dos ecuaciones. Suma de fuerzas: φRn·L1 + φRn·L2 = Pu = 170. Momentos respecto de uno de los cordones: φRn·L2·2.5 = Pu·0.555, de donde L2 ≈ 6.99 ≈ 7 in. Reemplazando en la primera, L1 ≈ 24.5 in. La suma (31.5 in) es la misma que con cordones iguales; lo que cambia es el reparto, que hace coincidir la resultante con el centroide y evita excentricidades. En obra se pueden redondear hacia arriba (8 in y 24½ o 25 in). El profesor subraya que la ubicación del ángulo depende de su centroide. Al final hace preguntas para evaluar la participación: la longitud máxima se obtiene con el tamaño máximo, que depende del espesor menor de las partes; y la forma más simple de hallar la longitud con dos planchas traslapadas es el equilibrio con longitudes iguales.",
+      "formulas": [
+        {
+          "nombre": "Cordones iguales",
+          "expresion": "Pu = 2·φRn·LW → LW = Pu/(2·φRn)",
+          "variables": "φRn: resistencia por pulgada (kips/in); LW: longitud de cada cordón (in)"
+        },
+        {
+          "nombre": "Soldadura balanceada: fuerzas",
+          "expresion": "φRn·L1 + φRn·L2 = Pu",
+          "variables": "L1, L2: longitudes de los cordones de cada borde"
+        },
+        {
+          "nombre": "Soldadura balanceada: momentos respecto al cordón 1",
+          "expresion": "φRn·L2·b = Pu·ȳ",
+          "variables": "b: ancho del ala conectada (distancia entre cordones); ȳ: distancia del centroide del ángulo al cordón 1"
+        }
+      ],
+      "referencias_norma": [
+        "AISC 360-16 Sección J1.7 (equilibrio de centroides en conexiones de miembros cargados axialmente)",
+        "AISC Manual, Parte 1 (propiedades de ángulos: x̄, ȳ)"
+      ]
+    },
+    {
+      "titulo": "Simbología de soldadura, tipos de junta y soldadura precalificada",
+      "contenido": "En los planos no se dibuja el cordón 'chorreado': se usa el símbolo normalizado. El símbolo es una línea de referencia horizontal con una flecha. Lo que va debajo de la línea se refiere al lado de la flecha y lo que va encima, al otro lado. Sobre la línea se dibuja la geometría de la soldadura (un triángulo para filete), a la izquierda del símbolo se escribe el tamaño y a la derecha la longitud. Si la soldadura es intermitente, después de la longitud se pone un guion y la separación (paso). Una bandera indica soldadura de campo u obra; sin bandera se entiende que es de taller. Un círculo en el quiebre indica soldadura todo alrededor, y entonces no hace falta especificar longitudes. En la cola de la flecha se anota información especial, como el electrodo o un procedimiento, por ejemplo cuando la soldadura la hacen buzos bajo el agua en un muelle. Para el ejemplo del ángulo se indica un filete de 1/4 in a ambos lados de la flecha con longitudes de 16 in (o, en la versión balanceada, 8 in y 24½ in), y filetes mínimos de 1/4 in × 1/2 in en los extremos. Si el mismo tamaño va en los dos lados, puede omitirse uno de los valores. Tipos de junta: traslapada, a tope (con bisel preparado para soldadura de canal o penetración), en T, de esquina y de borde. Las soldaduras de penetración, completa (CJP) o parcial (PJP), tienen detalles de junta precalificados en las normas de soldadura: tablas en las que, con los espesores de las partes, se obtiene la preparación del bisel y la soldadura.",
+      "formulas": [],
+      "referencias_norma": [
+        "AWS A2.4 (símbolos de soldadura)",
+        "AWS D1.1 (juntas precalificadas CJP/PJP)",
+        "AISC 360-16 Sección J2.1 (soldaduras de ranura)"
+      ]
+    },
+    {
+      "titulo": "Unión viga-columna en cajón para pórtico OMF: corte y par de fuerzas",
+      "contenido": "Se muestra el detalle de unión de una viga H con una columna en cajón rectangular, en un pórtico ordinario (OMF) de varios pisos. En el análisis los elementos son líneas (ejes), pero el detalle se dibuja con las dimensiones reales de las secciones. Como hacer rigidizadores internos en un cajón es difícil, se suele dar continuidad externa: una plancha que engrosa la pared de la columna a la altura de las alas, para que la compresión de la viga no la abolle localmente. Supuestos de demanda del análisis: Vu = 30 kips y Mu = 1200 kip·in. El corte lo toma el alma de la viga y se transfiere a la columna mediante ángulos (clips) soldados al alma, cada uno con su φRn por su longitud. El momento se convierte en un par de fuerzas: con un peralte de 20 in, F = 1200/20 = 60 kips en cada ala, tracción en una y compresión en la otra. La plancha proyectada desde la columna se suelda al ala de la viga con dos cordones longitudinales y un cordón transversal en el extremo, que en este caso sí se considera. El cordón transversal solo puede hacerse por arriba, porque abajo está el perfil. Esos tres cordones deben resistir más de 60 kips. El profesor anuncia que el tema se desarrollará con más detalle en el capítulo de pórticos.",
+      "formulas": [
+        {
+          "nombre": "Fuerza en las alas por momento",
+          "expresion": "Ff = Mu/d",
+          "variables": "Mu: momento en la unión (kip·in); d: peralte de la viga (in)"
+        }
+      ],
+      "referencias_norma": [
+        "AISC 360-16 Sección J10 (cargas concentradas en alas y almas)",
+        "Norma E.030 Tabla 7 (OMF)"
+      ]
+    },
+    {
+      "titulo": "Pernos: tipos, pretensión mínima y métodos de ajuste",
+      "contenido": "Al usar pernos se perforan los elementos y se reduce su área, lo que lleva a las líneas de falla vistas en tracción. Los pernos estructurales de alta resistencia son ASTM A325 y A490 y llevan su designación en relieve en la cabeza. Se usan en los elementos estructurales principales. El perno A307 (perno de máquina o común, el que se consigue en cualquier ferretería) no lleva marca y se reserva para elementos secundarios o no estructurales cuya falla no compromete la estructura. Partes: cabeza, vástago con una zona lisa y otra roscada, tuerca y arandela ('guacha'). La zona roscada importa porque el área resistente cambia según el plano de corte pase o no por la rosca. Pretensión: la Tabla J3.1 da la tracción mínima para considerar un perno ajustado. Por ejemplo, con acabado de superficie clase A, un perno de 3/4 in necesita 28 kips y uno de 5/8 in, 19 kips. Métodos de ajuste: llave calibrada o torquímetro (pantalla digital que indica la tensión o el torque aplicado; se ajusta hasta leer el valor de tabla o más), giro de tuerca (se aprieta a mano hasta que la llave ya no avanza, condición de ajuste firme, y luego se da una fracción de vuelta adicional con un tubo de extensión, según la longitud del perno en diámetros; el profesor menciona media vuelta para longitudes de unos 4-5 diámetros) e indicador directo de tensión. Al ajustar se produce un alargamiento axial del perno, es decir, una tracción que genera presión de contacto entre las planchas.",
+      "formulas": [],
+      "referencias_norma": [
+        "AISC 360-16 Sección J3.1 y Tabla J3.1 (pretensión mínima)",
+        "RCSC Specification (giro de tuerca, Tabla 8.2)",
+        "ASTM F3125 (A325/A490), ASTM A307"
+      ]
+    },
+    {
+      "titulo": "Juntas de aplastamiento y de deslizamiento crítico; modos de falla",
+      "contenido": "En una junta de aplastamiento (contacto) los pernos no van pretensados ('requintados'). Las planchas pueden deslizar hasta apoyarse en el vástago, que queda sometido a corte (fuerzas P y −P en los planos de corte), mientras las paredes del agujero se aplastan. Es el caso de armaduras empernadas o de uniones tipo pasador. En una junta de deslizamiento crítico los pernos se ajustan con la pretensión de la Tabla J3.1, y la fuerza se transmite por fricción entre las superficies, que dependen de su clase de acabado (A o B; en general se usa la clase A). Modos de falla que se quieren evitar: (1) desgarramiento o falla 'ojal' ('tear-out'), cuando el perno está demasiado cerca del borde, lo que se evita respetando la distancia mínima al borde; (2) aplastamiento de la plancha, también por cercanía al borde; (3) rotura por tracción en la sección neta, cuando el elemento es muy angosto o las distancias laterales son pequeñas; (4) falla del perno por corte; (5) falla del perno por tracción.",
+      "formulas": [],
+      "referencias_norma": [
+        "AISC 360-16 Sección J3.6 a J3.10 (resistencia a tracción, corte, aplastamiento y desgarramiento)",
+        "AISC 360-16 Sección J3.8 (conexiones de deslizamiento crítico)"
+      ]
+    },
+    {
+      "titulo": "Resistencia nominal de pernos (rosca incluida o excluida), agujeros, espaciamientos y bordes",
+      "contenido": "La Tabla J3.2 da la resistencia nominal a tracción Fnt y a corte Fnv. Para A325, Fnt = 90 ksi. En corte, Fnv = 54 ksi si la rosca no está excluida del plano de corte (condición N, el plano pasa por la zona roscada) y Fnv = 68 ksi si está excluida (condición X, el plano pasa por el vástago liso). En ambos casos se usa el área nominal del vástago, π·d²/4. El profesor lo explica dibujando el vástago con su zona roscada y dos secciones: una por la zona lisa (mayor) y otra por la raíz de la rosca (menor). Agujeros (Tabla J3.3): estándar, sobredimensionado, ranura corta y ranura larga. Para un perno de 5/8 in, el agujero estándar es de 11/16 in y el sobredimensionado de 13/16 in. Para pernos chicos el estándar es d + 1/16 in (de ahí 9/16 in para 1/2 in), y las ranuras tienen dimensiones tabuladas. Separación entre centros de agujeros: al menos 3 diámetros (la norma pide un mínimo de 2⅔·d y prefiere 3·d). Distancia mínima al borde: Tabla J3.4, por ejemplo 3/4 in para un perno de 1/2 in. Separación máxima en uniones traslapadas: 24 veces el espesor de la plancha más delgada o 30 cm (12 in) si no hay corrosión; en ambientes corrosivos, como muelles o puertos frente al mar, 14 veces el espesor o 18 cm (7 in).",
+      "formulas": [
+        {
+          "nombre": "Resistencia a corte de un perno",
+          "expresion": "φRn = 0.75·Fnv·Ab ; Ab = π·d²/4",
+          "variables": "Fnv: 54 ksi (A325-N) o 68 ksi (A325-X); d: diámetro nominal"
+        },
+        {
+          "nombre": "Resistencia a tracción de un perno",
+          "expresion": "φRn = 0.75·Fnt·Ab",
+          "variables": "Fnt = 90 ksi (A325)"
+        },
+        {
+          "nombre": "Número de pernos",
+          "expresion": "n = Pu/(φRn por perno), redondeado hacia arriba según la disposición",
+          "variables": "Pu: carga de diseño"
+        },
+        {
+          "nombre": "Espaciamiento y bordes",
+          "expresion": "s ≥ 3·d ; Le ≥ Le,mín (Tabla J3.4) ; smáx = mín(24·t ; 12 in) o mín(14·t ; 7 in) en ambiente corrosivo",
+          "variables": "t: espesor de la plancha más delgada"
+        }
+      ],
+      "referencias_norma": [
+        "AISC 360-16 Tabla J3.2",
+        "AISC 360-16 Tabla J3.3",
+        "AISC 360-16 Sección J3.3 y Tabla J3.4",
+        "AISC 360-16 Sección J3.5 (espaciamiento y distancia al borde máximos)"
+      ]
+    },
+    {
+      "titulo": "Ejemplo de unión empernada a tracción: chequeo geométrico y número de pernos",
+      "contenido": "Dos planchas traslapadas, una de 6 in × 1/2 in y otra de 8 in × 1/4 in, se jalan en sentidos opuestos con Pu = 25 kips. Se propone una línea transversal de dos pernos de 1/2 in con agujeros estándar de 9/16 in. Antes de calcular, el profesor 'chequea primero' que la disposición entre en la plancha más angosta. Suma dos distancias al borde de 3/4 in (1.50 in), dos diámetros de agujero (2·9/16 = 1.125 in; con eso van 2.625 in) y la separación de 3 diámetros de agujero (3·9/16 = 1.6875 in), lo que da un ancho mínimo de unos 4.31 in, menor que 6 in. La disposición cabe. Resistencia de un perno a corte simple, con Fnv = 68 ksi y Ab = π·0.5²/4 = 0.196 in²: φRn = 0.75·68·0.196 ≈ 10.0 kips. Número de pernos: 25/10 ≈ 2.5. Como no hay medios pernos y la disposición es por pares, se colocan 4 pernos en 2 líneas de 2. El profesor concluye que diseñar con pernos es sencillo. Lo importante es la distribución, el número de líneas y, sobre todo, las áreas.",
+      "formulas": [
+        {
+          "nombre": "Ancho mínimo para una fila de n pernos (criterio de clase)",
+          "expresion": "b,mín ≈ 2·Le + n·dh + (n − 1)·3·dh",
+          "variables": "Le: distancia al borde; dh: diámetro del agujero"
+        }
+      ],
+      "referencias_norma": [
+        "AISC 360-16 Tablas J3.2, J3.3 y J3.4"
+      ]
+    }
+  ],
+  "ejemplos": [
+    {
+      "titulo": "Filete de un ángulo L2½×2×5/16 sobre plancha, con cordones iguales",
+      "enunciado": "Un ángulo L2½×2×5/16 (A36) se suelda con filetes laterales a una plancha de 3/8 in (A36) y transmite Pu = 170 kips. Electrodo E70XX. Determinar el tamaño de soldadura, la resistencia por pulgada y la longitud de dos cordones iguales.",
+      "pasos": [
+        "Parte más delgada: 5/16 in. Tabla J2.4: SWmín = 3/16 in. SWmáx = 5/16 − 1/16 = 1/4 in. Se elige SW = 1/4 in.",
+        "Garganta: te = 0.707·0.25 = 0.177 in.",
+        "Metal de aporte: φRn = 0.75·0.60·70·0.177 = 5.57 kips/in.",
+        "Metal base, fluencia por corte: φRn = 1.00·0.60·36·0.25 = 5.40 kips/in.",
+        "Metal base, rotura por corte: φRn = 0.75·0.60·58·0.25 = 6.52 kips/in.",
+        "Controla φRn = 5.40 kips/in.",
+        "LW = 170/(2·5.40) = 15.74 in, que se redondea a 16 in por cordón. En los extremos, filetes mínimos de 1/4 in × 1/2 in."
+      ],
+      "resultado": "Filete de 1/4 in, dos cordones de 16 in (φRn total ≈ 2·5.4·16 = 173 kips ≥ 170 kips)."
+    },
+    {
+      "titulo": "Soldadura balanceada del mismo ángulo",
+      "enunciado": "Para el mismo ángulo y la misma carga (Pu = 170 kips, φRn = 5.40 kips/in), con el centroide del ángulo a ȳ ≈ 0.555 in del cordón 1 y una distancia entre cordones de 2.5 in, determinar longitudes L1 y L2 que equilibren la resultante con el centroide.",
+      "pasos": [
+        "Momentos respecto del cordón 1: 5.40·L2·2.5 = 170·0.555, así que L2 ≈ 6.99 ≈ 7 in.",
+        "Fuerzas: 5.40·L1 + 5.40·7 = 170, así que L1 ≈ 24.5 in.",
+        "Redondeo constructivo: L2 = 8 in y L1 = 24½ in (o 25 in).",
+        "En el plano: filete de 1/4 in con longitudes de 8 in y 24½ in, más filetes mínimos de 1/4 in × 1/2 in en los extremos."
+      ],
+      "resultado": "L1 ≈ 24.5 in (cordón cercano al centroide) y L2 ≈ 7 in. La longitud total, ≈ 31.5 in, es igual a la de cordones iguales."
+    },
+    {
+      "titulo": "Fuerzas en una unión viga-columna en cajón (OMF)",
+      "enunciado": "Una viga de 20 in de peralte llega a una columna en cajón con Vu = 30 kips y Mu = 1200 kip·in. Obtener las fuerzas de diseño de la conexión.",
+      "pasos": [
+        "Corte: lo toman los ángulos del alma, Vu = 30 kips (15 kips por ángulo si hay dos).",
+        "Par de fuerzas: Ff = 1200/20 = 60 kips en cada ala.",
+        "Las planchas de ala y sus soldaduras (dos longitudinales y una transversal superior) deben resistir más de 60 kips."
+      ],
+      "resultado": "Ángulos de alma para 30 kips. Planchas de ala y soldaduras para 60 kips de tracción o compresión."
+    },
+    {
+      "titulo": "Unión traslapada empernada con pernos de 1/2 in",
+      "enunciado": "Dos planchas traslapadas (6 in × 1/2 in y 8 in × 1/4 in) transmiten Pu = 25 kips. Pernos A325 de 1/2 in en agujeros estándar de 9/16 in, corte simple, Fnv = 68 ksi. Verificar que una fila de 2 pernos cabe y hallar el número de pernos.",
+      "pasos": [
+        "Ancho mínimo: 2·(3/4) + 2·(9/16) + 3·(9/16) = 1.5 + 1.125 + 1.6875 ≈ 4.31 in, menor que 6 in: cabe.",
+        "Ab = π·0.5²/4 = 0.196 in².",
+        "φRn = 0.75·68·0.196 ≈ 10.0 kips por perno.",
+        "n = 25/10.0 = 2.5 pernos, que se redondea según la disposición."
+      ],
+      "resultado": "4 pernos de 1/2 in en 2 líneas de 2 pernos."
+    }
+  ],
+  "conceptos_clave": [
+    {
+      "termino": "Tamaño mínimo de filete",
+      "definicion": "Valor de la Tabla J2.4 según el espesor de la parte más delgada, para asegurar fusión y evitar enfriamiento rápido."
+    },
+    {
+      "termino": "Tamaño máximo de filete",
+      "definicion": "En bordes: t si t < 1/4 in, o t − 1/16 in si t ≥ 1/4 in."
+    },
+    {
+      "termino": "Soldadura balanceada",
+      "definicion": "Reparto de longitudes de cordones para que la resultante de la soldadura coincida con el centroide del miembro y no haya excentricidad."
+    },
+    {
+      "termino": "Símbolo de soldadura",
+      "definicion": "Línea de referencia con flecha. Debajo, el lado de la flecha; encima, el otro lado. Incluye tamaño, tipo, longitud, paso, bandera de campo, círculo de todo alrededor y cola."
+    },
+    {
+      "termino": "Junta de aplastamiento",
+      "definicion": "Unión empernada sin pretensión, donde la carga pasa por corte del perno y aplastamiento de las paredes del agujero."
+    },
+    {
+      "termino": "Junta de deslizamiento crítico",
+      "definicion": "Unión con pernos pretensados según la Tabla J3.1, donde la carga pasa por fricción entre superficies de clase A o B."
+    },
+    {
+      "termino": "Rosca incluida / excluida (N / X)",
+      "definicion": "Indica si el plano de corte atraviesa la rosca (N, Fnv = 54 ksi en A325) o el vástago liso (X, Fnv = 68 ksi)."
+    },
+    {
+      "termino": "Giro de tuerca",
+      "definicion": "Método de pretensión: tras el ajuste firme se gira la tuerca una fracción de vuelta que depende de la longitud del perno."
+    },
+    {
+      "termino": "Falla 'ojal' (desgarramiento)",
+      "definicion": "Rotura del material entre el agujero y el borde cuando la distancia al borde es insuficiente."
+    },
+    {
+      "termino": "Bloque de corte",
+      "definicion": "Estado límite en que un bloque de material se desprende con un plano en tracción y otro en corte, descontando agujeros."
+    }
+  ],
+  "preguntas": [
+    {
+      "pregunta": "Se unen una plancha de 3/8 in y un ángulo de 5/16 in con filete. ¿Cuál es el tamaño mínimo según la Tabla J2.4?",
+      "opciones": [
+        "1/8 in",
+        "3/16 in",
+        "1/4 in",
+        "5/16 in"
+      ],
+      "correcta": 1,
+      "explicacion": "Se entra con la parte más delgada (5/16 in), que está entre 1/4 y 1/2 in, y el mínimo es 3/16 in."
+    },
+    {
+      "pregunta": "Tamaño máximo de un filete en el borde de un material de 5/16 in:",
+      "opciones": [
+        "5/16 in",
+        "3/16 in",
+        "1/4 in",
+        "3/8 in"
+      ],
+      "correcta": 2,
+      "explicacion": "Como t ≥ 1/4 in, el máximo es t − 1/16 = 1/4 in."
+    },
+    {
+      "pregunta": "φRn por pulgada del metal de aporte de un filete de 1/4 in con E70XX:",
+      "opciones": [
+        "5.57 kips/in",
+        "7.87 kips/in",
+        "5.40 kips/in",
+        "6.52 kips/in"
+      ],
+      "correcta": 0,
+      "explicacion": "0.75·0.60·70·0.707·0.25 ≈ 5.57 kips/in."
+    },
+    {
+      "pregunta": "En el ejemplo de clase, ¿qué controló la resistencia del cordón de 1/4 in sobre acero A36?",
+      "opciones": [
+        "La rotura del metal de aporte",
+        "La fluencia por corte del metal base (5.40 kips/in)",
+        "La rotura por corte del metal base",
+        "El bloque de corte"
+      ],
+      "correcta": 1,
+      "explicacion": "1.00·0.60·36·0.25 = 5.40 kips/in, menor que 5.57 (aporte) y que 6.52 (rotura del metal base)."
+    },
+    {
+      "pregunta": "Dos cordones iguales con φRn = 5.4 kips/in deben transmitir 170 kips. ¿Qué longitud por cordón se especifica?",
+      "opciones": [
+        "15.74 in",
+        "31.5 in",
+        "16 in",
+        "8 in"
+      ],
+      "correcta": 2,
+      "explicacion": "LW = 170/(2·5.4) = 15.74 in, que se redondea a un valor constructivo de 16 in."
+    },
+    {
+      "pregunta": "El objetivo de la soldadura balanceada es:",
+      "opciones": [
+        "Reducir la longitud total de soldadura",
+        "Que la resultante de los cordones coincida con el centroide del miembro y no haya excentricidad",
+        "Usar dos tamaños de filete distintos",
+        "Evitar el uso de cordones transversales"
+      ],
+      "correcta": 1,
+      "explicacion": "Las longitudes se reparten por equilibrio de momentos respecto del centroide. El total es el mismo."
+    },
+    {
+      "pregunta": "En un símbolo de soldadura, una bandera en el quiebre de la línea de referencia indica:",
+      "opciones": [
+        "Soldadura todo alrededor",
+        "Soldadura de campo (en obra)",
+        "Soldadura intermitente",
+        "Soldadura en el otro lado"
+      ],
+      "correcta": 1,
+      "explicacion": "La bandera indica soldadura en obra. Sin bandera se entiende que es de taller, y el círculo significa todo alrededor."
+    },
+    {
+      "pregunta": "Un momento de 1200 kip·in llega a una viga de 20 in de peralte. ¿Qué fuerza actúa en cada plancha de ala?",
+      "opciones": [
+        "24 kips",
+        "60 kips",
+        "120 kips",
+        "600 kips"
+      ],
+      "correcta": 1,
+      "explicacion": "Ff = M/d = 1200/20 = 60 kips."
+    },
+    {
+      "pregunta": "¿Qué perno es adecuado solo para elementos secundarios o no estructurales?",
+      "opciones": [
+        "A325",
+        "A490",
+        "A307",
+        "F1852"
+      ],
+      "correcta": 2,
+      "explicacion": "El A307 es un perno común de máquina, sin marca de alta resistencia en la cabeza."
+    },
+    {
+      "pregunta": "Pretensión mínima de un perno A325 de 3/4 in según la Tabla J3.1:",
+      "opciones": [
+        "19 kips",
+        "28 kips",
+        "39 kips",
+        "12 kips"
+      ],
+      "correcta": 1,
+      "explicacion": "La Tabla J3.1 da 28 kips para pernos A325 de 3/4 in (19 kips para 5/8 in)."
+    },
+    {
+      "pregunta": "Resistencia nominal a corte Fnv de un perno A325 con la rosca excluida del plano de corte:",
+      "opciones": [
+        "54 ksi",
+        "90 ksi",
+        "68 ksi",
+        "48 ksi"
+      ],
+      "correcta": 2,
+      "explicacion": "Condición X: Fnv = 68 ksi. Con la rosca incluida (N), Fnv = 54 ksi."
+    },
+    {
+      "pregunta": "Separación máxima entre pernos en una unión traslapada en ambiente marino:",
+      "opciones": [
+        "24·t o 30 cm",
+        "14·t o 18 cm",
+        "3·d",
+        "12·t o 15 cm"
+      ],
+      "correcta": 1,
+      "explicacion": "En ambientes corrosivos se limita a 14 veces el espesor menor o unos 18 cm (7 in)."
+    }
+  ],
+  "ejercicios_propuestos": [
+    "Un ángulo L3×3×3/8 (A36, ȳ = 0.884 in) se suelda a una plancha de 1/2 in y transmite Pu = 120 kips con electrodo E70XX. Elija el tamaño de filete, calcule φRn por pulgada (aporte y metal base) y diseñe una soldadura balanceada.",
+    "Dos planchas traslapadas de 8 in × 3/8 in (A36) transmiten Pu = 90 kips. Diseñe cordones longitudinales iguales de filete y dibuje el símbolo de soldadura correspondiente.",
+    "Una viga de 18 in de peralte transmite Mu = 1800 kip·in y Vu = 40 kips a una columna. Calcule la fuerza en las planchas de ala y la longitud de dos cordones longitudinales de 5/16 in (E70XX, planchas de 1/2 in A36) para tomarla.",
+    "Diseñe una unión traslapada con pernos A325-N de 3/4 in (agujeros estándar de 13/16 in) para Pu = 60 kips en planchas de 8 in × 1/2 in. Verifique el ancho mínimo, el número de pernos y las distancias al borde.",
+    "Para un perno A325 de 5/8 in, compare φRn a corte con la rosca incluida y excluida, y la resistencia a tracción φRn = 0.75·Fnt·Ab."
+  ],
+  "avisos": [
+    "El profesor evalúa la participación en clase: todos empiezan con 20 y se descuentan puntos a quien no responde cuando se le pregunta.",
+    "Se pasó lista dos veces porque unos 10 alumnos se desconectaron a mitad de la clase.",
+    "Se usaron la tabla de perfiles del AISC (pestaña de ángulos simples) y el Capítulo J de la norma.",
+    "El detalle de la unión viga-columna se desarrollará con más profundidad en el capítulo de pórticos."
+  ],
+  "notas_transcripcion": [
+    "La transcripción dice '1700 kips'. Por los cálculos (5.4·2·15.74 ≈ 170), la carga es 170 kips.",
+    "'250 por 2 por 5 16' se interpretó como el ángulo L2½×2×5/16 y '2.30' como 2½.",
+    "El profesor dice 'te van a soldar 16 centímetros', pero los cálculos están en pulgadas: son 16 in.",
+    "En la soldadura balanceada, el centroide de 0.55 in corresponde a x̄ ≈ 0.558 in del L2½×2×5/16. Las longitudes resultantes (7 in y 24.5 in) se registran tal como se calcularon en clase.",
+    "En el ejemplo de pernos, el profesor dice 'no estoy excluyendo' pero usa 68 ksi, que corresponde a la rosca excluida (X). Con la rosca incluida sería 54 ksi y φRn ≈ 7.95 kips. El resultado de 4 pernos se mantiene.",
+    "'Guacha' es la arandela, 'requintar' es pretensar y 'ojo chino' es un agujero ranurado.",
+    "El cálculo de ancho mínimo del ejemplo de pernos sigue el procedimiento de clase (suma de bordes, diámetros y separación), que es conservador respecto a 2·Le + s.",
+    "La fecha no se menciona. Por la secuencia, es una sesión entre el 26 de abril y el 3 de mayo de 2021 (en la playlist original está duplicada como clase 10)."
+  ]
+}

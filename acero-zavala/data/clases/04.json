@@ -1,0 +1,425 @@
+{
+  "clase": 4,
+  "titulo": "Diseño de miembros en tracción: áreas bruta, neta y efectiva, estados límite y aplicación a la brida inferior del tijeral",
+  "fecha": "miércoles (fecha exacta no mencionada; por la secuencia del curso, probablemente 14 de abril de 2021)",
+  "duracion_min": 101,
+  "resumen": "La clase cierra el dimensionamiento del tijeral (fuerza en diagonales a partir de la reacción y el ángulo) y entra al primer tema de diseño propiamente dicho: miembros en tracción. El profesor presenta los documentos normativos que se usarán (AISC 360-16 vigente, borrador de AISC 360-22 solo como referencia, Norma E.090 vigente para combinaciones de carga y el proyecto de norma peruana de 2018 con su capítulo sísmico). Luego define las tres áreas que intervienen en el diseño en tracción: área bruta Ag, área neta An (descontando agujeros con diámetro del perno más 1/8 pulg y aplicando la regla s²/4g de Cochrane para cadenas en zigzag) y área neta efectiva Ae = U·An, con el factor de rezago de cortante U de la Tabla D3.1. Explica los estados límite de fluencia en el área bruta (φ = 0.90) y rotura en el área neta efectiva (φ = 0.75), y la recomendación de esbeltez L/r ≤ 300 para evitar vibraciones. Resuelve un ejemplo de unión soldada de dos planchas y finalmente predimensiona la brida inferior del tijeral del ejemplo del Callao (Tu ≈ 50.8 kips) con 2L 2×2×5/16.",
+  "objetivos": [
+    "Al terminar, el estudiante podrá calcular el área bruta, el área neta y el área neta efectiva de planchas y perfiles conectados con pernos o soldadura.",
+    "Al terminar, el estudiante podrá aplicar la regla de Cochrane (s²/4g) para encontrar la línea de falla crítica en agujeros en zigzag.",
+    "Al terminar, el estudiante podrá seleccionar el factor de rezago de cortante U según la Tabla D3.1 del AISC 360.",
+    "Al terminar, el estudiante podrá evaluar la resistencia de diseño en tracción por fluencia y por rotura y escoger el estado límite que controla.",
+    "Al terminar, el estudiante podrá verificar la relación de esbeltez L/r ≤ 300 de un miembro en tracción.",
+    "Al terminar, el estudiante podrá predimensionar la brida inferior de un tijeral a partir de la analogía de viga simplemente apoyada."
+  ],
+  "temas": [
+    {
+      "titulo": "Cierre del dimensionamiento del tijeral: fuerza en diagonales",
+      "contenido": "Retomando la clase anterior, el profesor recuerda que la armadura se puede analizar en forma aproximada como una viga simplemente apoyada con carga repartida wu (obtenida del ancho tributario o modular entre pórticos). Con esa aproximación la reacción en cada apoyo es wu·L/2. Para las diagonales recomienda configurar la armadura buscando que las diagonales queden aproximadamente a 45°, lo que se logra relacionando el peralte H con la separación entre nudos. Conociendo la geometría se obtiene la longitud de la diagonal por Pitágoras (proyección horizontal y peralte H) y de ahí el coseno o seno del ángulo que forma con la vertical u horizontal. La fuerza en la diagonal extrema se obtiene dividiendo la reacción entre la componente trigonométrica correspondiente (equilibrio del nudo de apoyo), y esa fuerza, de compresión o tracción según la orientación, es la que sirve para dimensionar la diagonal. Este procedimiento es solo de predimensionamiento: el análisis definitivo se hará con un modelo de armadura, pero permite tener un primer orden de magnitud de las fuerzas.",
+      "formulas": [
+        {
+          "nombre": "Reacción de la armadura (analogía de viga)",
+          "expresion": "R = wu·L / 2",
+          "variables": "wu: carga repartida factorizada (kg/m o kip/ft); L: luz del tijeral"
+        },
+        {
+          "nombre": "Fuerza aproximada en la diagonal extrema",
+          "expresion": "Fd = R / sen(θ) (θ medido respecto a la horizontal)",
+          "variables": "R: reacción de apoyo; θ: ángulo de la diagonal; longitud de diagonal Ld = √((s)² + H²) con s la proyección horizontal y H el peralte"
+        }
+      ],
+      "referencias_norma": []
+    },
+    {
+      "titulo": "Documentos normativos del curso y combinaciones de carga",
+      "contenido": "El profesor fija el marco normativo del curso. La norma de diseño base es la AISC 360-16 (Specification for Structural Steel Buildings), vigente en Estados Unidos. De la Norma Peruana E.090 vigente se tomarán fundamentalmente las combinaciones de carga (página 5 del PDF). Existe además un proyecto de actualización de la E.090 (versión 2018) que está en el Ministerio sin publicarse; el profesor es miembro del comité por la UNI y es autor del capítulo de diseño sísmico (capítulo 13). En el capítulo 1 del proyecto (página 20) aparecen las cargas y combinaciones, que no difieren de las de la norma vigente. Se aclara que la AISC remite a la ASCE 7 para cargas, pero en el curso no se usará la ASCE 7 sino las combinaciones de la norma peruana. También comparte un borrador (preview) de la AISC 360-22 que saldría el año siguiente, solo para que los alumnos se familiaricen: los cambios son menores (pueden alterar un diseño en orden de un décimo), por ejemplo en la Tabla D3.1 se precisan los casos de HSS circulares y rectangulares. Para el curso se usa la 360-16. Todos los documentos estarán en el Drive del curso.",
+      "formulas": [
+        {
+          "nombre": "Combinación 1 (E.090)",
+          "expresion": "U = 1.4·D",
+          "variables": "D: carga muerta"
+        },
+        {
+          "nombre": "Combinación 2 (E.090)",
+          "expresion": "U = 1.2·D + 1.6·L + 0.5·(Lr o S o R)",
+          "variables": "L: carga viva; Lr: viva de techo; S: nieve; R: lluvia"
+        }
+      ],
+      "referencias_norma": [
+        "Norma E.090 vigente, combinaciones de carga (sección 1.4)",
+        "Proyecto de Norma E.090 (2018), capítulo 1 (cargas y combinaciones) y capítulo 13 (diseño sísmico)",
+        "AISC 360-16",
+        "AISC 360-22 (borrador, solo referencia)"
+      ]
+    },
+    {
+      "titulo": "Área bruta (geométrica) Ag",
+      "contenido": "El área bruta o geométrica Ag es el área de la sección transversal completa, sin descontar perforaciones. Para una plancha de ancho b y espesor t, Ag = b·t. Para un perfil en H formado por planchas soldadas (perfil soldado, a diferencia del perfil laminado o 'rolado' que sale del horno ya con su forma), el área se obtiene sumando las dos alas y el alma: Ag = 2·bf·tf + h·tw. El profesor explica la nomenclatura en inglés: el subíndice f viene de 'flange' (ala) y el subíndice w de 'web' (alma). En los perfiles soldados aparecen filetes de soldadura en las uniones ala-alma, que deben tenerse presentes al identificar cómo se fabricó la pieza, aunque para el área se toma la suma de las planchas. El área bruta es la base del estado límite de fluencia, porque la fluencia se produce a lo largo de todo el miembro, lejos de las conexiones, donde la sección está completa. En perfiles laminados el valor de Ag se lee directamente de las tablas del Manual AISC (primera columna de propiedades); en perfiles soldados se calcula sumando las planchas que lo componen. Para dobles ángulos, Ag es la suma de las áreas de ambos ángulos.",
+      "formulas": [
+        {
+          "nombre": "Área bruta de plancha",
+          "expresion": "Ag = b·t",
+          "variables": "b: ancho (pulg); t: espesor (pulg)"
+        },
+        {
+          "nombre": "Área bruta de perfil H soldado",
+          "expresion": "Ag = 2·bf·tf + h·tw",
+          "variables": "bf, tf: ancho y espesor del ala; h, tw: altura libre y espesor del alma"
+        }
+      ],
+      "referencias_norma": [
+        "AISC 360-16 Sección B4.3a"
+      ]
+    },
+    {
+      "titulo": "Área neta An y método de Cochrane para agujeros en zigzag",
+      "contenido": "El área neta descuenta el material retirado por las perforaciones para pernos. El diámetro del agujero que se descuenta se toma como el diámetro nominal del perno más 1/8 de pulgada: el agujero estándar se perfora 1/16 pulg mayor que el perno (holgura para poder montarlo) y se agrega otro 1/16 pulg para considerar el daño o imperfección del proceso de perforado. El profesor lo explica como una tolerancia de ±1/16 más la holgura; lo importante es que se usa db + 1/8 pulg porque un agujero mayor deja menos área y es la condición más desfavorable. Para una fila recta de agujeros el ancho neto es bn = b − Σd y An = bn·t. Cuando los agujeros están en diagonal o en zigzag se aplica el método empírico de Cochrane: para cada línea de falla posible se calcula bn = b − Σd + Σ s²/(4g), donde s es el espaciamiento longitudinal (paralelo a la carga) entre dos agujeros consecutivos de la cadena y g el espaciamiento transversal (gramil). Deben analizarse todas las líneas posibles (rectas y quebradas) y se adopta la que da el menor ancho neto, que es la línea crítica. Ejemplo conceptual: plancha de ancho b con dos pernos en una misma sección transversal: bn = b − 2·(db + 1/8) y An = bn·t.",
+      "formulas": [
+        {
+          "nombre": "Diámetro de cálculo del agujero",
+          "expresion": "d = db + 1/8 pulg",
+          "variables": "db: diámetro nominal del perno"
+        },
+        {
+          "nombre": "Área neta (fila recta)",
+          "expresion": "An = (b − Σd)·t",
+          "variables": "b: ancho bruto; Σd: suma de diámetros de agujeros en la sección; t: espesor"
+        },
+        {
+          "nombre": "Regla de Cochrane (cadena en zigzag)",
+          "expresion": "An = (b − Σd + Σ s²/(4·g))·t",
+          "variables": "s: paso longitudinal entre agujeros consecutivos; g: separación transversal (gramil); se toma la cadena con menor An"
+        }
+      ],
+      "referencias_norma": [
+        "AISC 360-16 Sección B4.3b (área neta)",
+        "AISC 360-16 Sección B4.3b: ancho de agujero = nominal + 1/16 pulg"
+      ]
+    },
+    {
+      "titulo": "Área neta efectiva Ae y factor de rezago de cortante U (Tabla D3.1)",
+      "contenido": "El área neta efectiva considera que, cuando la fuerza no se transmite a todos los elementos de la sección, los esfuerzos se concentran cerca de la conexión (rezago de cortante o shear lag). Se define Ae = U·An. Caso 1 de la Tabla D3.1: si la tracción se transmite directamente a cada elemento de la sección (alas y alma conectadas) mediante pernos o soldadura, U = 1 y Ae = An. Si la carga se transmite por algunos pero no todos los elementos, U < 1 y se obtiene de la tabla. Un caso general es U = 1 − x̄/l, donde l es la longitud de la conexión en la dirección de la carga y x̄ la excentricidad de la conexión (distancia del centroide del perfil conectado al plano de la conexión), por ejemplo en un ángulo soldado o empernado a una cartela. Para conexión solo con pernos se trabaja con el área neta; con soldadura no hay agujeros y An = Ag. Si la carga se transmite solo por soldaduras transversales, el área es la de los elementos directamente conectados con U = 1. Para planchas con soldaduras longitudinales paralelas a la carga, U depende de la relación entre la longitud de soldadura l y el ancho w de la plancha (1.0, 0.87 o 0.75 en la tabla que muestra el profesor). Antiguamente se usaba directamente U = 0.75 cuando no todos los elementos estaban conectados. Ilustra con dos casos: en una vigueta con barra lisa en zigzag ('gusano') soldada a ambas caras de los ángulos de la brida, todos los elementos reciben carga y U = 1; en cambio, en el tijeral la montante (ángulo) se suelda a la brida por una sola ala y la otra ala queda libre, así que el área efectiva es aproximadamente la del ala conectada (≈ Ag/2). Se trabajan pues tres áreas: Ag, An y Ae.",
+      "formulas": [
+        {
+          "nombre": "Área neta efectiva",
+          "expresion": "Ae = U·An",
+          "variables": "U: factor de rezago de cortante (Tabla D3.1); An: área neta"
+        },
+        {
+          "nombre": "Factor de rezago general",
+          "expresion": "U = 1 − x̄ / l",
+          "variables": "x̄: excentricidad de la conexión (pulg); l: longitud de la conexión en dirección de la carga (pulg)"
+        },
+        {
+          "nombre": "Planchas con soldadura longitudinal (valores mostrados en clase)",
+          "expresion": "l ≥ 2w: U = 1.00; 2w > l ≥ 1.5w: U = 0.87; 1.5w > l ≥ w: U = 0.75",
+          "variables": "l: longitud de soldadura; w: ancho de la plancha (distancia entre soldaduras)"
+        }
+      ],
+      "referencias_norma": [
+        "AISC 360-16 Sección D3",
+        "AISC 360-16 Tabla D3.1 (casos 1, 2, 3 y 4)",
+        "AISC 360-22 (borrador): cambios en Tabla D3.1 para HSS"
+      ]
+    },
+    {
+      "titulo": "Estados límite en tracción: fluencia, rotura y esbeltez",
+      "contenido": "El profesor recuerda el ensayo de tracción visto la semana anterior: la probeta tiene un tramo lineal, luego fluye con grandes deformaciones, se endurece, se estrangula y se rompe. Los fabricantes tienen bases de datos con dispersión: el valor de 36 ksi del A36 es un mínimo garantizado, pero los valores reales se distribuyen por encima con cierta varianza; el uso de esos valores esperados para evaluar el colapso es tema de posgrado. En tracción se verifican dos estados límite: fluencia en el área bruta (φt = 0.90, Pn = Fy·Ag), que representa deformación excesiva del miembro, y rotura en el área neta efectiva (φt = 0.75, Pn = Fu·Ae), que ocurre en la sección de la conexión. La resistencia de diseño es el menor de ambos valores; puede ocurrir que el elemento se rompa sin llegar a fluir, típicamente cuando tiene muchos agujeros. Adicionalmente se controla la esbeltez: un elemento en tracción muy esbelto se comporta como una cuerda de guitarra tensada por la clavija y puede vibrar, por lo que se recomienda L/r ≤ 300 (esta limitación no se aplica a varillas ni colgadores en tracción).",
+      "formulas": [
+        {
+          "nombre": "Fluencia en área bruta",
+          "expresion": "φt·Pn = 0.90·Fy·Ag",
+          "variables": "Fy: esfuerzo de fluencia (ksi); Ag: área bruta (pulg²)"
+        },
+        {
+          "nombre": "Rotura en área neta efectiva",
+          "expresion": "φt·Pn = 0.75·Fu·Ae",
+          "variables": "Fu: resistencia a la tracción (ksi); Ae: área neta efectiva (pulg²)"
+        },
+        {
+          "nombre": "Condición de diseño",
+          "expresion": "Tu ≤ min(0.90·Fy·Ag ; 0.75·Fu·Ae)",
+          "variables": "Tu: tracción última factorizada"
+        },
+        {
+          "nombre": "Límite de esbeltez recomendado",
+          "expresion": "L / r ≤ 300",
+          "variables": "L: longitud del miembro; r: radio de giro mínimo = √(I/A)"
+        }
+      ],
+      "referencias_norma": [
+        "AISC 360-16 Sección D2, ecuaciones D2-1 y D2-2",
+        "AISC 360-16 Sección D1 (nota: L/r preferiblemente ≤ 300)"
+      ]
+    },
+    {
+      "titulo": "Ejemplo: resistencia de una unión soldada de dos planchas y esbeltez",
+      "contenido": "Se analiza una unión soldada entre una plancha de 6×1/2 pulg y otra de 3×1/4 pulg, ambas de acero A36 (Fy = 36 ksi, Fu = 58 ksi). Como la unión es soldada no hay agujeros (An = Ag); como aún no se conoce la longitud del cordón de soldadura, se adopta el valor más desfavorable de la tabla para soldaduras longitudinales, U = 0.75. Para la plancha grande la fluencia da 97.2 kips y la rotura 97.9 kips, controla fluencia. Para la plancha pequeña la fluencia da 24.3 kips y la rotura unos 24.4 kips, controla fluencia. La unión falla con el menor de los valores de ambas planchas: cuando la carga llega a 24.3 kips la plancha chica fluye, se deforma mucho y el nudo deja de funcionar, aunque la grande podría resistir más. Por tanto Pu debe ser menor que 24.3 kips. Luego se verifica la esbeltez con L = 40 (en el cálculo se usó como pulgadas): la plancha grande tiene L/r = 277 en su eje débil (r = t/√12 = 0.144 pulg), menor que 300, y pasa; la plancha chica tiene r = 0.072 pulg y L/r ≈ 555 > 300, de modo que no es recomendable porque vibraría. Una pregunta típica derivada es hallar la longitud máxima de la plancha chica para cumplir L/r ≤ 300.",
+      "formulas": [
+        {
+          "nombre": "Radio de giro de una plancha respecto a su eje débil",
+          "expresion": "r = √(I/A) = t/√12",
+          "variables": "t: espesor de la plancha"
+        }
+      ],
+      "referencias_norma": [
+        "AISC 360-16 D2, Tabla D3.1 caso 4"
+      ]
+    },
+    {
+      "titulo": "Predimensionamiento de la brida inferior del tijeral (ejemplo del Callao)",
+      "contenido": "Se retoma el galpón del ejemplo del Callao: 95 m de longitud con 16 pórticos, lo que da un ancho modular de 5.86 m. Cargas: peso propio estimado 30 kg/m², cobertura (Eternit) 15 kg/m², carga muerta total 45 kg/m²; carga viva de techo 30 kg/m² según norma. Multiplicando por 5.86 m: D ≈ 264 kg/m, L ≈ 176 kg/m. Con 1.4D se obtiene ≈ 369 kg/m y con 1.2D + 1.6L ≈ 597.7 kg/m, que controla. La armadura se idealiza como viga simplemente apoyada en las columnas: Mu = wu·L²/8 con L = 28.10 m da ≈ 59,000 kg·m. En el centro de luz el momento es resistido por un par de fuerzas: compresión en la brida superior y tracción en la inferior separadas por el peralte H = 2.55 m, así que Tu = Cu = Mu/H ≈ 23,100 kg ≈ 50.8 kips. Despejando la condición de fluencia, el área bruta mínima es Ag ≥ Tu/(0.9·Fy) ≈ 1.57 pulg². Se buscan dobles ángulos en el Excel de perfiles de la AISC, advirtiendo que en el Perú solo se consiguen alrededor de una docena de W, una docena de C y ángulos de lados iguales hasta 4 pulg. Primer tanteo: 2L 2×2×5/16, Ag = 2.32 pulg². Las tablas de doble ángulo dan tres valores de ry según la separación entre ángulos (0, 3/8 y 3/4 pulg); se elige espalda con espalda, ry ≈ 0.853 pulg. Verificación: fluencia 0.9·36·2.32 ≈ 75.2 kips; rotura, considerando conectada solo un ala (Ae ≈ Ag/2), 0.75·58·1.16 ≈ 50.5 kips, prácticamente igual a la demanda: cumple pero al límite, y lo que da margen es el factor φ. La verificación de esbeltez se deja para el seminario.",
+      "formulas": [
+        {
+          "nombre": "Momento en viga simplemente apoyada",
+          "expresion": "Mu = wu·L² / 8",
+          "variables": "wu: carga factorizada por metro; L: luz"
+        },
+        {
+          "nombre": "Fuerza en bridas (par interno)",
+          "expresion": "Tu = Cu = Mu / H",
+          "variables": "H: peralte entre ejes de bridas"
+        },
+        {
+          "nombre": "Área bruta requerida",
+          "expresion": "Ag,req ≥ Tu / (0.90·Fy)",
+          "variables": "Tu en kips, Fy en ksi"
+        },
+        {
+          "nombre": "Conversión",
+          "expresion": "1 kip = 1000 lb ≈ 454 kg; kg → kips: ×2.2/1000",
+          "variables": ""
+        }
+      ],
+      "referencias_norma": [
+        "Norma E.020 / E.090: carga viva de techo 30 kg/m²",
+        "AISC 360-16 D2",
+        "Tablas de doble ángulo del AISC Steel Construction Manual"
+      ]
+    }
+  ],
+  "ejemplos": [
+    {
+      "titulo": "Unión soldada de planchas 6×1/2 y 3×1/4 en A36",
+      "enunciado": "Una plancha de 6×1/2 pulg se une mediante soldadura longitudinal a una plancha de 3×1/4 pulg, ambas A36 (Fy = 36 ksi, Fu = 58 ksi). Se desconoce aún la longitud de soldadura. Determinar la carga última máxima que puede transmitir la unión y verificar L/r ≤ 300 con L = 40 pulg.",
+      "pasos": [
+        "Plancha grande: Ag = 6×0.5 = 3.00 pulg²; soldada → An = Ag = 3.00 pulg²; U = 0.75 (más desfavorable) → Ae = 2.25 pulg².",
+        "Fluencia: 0.9×36×3.00 = 97.2 kips. Rotura: 0.75×58×2.25 = 97.9 kips. Controla 97.2 kips.",
+        "Plancha chica: Ag = 3×0.25 = 0.75 pulg²; Ae = 0.75×0.75 = 0.5625 pulg².",
+        "Fluencia: 0.9×36×0.75 = 24.3 kips. Rotura: 0.75×58×0.5625 = 24.5 kips. Controla 24.3 kips.",
+        "La unión falla con el menor: 24.3 kips (fluencia de la plancha chica).",
+        "Esbeltez plancha grande: Ix = 6×0.5³/12 = 0.0625 pulg⁴, r = √(0.0625/3) = 0.144 pulg, L/r = 40/0.144 = 277 < 300 OK; eje fuerte Iy = 0.5×6³/12 = 9 pulg⁴, r = 1.73 pulg, L/r = 23.1.",
+        "Esbeltez plancha chica: r = 0.25/√12 = 0.072 pulg, L/r = 40/0.072 ≈ 555 > 300 → no recomendable (vibra); en el otro eje r = 0.866 pulg, L/r ≈ 46."
+      ],
+      "resultado": "Pu ≤ 24.3 kips (controla la fluencia de la plancha de 3×1/4); la plancha de 3×1/4 no cumple la esbeltez recomendada L/r ≤ 300 para L = 40 pulg."
+    },
+    {
+      "titulo": "Primer tanteo de la brida inferior del tijeral",
+      "enunciado": "Tijeral de luz 28.10 m, peralte H = 2.55 m, ancho modular 5.86 m, D = 45 kg/m², Lr = 30 kg/m². Acero A36. Predimensionar la brida inferior con doble ángulo.",
+      "pasos": [
+        "wD = 45×5.86 = 263.7 kg/m; wL = 30×5.86 = 175.8 kg/m.",
+        "1.4D = 369 kg/m; 1.2D + 1.6L = 316.4 + 281.3 = 597.7 kg/m → controla wu ≈ 597.7 kg/m.",
+        "Mu = 597.7×28.10²/8 ≈ 59,000 kg·m.",
+        "Tu = Mu/H = 59,000/2.55 ≈ 23,100 kg ≈ 50.8 kips.",
+        "Ag,req = 50.8/(0.9×36) = 1.57 pulg².",
+        "Tanteo 2L 2×2×5/16: Ag = 2.32 pulg², ry (espalda con espalda) = 0.853 pulg.",
+        "Fluencia: 0.9×36×2.32 = 75.2 kips ≥ 50.8 OK.",
+        "Rotura (solo un ala conectada, Ae ≈ 1.16 pulg²): 0.75×58×1.16 = 50.5 kips ≈ 50.8 kips → al límite."
+      ],
+      "resultado": "2L 2×2×5/16 resulta adecuado por fluencia (75.2 kips) y prácticamente al límite por rotura (≈ 50.5 kips frente a Tu ≈ 50.8 kips); falta verificar la esbeltez."
+    }
+  ],
+  "conceptos_clave": [
+    {
+      "termino": "Área bruta (Ag)",
+      "definicion": "Área total de la sección transversal sin descontar agujeros."
+    },
+    {
+      "termino": "Área neta (An)",
+      "definicion": "Área bruta menos el área de los agujeros en la línea de falla crítica, usando d = db + 1/8 pulg."
+    },
+    {
+      "termino": "Área neta efectiva (Ae)",
+      "definicion": "Área neta multiplicada por el factor U que considera el rezago de cortante cuando no todos los elementos de la sección están conectados."
+    },
+    {
+      "termino": "Rezago de cortante (shear lag)",
+      "definicion": "Distribución no uniforme de esfuerzos en la conexión cuando la carga se transmite solo por algunos elementos del perfil."
+    },
+    {
+      "termino": "Regla de Cochrane (s²/4g)",
+      "definicion": "Corrección empírica que suma s²/(4g) por cada tramo diagonal de una cadena de agujeros en zigzag al calcular el ancho neto."
+    },
+    {
+      "termino": "Holgura del agujero",
+      "definicion": "Exceso de diámetro del agujero sobre el perno para permitir el montaje (1/16 pulg en agujero estándar), más 1/16 pulg por daño de perforación."
+    },
+    {
+      "termino": "Fluencia en área bruta",
+      "definicion": "Estado límite de deformación excesiva del miembro en tracción; φ = 0.90, Pn = Fy·Ag."
+    },
+    {
+      "termino": "Rotura en área neta efectiva",
+      "definicion": "Estado límite de fractura en la sección de la conexión; φ = 0.75, Pn = Fu·Ae."
+    },
+    {
+      "termino": "Brida",
+      "definicion": "Cuerda superior o inferior de un tijeral; en el ejemplo, formada por dos ángulos espalda con espalda."
+    },
+    {
+      "termino": "Montante",
+      "definicion": "Elemento vertical del tijeral que une la brida superior con la inferior."
+    },
+    {
+      "termino": "Perfil soldado vs laminado",
+      "definicion": "El laminado ('rolado') se forma en caliente en la siderúrgica; el soldado se arma cortando y soldando planchas con filetes."
+    }
+  ],
+  "preguntas": [
+    {
+      "pregunta": "Para calcular el área neta de una plancha con un agujero para un perno de 3/4 pulg, ¿qué diámetro de agujero se descuenta según el criterio usado en clase?",
+      "opciones": [
+        "3/4 pulg",
+        "13/16 pulg",
+        "7/8 pulg",
+        "1 pulg"
+      ],
+      "correcta": 2,
+      "explicacion": "Se descuenta db + 1/8 pulg: 1/16 de holgura del agujero estándar más 1/16 por daño de perforación; 3/4 + 1/8 = 7/8 pulg."
+    },
+    {
+      "pregunta": "En la regla de Cochrane, el término que se suma por cada tramo diagonal de la cadena de agujeros es:",
+      "opciones": [
+        "s/(4g)",
+        "s²/(4g)",
+        "g²/(4s)",
+        "4s²/g"
+      ],
+      "correcta": 1,
+      "explicacion": "El ancho neto es b − Σd + Σ s²/(4g), con s el paso longitudinal y g el gramil transversal."
+    },
+    {
+      "pregunta": "¿Cuáles son los factores de resistencia φ para fluencia en el área bruta y rotura en el área neta efectiva, respectivamente?",
+      "opciones": [
+        "0.90 y 0.75",
+        "0.75 y 0.90",
+        "0.90 y 0.90",
+        "0.85 y 0.75"
+      ],
+      "correcta": 0,
+      "explicacion": "AISC 360 D2: φt = 0.90 para fluencia (Fy·Ag) y φt = 0.75 para rotura (Fu·Ae)."
+    },
+    {
+      "pregunta": "Un perfil H tiene sus dos alas y su alma conectadas directamente mediante pernos a la pieza siguiente. El factor U vale:",
+      "opciones": [
+        "1.0",
+        "0.75",
+        "0.87",
+        "1 − x̄/l"
+      ],
+      "correcta": 0,
+      "explicacion": "Caso 1 de la Tabla D3.1: si la carga se transmite directamente a todos los elementos de la sección, U = 1 y Ae = An."
+    },
+    {
+      "pregunta": "Una montante de ángulo se suelda a la brida solo por una de sus alas. ¿Qué área efectiva aproximada propuso el profesor?",
+      "opciones": [
+        "El área bruta completa",
+        "El 87% del área bruta",
+        "El área neta menos los agujeros",
+        "Aproximadamente la mitad del área bruta (ala conectada)"
+      ],
+      "correcta": 3,
+      "explicacion": "Solo el ala conectada transmite carga; el ala libre 'mira al aire', por lo que se toma aproximadamente Ag/2."
+    },
+    {
+      "pregunta": "¿Por qué se recomienda limitar L/r ≤ 300 en miembros en tracción?",
+      "opciones": [
+        "Para evitar el pandeo flexionante",
+        "Para evitar vibraciones y excesiva flexibilidad, como una cuerda de guitarra",
+        "Porque la rotura depende de L/r",
+        "Para garantizar U = 1"
+      ],
+      "correcta": 1,
+      "explicacion": "La tracción no produce pandeo, pero un miembro muy esbelto vibra y se deforma con facilidad; AISC D1 recomienda L/r ≤ 300."
+    },
+    {
+      "pregunta": "En la unión soldada de las planchas 6×1/2 y 3×1/4 (A36), ¿qué controla la resistencia de la unión?",
+      "opciones": [
+        "Rotura de la plancha grande, 97.9 kips",
+        "Fluencia de la plancha grande, 97.2 kips",
+        "Rotura de la soldadura",
+        "Fluencia de la plancha chica, 24.3 kips"
+      ],
+      "correcta": 3,
+      "explicacion": "La unión falla con el menor valor de todas las piezas: la plancha chica fluye a 24.3 kips antes de que la grande alcance su capacidad."
+    },
+    {
+      "pregunta": "Con la analogía de viga simplemente apoyada, la fuerza en la brida inferior al centro de luz se calcula como:",
+      "opciones": [
+        "Tu = wu·L/2",
+        "Tu = wu·L²/8",
+        "Tu = wu·H/L",
+        "Tu = wu·L²/(8·H)"
+      ],
+      "correcta": 3,
+      "explicacion": "Mu = wu·L²/8 se resiste con un par de fuerzas separadas por H, de modo que Tu = Mu/H."
+    },
+    {
+      "pregunta": "En la tabla de dobles ángulos aparecen tres valores de ry con separaciones 0, 3/8 y 3/4 pulg. ¿Qué representan?",
+      "opciones": [
+        "Espesores posibles del ángulo",
+        "Diámetros de pernos",
+        "La separación entre los ángulos (espesor de la cartela) que modifica ry",
+        "Tolerancias de laminación"
+      ],
+      "correcta": 2,
+      "explicacion": "ry de la sección compuesta aumenta al separar los ángulos; 0 corresponde a espalda con espalda."
+    },
+    {
+      "pregunta": "Si una plancha está unida solo con soldadura (sin pernos), el área neta An es:",
+      "opciones": [
+        "Igual a Ag",
+        "Ag menos un agujero estándar",
+        "0.75·Ag siempre",
+        "La mitad de Ag"
+      ],
+      "correcta": 0,
+      "explicacion": "Sin agujeros no hay nada que descontar: An = Ag; el efecto de rezago se toma luego con U."
+    },
+    {
+      "pregunta": "Según el profesor, ¿qué se toma de la Norma E.090 vigente en este curso?",
+      "opciones": [
+        "Las fórmulas de pandeo",
+        "Las tablas de perfiles",
+        "Las combinaciones de carga",
+        "El factor U"
+      ],
+      "correcta": 2,
+      "explicacion": "El diseño sigue la AISC 360-16; de la E.090 (y su proyecto) se toman las combinaciones de carga."
+    }
+  ],
+  "ejercicios_propuestos": [
+    "Una plancha de 10×1/2 pulg (A36) tiene dos filas de pernos de 3/4 pulg con gramil g = 3 pulg y paso alternado s = 2 pulg. Evalúe las líneas de falla recta y en zigzag con la regla de Cochrane y determine An.",
+    "Para la plancha anterior, con U = 1.0, calcule φPn por fluencia y por rotura e indique qué estado límite controla.",
+    "En la unión de planchas 6×1/2 y 3×1/4 de clase, determine la longitud máxima de la plancha de 3×1/4 para que cumpla L/r ≤ 300.",
+    "Repita el predimensionamiento de la brida inferior del tijeral con un peralte H = 2.00 m y verifique si 2L 2×2×5/16 sigue siendo adecuado por fluencia y rotura (Ae = Ag/2).",
+    "Un ángulo L 3×3×1/4 se suelda a una cartela por una sola ala con soldaduras longitudinales de 4 pulg. Con x̄ = 0.836 pulg, calcule U = 1 − x̄/l, Ae y φPn por rotura (A36)."
+  ],
+  "avisos": [
+    "Los documentos del curso (AISC 360-16, Norma E.090 vigente, proyecto de norma E.090 2018 y el borrador de AISC 360-22) se suben al Drive.",
+    "Se usa el Excel de perfiles de la AISC (pestañas por tipo de perfil); se advierte que en el Perú solo existe parte de esos perfiles.",
+    "El jueves siguiente hay seminario con los jefes de práctica, que continuarán el ejemplo (verificación de esbeltez de la brida inferior).",
+    "Existe un programa de prácticas en discusión; el profesor avisará con anticipación las prácticas calificadas."
+  ],
+  "notas_transcripcion": [
+    "'BW' se interpretó como wu (carga repartida) y 'TU', 'CU' como Tu y Cu.",
+    "'Macual' / 'el AC' se interpretaron como el Manual AISC y la ASCE 7, respectivamente.",
+    "'un 16 de pulgada' = 1/16 pulg; 'tres octavos' en el ejemplo de dos pernos fue corregido por el propio profesor a 1/8 pulg.",
+    "'la del 2022 ... usamos todavía la del 2022' se interpretó como: se usa la AISC 360-16 y la 360-22 solo como referencia.",
+    "En el ejemplo de esbeltez la transcripción dice '40 pies', pero los resultados (L/r = 277, 555, 23.1, 46) solo cuadran con L = 40 pulg; se dejó L = 40 pulg.",
+    "'24 36' se interpretó como 24.36 kips (rotura de la plancha chica); el cálculo exacto da 24.5 kips; en ambos casos controla la fluencia (24.3 kips).",
+    "'6 9' en la combinación 1.4D se interpretó como ≈ 369 kg/m.",
+    "Los valores U = 1.0/0.87/0.75 para planchas con soldadura longitudinal provienen de la AISC 360-10; en la 360-16 el caso 4 se expresa con una fórmula, pero se mantuvo lo enseñado.",
+    "'Eternity' = cobertura Eternit; 'gusano' = barra lisa doblada en zigzag (celosía) de la vigueta."
+  ]
+}

@@ -1,0 +1,426 @@
+{
+  "clase": 7,
+  "titulo": "Cierre de compresión (perfil H armado) e introducción a uniones: clasificación, demandas y soldadura de filete",
+  "fecha": "lunes 26 de abril de 2021",
+  "duracion_min": 70,
+  "resumen": "La clase empieza cerrando el tema de compresión con una hoja de cálculo para un perfil H armado (alas y alma de planchas): clasificación de esbeltez local con la Tabla B4.1a, cálculo de propiedades por partes (área, centroides, Steiner, Z, S, J) y obtención de la resistencia φPn por pandeo inelástico. Luego empieza el capítulo de uniones. El profesor repasa cómo ha cambiado la idealización de las conexiones: simples en los años 50, rígidas en los 60-70 con el cómputo, y semirrígidas desde los 80, cuando los ensayos de laboratorio y los sismos de Northridge (1994) y Kobe mostraron que las uniones 'rígidas' no transmitían todo el momento supuesto. Relaciona el tipo de unión con los sistemas estructurales de la Tabla 7 de la E.030. Explica cómo imaginar la demanda en una unión (efectos locales, corte, par de fuerzas por flexión, carga axial), las reglas de resistencia mínima de conexiones (45 kN y 50 % de la resistencia de los miembros en armaduras) y los fundamentos de la soldadura: planos de falla del filete, garganta efectiva, agujeros de acceso, longitudes mínimas y máximas, soldaduras de tapón y de ranura, y la Tabla J2.5.",
+  "objetivos": [
+    "Al terminar, el estudiante podrá clasificar las alas y el alma de un perfil H armado en compresión usando la Tabla B4.1a, incluido el cálculo y los límites de kc.",
+    "Al terminar, el estudiante podrá calcular por partes las propiedades geométricas (A, I, r, S, Z, J) de una sección armada y obtener φPn de una columna.",
+    "Al terminar, el estudiante podrá distinguir uniones simples, rígidas y semirrígidas y relacionarlas con los sistemas estructurales de acero (SMF, IMF, OMF, arriostrados).",
+    "Al terminar, el estudiante podrá identificar el tipo de demanda (local, corte, flexión, axial) que actúa sobre una unión y proponer el mecanismo resistente.",
+    "Al terminar, el estudiante podrá aplicar las reglas de resistencia mínima de conexiones y las reglas geométricas básicas de la soldadura de filete, de tapón y de ranura.",
+    "Al terminar, el estudiante podrá describir los planos de falla de un filete y la resistencia de la soldadura como el menor valor entre el metal de aporte y el metal base."
+  ],
+  "temas": [
+    {
+      "titulo": "Hoja de cálculo para columna con perfil H armado (cierre de compresión)",
+      "contenido": "Para cerrar el capítulo de compresión, el profesor presenta una hoja Excel que trata un perfil H formado por planchas soldadas. La sección se descompone en dos alas iguales y un alma partida en dos 'medias almas', lo que facilita sumar momentos de área y aplicar Steiner. Si las alas fueran distintas, basta modificar las filas de cada ala. En el caso mostrado cada ala mide 6 in de ancho total y el alma 6 in de altura libre, todas de 1/2 in de espesor. La esbeltez del ala es b/tf con b igual a la mitad del ancho (3/0.5 = 6) y la del alma es h/tw (6/0.5 = 12). Los límites salen de la Tabla B4.1a. Para el ala de un perfil armado (caso 2) el límite es λr = 0.64·√(kc·E/Fy), con kc = 4/√(h/tw), y kc debe quedar entre 0.35 y 0.76. En el ejemplo kc da 1.15, fuera del rango, así que se usa el tope de 0.76. Para el alma (caso 5 de la Tabla B4.1a) el límite es λr = 1.49·√(E/Fy) ≈ 42 para Fy = 36 ksi. Como 6 < λr del ala y 12 < 42, ningún elemento es esbelto y no hace falta usar áreas efectivas. La hoja también calcula J = Σ b·t³/3, la distancia entre centroides de alas (ho), el módulo plástico Z como suma de momentos de área (con el que luego se obtiene Mp = Z·Fy), el módulo elástico S = I/c (para My = S·Fy) y las inercias en ambos ejes. Los radios de giro salen como r = √(I/A). Con K = 1 y L = 120 in, la esbeltez que controla es la mayor de las dos, en este caso alrededor del eje débil. Con ella se calcula el esfuerzo de Euler Fe y se ve si el pandeo es elástico o inelástico comparando KL/r con 4.71·√(E/Fy) ≈ 133. Como 84 < 133, el pandeo es inelástico, Fcr = 0.658^(Fy/Fe)·Fy y φPn = 0.90·Fcr·Ag ≈ 199 kips, de modo que la columna resiste una carga de 80 o 100 kips pero no 200 o 300. Ante la pregunta de un alumno, el profesor aclara que en las secciones con elementos esbeltos la diferencia es que se trabaja con un área efectiva (anchos efectivos be) y, si el esfuerzo de pandeo local resulta menor que el Fcr global, se reemplaza Fcr por ese valor. La misma hoja deja listos parámetros que se usarán en flexión (Z, S, J, ho).",
+      "formulas": [
+        {
+          "nombre": "Coeficiente kc para alas de perfiles armados",
+          "expresion": "kc = 4/√(h/tw), con 0.35 ≤ kc ≤ 0.76",
+          "variables": "h: altura libre del alma (in); tw: espesor del alma (in)"
+        },
+        {
+          "nombre": "Límite λr del ala no rigidizada de perfil armado en compresión",
+          "expresion": "λr = 0.64·√(kc·E/Fy)",
+          "variables": "E = 29000 ksi; Fy: fluencia (ksi); se compara con b/t, b = bf/2"
+        },
+        {
+          "nombre": "Límite λr del alma en compresión",
+          "expresion": "λr = 1.49·√(E/Fy)",
+          "variables": "se compara con h/tw"
+        },
+        {
+          "nombre": "Constante torsional aproximada",
+          "expresion": "J = Σ (b·t³)/3",
+          "variables": "b, t: ancho y espesor de cada plancha (in)"
+        },
+        {
+          "nombre": "Teorema de Steiner",
+          "expresion": "I = Σ (Ii + Ai·di²)",
+          "variables": "Ii: inercia propia de cada parte; Ai: área; di: distancia de su centroide al eje"
+        },
+        {
+          "nombre": "Radio de giro",
+          "expresion": "r = √(I/A)",
+          "variables": "I: inercia (in⁴); A: área (in²)"
+        },
+        {
+          "nombre": "Esfuerzo crítico inelástico",
+          "expresion": "Fcr = 0.658^(Fy/Fe)·Fy, si KL/r ≤ 4.71·√(E/Fy); Fe = π²E/(KL/r)²",
+          "variables": "Fe: esfuerzo de Euler (ksi)"
+        },
+        {
+          "nombre": "Resistencia de diseño a compresión",
+          "expresion": "φPn = 0.90·Fcr·Ag",
+          "variables": "Ag: área bruta (in²)"
+        }
+      ],
+      "referencias_norma": [
+        "AISC 360-16 Tabla B4.1a (casos 2 y 5)",
+        "AISC 360-16 Cap. E, ecuaciones E3-2 a E3-4",
+        "AISC 360-16 Sección E7 (miembros con elementos esbeltos)"
+      ]
+    },
+    {
+      "titulo": "Evolución histórica de la idealización de las uniones: simples, rígidas y semirrígidas",
+      "contenido": "El profesor explica que el diseño de una unión depende de cómo se idealizó el modelo estructural, y lo cuenta históricamente. En los años 50, con pocas computadoras, un pórtico se resolvía con 'ingenio': las vigas se suponían simplemente apoyadas, su reacción se aplicaba a las columnas y estas se diseñaban como empotradas en la base y libres arriba con desplazamiento (K = 2). La unión real era una plancha o ménsula proyectada desde la columna sobre la que se apoyaba la viga: una unión simple. En los 60 y 70 aparecieron las computadoras (el profesor recuerda programar con tarjetas perforadas en la UNI y luego en terminales con pantalla), se pudo calcular el momento que la viga transmite a la columna y nació la unión rígida, donde viga y columna se suponen unidas en la intersección de sus ejes y se transmiten momento, corte y carga axial. En los 80, los laboratorios universitarios mostraron que la suma de momentos en el nudo no era cero: había disipación de energía en la junta, es decir, la unión era en realidad semirrígida. Los sismos de Northridge (EE. UU., 1994) y Kobe (Japón, 1995; el profesor dice 'el 96') provocaron fallas en viaductos y en uniones viga-columna de edificios de acero. A raíz de ello FEMA produjo gran cantidad de documentos y procedimientos. En la Universidad de Tokio, el profesor Kuwamura reprodujo en laboratorio las temperaturas bajo cero del día del sismo de Kobe y encontró que las uniones diseñadas como rígidas solo alcanzaban del orden del 80 % de la capacidad supuesta (unos 20 % menos). De ahí la recomendación práctica: si se diseña una unión como rígida, conviene dejar una holgura adicional, aparte del factor φ. La unión simple, en el mejor caso, transmite apenas un 5 % del momento de la sección. Así, las uniones se clasifican en simples, rígidas y semirrígidas, y las semirrígidas buscan más capacidad sabiendo que hay que darles holgura.",
+      "formulas": [],
+      "referencias_norma": [
+        "AISC 360-16 Sección B3.4 (clasificación de conexiones simples y de momento: FR y PR)",
+        "FEMA-350/351 (documentos post-Northridge)"
+      ]
+    },
+    {
+      "titulo": "Tipo de unión y sistema estructural (Tabla 7 de la E.030)",
+      "contenido": "El tipo de unión se relaciona con el tipo de estructura. Además de los pórticos resistentes a momento existen los pórticos con arriostres concéntricos y con arriostres excéntricos. La Tabla N.° 7 de la Norma E.030 (Diseño Sismorresistente) lista los sistemas estructurales de acero. En los pórticos especiales (SMF), de alta ductilidad, las secciones llegan a su capacidad máxima, el momento plástico. Los intermedios (IMF) tienen una ductilidad o deformación inelástica moderada. Los ordinarios (OMF) son los que se tratan en el curso. También hay sistemas compuestos acero-concreto, poco usados en el Perú y fuera de la normativa obligatoria, aunque el profesor ha construido algunos edificios compuestos hace 10-15 años. Si se quiere un sistema de alta ductilidad, al diseño hay que sumarle las disposiciones sísmicas del Capítulo 13 de la propuesta de norma E.090 que se compartió en el aula virtual. En resumen, hay que tener presentes dos clasificaciones: la de las uniones (simples, semirrígidas, rígidas) y la de los pórticos según su ductilidad (ordinarios, intermedios, especiales), además de los arriostrados.",
+      "formulas": [],
+      "referencias_norma": [
+        "Norma E.030 Tabla N.° 7 (sistemas estructurales y coeficiente R)",
+        "Propuesta de Norma E.090, Capítulo 13 (disposiciones sísmicas)",
+        "AISC 341 (Seismic Provisions)"
+      ]
+    },
+    {
+      "titulo": "Identificación de la demanda en una unión y ejemplos conceptuales",
+      "contenido": "Para diseñar una unión hay que imaginar primero qué demanda tiene. Si una carga de compresión se aplica sobre un elemento, alrededor del punto de aplicación aparecen efectos locales y posible pandeo local: en una unión simple la reacción R de la viga actúa sobre la viga y, en sentido opuesto, sobre la columna, así que hay que revisar los efectos locales en ambas. El corte funciona como una tijera, con dos fuerzas opuestas sobre un área de corte, y en la base de una columna empotrada se combina con el momento y con la reacción del apoyo. La flexión se puede ver como un par de fuerzas: si un elemento con bordes fijos se jala con T, cada borde reacciona con T/2, y en general un momento M equivale a dos fuerzas M/d separadas el peralte d. Ejemplo de unión simple: plancha proyectada desde la columna, con sección b×t, inercia b·t³/12, módulo elástico b·t²/6, momento de primera fluencia Sx·Fy y momento plástico Zx·Fy. La viga se apoya cerca del centro del voladizo, a una distancia L de la cara de la columna, y si se toma la columna como empotramiento de la plancha, el momento R·L debe ser menor que el momento resistente (se puede usar el plástico) para dimensionar el espesor. La misma sección crítica sirve para diseñar la soldadura de la plancha a la columna (φRn por unidad de longitud por la longitud soldada). Ejemplo de unión rígida o semirrígida: se proyectan dos planchas, una para cada ala, que toman el par de fuerzas del momento, y dos ángulos (clips) soldados al alma que toman el corte. Cada ángulo recibe la mitad del cortante, V/2, que debe ser menor que lo que resiste. El profesor insiste en que el éxito del diseño depende de imaginar bien la condición crítica.",
+      "formulas": [
+        {
+          "nombre": "Propiedades de una plancha rectangular",
+          "expresion": "I = b·t³/12 ; S = b·t²/6 ; Z = b·t²/4",
+          "variables": "b: ancho de la plancha; t: espesor (peralte en flexión)"
+        },
+        {
+          "nombre": "Momentos de fluencia y plástico",
+          "expresion": "My = Sx·Fy ; Mp = Zx·Fy",
+          "variables": "Sx, Zx: módulos elástico y plástico; Fy: fluencia"
+        },
+        {
+          "nombre": "Verificación de plancha proyectada (ménsula)",
+          "expresion": "Ru·L ≤ φ·Mp = 0.90·Zx·Fy",
+          "variables": "Ru: reacción de la viga; L: brazo desde la cara de la columna al punto de apoyo"
+        },
+        {
+          "nombre": "Par de fuerzas equivalente a un momento",
+          "expresion": "F = M/d",
+          "variables": "M: momento en la unión; d: peralte (separación entre las fuerzas del par)"
+        }
+      ],
+      "referencias_norma": [
+        "AISC 360-16 Cap. J (diseño de conexiones)",
+        "AISC 360-16 Sección J10 (alas y almas con cargas concentradas)"
+      ]
+    },
+    {
+      "titulo": "Uniones soldadas versus empernadas y requisitos mínimos de las conexiones",
+      "contenido": "Según el profesor, en el Perú alrededor del 90 % de las conexiones son soldadas, es decir, fijas y permanentes. Las empernadas se usan cuando la estructura va a desarmarse o trasladarse. Cuenta el caso de un supermercado que diseñó: el negocio no funcionó y la empresa lo desarmó sin problemas porque todo estaba empernado. Muchas transnacionales prefieren uniones empernadas para poder 'levantar la carpa' si la inversión no resulta, y con un ejemplo de emprendimiento (el 'alumno Pérez' y sus viviendas) ilustra que soldar significa permanencia y empernar significa ensamblar y desensamblar. Regla general: las cargas del análisis estructural deben ser menores que la resistencia de las uniones. Las conexiones simples se usan sobre todo en armaduras, y las de momento (rígidas o semirrígidas) en uniones viga-columna permanentes. Ninguna conexión debe diseñarse para menos de 45 kN (unas 4.5 t), aunque el Pu del análisis sea menor. En las armaduras, además, la conexión debe resistir al menos el 50 % de la resistencia de los miembros que une, aunque estos tengan poca carga. El profesor menciona además los casos en que deben usarse pernos de alta resistencia o soldadura: empalmes de columnas en edificios altos, intermedios y bajos, conexiones viga-columna (arriostradas o no), estructuras con grúas de más de 45 kN y soportes de maquinaria que produce impacto o vibraciones.",
+      "formulas": [
+        {
+          "nombre": "Resistencia mínima de una conexión",
+          "expresion": "φRn ≥ máx(Ru ; 45 kN)",
+          "variables": "Ru: demanda de la combinación de cargas"
+        },
+        {
+          "nombre": "Conexiones en armaduras",
+          "expresion": "φRn ≥ máx(Ru ; 45 kN ; 0.5·φRn,miembro)",
+          "variables": "φRn,miembro: resistencia de diseño de los miembros conectados"
+        }
+      ],
+      "referencias_norma": [
+        "Norma E.090 Capítulo J (requisitos generales de conexiones, resistencia mínima)",
+        "AISC 360-16 Sección J1.10 (pernos de alta resistencia en combinación / dónde se requieren)"
+      ]
+    },
+    {
+      "titulo": "Soldadura de filete: planos de falla, garganta efectiva y reglas geométricas",
+      "contenido": "Con apoyo de un video, el profesor explica la geometría del filete. Los dos catetos miden SW (tamaño de la soldadura) y el plano inclinado que pasa por la raíz es la garganta efectiva, de espesor te = 0.707·SW en un filete de lados iguales. Cuando las planchas se jalan en sentidos opuestos, la soldadura trabaja a corte. Hay dos superficies de falla posibles: el plano del cateto, de área SW·LW, sobre el metal base, y el plano de la garganta, de área te·LW, sobre el metal de aporte. Por comodidad se calcula todo por pulgada de soldadura (LW = 1 in). En una unión en T jalada perpendicularmente, cada cordón toma T/2. Agujeros de acceso: en las uniones viga-columna hay que recortar el alma de la viga para que pase el electrodo. Tras el sismo de Kobe, los ensayos del profesor Kuwamura, que el profesor vio mientras hacía su tesis en la Universidad de Tokio, mostraron que el agujero debe tener una longitud mínima de 1.5·tw; si es menor, la unión falla porque no hay espacio para depositar bien el cordón en la zona del alma. Longitudes, según el profesor: mínima de 2·SW, máxima de 70·SW, y en juntas traslapadas con carga paralela al cordón, mínima de 4·SW. Los cordones perpendiculares a la carga (frontales) no se diseñan y se les pone el tamaño mínimo. En un corte transversal de la junta traslapada se ven los dos planos de falla del triángulo de soldadura. Soldadura de tapón: se perforan agujeros como para pernos y se llenan con soldadura, que trabaja por contacto. La separación centro a centro mínima es de 4 diámetros, y el espesor de soldadura es igual a t si t ≤ 16 mm (5/8 in) o al menos t/2 si t > 16 mm. Soldadura de ranura: en lugar de agujeros circulares se hacen ranuras alargadas ('ojo chino'), de ancho entre unos 8 mm más el espesor y 2.25 veces el espesor de la soldadura, y largo máximo de 10 veces ese espesor.",
+      "formulas": [
+        {
+          "nombre": "Garganta efectiva de filete",
+          "expresion": "te = 0.707·SW",
+          "variables": "SW: tamaño (cateto) del filete"
+        },
+        {
+          "nombre": "Áreas de falla por unidad de longitud",
+          "expresion": "A_cateto = SW·1 in ; A_garganta = 0.707·SW·1 in",
+          "variables": "por pulgada de cordón"
+        },
+        {
+          "nombre": "Agujero de acceso",
+          "expresion": "L_acceso ≥ 1.5·tw",
+          "variables": "tw: espesor del alma de la viga"
+        },
+        {
+          "nombre": "Longitudes de filete (según el profesor)",
+          "expresion": "LW,mín = 2·SW (general) ; LW,mín = 4·SW (traslape, carga paralela) ; LW,máx = 70·SW",
+          "variables": "SW: tamaño del filete"
+        }
+      ],
+      "referencias_norma": [
+        "AISC 360-16 Sección J2.2 (soldaduras de filete: área efectiva, tamaños y longitudes)",
+        "AISC 360-16 Sección J1.6 (agujeros de acceso)",
+        "AISC 360-16 Sección J2.3 (soldaduras de tapón y de ranura)"
+      ]
+    },
+    {
+      "titulo": "Resistencia de la soldadura: Tabla J2.5 y compatibilidad de electrodos",
+      "contenido": "La resistencia de diseño se obtiene de la Tabla J2.5 del Capítulo J, que en la propuesta de norma peruana tiene su equivalente. Para filetes con carga de corte hay que revisar dos cosas. En el metal base, la resistencia la da la Sección J4 (fluencia o rotura por corte). En el metal de aporte se usa φ = 0.75, Fnw = 0.60·FEXX (FEXX es la resistencia del electrodo) y el área efectiva de la garganta. La resistencia del cordón es la menor de las dos. La tabla aclara que la tracción o compresión paralela al eje de la soldadura no se considera en el diseño, por eso los filetes se diseñan casi siempre a corte. El profesor recomienda leer con cuidado la Sección J4, porque ahí se definen las áreas del metal base afectadas por la soldadura. Por último muestra las tablas de metales base y electrodos compatibles, tanto en la norma vigente como en la propuesta, junto con los electrodos que se venden en el Perú (por ejemplo, E70XX para acero A36).",
+      "formulas": [
+        {
+          "nombre": "Resistencia del metal de aporte (filete a corte)",
+          "expresion": "φRn = φ·Fnw·Awe = 0.75·(0.60·FEXX)·(0.707·SW·LW)",
+          "variables": "FEXX: resistencia del electrodo (70 ksi para E70XX); Awe: área efectiva de garganta"
+        },
+        {
+          "nombre": "Resistencia del metal base",
+          "expresion": "φRn = mín(1.00·0.60·Fy·Agv ; 0.75·0.60·Fu·Anv)",
+          "variables": "Agv, Anv: áreas bruta y neta a corte del metal base"
+        },
+        {
+          "nombre": "Resistencia de la soldadura",
+          "expresion": "φRn = mín(φRn,aporte ; φRn,base)",
+          "variables": "se toma el menor"
+        }
+      ],
+      "referencias_norma": [
+        "AISC 360-16 Tabla J2.5",
+        "AISC 360-16 Sección J4 (elementos afectados de miembros y elementos de conexión)",
+        "AISC 360-16 Tabla J2.6 / Norma E.090 tabla de metales de aporte compatibles"
+      ]
+    }
+  ],
+  "ejemplos": [
+    {
+      "titulo": "Columna con perfil H armado de planchas de 1/2 in",
+      "enunciado": "Perfil H armado con dos alas de 6 in × 1/2 in y alma de 6 in (altura libre) × 1/2 in, acero Fy = 36 ksi, E = 29000 ksi. Longitud L = 120 in y K = 1. Verificar la esbeltez local y calcular φPn. Comparar con Pu = 80 kips.",
+      "pasos": [
+        "Esbeltez del ala: b/tf = 3/0.5 = 6. Esbeltez del alma: h/tw = 6/0.5 = 12.",
+        "kc = 4/√12 = 1.15 > 0.76, entonces kc = 0.76. λr,ala = 0.64·√(0.76·29000/36) ≈ 15.8 (la hoja del profesor muestra ≈ 18.9). En cualquier caso 6 < λr: ala no esbelta.",
+        "λr,alma = 1.49·√(29000/36) ≈ 42.3 > 12: alma no esbelta.",
+        "Ag = 2(6·0.5) + 6·0.5 = 9.0 in².",
+        "Iy ≈ 2(0.5·6³/12) + 6·0.5³/12 ≈ 18.06 in⁴, ry = √(18.06/9) ≈ 1.42 in. Ix es mayor, así que controla el eje y.",
+        "KL/r = 120/1.42 ≈ 84.7 < 4.71·√(E/Fy) ≈ 133.7, pandeo inelástico.",
+        "Fe = π²·29000/84.7² ≈ 39.9 ksi. Fcr = 0.658^(36/39.9)·36 ≈ 24.7 ksi.",
+        "φPn = 0.90·24.7·9.0 ≈ 200 kips (la hoja da 199 kips)."
+      ],
+      "resultado": "φPn ≈ 199 kips > Pu = 80 kips: el perfil cumple. No cumpliría con 200 o 300 kips."
+    },
+    {
+      "titulo": "Planteamiento de una plancha proyectada (unión simple)",
+      "enunciado": "Una viga se apoya sobre una plancha proyectada desde la columna, con la reacción Ru aplicada a una distancia L de la cara de la columna. Plantear cómo se dimensiona el espesor de la plancha (ejemplo conceptual de clase, sin datos numéricos).",
+      "pasos": [
+        "Se toma la columna como empotramiento de la plancha en voladizo.",
+        "Momento de demanda en la cara: Mu = Ru·L.",
+        "Resistencia: φMn = 0.90·Z·Fy, con Z = b·t²/4 para una plancha de ancho b y espesor t.",
+        "Se impone Ru·L ≤ 0.90·Fy·b·t²/4 y se despeja t.",
+        "En la misma sección se diseña la soldadura plancha-columna: φRn (por pulgada) × longitud ≥ demanda."
+      ],
+      "resultado": "t ≥ √(4·Ru·L/(0.90·Fy·b)). Además hay que revisar la soldadura y los efectos locales en viga y columna."
+    }
+  ],
+  "conceptos_clave": [
+    {
+      "termino": "Unión simple",
+      "definicion": "Conexión que transmite corte y prácticamente nada de momento (según el profesor, como máximo un 5 % de la capacidad de la sección). Ejemplos: plancha proyectada o ménsula de apoyo."
+    },
+    {
+      "termino": "Unión rígida",
+      "definicion": "Conexión que se supone capaz de transmitir el momento, el corte y la carga axial de la viga a la columna, manteniendo el ángulo entre ambas."
+    },
+    {
+      "termino": "Unión semirrígida",
+      "definicion": "Conexión con capacidad parcial de transmitir momento, en la que hay rotación relativa y disipación de energía en la junta. Se diseña dejando holgura."
+    },
+    {
+      "termino": "OMF / IMF / SMF",
+      "definicion": "Pórticos resistentes a momento ordinarios, intermedios y especiales, de ductilidad baja, media y alta. Están listados en la Tabla 7 de la E.030."
+    },
+    {
+      "termino": "Coeficiente kc",
+      "definicion": "Factor de interacción ala-alma en perfiles armados, kc = 4/√(h/tw), limitado entre 0.35 y 0.76."
+    },
+    {
+      "termino": "Garganta efectiva",
+      "definicion": "Distancia mínima de la raíz a la cara del filete. En filetes de lados iguales vale 0.707·SW y define el área de falla del metal de aporte."
+    },
+    {
+      "termino": "SW",
+      "definicion": "Tamaño (cateto) del filete de soldadura, parámetro del que dependen las áreas y las longitudes mínimas y máximas."
+    },
+    {
+      "termino": "Agujero de acceso",
+      "definicion": "Recorte en el alma de la viga, junto al ala, que permite pasar el electrodo. Longitud mínima de 1.5·tw."
+    },
+    {
+      "termino": "Soldadura de tapón",
+      "definicion": "Agujero circular en una de las planchas que se llena de soldadura. Separación mínima de 4 diámetros entre centros."
+    },
+    {
+      "termino": "Soldadura de ranura",
+      "definicion": "Ranura alargada ('ojo chino') llena de soldadura, con largo máximo de 10 veces el espesor de soldadura."
+    },
+    {
+      "termino": "Resistencia mínima de conexión",
+      "definicion": "Ninguna conexión se diseña para menos de 45 kN. En armaduras debe resistir además el 50 % de la resistencia de los miembros que une."
+    }
+  ],
+  "preguntas": [
+    {
+      "pregunta": "En un perfil H armado en compresión, kc = 4/√(h/tw) resulta 1.15. ¿Qué valor de kc se usa para calcular λr del ala?",
+      "opciones": [
+        "1.15",
+        "0.35",
+        "0.76",
+        "1.00"
+      ],
+      "correcta": 2,
+      "explicacion": "kc debe estar entre 0.35 y 0.76. Si el cálculo da más, se usa el tope de 0.76."
+    },
+    {
+      "pregunta": "Una columna tiene KL/r = 84 y acero A36. ¿Qué tipo de pandeo controla?",
+      "opciones": [
+        "Elástico, porque KL/r > 25",
+        "Inelástico, porque KL/r < 4.71√(E/Fy) ≈ 133",
+        "Elástico, porque KL/r < 133",
+        "Fluencia pura sin pandeo"
+      ],
+      "correcta": 1,
+      "explicacion": "Si KL/r ≤ 4.71√(E/Fy), el pandeo es inelástico y Fcr = 0.658^(Fy/Fe)·Fy."
+    },
+    {
+      "pregunta": "¿Qué evento sísmico motivó la creación de numerosos documentos FEMA sobre uniones de acero?",
+      "opciones": [
+        "Lima 1974",
+        "Northridge 1994",
+        "Chile 2010",
+        "San Francisco 1906"
+      ],
+      "correcta": 1,
+      "explicacion": "Tras Northridge (1994) fallaron muchas uniones viga-columna y FEMA publicó abundante guía técnica."
+    },
+    {
+      "pregunta": "Según los ensayos del profesor Kuwamura tras el sismo de Kobe, las uniones diseñadas como rígidas alcanzaban aproximadamente:",
+      "opciones": [
+        "El 100 % de la capacidad supuesta",
+        "El 120 % de la capacidad supuesta",
+        "El 80 % de la capacidad supuesta",
+        "El 5 % de la capacidad supuesta"
+      ],
+      "correcta": 2,
+      "explicacion": "Encontró una reducción de alrededor del 20 % (solo un 80 % de capacidad), de ahí la recomendación de dejar holgura adicional."
+    },
+    {
+      "pregunta": "¿Cuál es la resistencia mínima con la que debe diseñarse cualquier conexión según lo visto en clase?",
+      "opciones": [
+        "10 kN",
+        "45 kN",
+        "100 kN",
+        "La mitad del Pu del análisis"
+      ],
+      "correcta": 1,
+      "explicacion": "Ninguna conexión debe diseñarse para menos de 45 kN (unas 4.5 t)."
+    },
+    {
+      "pregunta": "En una armadura, una diagonal tiene φPn = 120 kN y Pu = 30 kN. ¿Para qué fuerza mínima debe diseñarse su conexión?",
+      "opciones": [
+        "30 kN",
+        "45 kN",
+        "60 kN",
+        "120 kN"
+      ],
+      "correcta": 2,
+      "explicacion": "La conexión debe resistir el mayor entre Pu, 45 kN y el 50 % de la resistencia del miembro: máx(30; 45; 60) = 60 kN."
+    },
+    {
+      "pregunta": "La garganta efectiva de un filete de lados iguales de 1/4 in es aproximadamente:",
+      "opciones": [
+        "0.250 in",
+        "0.354 in",
+        "0.125 in",
+        "0.177 in"
+      ],
+      "correcta": 3,
+      "explicacion": "te = 0.707·0.25 ≈ 0.177 in."
+    },
+    {
+      "pregunta": "¿Qué longitud mínima debe tener el agujero de acceso para soldadura en el alma de una viga, según la clase?",
+      "opciones": [
+        "0.5·tw",
+        "1.0·tw",
+        "1.5·tw",
+        "3.0·tw"
+      ],
+      "correcta": 2,
+      "explicacion": "El profesor indica 1.5·tw, criterio reforzado tras los ensayos posteriores a Kobe."
+    },
+    {
+      "pregunta": "Según la Tabla J2.5, la tracción o compresión paralela al eje de un filete:",
+      "opciones": [
+        "Se diseña con φ = 0.90",
+        "No necesita considerarse en el diseño de la soldadura",
+        "Se suma al corte vectorialmente",
+        "Se diseña con 0.60·FEXX"
+      ],
+      "correcta": 1,
+      "explicacion": "La norma permite despreciarla, por eso los filetes se diseñan a corte."
+    },
+    {
+      "pregunta": "¿Por qué en el Perú la mayoría de las conexiones son soldadas?",
+      "opciones": [
+        "Porque los pernos están prohibidos",
+        "Porque la soldadura da uniones permanentes y la mayoría de las obras lo son; los pernos se reservan para estructuras desmontables",
+        "Porque la soldadura siempre es más barata que los pernos",
+        "Porque la E.090 no tiene requisitos para pernos"
+      ],
+      "correcta": 1,
+      "explicacion": "Soldar significa permanencia; empernar permite ensamblar y desensamblar, algo útil para inversiones temporales."
+    },
+    {
+      "pregunta": "En una unión rígida con dos ángulos (clips) en el alma, si el cortante de la viga es V, ¿qué corte se usa para diseñar cada ángulo?",
+      "opciones": [
+        "V",
+        "2V",
+        "V/2",
+        "V/4"
+      ],
+      "correcta": 2,
+      "explicacion": "Los dos ángulos se reparten el corte por igual, V/2 cada uno."
+    },
+    {
+      "pregunta": "En una soldadura de tapón, la separación mínima centro a centro entre agujeros es:",
+      "opciones": [
+        "2 diámetros",
+        "3 diámetros",
+        "4 diámetros",
+        "10 diámetros"
+      ],
+      "correcta": 2,
+      "explicacion": "Se exige una separación mínima de 4 veces el diámetro del agujero."
+    }
+  ],
+  "ejercicios_propuestos": [
+    "Repita el ejemplo del perfil H armado con alas de 8 in × 3/8 in, alma de 10 in × 5/16 in, Fy = 36 ksi, L = 150 in y K = 1. Clasifique los elementos (Tabla B4.1a, con kc) y obtenga φPn.",
+    "Una plancha proyectada de 6 in de ancho, de acero A36, recibe la reacción Ru = 12 kips de una viga a 3 in de la cara de la columna. Calcule el espesor mínimo con Mu ≤ 0.90·Z·Fy y elija un espesor comercial.",
+    "Una diagonal de armadura tiene Pu = 20 kN y φPn = 150 kN. Determine la fuerza mínima de diseño de su conexión aplicando las reglas de 45 kN y del 50 %.",
+    "Para un filete de 5/16 in con electrodo E70XX, calcule el área de garganta por pulgada y la resistencia φRn por pulgada del metal de aporte.",
+    "En una unión viga-columna con Vu = 40 kips y dos ángulos de alma, determine el corte de diseño por ángulo y explique qué estados límite revisaría en el ángulo y en su soldadura."
+  ],
+  "avisos": [
+    "Se usó una hoja Excel para compresión de perfiles H armados. El profesor recomienda que cada alumno haga la suya.",
+    "La propuesta de norma E.090 (con el Capítulo 13 de disposiciones sísmicas) está en el aula virtual.",
+    "Se pasó lista durante la clase (seis ausentes).",
+    "Se recomienda buscar documentación FEMA (sitio de FEMA) sobre uniones post-Northridge.",
+    "Se mostró un video sobre la geometría y los planos de falla de la soldadura de filete."
+  ],
+  "notas_transcripcion": [
+    "'Tb' se interpretó como tw y 'kase/casé' como kc.",
+    "En la hoja, λr del ala aparece como 18.90. Recalculado con kc = 0.76 y Fy = 36 ksi da ≈ 15.8. La conclusión (no esbelto) no cambia.",
+    "'Nordridge/Norwich' es Northridge (1994) y 'CO' es Kobe. El profesor dice 1996, pero el sismo de Kobe fue en enero de 1995.",
+    "'profesor Kuamura/Kubamura' se interpretó como el profesor Kuwamura (Universidad de Tokio).",
+    "Longitudes de filete: el profesor dice mínima 2·SW, mínima 4·SW en traslapes y máxima 70·SW. El AISC 360-16 exige una longitud mínima de 4 veces el tamaño y reduce la longitud efectiva (factor β) cuando L > 100·w. Se registra lo dicho en clase.",
+    "La resistencia de 45 kN y la regla del 50 % para armaduras vienen de la E.090 (y de versiones antiguas del AISC). El AISC 360-16 ya no tiene la regla del 50 %.",
+    "La parte del video sobre soldadura se transcribió solo parcialmente (comienza a mitad de una explicación)."
+  ]
+}

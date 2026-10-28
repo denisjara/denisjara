@@ -1,0 +1,364 @@
+{
+ "clase": 20,
+ "titulo": "Uniones empernadas: ajuste, tipos de junta, diseño de un empalme y criterios de detalle; introducción a columnas compuestas",
+ "fecha": "miércoles 9 de junio de 2021 (inferida: el profesor alude al partido 'de ayer martes')",
+ "duracion_min": 95,
+ "resumen": "La clase repasa las uniones empernadas y luego introduce los elementos compuestos. Se describen los pernos estructurales (A325/A490, con marca en alto relieve en la cabeza) frente a los de uso secundario (A307), y los métodos de ajuste de la Tabla J3.1 (pretensión mínima, por ejemplo 28 kips para 3/4 in A325): gata hidráulica con celda de carga, llave calibrada o torquímetro, giro de la tuerca e indicador directo de tensión. Se distinguen las juntas de aplastamiento (pernos presentados) y las de deslizamiento crítico (fricción μ·T), sus modos de falla, la resistencia nominal de la Tabla J3.2 con roscas incluidas o excluidas, los agujeros estándar, agrandados y ranurados (Tabla J3.3), las distancias mínimas a borde (Tabla J3.4) y los espaciamientos mínimo y máximo. Se resuelve un empalme traslapado de una plancha de 6×1/2 in y otra de 3×5/16 in con pernos de 1/2 in. Se comentan el criterio de diseñar las uniones de armaduras para al menos la mitad de la resistencia del elemento, los empalmes de columnas en puntos de momento nulo y la disposición de pernos en uniones viga-columna. Finalmente se introducen las columnas compuestas rellenas y embebidas, con sus límites y requisitos mínimos.",
+ "objetivos": [
+  "Al terminar, el estudiante podrá describir los métodos de pretensado de pernos y leer la pretensión mínima de la Tabla J3.1.",
+  "Al terminar, el estudiante podrá diferenciar juntas de aplastamiento y de deslizamiento crítico, y sus modos de falla.",
+  "Al terminar, el estudiante podrá seleccionar Fnv y Fnt de la Tabla J3.2, tamaños de agujero de la Tabla J3.3 y distancias a borde de la Tabla J3.4.",
+  "Al terminar, el estudiante podrá diseñar un empalme traslapado empernado verificando fluencia y rotura de cada plancha, número de pernos, espaciamientos y distancias al borde.",
+  "Al terminar, el estudiante podrá verificar la compacidad de un tubo HSS relleno y los requisitos mínimos de una columna embebida."
+ ],
+ "temas": [
+  {
+   "titulo": "Pernos estructurales y métodos de ajuste",
+   "contenido": "Los pernos son piezas roscadas. Los de uso estructural (A325, A490 o sus equivalentes F3125) llevan en la cabeza la designación en alto relieve. El profesor indica que, si no la tienen, se trata de pernos para usos secundarios o de máquinas (A307). Los pernos pueden ajustarse según la Tabla J3.1, que da la pretensión mínima por diámetro y grupo; en el Perú se usa normalmente el grupo A. Por ejemplo, un perno de 3/4 in del grupo A requiere 28 kips. Describe los métodos. (1) Gata hidráulica montada en un pequeño pórtico con celda de carga: se sujeta el perno con un dispositivo de anclaje, se tracciona hasta que el manómetro marca la tensión requerida, se ajusta la tuerca con la llave y luego se libera la gata. (2) Llave calibrada o torquímetro, cuyo indicador digital muestra la tracción equivalente con factores de conversión propios de cada equipo. (3) Giro de la tuerca: primero se lleva la tuerca a la condición de ajuste firme (snug-tight), hasta donde alcanza la fuerza de la mano. Luego se aplica un giro adicional con una extensión de palanca (un tubo), que depende de la relación entre la longitud y el diámetro del perno. Para longitudes entre 4d y 8d (por ejemplo 6d) corresponde 1/2 vuelta adicional. (4) Indicador directo de tensión. Con cualquiera de ellos se obtiene la pretensión necesaria en el perno.",
+   "formulas": [
+    {
+     "nombre": "Giro adicional (método del giro de tuerca, RCSC)",
+     "expresion": "L ≤ 4d: 1/3 de vuelta ; 4d < L ≤ 8d: 1/2 vuelta ; 8d < L ≤ 12d: 2/3 de vuelta",
+     "variables": "L longitud del perno, d diámetro nominal; caras normales al eje del perno"
+    }
+   ],
+   "referencias_norma": [
+    "AISC 360-16 Tabla J3.1 (pretensión mínima de pernos)",
+    "Especificación RCSC, Tabla 8.2 (giro de tuerca)"
+   ]
+  },
+  {
+   "titulo": "Juntas de aplastamiento y de deslizamiento crítico; modos de falla",
+   "contenido": "Hay dos tipos de junta. En la junta de aplastamiento (contacto) el perno solo está presentado o con ajuste firme, como un pasador. Al traccionar las planchas en sentidos opuestos, el vástago trabaja en corte y se apoya contra las paredes de los agujeros. En la junta de deslizamiento crítico el perno se pretensiona con la tracción T y, al aplicar la carga P, se desarrolla entre las superficies una fricción del orden de μ·T que impide el deslizamiento. Los modos de falla posibles son: corte del perno; aplastamiento o desgarramiento de la plancha cuando el perno está muy cerca del borde; rotura por tracción de la plancha en la sección neta si no hay distancia suficiente; y fluencia del perno en tracción. La Tabla J3.2 da los esfuerzos nominales en tracción (Fnt) y en corte (Fnv) con dos hipótesis: rosca incluida en el plano de corte (N), con menor resistencia, y rosca excluida (X), con mayor resistencia porque el área efectiva es la del vástago completo. Para A325, Fnv = 54 ksi (N) y 68 ksi (X), y Fnt = 90 ksi. La elección de la hipótesis es una decisión del diseñador, que debe garantizarla en obra. También comenta los apoyos: uno fijo, con perno anclado con epóxico en un muro o columna y ajustado, y uno deslizante, con agujeros ranurados (ojos chinos) y pernos solo presentados para permitir el movimiento de la viga.",
+   "formulas": [
+    {
+     "nombre": "Resistencia de un perno en corte",
+     "expresion": "φRn = φ·Fnv·Ab, φ = 0.75",
+     "variables": "Fnv esfuerzo nominal en corte (ksi), Ab área nominal del perno (in²)"
+    },
+    {
+     "nombre": "Resistencia de un perno en tracción",
+     "expresion": "φRn = φ·Fnt·Ab, φ = 0.75",
+     "variables": "Fnt = 90 ksi para A325"
+    },
+    {
+     "nombre": "Deslizamiento crítico (concepto)",
+     "expresion": "Rn ≈ μ·Du·hf·Tb·ns",
+     "variables": "μ coeficiente de fricción, Du = 1.13, hf factor de rellenos, Tb pretensión mínima, ns número de planos de deslizamiento"
+    }
+   ],
+   "referencias_norma": [
+    "AISC 360-16 J3.6 y Tabla J3.2",
+    "AISC 360-16 J3.8 (deslizamiento crítico)",
+    "AISC 360-16 J3.10 (aplastamiento y desgarramiento)"
+   ]
+  },
+  {
+   "titulo": "Agujeros, distancias al borde y espaciamientos",
+   "contenido": "El diámetro del agujero considera el diámetro comercial del perno, su tolerancia de fabricación (±1/16 in) y una holgura: en la práctica, el agujero estándar es d + 1/16 in. Para un perno de 1/2 in, la Tabla J3.3 da 9/16 in (estándar), 5/8 in (agrandado), 9/16 × 11/16 in (ranura corta) y 9/16 × 1-1/4 in (ranura larga). Para el cálculo del área neta se resta además 1/16 in, es decir, se usa d + 1/8 in. El espaciamiento entre pernos debe ser de unos 3 diámetros (mínimo 2-2/3 d). Las distancias mínimas al borde están en la Tabla J3.4: 3/4 in para pernos de 1/2 in, 1 in para 3/4 in y 1-1/4 in para 1 in. Para agujeros agrandados o ranurados se suma un incremento C2 (Tabla J3.5). El espaciamiento máximo en elementos pintados o no sujetos a corrosión es 24 veces el espesor de la plancha más delgada, sin exceder 12 in (305 mm). En elementos de acero no pintado sujetos a corrosión atmosférica es 14 veces el espesor, sin exceder 7 in (180 mm). La distancia máxima al borde es 12 veces el espesor, sin exceder 6 in.",
+   "formulas": [
+    {
+     "nombre": "Diámetro para área neta",
+     "expresion": "dh,neto = d + 1/16 + 1/16 = d + 1/8 in",
+     "variables": "d diámetro nominal del perno"
+    },
+    {
+     "nombre": "Espaciamiento",
+     "expresion": "s ≥ 2.67·d (preferible 3d) ; s ≤ min(24·tmin, 12 in)",
+     "variables": "tmin espesor de la parte más delgada; para acero no pintado expuesto: s ≤ min(14·tmin, 7 in)"
+    }
+   ],
+   "referencias_norma": [
+    "AISC 360-16 Tabla J3.3 (dimensiones de agujeros)",
+    "AISC 360-16 J3.3, J3.4, J3.5, Tablas J3.4 y J3.5"
+   ]
+  },
+  {
+   "titulo": "Diseño de un empalme traslapado empernado (planchas 6×1/2 y 3×5/16)",
+   "contenido": "El profesor resuelve un empalme traslapado de una plancha de 6 × 1/2 in con otra de 3 × 5/16 in, ambas de acero A36 (Fy = 36 ksi, Fu = 58 ksi), con pernos A325 de 1/2 in. El criterio es determinar primero cuánto resiste cada elemento por separado y diseñar la unión para la resistencia del elemento más débil. Si la plancha chica falla a 30 kips, la carga nunca podrá llegar a los 97 kips de la grande. Para cada plancha se evalúa la fluencia en el área bruta y la rotura en el área neta (descontando un agujero de 1/2 + 1/8 in en la línea de falla). La plancha pequeña gobierna con unos 30.4 kips. Para el perno, se calcula un área conservadora con el diámetro reducido por la tolerancia (7/16 in), Ab ≈ 0.15 in², y con Fnv = 54 ksi (rosca incluida) cada perno resiste unos 6.08 kips en corte simple. Se requieren 30.38/6.075 ≈ 5.0, que se redondean a 6 pernos. Los límites de espaciamiento quedan entre unas 1.375 in como mínimo (según la cifra de clase) y 7.5 in como máximo (24 × 5/16), y se adopta 2 in. La distancia al borde en la plancha de 3 in cumple ampliamente los 3/4 in de la Tabla J3.4. Ante preguntas, aclara el criterio de armaduras: la unión no debe diseñarse para menos de la mitad de la resistencia del elemento. Si el análisis da 24 kips y la resistencia del elemento es 50 kips, se diseña para 25 kips.",
+   "formulas": [
+    {
+     "nombre": "Fluencia en área bruta",
+     "expresion": "φPn = 0.90·Fy·Ag",
+     "variables": "Ag área bruta (in²)"
+    },
+    {
+     "nombre": "Rotura en área neta efectiva",
+     "expresion": "φPn = 0.75·Fu·Ae",
+     "variables": "Ae = An·U; se tomó Ae = An = (b − dh)·t"
+    },
+    {
+     "nombre": "Número de pernos",
+     "expresion": "n ≥ Tu / (φ·Fnv·Ab)",
+     "variables": "Tu fuerza a transmitir"
+    }
+   ],
+   "referencias_norma": [
+    "AISC 360-16 D2 (tracción)",
+    "AISC 360-16 J4.1 (elementos de conexión en tracción)",
+    "AISC 360-16 Tablas J3.2 y J3.4"
+   ]
+  },
+  {
+   "titulo": "Criterios de detalle: empalmes de columna y pernos en uniones viga-columna",
+   "contenido": "Las columnas de acero no se cortan en cada piso: suben de forma continua dos o tres pisos y se empalman. El empalme debe ubicarse donde el momento por sismo es casi nulo, entre un tercio y la mitad de la altura del entrepiso, normalmente a media altura. El profesor critica empalmar al ras de la losa, como hacen algunos por costumbre del concreto. En la unión viga-columna con ángulos empernados, la tracción del ala de la viga somete a los pernos del lado de la viga a corte y a los del lado de la columna a tracción. En ese caso se usa Fnt = 90 ksi en lugar de Fnv = 54 ksi. La longitud del ángulo está limitada por el ancho del ala de la columna (≤ bf), y su altura en el clip de corte por el peralte disponible de la viga. Hay que verificar que los pernos quepan con las distancias al borde y el espaciamiento de 3 diámetros, y si no caben se agrega una plancha soldada. Ningún libro da las acciones en cada pieza: el diseñador las identifica a partir de cómo llegan las fuerzas al nudo. Ante la pregunta por vigas que llegan por ambos lados al alma de la columna, explica que los ángulos forman un sándwich con el alma y el mismo perno atraviesa ambos, trabajando en doble corte con el mayor cortante. Las vigas de los pórticos principales y secundarios tienen peraltes distintos, así que sus pernos quedan a diferentes niveles y no interfieren. Recomienda al menos tres ejes resistentes en cada dirección.",
+   "formulas": [],
+   "referencias_norma": [
+    "AISC 360-16 J1.4 (empalmes)",
+    "AISC 360-16 Tabla J3.2"
+   ]
+  },
+  {
+   "titulo": "Columnas compuestas: rellenas (filled) y embebidas (encased)",
+   "contenido": "Un elemento compuesto combina concreto y acero trabajando en conjunto. La primera opción es rellenar un tubo o una sección cajón (HSS) con concreto. El concreto fresco se comporta como un líquido y genera presión hidrostática, máxima en el fondo, que puede pandear localmente las paredes del tubo. Por eso debe cuidarse el espesor y se recomienda usar un concreto muy fluido (grout) con slump del orden de 20 cm. La otra opción es embeber el perfil en concreto: se coloca una canastilla de acero longitudinal y estribos alrededor del perfil y se vacía concreto con encofrado. Es el 'encamisetado' o encased. El profesor comenta que algunas columnas sorprendentemente delgadas en edificios tienen un perfil de acero dentro, y que el concreto puede multiplicar varias veces la resistencia. Se asume compatibilidad de deformaciones: acero estructural, refuerzo longitudinal y concreto alcanzan la misma deformación unitaria, con 0.003 como deformación máxima del concreto. También menciona las vigas compuestas, con losa sobre placa colaborante o con perfil de acero embebido en una viga de concreto.",
+   "formulas": [],
+   "referencias_norma": [
+    "AISC 360-16 Cap. I, I1 e I2"
+   ]
+  },
+  {
+   "titulo": "Límites de esbeltez para tubos rellenos (Tabla I1.1a) y requisitos de la columna embebida",
+   "contenido": "Para secciones rectangulares HSS rellenas de concreto, la Tabla I1.1a establece límites de b/t distintos de los de acero solo. Compacta si b/t ≤ 2.26·√(E/Fy). No compacta si está entre 2.26 y 3.00·√(E/Fy). Esbelta si supera 3.00·√(E/Fy), con un máximo permitido de 5.00·√(E/Fy). Ejemplo: tubo de 5 × 5 × 3/16 in, con b/t tomado como 5/(3/16) = 26.67. Con E = 29000 ksi y Fy = 36 ksi, los límites son 64.13, 85.1 y 141.9, por lo que el tubo es compacto. Se busca que el tubo sea compacto o no compacto para evitar el pandeo local del fondo durante el vaciado. Para columnas embebidas, el área del perfil debe ser al menos el 1% del área bruta (As ≥ 0.01·Ag); si no, la sección no se considera compuesta. La cuantía de refuerzo longitudinal continuo debe ser al menos 0.004 (ρsr = Asr/Ag ≥ 0.004). Los estribos deben ser de 3/8 in (#3) con espaciamiento máximo de 12 in o de 1/2 in (#4) o mayores con máximo de 16 in, y en ningún caso más de 0.5 veces la menor dimensión de la sección. Para tubos rellenos grandes también puede colocarse canastilla; deben cumplirse los requisitos anteriores aplicables y los de la Tabla I1.1a. El diseño sigue el protocolo de la norma (Pno, Pe con EIeff), que se verá la clase siguiente.",
+   "formulas": [
+    {
+     "nombre": "Límites b/t HSS rectangular relleno",
+     "expresion": "λp = 2.26·√(E/Fy) ; λr = 3.00·√(E/Fy) ; λmax = 5.00·√(E/Fy)",
+     "variables": "b ancho plano de la pared, t espesor de diseño"
+    },
+    {
+     "nombre": "Área mínima de acero",
+     "expresion": "As ≥ 0.01·Ag",
+     "variables": "As área del perfil, Ag área bruta de la sección compuesta"
+    },
+    {
+     "nombre": "Cuantía mínima de refuerzo",
+     "expresion": "ρsr = Asr/Ag ≥ 0.004",
+     "variables": "Asr área de barras longitudinales continuas"
+    }
+   ],
+   "referencias_norma": [
+    "AISC 360-16 Tabla I1.1a",
+    "AISC 360-16 I2.1a (limitaciones de columnas embebidas)",
+    "AISC 360-16 I2.2a"
+   ]
+  }
+ ],
+ "ejemplos": [
+  {
+   "titulo": "Empalme traslapado de plancha 6×1/2 in con plancha 3×5/16 in",
+   "enunciado": "Dos planchas A36 (Fy = 36 ksi, Fu = 58 ksi), una de 6 × 1/2 in y otra de 3 × 5/16 in, se traslapan y unen con pernos A325 de 1/2 in, con la rosca incluida en el plano de corte (Fnv = 54 ksi). Determinar la carga de diseño, el número de pernos, el espaciamiento y verificar la distancia al borde.",
+   "pasos": [
+    "Plancha grande, fluencia: φPn = 0.9·36·(6·0.5) = 97.2 kips.",
+    "Plancha grande, rotura: An = (6 − 0.625)·0.5 = 2.69 in²; φPn = 0.75·58·2.69 = 116.9 kips. Gobierna 97.2 kips.",
+    "Plancha chica, fluencia: φPn = 0.9·36·(3·0.3125) = 30.38 kips.",
+    "Plancha chica, rotura: An = (3 − 0.625)·0.3125 = 0.742 in²; φPn = 0.75·58·0.742 = 32.3 kips. Gobierna 30.38 kips.",
+    "La unión se diseña para Tu = 30.38 kips, porque la plancha chica falla primero.",
+    "Perno: d reducido = 1/2 − 1/16 = 7/16 in, Ab = π·0.4375²/4 ≈ 0.150 in²; φRn = 0.75·54·0.15 ≈ 6.08 kips por perno.",
+    "n ≥ 30.38/6.075 ≈ 5.0, se adoptan 6 pernos.",
+    "Espaciamiento: mínimo ≈ 1.375 in (valor de clase); máximo = min(24·5/16, 12) = 7.5 in; se adopta s = 2 in.",
+    "Distancia al borde en la plancha de 3 in: eje a 1.5 in del borde (1.875 in según la cifra de clase), mayor que 3/4 in de la Tabla J3.4: cumple."
+   ],
+   "resultado": "6 pernos A325 de 1/2 in en una línea a 2 in, para una carga de diseño de 30.38 kips controlada por la fluencia de la plancha de 3 × 5/16 in."
+  },
+  {
+   "titulo": "Verificación de compacidad de un HSS 5×5×3/16 relleno",
+   "enunciado": "Clasificar la pared de un tubo de 5 × 5 × 3/16 in de acero con Fy = 36 ksi que se rellenará de concreto.",
+   "pasos": [
+    "b/t = 5/(3/16) = 26.67 (simplificación de clase usando el ancho exterior).",
+    "λp = 2.26·√(29000/36) = 64.13.",
+    "λr = 3.00·√(29000/36) = 85.1; λmax = 5.00·√(29000/36) = 141.9.",
+    "26.67 < 64.13, por lo tanto la pared es compacta."
+   ],
+   "resultado": "Sección compacta para columna rellena: no hay riesgo de pandeo local de las paredes por la presión del concreto fresco."
+  }
+ ],
+ "conceptos_clave": [
+  {
+   "termino": "Pretensión mínima",
+   "definicion": "Tracción que debe inducirse en un perno de alta resistencia según la Tabla J3.1 (p. ej. 28 kips para 3/4 in A325)."
+  },
+  {
+   "termino": "Método del giro de la tuerca",
+   "definicion": "Ajuste firme seguido de una rotación adicional especificada según la relación L/d del perno."
+  },
+  {
+   "termino": "Junta de aplastamiento",
+   "definicion": "Junta en que la carga se transmite por corte del vástago y aplastamiento contra el agujero."
+  },
+  {
+   "termino": "Junta de deslizamiento crítico",
+   "definicion": "Junta pretensionada que transmite la carga por fricción entre superficies, sin deslizamiento."
+  },
+  {
+   "termino": "Rosca incluida (N) / excluida (X)",
+   "definicion": "Hipótesis sobre si la rosca atraviesa el plano de corte; cambia Fnv (54 vs 68 ksi en A325)."
+  },
+  {
+   "termino": "Agujero ranurado (ojo chino)",
+   "definicion": "Agujero alargado que permite movimiento relativo, usado en apoyos deslizantes."
+  },
+  {
+   "termino": "Criterio del 50%",
+   "definicion": "Una unión de armadura no debe diseñarse para menos de la mitad de la resistencia del elemento que conecta."
+  },
+  {
+   "termino": "Empalme de columna",
+   "definicion": "Unión de tramos de columna ubicada cerca del punto de momento nulo (entre 1/3 y 1/2 de la altura)."
+  },
+  {
+   "termino": "Columna rellena",
+   "definicion": "Tubo o cajón de acero lleno de concreto."
+  },
+  {
+   "termino": "Columna embebida (encamisetada)",
+   "definicion": "Perfil de acero rodeado de concreto armado con barras longitudinales y estribos."
+  }
+ ],
+ "preguntas": [
+  {
+   "pregunta": "Según la Tabla J3.1, la pretensión mínima de un perno A325 de 3/4 in es:",
+   "opciones": [
+    "12 kips",
+    "19 kips",
+    "28 kips",
+    "39 kips"
+   ],
+   "correcta": 2,
+   "explicacion": "La Tabla J3.1 da 28 kips para 3/4 in en el grupo A."
+  },
+  {
+   "pregunta": "Por el método del giro de la tuerca, un perno con longitud de 6d requiere después del ajuste firme:",
+   "opciones": [
+    "1/3 de vuelta",
+    "1/2 vuelta",
+    "2/3 de vuelta",
+    "1 vuelta"
+   ],
+   "correcta": 1,
+   "explicacion": "Para 4d < L ≤ 8d corresponde media vuelta adicional."
+  },
+  {
+   "pregunta": "Para un perno A325 en corte con rosca incluida en el plano de corte, Fnv es:",
+   "opciones": [
+    "68 ksi",
+    "90 ksi",
+    "54 ksi",
+    "27 ksi"
+   ],
+   "correcta": 2,
+   "explicacion": "Fnv = 54 ksi (N); con rosca excluida (X) es 68 ksi."
+  },
+  {
+   "pregunta": "El agujero estándar para un perno de 1/2 in es:",
+   "opciones": [
+    "1/2 in",
+    "9/16 in",
+    "5/8 in",
+    "11/16 in"
+   ],
+   "correcta": 1,
+   "explicacion": "Tabla J3.3: estándar 9/16 in; agrandado 5/8 in."
+  },
+  {
+   "pregunta": "La distancia mínima al borde para un perno de 3/4 in según la Tabla J3.4 es:",
+   "opciones": [
+    "3/4 in",
+    "7/8 in",
+    "1 in",
+    "1-1/4 in"
+   ],
+   "correcta": 2,
+   "explicacion": "La Tabla J3.4 da 1 in para pernos de 3/4 in."
+  },
+  {
+   "pregunta": "El espaciamiento máximo entre pernos en planchas pintadas de 5/16 in no sujetas a corrosión es:",
+   "opciones": [
+    "7.5 in",
+    "12 in",
+    "4.4 in",
+    "3.75 in"
+   ],
+   "correcta": 0,
+   "explicacion": "min(24·0.3125, 12) = 7.5 in."
+  },
+  {
+   "pregunta": "En el empalme de una plancha de 6×1/2 con una de 3×5/16, la unión se diseña para 30.38 kips porque:",
+   "opciones": [
+    "Es la resistencia de los pernos",
+    "Es la rotura de la plancha grande",
+    "Es la menor resistencia de los elementos unidos y nunca se alcanzará la de la plancha grande",
+    "Es el 50% de 60 kips"
+   ],
+   "correcta": 2,
+   "explicacion": "La plancha chica fluye a 30.38 kips antes de que la grande llegue a 97.2 kips."
+  },
+  {
+   "pregunta": "¿Dónde conviene ubicar el empalme de una columna de acero en un edificio sísmico?",
+   "opciones": [
+    "Al ras de la losa",
+    "A la altura de la viga",
+    "En la zona de momento casi nulo, entre 1/3 y 1/2 de la altura del entrepiso",
+    "En la base"
+   ],
+   "correcta": 2,
+   "explicacion": "El momento por sismo se anula cerca de media altura, por eso el empalme se coloca allí."
+  },
+  {
+   "pregunta": "Para un HSS rectangular relleno de concreto, la pared es compacta si b/t es menor o igual que:",
+   "opciones": [
+    "1.12·√(E/Fy)",
+    "1.40·√(E/Fy)",
+    "3.00·√(E/Fy)",
+    "2.26·√(E/Fy)"
+   ],
+   "correcta": 3,
+   "explicacion": "Tabla I1.1a: λp = 2.26·√(E/Fy) para paredes de HSS rectangulares rellenas en compresión."
+  },
+  {
+   "pregunta": "Una columna embebida requiere que el área del perfil de acero sea al menos:",
+   "opciones": [
+    "0.4% de Ag",
+    "1% de Ag",
+    "4% de Ag",
+    "8% de Ag"
+   ],
+   "correcta": 1,
+   "explicacion": "AISC I2.1a: As ≥ 0.01·Ag; además ρsr ≥ 0.004."
+  },
+  {
+   "pregunta": "En una junta de deslizamiento crítico, la carga se transmite principalmente por:",
+   "opciones": [
+    "Aplastamiento del perno contra el agujero",
+    "Fricción entre las superficies pretensionadas",
+    "Soldadura de tapón",
+    "Tracción del perno"
+   ],
+   "correcta": 1,
+   "explicacion": "La pretensión T genera fricción μ·T que impide el deslizamiento."
+  }
+ ],
+ "ejercicios_propuestos": [
+  "Diseñe el empalme traslapado de una plancha de 8 × 5/8 in con otra de 4 × 3/8 in, A36, con pernos A325 de 3/4 in (rosca incluida). Determine la carga de diseño, el número de pernos, el espaciamiento entre límites y la distancia al borde.",
+  "Una diagonal de armadura tiene φPn = 50 kips y el análisis le asigna 18 kips. ¿Para qué fuerza debe diseñarse su conexión según el criterio del 50%? ¿Cuántos pernos A325 de 5/8 in en corte simple (rosca incluida) requiere?",
+  "El ala de una viga transmite T = 90 kips a un ángulo empernado al ala de la columna. Si los pernos del lado de la columna trabajan en tracción, ¿cuántos pernos A325 de 3/4 in se necesitan (φ = 0.75, Fnt = 90 ksi)? Verifique si caben 4 pernos en un ala de columna de bf = 10 in con distancias al borde de la Tabla J3.4.",
+  "Verifique la compacidad de un HSS 6×6×1/4 (t de diseño = 0.233 in, b/t = 22.8) relleno de concreto con Fy = 46 ksi según la Tabla I1.1a.",
+  "Una columna embebida de 40 × 40 cm contiene un W8x31 (A = 9.12 in²) y 4 barras de 3/4 in. Verifique As ≥ 1%Ag, ρsr ≥ 0.004 y el espaciamiento máximo de estribos de 3/8 in."
+ ],
+ "avisos": [
+  "Entrega del trabajo escalonado: hoy hasta el mediodía en el aula virtual (a pedido de los delegados).",
+  "En próximas clases se verá el diseño de placas colaborantes, que se usará en el trabajo escalonado.",
+  "El protocolo de diseño de columnas compuestas (Pn, Pe) se desarrollará el próximo lunes.",
+  "Se tomó asistencia: 12 alumnos ausentes."
+ ],
+ "notas_transcripcion": [
+  "'pernos A' (sin número) se interpretó como A307 (secundarios) y A325/A490 (estructurales).",
+  "'tabla J' se interpretó como las Tablas J3.1 a J3.5 según el contexto.",
+  "'perro' / 'pérmo' = perno; 'requintar' = ajustar o pretensar; 'ojo chino' = agujero ranurado.",
+  "'916 por un cuarto' se interpretó como 9/16 × 1-1/4 in (ranura larga).",
+  "'entre 24 veces el espesor mínimo a 30 milímetros' se interpretó como 24t ≤ 12 in (305 mm).",
+  "'longitud mínima de traslape ... máxima 12 veces el espesor' se interpretó como la distancia máxima al borde (12t ≤ 6 in).",
+  "El espaciamiento mínimo de 1.375 in y la distancia al borde de 1.875 in son las cifras dichas en clase; su origen numérico no es claro (3d con d = 1/2 in daría 1.5 in).",
+  "'Fi = 0.9 el acero es 36' y 'rotura que es 58' corresponden a φt = 0.90 en fluencia y Fu = 58 ksi, con φt = 0.75 en rotura.",
+  "Sobre los estribos de la columna embebida el profesor dijo 'el mínimo será el menor entre B y T'; el AISC limita el espaciamiento máximo a 0.5 veces la menor dimensión, y en la clase 21 se usa 0.5·b."
+ ]
+}

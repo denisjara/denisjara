@@ -1,0 +1,390 @@
+{
+ "clase": 21,
+ "titulo": "Columnas compuestas en compresión (embebidas y rellenas), transferencia de carga e introducción a vigas compuestas con placa colaborante",
+ "fecha": null,
+ "duracion_min": 92,
+ "resumen": "La clase desarrolla el protocolo del AISC 360-16 para columnas compuestas en compresión. Se calculan Pno, la rigidez efectiva EIeff (con C1 en embebidas y C3 en rellenas), la carga de Euler Pe y la resistencia Pn según la relación Pno/Pe frente a 2.25, con φc = 0.75. Se resuelven dos ejemplos en Excel. En el primero, un perfil W4x13 de 10 ft con K = 1.2 resiste solo 41.7 kips como acero aislado; embebido en una sección de 30 × 35 cm con 4 barras de 1/2 in y concreto de 3 ksi alcanza φPn ≈ 350 kips, unas 8.4 veces más. En el segundo, un HSS 4×4×5/16 relleno de concreto prácticamente no mejora (81.4 frente a 81.2 kips), lo que muestra que el relleno es ineficiente en perfiles muy pequeños. Se comentan la resistencia a tracción de compuestos y la transferencia de carga entre acero y concreto (cortante en la interfase V'r y mecanismos de aplastamiento directo, conectores y adherencia). Finalmente se introduce la viga compuesta: ancho efectivo de losa y requisitos geométricos de la placa colaborante y de los conectores de corte, con mención de las investigaciones del CISMID desde 2001.",
+ "objetivos": [
+  "Al terminar, el estudiante podrá dimensionar una columna embebida (b, h, barras, estribos) y verificar As ≥ 1% Ag, ρsr ≥ 0.004 y el espaciamiento de estribos.",
+  "Al terminar, el estudiante podrá calcular Pno, EIeff, Pe y φPn de columnas compuestas embebidas y rellenas según el AISC 360-16.",
+  "Al terminar, el estudiante podrá comparar la resistencia del perfil solo con la de la sección compuesta y juzgar la eficiencia del compuesto.",
+  "Al terminar, el estudiante podrá calcular la resistencia a tracción de un compuesto y explicar la transferencia de carga en la interfase acero-concreto.",
+  "Al terminar, el estudiante podrá determinar el ancho efectivo de una viga compuesta y enumerar los requisitos de la placa colaborante y los conectores de corte."
+ ],
+ "temas": [
+  {
+   "titulo": "Protocolo de diseño de columnas compuestas embebidas en compresión",
+   "contenido": "Se recuerda que un compuesto puede ser embebido (el perfil rodeado de concreto armado) o relleno (concreto dentro de un tubo o cajón, con o sin canastilla). La resistencia nominal base Pno suma la fluencia del perfil, la del refuerzo longitudinal y la del concreto con 0.85·f'c, cada una con su área. La carga de Euler del compuesto se calcula con una rigidez efectiva EIeff que suma Es·Is del perfil, Es·Isr de las barras y una fracción C1 de Ec·Ic del concreto. C1 depende de la proporción de acero respecto al área bruta y no puede superar 0.7. Con Pe = π²·EIeff/(KL)², si Pno/Pe ≤ 2.25 el pandeo es inelástico y Pn = Pno·0.658^(Pno/Pe); si es mayor, el pandeo es elástico y Pn = 0.877·Pe. La resistencia de diseño es φc·Pn con φc = 0.75. El módulo del concreto en unidades inglesas es Ec = w^1.5·√f'c, con w = 145 lb/ft³ y f'c en ksi, lo que da unos 3024 ksi para f'c = 3 ksi (aproximadamente 210 kg/cm², el mínimo que el profesor recomienda). La inercia del concreto se obtiene por diferencia: inercia bruta menos la del perfil y la de las barras, estas trasladadas con el teorema de Steiner. Se verifica en el eje débil del perfil, que es el que controla el acero solo.",
+   "formulas": [
+    {
+     "nombre": "Resistencia nominal base (embebida)",
+     "expresion": "Pno = Fy·As + Fysr·Asr + 0.85·f'c·Ac",
+     "variables": "As, Asr, Ac áreas de perfil, refuerzo y concreto; Fy, Fysr fluencias (ksi); f'c resistencia del concreto (ksi)"
+    },
+    {
+     "nombre": "Rigidez efectiva (embebida, AISC 360-16)",
+     "expresion": "EIeff = Es·Is + Es·Isr + C1·Ec·Ic ; C1 = 0.25 + 3·(As + Asr)/Ag ≤ 0.7",
+     "variables": "Is, Isr, Ic inercias de perfil, refuerzo y concreto"
+    },
+    {
+     "nombre": "Módulo del concreto",
+     "expresion": "Ec = w^1.5·√f'c",
+     "variables": "w peso unitario (lb/ft³), f'c (ksi), Ec (ksi)"
+    },
+    {
+     "nombre": "Carga de Euler",
+     "expresion": "Pe = π²·EIeff/(K·L)²",
+     "variables": "K·L longitud efectiva (in)"
+    },
+    {
+     "nombre": "Resistencia a compresión",
+     "expresion": "Si Pno/Pe ≤ 2.25: Pn = Pno·0.658^(Pno/Pe) ; si no: Pn = 0.877·Pe ; φc = 0.75",
+     "variables": ""
+    },
+    {
+     "nombre": "Steiner para barras",
+     "expresion": "Isr = Σ(I0 + Ab·d²)",
+     "variables": "I0 inercia propia de la barra, Ab área, d distancia del centroide de la barra al eje"
+    }
+   ],
+   "referencias_norma": [
+    "AISC 360-16 I2.1b, ecuaciones I2-2 a I2-6",
+    "AISC 360-16 I2.1b, ec. I2-4 (C1)",
+    "AISC 360-16 I1.2 (Ec)"
+   ]
+  },
+  {
+   "titulo": "Ejemplo 1: perfil W4x13 solo y embebido (encamisetado)",
+   "contenido": "Primero se evalúa el W4x13 (A = 3.83 in², d = 4.16 in, bf = 4.06 in, rx = 1.72 in, ry = 1.00 in, Ix = 11.3 in⁴, Iy = 3.86 in⁴) de acero A36 trabajando solo. Las relaciones ancho-espesor de ala y alma son menores que los límites de la Tabla B4.1a (0.56·√(E/Fy) y 1.49·√(E/Fy)), así que la sección es no esbelta y se revisan el pandeo flexional y el torsional. Con L = 120 in y K = 1.2, KL/r = 83.7 en x y 144 en y. Como 144 > 4.71·√(E/Fy) = 133.7, el pandeo es elástico: Fe = π²E/(KL/r)² ≈ 13.8 ksi, Fcr = 0.877·Fe ≈ 12.1 ksi y φPn = 0.9·3.83·12.1 ≈ 41.7 kips. El pandeo torsional da un Fe mayor (unos 135 ksi), por lo que no gobierna: controla el pandeo flexional. Después se diseña la camiseta con 4 barras de 1/2 in (Fysr = 60 ksi), estribos de 3/8 in y recubrimiento de 2 in. Se estima b = bf + 2·(2db + db + dst + rec) = 4.06 + 2·3.875 = 11.81 in (30 cm). Para h se obtiene 11.91 in (30.25 cm) y se redondea a un valor práctico de 35 cm (13.78 in). Entonces Ag ≈ 162.7 in², As/Ag ≈ 2.4% > 1% y ρsr = 4·0.196/162.7 ≈ 0.0048 > 0.004. El espaciamiento de estribos se limita a 0.5·b ≈ 5.91 in o 12 in, y se adopta 6 in. Con Ac ≈ 158.1 in² y f'c = 3 ksi resulta Pno ≈ 588 kips. Luego C1 ≈ 0.335 < 0.7 y la inercia del concreto se obtiene por diferencia. En el eje y, EIeff ≈ 2.26×10⁶ kip·in², Pe ≈ 1076 kips y Pno/Pe ≈ 0.55 < 2.25, así que el pandeo es inelástico: Pn ≈ 467 kips y φPn ≈ 350 kips. La relación 350/41.7 ≈ 8.4 muestra que conviene embeber el perfil.",
+   "formulas": [
+    {
+     "nombre": "Estimación del ancho de la camiseta",
+     "expresion": "b = bf + 2·(2·db + db + dst + rec)",
+     "variables": "db diámetro de la barra, dst diámetro del estribo, rec recubrimiento"
+    },
+    {
+     "nombre": "Ubicación de barras",
+     "expresion": "x = b/2 − rec − dst − db/2",
+     "variables": "distancia del centroide de la barra al eje"
+    }
+   ],
+   "referencias_norma": [
+    "AISC 360-16 E3 (pandeo flexional), E4 (pandeo torsional)",
+    "AISC 360-16 Tabla B4.1a"
+   ]
+  },
+  {
+   "titulo": "Columnas rellenas (filled): Pno según compacidad y rigidez efectiva C3",
+   "contenido": "En las secciones rellenas, Pno depende de la clasificación de la pared según la Tabla I1.1a. Para secciones compactas, Pno = Pp = Fy·As + C2·f'c·(Ac + Asr·Es/Ec), con C2 = 0.85 en secciones rectangulares y 0.95 en circulares por el efecto de confinamiento. Para secciones no compactas y esbeltas Pno se reduce con las expresiones de la norma, y en el caso esbelto se usa un esfuerzo crítico de pandeo local para el acero. La rigidez efectiva se calcula como EIeff = Es·Is + Es·Isr + C3·Ec·Ic, con C3 = 0.45 + 3·(As + Asr)/Ag ≤ 0.9. Pe y Pn se obtienen con las mismas expresiones que en las secciones embebidas, con φc = 0.75. El profesor señala que cuando el perfil es muy pequeño apenas cabe refuerzo: en un tubo de 10 × 10 cm no entra una canastilla y solo se pueden colocar bastones o ganchos. En la práctica, la eficiencia de una sección rellena aumenta con el tamaño del tubo: a mayor área interior, mayor contribución del concreto a Pno y a EIeff.",
+   "formulas": [
+    {
+     "nombre": "Pno sección rellena compacta",
+     "expresion": "Pno = Pp = Fy·As + C2·f'c·(Ac + Asr·Es/Ec) ; C2 = 0.85 rectangular, 0.95 circular",
+     "variables": ""
+    },
+    {
+     "nombre": "Rigidez efectiva (rellena)",
+     "expresion": "EIeff = Es·Is + Es·Isr + C3·Ec·Ic ; C3 = 0.45 + 3·(As + Asr)/Ag ≤ 0.9",
+     "variables": ""
+    }
+   ],
+   "referencias_norma": [
+    "AISC 360-16 I2.2b, ecuaciones I2-9 a I2-13"
+   ]
+  },
+  {
+   "titulo": "Ejemplo 2: HSS 4×4×5/16 solo y relleno de concreto",
+   "contenido": "El tubo HSS 4×4×5/16 (A = 4.10 in², b/t = 10.7, I = 9.14 in⁴, r = 1.49 in, J = 15.3 in⁴) de acero con Fy = 36 ksi es compacto y no esbelto. Con L = 120 in y K = 1.2, KL/r ≈ 96.6 < 133.7, así que el pandeo es inelástico: Fe ≈ 30.7 ksi, Fcr = 0.658^(Fy/Fe)·Fy ≈ 22 ksi y φPn = 0.9·22·4.10 ≈ 81.2 kips. La verificación torsional da una resistencia mayor (unos 132.6 kips), por lo que gobierna el pandeo flexional. Luego se rellena el tubo con concreto de 3 ksi y se colocan dos bastones de 3/8 in (0.11 in² cada uno, 60 ksi), porque no cabe una canastilla: el espacio interior es de unos 6 cm. Con Ag = 16 in², As/Ag ≈ 26% > 1% y ρsr ≈ 0.014 > 0.004. Como la sección es compacta, Pno = Pp ≈ 182 kips con C2 = 0.85. El factor C3 calculado supera 0.9 (señal de poca eficiencia), así que se toma C3 = 0.9. Con EIeff del orden de 3.1×10⁵ kip·in², Pe ≈ 147 kips, Pno/Pe ≈ 1.24 < 2.25 (pandeo inelástico), Pn ≈ 108.6 kips y φPn ≈ 81.4 kips. Frente a los 81.2 kips del tubo vacío, la mejora es prácticamente nula: en perfiles muy pequeños el relleno no es eficiente. Subir f'c a 4 o 5 ksi mejora poco, y solo un concreto de alta resistencia lograría alrededor de un 7% más, lo que no es económico.",
+   "formulas": [],
+   "referencias_norma": [
+    "AISC 360-16 I2.2",
+    "AISC 360-16 E3"
+   ]
+  },
+  {
+   "titulo": "Compuestos en tracción",
+   "contenido": "Si la sección compuesta trabaja en tracción, el concreto no aporta. En una sección embebida la resistencia nominal es la suma de la fluencia del perfil y la fluencia de las barras longitudinales. En una rellena es igual, el área del perfil por Fy más el refuerzo interior si existe. Los ganchos o bastones aislados aportan muy poco, así que la resistencia es prácticamente la del perfil solo. El profesor lo muestra para contrastar con la compresión: en compresión el concreto multiplica la capacidad, en tracción no la cambia. En los ejemplos de la clase, el gancho de 3/8 in colocado en el tubo de 4 × 4 in casi no modifica la resistencia a tracción respecto del tubo solo. Por eso la sección compuesta no se justifica para elementos que trabajan principalmente en tracción: el concreto aporta peso, protección contra fuego y rigidez, pero no resistencia a tracción. Si hubiera tracción importante, conviene confiar en el perfil y en barras longitudinales continuas debidamente ancladas.",
+   "formulas": [
+    {
+     "nombre": "Resistencia a tracción de compuestos",
+     "expresion": "Pn = Fy·As + Fysr·Asr ; φt = 0.90",
+     "variables": "As área del perfil, Asr área de refuerzo longitudinal"
+    }
+   ],
+   "referencias_norma": [
+    "AISC 360-16 I2.1c e I2.2c (ecuaciones I2-8 e I2-14)"
+   ]
+  },
+  {
+   "titulo": "Transferencia de carga entre acero y concreto",
+   "contenido": "Cuando la carga externa se aplica solo a uno de los materiales, aparece un cortante longitudinal en la interfase, V'r, que debe transferirse al otro material. Si la fuerza se aplica al perfil de acero, V'r = Pr·(1 − Fy·As/Pno). Si se aplica al concreto, V'r = Pr·(Fy·As/Pno). Debe cumplirse V'r ≤ φ·Rn, donde Rn proviene de alguno de los mecanismos de la norma: aplastamiento directo del concreto (bearing), con φRn = 0.65·1.7·f'c·A1; conectores de corte soldados al perfil; o adherencia directa, solo en secciones rellenas. El profesor indica que, con las dimensiones ya obtenidas, normalmente estos valores se cumplen, y que el tema cobra más importancia en flexión, donde se calcula con más precisión el cortante horizontal en vigas compuestas. Las dos hipótesis extremas son que toda la carga entre por el concreto o que entre por el acero, y la verificación debe hacerse para el caso que corresponda a la forma real en que llega la carga (por ejemplo, una viga conectada al perfil o una losa apoyada sobre el concreto). La fuerza se transfiere en una longitud de introducción de carga limitada por la norma alrededor del punto de aplicación, y allí deben ubicarse los conectores si se usa ese mecanismo.",
+   "formulas": [
+    {
+     "nombre": "Cortante de transferencia (carga aplicada al acero)",
+     "expresion": "V'r = Pr·(1 − Fy·As/Pno)",
+     "variables": "Pr carga axial requerida"
+    },
+    {
+     "nombre": "Cortante de transferencia (carga aplicada al concreto)",
+     "expresion": "V'r = Pr·(Fy·As/Pno)",
+     "variables": ""
+    },
+    {
+     "nombre": "Aplastamiento directo",
+     "expresion": "φB·Rn = 0.65·1.7·f'c·A1",
+     "variables": "A1 área de concreto cargada"
+    }
+   ],
+   "referencias_norma": [
+    "AISC 360-16 I6.2 (asignación de fuerzas)",
+    "AISC 360-16 I6.3 (mecanismos: aplastamiento, conectores, adherencia directa)"
+   ]
+  },
+  {
+   "titulo": "Introducción a vigas compuestas: ancho efectivo y requisitos de placa colaborante y conectores",
+   "contenido": "El caso más usado de compuesto en flexión es la viga de acero con losa sobre placa colaborante (steel deck). El profesor menciona que en el CISMID se han realizado tesis desde 2001 que sirvieron para desarrollar el catálogo técnico de Acero Deck de Aceros Procesados. La losa se une a la viga mediante conectores de corte (studs) y trabaja con ella; primero se define el ancho efectivo. A cada lado de la viga se toma el menor valor entre L/8 (L = luz de la viga), la mitad de la distancia a la viga adyacente y la distancia al borde de la losa, y el ancho total es la suma de ambos lados. Para la placa la norma exige: ancho promedio del valle wr ≥ 2 in; altura nominal del nervio hr ≤ 3 in; conectores que sobresalgan al menos 1.5 in por encima de la cresta y con al menos 1/2 in de recubrimiento sobre su cabeza; espesor de concreto sobre la cresta ≥ 2 in. Se pide recubrimiento mínimo de 1 in al refuerzo de temperatura, diámetro del conector ≤ 2.5·tf del ala (salvo que esté sobre el alma) y ≤ 3/4 in, longitud del conector ≥ 4 diámetros, espaciamiento longitudinal ≥ 6d y ≤ 8 veces el espesor total de la losa, y espaciamiento transversal ≥ 4d. La placa debe perforarse para soldar el conector al ala a través de ella. Cita además rangos de los ensayos que debe cumplir el fabricante (wr/hr entre 1.3 y 3, hs/hr entre 1.5 y 3.4, altura del conector entre 3 y 7 in) y que no deben colocarse más de 3 conectores por valle. El trabajo de la placa según el diagrama de momentos se verá la próxima sesión.",
+   "formulas": [
+    {
+     "nombre": "Ancho efectivo por lado",
+     "expresion": "be,lado = min(L/8, s/2, distancia al borde) ; b = be,izq + be,der",
+     "variables": "L luz de la viga, s separación entre vigas"
+    },
+    {
+     "nombre": "Limitaciones de conectores",
+     "expresion": "dsa ≤ 2.5·tf ; dsa ≤ 3/4 in ; Lstud ≥ 4·dsa ; 6·dsa ≤ s_long ≤ min(8·t_losa, 36 in) ; s_trans ≥ 4·dsa",
+     "variables": "dsa diámetro del conector, tf espesor del ala"
+    }
+   ],
+   "referencias_norma": [
+    "AISC 360-16 I3.1a (ancho efectivo)",
+    "AISC 360-16 I3.2c (losa con placa colaborante)",
+    "AISC 360-16 I8.1 e I8.2d (conectores de corte)"
+   ]
+  }
+ ],
+ "ejemplos": [
+  {
+   "titulo": "Columna W4x13 embebida en concreto",
+   "enunciado": "Perfil W4x13 A36 (A = 3.83 in², d = 4.16, bf = 4.06, Ix = 11.3, Iy = 3.86 in⁴, ry = 1.00 in), L = 120 in, K = 1.2. Se embebe con 4 barras de 1/2 in (Fysr = 60 ksi), estribos de 3/8 in, recubrimiento de 2 in y concreto f'c = 3 ksi. Comparar φPn del perfil solo con el de la sección compuesta.",
+   "pasos": [
+    "Acero solo: KL/ry = 1.2·120/1.00 = 144 > 133.7 (pandeo elástico); Fe = π²·29000/144² = 13.8 ksi; Fcr = 0.877·13.8 = 12.1 ksi; φPn = 0.9·3.83·12.1 = 41.7 kips.",
+    "Dimensiones: b = 4.06 + 2·(1.0 + 0.5 + 0.375 + 2) = 11.81 in; h calculado = 11.91 in, se adopta 35 cm = 13.78 in; Ag = 11.81·13.78 ≈ 162.7 in².",
+    "Verificaciones: As/Ag = 3.83/162.7 = 2.35% > 1%; ρsr = 4·0.196/162.7 = 0.0048 > 0.004; estribos: s ≤ min(12 in, 0.5·11.81 = 5.91 in); se adoptó 6 in.",
+    "Ac = 162.7 − 3.83 − 0.785 = 158.1 in²; Pno = 36·3.83 + 60·0.785 + 0.85·3·158.1 ≈ 588 kips.",
+    "Ec = 145^1.5·√3 = 3024 ksi; C1 = 0.25 + 3·(3.83 + 0.785)/162.7 = 0.335 < 0.7.",
+    "Eje y: Ig = 13.78·11.81³/12 ≈ 1891 in⁴; Isr (Steiner, x = 3.28 in) ≈ 8.4 in⁴; Ic ≈ 1891 − 3.86 − 8.4 ≈ 1879 in⁴.",
+    "EIeff = 29000·3.86 + 29000·8.4 + 0.335·3024·1879 ≈ 2.26×10⁶ kip·in²; Pe = π²·EIeff/144² ≈ 1076 kips.",
+    "Pno/Pe ≈ 0.55 < 2.25: Pn = 588·0.658^0.55 ≈ 467 kips; φPn = 0.75·467 ≈ 350 kips."
+   ],
+   "resultado": "φPn compuesto ≈ 350 kips frente a 41.7 kips del perfil solo: unas 8.4 veces más resistencia."
+  },
+  {
+   "titulo": "Tubo HSS 4×4×5/16 relleno de concreto",
+   "enunciado": "HSS 4×4×5/16 (A = 4.10 in², I = 9.14 in⁴, r = 1.49 in), Fy = 36 ksi, L = 120 in, K = 1.2, relleno con concreto f'c = 3 ksi y 2 bastones de 3/8 in (60 ksi). Comparar φPn.",
+   "pasos": [
+    "Tubo solo: KL/r = 144/1.49 ≈ 96.6 < 133.7 (inelástico); Fe ≈ 30.7 ksi; Fcr = 0.658^(36/30.7)·36 ≈ 22.0 ksi; φPn = 0.9·22.0·4.10 ≈ 81.2 kips.",
+    "Relleno: Ag = 16 in²; As/Ag = 25.6% > 1%; ρsr = 0.22/16 = 0.014 > 0.004; Ac ≈ 16 − 4.10 − 0.22 = 11.68 in².",
+    "Sección compacta: Pno = Pp = 36·4.10 + 0.85·3·(11.68 + 0.22·29000/3024) ≈ 182 kips.",
+    "C3 = 0.45 + 3·(As + Asr)/Ag > 0.9, se limita a 0.9.",
+    "EIeff ≈ 3.1×10⁵ kip·in²; Pe ≈ 147 kips; Pno/Pe ≈ 1.24 < 2.25.",
+    "Pn = 182·0.658^1.24 ≈ 108.6 kips; φPn = 0.75·108.6 ≈ 81.4 kips."
+   ],
+   "resultado": "φPn ≈ 81.4 kips frente a 81.2 kips del tubo vacío: el relleno no es eficiente en un perfil tan pequeño."
+  }
+ ],
+ "conceptos_clave": [
+  {
+   "termino": "Pno",
+   "definicion": "Resistencia nominal a compresión de longitud cero de la sección compuesta (suma de las contribuciones de los materiales)."
+  },
+  {
+   "termino": "EIeff",
+   "definicion": "Rigidez efectiva a flexión del compuesto: acero completo más una fracción (C1 o C3) de la rigidez del concreto."
+  },
+  {
+   "termino": "C1 / C3",
+   "definicion": "Coeficientes de participación del concreto en la rigidez: C1 ≤ 0.7 (embebidas) y C3 ≤ 0.9 (rellenas)."
+  },
+  {
+   "termino": "C2",
+   "definicion": "Factor de resistencia del concreto en secciones rellenas: 0.85 rectangular, 0.95 circular (confinamiento)."
+  },
+  {
+   "termino": "Límite Pno/Pe = 2.25",
+   "definicion": "Umbral entre pandeo inelástico (0.658^(Pno/Pe)) y elástico (0.877Pe) para compuestos."
+  },
+  {
+   "termino": "V'r",
+   "definicion": "Fuerza longitudinal que debe transferirse entre acero y concreto en la zona de introducción de carga."
+  },
+  {
+   "termino": "Placa colaborante (steel deck)",
+   "definicion": "Lámina de acero nervada que sirve de encofrado y de refuerzo positivo de la losa, con muescas que dan adherencia."
+  },
+  {
+   "termino": "Ancho efectivo",
+   "definicion": "Ancho de losa que trabaja con la viga: suma por lado del menor entre L/8, s/2 y la distancia al borde."
+  },
+  {
+   "termino": "Conector de corte (stud)",
+   "definicion": "Perno con cabeza soldado al ala de la viga que transmite el cortante horizontal entre losa y viga."
+  }
+ ],
+ "preguntas": [
+  {
+   "pregunta": "En una columna compuesta, el factor de resistencia φc del AISC 360-16 es:",
+   "opciones": [
+    "0.90",
+    "0.85",
+    "0.75",
+    "0.65"
+   ],
+   "correcta": 2,
+   "explicacion": "Para compuestos en compresión φc = 0.75."
+  },
+  {
+   "pregunta": "Si Pno/Pe = 1.5 en una columna compuesta, Pn vale:",
+   "opciones": [
+    "0.877·Pe",
+    "Pno·0.658^1.5",
+    "Pno",
+    "0.658·Pe"
+   ],
+   "correcta": 1,
+   "explicacion": "Como 1.5 ≤ 2.25, el pandeo es inelástico y Pn = Pno·0.658^(Pno/Pe)."
+  },
+  {
+   "pregunta": "En una columna embebida (AISC 360-16), el coeficiente C1 de la rigidez efectiva está limitado a:",
+   "opciones": [
+    "0.3",
+    "0.7",
+    "0.9",
+    "1.0"
+   ],
+   "correcta": 1,
+   "explicacion": "C1 = 0.25 + 3·(As + Asr)/Ag ≤ 0.7."
+  },
+  {
+   "pregunta": "En una sección rellena rectangular compacta, el coeficiente C2 que multiplica f'c es:",
+   "opciones": [
+    "0.95",
+    "0.70",
+    "0.85",
+    "1.00"
+   ],
+   "correcta": 2,
+   "explicacion": "C2 = 0.85 rectangular y 0.95 circular."
+  },
+  {
+   "pregunta": "El módulo de elasticidad de un concreto normal de f'c = 3 ksi (w = 145 pcf) es aproximadamente:",
+   "opciones": [
+    "3024 ksi",
+    "29000 ksi",
+    "1800 ksi",
+    "4500 ksi"
+   ],
+   "correcta": 0,
+   "explicacion": "Ec = 145^1.5·√3 ≈ 1746·1.732 ≈ 3024 ksi."
+  },
+  {
+   "pregunta": "En el ejemplo del W4x13 embebido, la resistencia aumentó unas:",
+   "opciones": [
+    "1.0 vez",
+    "2 veces",
+    "8.4 veces",
+    "20 veces"
+   ],
+   "correcta": 2,
+   "explicacion": "350/41.7 ≈ 8.4."
+  },
+  {
+   "pregunta": "¿Por qué el HSS 4×4×5/16 relleno casi no ganó resistencia?",
+   "opciones": [
+    "Porque el concreto se aplastó",
+    "Porque el área de concreto es muy pequeña frente al acero y la carga de Euler sigue controlada por el tubo",
+    "Porque se usó φ = 0.9",
+    "Porque la sección era esbelta"
+   ],
+   "correcta": 1,
+   "explicacion": "En perfiles muy pequeños la contribución del concreto a Pno y a EIeff es marginal."
+  },
+  {
+   "pregunta": "La resistencia nominal a tracción de una columna embebida es:",
+   "opciones": [
+    "Fy·As + Fysr·Asr",
+    "Fy·As + 0.85·f'c·Ac",
+    "0.85·f'c·Ag",
+    "Fu·As"
+   ],
+   "correcta": 0,
+   "explicacion": "El concreto no aporta en tracción."
+  },
+  {
+   "pregunta": "Si la carga externa se aplica directamente al perfil de acero de una columna compuesta, la fuerza a transferir al concreto es:",
+   "opciones": [
+    "Pr·Fy·As/Pno",
+    "Pr",
+    "Pr·(1 − Fy·As/Pno)",
+    "0"
+   ],
+   "correcta": 2,
+   "explicacion": "AISC I6.2a: V'r = Pr·(1 − Fy·As/Pno)."
+  },
+  {
+   "pregunta": "Para una viga compuesta interior de 9 m de luz con vigas espaciadas a 3 m, el ancho efectivo total es:",
+   "opciones": [
+    "2.25 m",
+    "3.0 m",
+    "1.125 m",
+    "1.5 m"
+   ],
+   "correcta": 0,
+   "explicacion": "Por lado min(9/8 = 1.125, 3/2 = 1.5) = 1.125 m; total 2.25 m."
+  },
+  {
+   "pregunta": "Según el AISC 360, la altura nominal del nervio de la placa colaborante hr no debe exceder:",
+   "opciones": [
+    "2 in",
+    "3 in",
+    "4 in",
+    "1.5 in"
+   ],
+   "correcta": 1,
+   "explicacion": "I3.2c: hr ≤ 3 in y wr ≥ 2 in."
+  },
+  {
+   "pregunta": "El diámetro de un conector de corte soldado al ala fuera de la línea del alma no debe exceder:",
+   "opciones": [
+    "1.5·tf",
+    "4·tf",
+    "2.5·tf",
+    "tf"
+   ],
+   "correcta": 2,
+   "explicacion": "I8.1: dsa ≤ 2.5·tf, salvo que se ubique sobre el alma."
+  }
+ ],
+ "ejercicios_propuestos": [
+  "Embeba un W6x20 (A = 5.87 in², Iy = 13.3 in⁴, bf = 6.02 in, d = 6.20 in) de acero A36, con L = 12 ft y K = 1.0, en concreto de 4 ksi con 4 barras de 5/8 in, estribos de 3/8 in y recubrimiento de 1.5 in. Dimensione b y h, verifique los requisitos mínimos y calcule φPn compuesto frente al perfil solo.",
+  "Calcule φPn de un HSS 8×8×1/4 (A = 7.10 in², I = 70.7 in⁴, t de diseño = 0.233 in) de Fy = 46 ksi relleno con concreto de 4 ksi, L = 14 ft, K = 1.0. Clasifique primero la pared según la Tabla I1.1a.",
+  "Para la columna del ejercicio 1, con Pr = 300 kips aplicada solo al perfil mediante una conexión de viga, calcule la fuerza V'r que debe transferirse al concreto.",
+  "Determine el ancho efectivo de una viga compuesta de borde de 7.5 m de luz, con la viga interior adyacente a 2.4 m y un volado de losa de 0.40 m.",
+  "Verifique si un conector de 3/4 in puede soldarse fuera del alma de una viga W12x26 (tf = 0.38 in) y cuál es el espaciamiento longitudinal mínimo y máximo para una losa de 6.5 in."
+ ],
+ "avisos": [
+  "Los ejemplos se resolvieron en hojas de Excel que el profesor muestra en clase.",
+  "La próxima sesión continuará con el comportamiento de la placa colaborante según el diagrama de momentos de la viga compuesta.",
+  "Se tomó asistencia en clase."
+ ],
+ "notas_transcripcion": [
+  "No se menciona la fecha; por la secuencia, corresponde al lunes siguiente a la clase 20 (probablemente 14 de junio de 2021).",
+  "'4 por 13' es el perfil W4x13; '383' = 3.83 in²; '11 3' = Ix 11.3 in⁴; '3 86' = Iy 3.86 in⁴.",
+  "Los valores de pandeo torsional dichos en clase ('118' y '409') son inconsistentes (Fcr no puede superar Fy = 36 ksi); lo relevante es que el pandeo torsional no gobierna.",
+  "'25.74' y '18.91' se interpretaron como inercias brutas de 2574 y 1891 in⁴.",
+  "El espaciamiento de estribos adoptado (6 in) excede ligeramente el límite 0.5·b = 5.91 in calculado en clase; debería tomarse ≤ 5.9 in.",
+  "En el tubo relleno el profesor obtiene C3 = 1.56 (con los datos del ejemplo resulta del orden de 1.26); en ambos casos se limita a 0.9. 'Inercia efectiva 108 con 618' no concuerda con Pe = 146.9 kips; se interpretó EIeff ≈ 3.1×10⁵ kip·in².",
+  "El profesor asocia oralmente V'r = Pr·(1 − FyAs/Pn) a la carga aplicada al concreto; según el AISC esa expresión corresponde a la carga aplicada al acero. Se registró la versión del AISC.",
+  "'0.65 por 1.7 del f'c por el área' es el aplastamiento directo (bearing), no la adherencia.",
+  "'Sysmit/Sismit' = CISMID (UNI); 'acero DEC' = Acero Deck (Aceros Procesados)."
+ ]
+}

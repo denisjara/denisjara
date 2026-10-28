@@ -1,0 +1,95 @@
+{
+  "meta": {
+    "curso": "Diseño en Acero",
+    "profesor": "Ing. Carlos Zavala Toledo",
+    "institucion": "UNI – Facultad de Ingeniería Civil",
+    "anio": "2021-I",
+    "playlist": "https://www.youtube.com/playlist?list=PLWJA_k_OD5L8167OvI7m7lVQ3j87qjhWl",
+    "videos_playlist": 29,
+    "horas": "44",
+    "normas": "ANSI/AISC 360-16 (método LRFD), borrador AISC 360-22, NTE E.020 Cargas, NTE E.030 Diseño Sismorresistente (2018), NTE E.090 Estructuras Metálicas (combinaciones de carga) y su proyecto de actualización.",
+    "metodo_fuente": "Cada video se transcribió completo (reconocimiento de voz en español) y cada transcripción se leyó de principio a fin para reorganizar su contenido en teoría, fórmulas, ejemplos resueltos paso a paso, conceptos, ejercicios y preguntas. Los términos técnicos mal reconocidos se corrigieron y los cálculos se revisaron contra la norma; cuando un número dicho en clase no cuadra, se indica en la pestaña «Avisos y notas» de la clase.",
+    "observaciones": [
+      "Los videos 10 y 11 de la lista son copias exactas de los videos 8 y 9 (mismo contenido y misma hora de grabación: 3 de mayo de 2021). No aportan contenido nuevo.",
+      "El video 14 dura solo 44 segundos: es el inicio de la clase del miércoles 12 de mayo de 2021 (vigas con alas esbeltas); el resto de esa clase no se publicó. Su tema se retoma en las clases 13 y 15.",
+      "Las clases 23 a 29 están pendientes de transcripción; el programa se completará cuando se procesen."
+    ],
+    "plan_intro": "El curso sigue el orden del Dr. Zavala: primero el material y las cargas, luego cada tipo de miembro según la especificación AISC 360 (tracción, compresión, flexión y corte, flexocompresión), las uniones soldadas y empernadas, y finalmente los miembros compuestos con placa colaborante. Cada clase dura entre 70 y 107 minutos; se recomienda una sesión de estudio de 2 a 3 horas por clase.",
+    "metodo": [
+      "Mira la clase en YouTube (enlace en cada lección) o lee primero la pestaña Teoría para tener el mapa del tema.",
+      "Rehace los ejemplos resueltos paso a paso: intenta cada paso antes de revelarlo.",
+      "Resuelve los ejercicios propuestos y comprueba tus números con la calculadora AISC del tema.",
+      "Cierra con la autoevaluación; si obtienes menos del 70 %, repasa los temas de las preguntas falladas.",
+      "Al terminar cada módulo, genera un examen de práctica solo con ese módulo."
+    ],
+    "evaluacion": [
+      "Sistema de evaluación F: promedio de prácticas, examen parcial (peso 1) y examen final (peso 2).",
+      "7 prácticas calificadas más una 8.ª de intervención y asistencia, que no se anula y sirve para levantar el promedio.",
+      "3 trabajos escalonados que se promedian y no se anulan (en 2021: diseño de una estación de servicio en acero, con modelo en SAP2000).",
+      "Las prácticas se rinden con la cámara encendida."
+    ]
+  },
+  "modulos": [
+    {"n": 1, "corto": "Fundamentos", "titulo": "Material, cargas y naves industriales",
+     "descripcion": "El acero estructural y sus propiedades, la filosofía LRFD (demanda vs. resistencia), las cargas de la E.020 y la E.030, y la configuración y el prediseño de un galpón con tijerales.",
+     "clases": ["01","02","03"],
+     "competencias": ["Interpretar la curva esfuerzo-deformación y las propiedades del acero A36/A572.","Calcular cargas de gravedad, viento y sismo y combinarlas según la E.090.","Configurar una nave industrial y predimensionar tijerales y viguetas."]},
+    {"n": 2, "corto": "Tracción", "titulo": "Miembros en tracción",
+     "descripcion": "Áreas bruta, neta y efectiva, rezago de cortante, estados límite de fluencia y rotura (Capítulo D) aplicados a la brida inferior de un tijeral.",
+     "clases": ["04"],
+     "competencias": ["Calcular An con agujeros alineados y en zigzag y Ae con la Tabla D3.1.","Diseñar un miembro en tracción por fluencia, rotura y esbeltez."]},
+    {"n": 3, "corto": "Compresión", "titulo": "Miembros en compresión",
+     "descripcion": "Pandeo local (Tabla B4.1a), pandeo global de Euler, factor K, ecuaciones E3, elementos esbeltos (E7), pandeo torsional y flexotorsional (E4) y columnas armadas.",
+     "clases": ["05","06","07"],
+     "competencias": ["Clasificar secciones en compresión como esbeltas o no esbeltas.","Obtener K con nomogramas y calcular φcPn con E3, E4 y E7.","Diseñar la brida comprimida de un tijeral y una columna armada."]},
+    {"n": 4, "corto": "Uniones I", "titulo": "Uniones soldadas y empernadas",
+     "descripcion": "Clasificación de uniones, soldadura de filete (tamaños, resistencia, soldadura balanceada, simbología) e introducción a uniones empernadas.",
+     "clases": ["08"],
+     "competencias": ["Dimensionar soldaduras de filete y balancearlas respecto al centroide.","Leer la simbología de soldadura y elegir juntas precalificadas.","Calcular la resistencia de pernos al corte y al aplastamiento."]},
+    {"n": 5, "corto": "Vigas", "titulo": "Vigas: flexión y corte",
+     "descripcion": "Compacidad, pandeo lateral torsional y Cb (F2), pandeo local del ala (F3), almas no compactas y esbeltas (F4, F5), resistencia al corte, atiesadores y campo de tensiones (Capítulo G).",
+     "clases": ["09","10","11","12","13","14","15","16","17"],
+     "competencias": ["Calcular Lp, Lr y φbMn para cualquier perfil I según F2 a F5.","Diseñar una viga soldada desde cero, incluyendo deflexiones.","Diseñar por corte con y sin atiesadores y dimensionar atiesadores intermedios."]},
+    {"n": 6, "corto": "Flexocompresión", "titulo": "Flexocompresión y análisis de segundo orden",
+     "descripcion": "Interacción H1, efecto P-Δ en SAP2000, método aproximado B1-B2 (Apéndice 8), aberturas en almas y uniones ligadas al sistema estructural.",
+     "clases": ["18","19"],
+     "competencias": ["Verificar miembros con H1-1a/b.","Amplificar momentos con B1 y B2.","Relacionar el sistema estructural (SMF, IMF, OMF, CBF, EBF) con el tipo de unión."]},
+    {"n": 7, "corto": "Compuestos", "titulo": "Uniones empernadas y miembros compuestos",
+     "descripcion": "Pretensado y diseño de empalmes empernados, columnas compuestas embebidas y rellenas, transferencia de carga y vigas compuestas con placa colaborante y conectores de corte.",
+     "clases": ["20","21","22"],
+     "competencias": ["Diseñar un empalme empernado con criterios de detalle (J3).","Calcular la resistencia de columnas compuestas (Capítulo I).","Diseñar los conectores de corte de una viga con placa colaborante."]},
+    {"n": 8, "corto": "Temas finales", "titulo": "Temas finales del curso",
+     "descripcion": "Últimas siete clases del ciclo (junio–julio 2021). Pendientes de transcripción: se agregarán al programa cuando se procesen.",
+     "clases": ["23","24","25","26","27","28","29"],
+     "competencias": []}
+  ],
+  "cortos": {
+    "01":"El acero estructural","02":"Cargas y combinaciones","03":"Naves industriales","04":"Miembros en tracción",
+    "05":"Pandeo local y Euler","06":"K, E7 y pandeo torsional","07":"Columna armada · uniones","08":"Soldadura y pernos",
+    "09":"Flexión y pandeo lateral","10":"Duplicado de la 08","11":"Duplicado de la 09","12":"Corte y viga soldada",
+    "13":"Pandeo del ala (F3/F4)","14":"Fragmento de 44 s","15":"Vigas F4, F5, cajón","16":"Corte y campo de tensión",
+    "17":"Atiesadores intermedios","18":"Flexocompresión y P-Δ","19":"B1-B2 y sistemas","20":"Empalmes empernados",
+    "21":"Columnas compuestas","22":"Vigas con placa colaborante","23":"Pendiente","24":"Pendiente","25":"Pendiente",
+    "26":"Pendiente","27":"Pendiente","28":"Pendiente","29":"Pendiente"
+  },
+  "especiales": {
+    "10": {"titulo":"Video duplicado de la clase 08","estado_txt":"Video duplicado","estado_det":"Este video es idéntico al de la clase 08 (misma grabación y duración de 1 h 47 min). Estudia la clase 08."},
+    "11": {"titulo":"Video duplicado de la clase 09","estado_txt":"Video duplicado","estado_det":"Este video es idéntico al de la clase 09 (misma grabación del 3 de mayo de 2021). Estudia la clase 09."},
+    "14": {"titulo":"Fragmento: inicio de la clase del 12 de mayo (vigas con alas esbeltas)","fecha":"miércoles 12 de mayo de 2021","estado_txt":"Video incompleto","estado_det":"El video solo contiene los primeros 44 segundos de la clase, en los que el profesor anuncia que continuará con vigas de alas esbeltas. Ese contenido se cubre en las clases 13 y 15."},
+    "23": {"titulo":"Clase 23 (pendiente de transcripción)","estado_txt":"Pendiente de transcripción","estado_det":"El video ya está cargado; falta transcribirlo para incorporarlo al programa."},
+    "24": {"titulo":"Clase 24 (pendiente de transcripción)","estado_txt":"Pendiente de transcripción","estado_det":"El video ya está cargado; falta transcribirlo para incorporarlo al programa."},
+    "25": {"titulo":"Clase 25 (pendiente de transcripción)","estado_txt":"Pendiente de transcripción","estado_det":"El video ya está cargado; falta transcribirlo para incorporarlo al programa."},
+    "26": {"titulo":"Clase 26 (pendiente de transcripción)","estado_txt":"Pendiente de transcripción","estado_det":"El video ya está cargado; falta transcribirlo para incorporarlo al programa."},
+    "27": {"titulo":"Clase 27 (pendiente de transcripción)","estado_txt":"Pendiente de transcripción","estado_det":"El video ya está cargado; falta transcribirlo para incorporarlo al programa."},
+    "28": {"titulo":"Clase 28 (pendiente de transcripción)","estado_txt":"Pendiente de transcripción","estado_det":"El video ya está cargado; falta transcribirlo para incorporarlo al programa."},
+    "29": {"titulo":"Clase 29 (pendiente de transcripción)","estado_txt":"Pendiente de transcripción","estado_det":"El video ya está cargado; falta transcribirlo para incorporarlo al programa."}
+  },
+  "videos": {
+    "01":["WUF5W_JfnyI",91],"02":["CRm5e78M-bU",103],"03":["CAQC3BbHf2c",93],"04":["TCkwFrTs8RY",101],"05":["RJ96InmHBWw",102],
+    "06":["DH0DMt94MdI",96],"07":["sM0zYKSU0QQ",70],"08":["tNfFtJLqFbs",107],"09":["-iyz-gbe4D8",99],"10":["OkH9EP1W18k",107],
+    "11":["ROvDhNOTAiY",99],"12":["06ZiRHTIa5c",101],"13":["ijEAxB2ikWA",106],"14":["MsRro5VMtgQ",1],"15":["7KWGpqkpr4s",97],
+    "16":["pEX5U0ZlLLE",102],"17":["rFuF_ZZ7Z9w",98],"18":["jdAiyGw4XAk",99],"19":["d2yjvq66IC0",84],"20":["qAyG2_uwxnE",95],
+    "21":["gsZwYDfbHqM",92],"22":["YaCgie4LgX8",90],"23":["s44PX4MN6VU",96],"24":["ZR4k5AewCd4",76],"25":["7YfWsqQPg9I",101],
+    "26":["jTbJLNCs5Ew",98],"27":["PydhnZkKnwE",76],"28":["xz5SH36sk_M",89],"29":["G2P-zQyE1F8",90]
+  }
+}

@@ -1,0 +1,328 @@
+{
+ "clase": 22,
+ "titulo": "Vigas compuestas con placa colaborante: sistema Acero Deck, ancho efectivo, conectores de corte y cortante horizontal por zonas de momento",
+ "fecha": "miércoles 16 de junio de 2021",
+ "duracion_min": 90,
+ "resumen": "La clase trata los elementos compuestos en flexión. El profesor resume las investigaciones del CISMID desde 2006 (tesis de C. Málaga y G. Maraví) sobre placas colaborantes con losa de concreto. Presenta el sistema Acero Deck (placa, refuerzo de temperatura y concreto; perfiles AD-600, AD-730 y AD-900; muescas que generan adherencia) y obras reales en Lima. Explica la planta de un sistema de techo: vigas principales y secundarias, placa apoyada sobre vigas a 1.5-2 m y vigas compuestas, que son las que reciben directamente la losa. Calcula el ancho efectivo con un ejemplo numérico (L = 6 m, s = 4 m, b = 60 in) y estima el espesor de losa como s/21. Discute la orientación del valle respecto de la viga, con preferencia por la orientación perpendicular, y repasa las limitaciones geométricas de los conectores (tc sobre la cresta). Explica la zonificación del diagrama de momentos en regiones de momento positivo y negativo y el cálculo del cortante horizontal V' en cada zona: min(As·Fy, 0.85·f'c·Ac, ΣQn) en momento positivo y min(Asr·Fysr, ΣQn) en momento negativo, este último con refuerzo adicional en la losa. Termina con la resistencia de un conector, Qn = 0.5·Asa·√(f'c·Ec) ≤ Rg·Rp·Asa·Fu, y el número de conectores por zona.",
+ "objetivos": [
+  "Al terminar, el estudiante podrá describir los componentes y el proceso constructivo de una losa con placa colaborante.",
+  "Al terminar, el estudiante podrá identificar en una planta qué vigas trabajan como compuestas y cuál es la luz de apoyo de la placa.",
+  "Al terminar, el estudiante podrá calcular el ancho efectivo de una viga compuesta y predimensionar el espesor de losa.",
+  "Al terminar, el estudiante podrá zonificar el diagrama de momentos y calcular el cortante horizontal V' en zonas de momento positivo y negativo.",
+  "Al terminar, el estudiante podrá calcular la resistencia de un conector de corte con Rg y Rp y el número de conectores por zona."
+ ],
+ "temas": [
+  {
+   "titulo": "Investigaciones del CISMID y el sistema Acero Deck",
+   "contenido": "El profesor relata que en el CISMID (UNI) se ensayan placas colaborantes desde 2006. La tesis del Ing. César Málaga fue el punto de partida para estudiar el comportamiento de la placa colaborante con losa de concreto, y la de Gerti Maraví permitió ver a qué niveles de esfuerzo trabajan estas placas. Esos ensayos sirvieron de base técnica para el catálogo del fabricante. Con un video de Acero Deck se explican los componentes indispensables: la placa colaborante, el acero de temperatura (para evitar fisuras superficiales) y el concreto. Sobre la losa puede ir cualquier acabado (madera, cerámica). La placa tiene muescas o embozos que generan la adherencia con el concreto y dan la resistencia final cuando falla la conexión mecánica. Existen varios perfiles (por ejemplo AD-600, AD-730 y AD-900, este último de 900 mm de ancho útil), con dimensiones de cresta, valle y peralte, y tablas de luces y cargas admisibles disponibles en la web del fabricante. Se muestran obras en Lima: la playa de estacionamiento de la UPC, un McDonald's en La Molina (con conectores hechos de barra lisa doblada), una tribuna en el Cineplanet de Miraflores, un techo mixto sobre muros de albañilería y un Plaza Vea en La Molina, antes Santa Isabel, cuyo sótano había fallado anteriormente. La placa no debe cubrir luces grandes: si la viga principal mide 6 m se colocan vigas secundarias para que la placa salve unos 2 m. El proceso constructivo es: fabricación a medida, transporte según el largo, almacenamiento, izaje, colocación y fijación, conectores de corte, acero de temperatura, ductos o pases antes del vaciado, vaciado y acabado natural, pintado o con falso cielo raso. Las placas no se traslapan: cada una es una sola pieza.",
+   "formulas": [],
+   "referencias_norma": [
+    "Manual técnico Acero Deck (Aceros Procesados)",
+    "AISC 360-16 I3.2c"
+   ]
+  },
+  {
+   "titulo": "Planta del sistema de techo: qué vigas son compuestas y luces de diseño",
+   "contenido": "En una planta con columnas tubulares en los ejes 1-3 y A-C se distinguen las vigas que llegan a las columnas (pórticos) y vigas intermedias que reducen la luz del paño para apoyar la placa. Las vigas que reciben directamente la placa o losa, orientadas perpendicularmente a los valles, son las que trabajan como vigas compuestas. Su luz es L, y la separación entre ellas, s, es la luz de apoyo de la placa. Las vigas que reciben las reacciones de las anteriores (en el ejemplo, las del eje B) se diseñan como vigas de acero con cargas concentradas, no como compuestas. Ante una pregunta, el profesor aclara que las vigas de los pórticos no se diseñan como empotradas con una carga puntual: se diseñan con los momentos y cortantes del modelo estructural completo, que incluye las cargas de las vigas secundarias y de la losa, y luego se verifica el compuesto. Las vigas que solo apoyan la placa pueden tratarse como simplemente apoyadas. La placa se diseña como simplemente apoyada (o continua sobre varios apoyos) con luz s, en dos estados: fresco (la placa sola soporta el concreto) y fraguado (trabaja como compuesto). Si la separación s varía (por ejemplo 1.75, 2.0 y 1.75 m en una luz de 5.5 m del trabajo escalonado), se diseña con el caso más desfavorable, el que carga más. Recomienda separaciones modulares y recuerda el principio de 'Sansón': identificar siempre qué ancho tributario carga cada elemento.",
+   "formulas": [],
+   "referencias_norma": [
+    "AISC 360-16 I3"
+   ]
+  },
+  {
+   "titulo": "Ancho efectivo y predimensionamiento del espesor de losa",
+   "contenido": "El ancho efectivo de la losa que trabaja con la viga compuesta es la suma de los anchos a cada lado. Cada uno es el menor entre L/8 (L = luz de la viga compuesta), la mitad de la distancia a la viga adyacente (s/2) y la distancia al borde de la losa, que algunos constructores proyectan en volado. Ejemplo de clase: s = 4 m ≈ 160 in, L = 6 m ≈ 240 in y una distancia al borde supuesta de 60 in. Por lado, min(240/8 = 30, 160/2 = 80, 60) = 30 in; si la modulación es simétrica, b = 30 + 30 = 60 in. Como predimensionamiento práctico del espesor de losa, el profesor propone t ≈ s/21. Para s = 4 m resulta 19 cm, que se redondea a 20 cm, unas 8 in. Aclara que este ancho es para verificar la resistencia de la sección compuesta. En el modelo del pórtico se ponen las cargas normales (peso propio, carga muerta, sobrecarga).",
+   "formulas": [
+    {
+     "nombre": "Ancho efectivo por lado",
+     "expresion": "be = min(L/8, s/2, distancia al borde)",
+     "variables": "L luz de la viga compuesta, s separación entre vigas"
+    },
+    {
+     "nombre": "Ancho efectivo total",
+     "expresion": "b = be,izq + be,der",
+     "variables": ""
+    },
+    {
+     "nombre": "Predimensionamiento de losa (criterio del profesor)",
+     "expresion": "t ≈ s/21",
+     "variables": "s luz de apoyo de la losa o placa"
+    }
+   ],
+   "referencias_norma": [
+    "AISC 360-16 I3.1a"
+   ]
+  },
+  {
+   "titulo": "Orientación de la placa respecto de la viga",
+   "contenido": "La placa puede colocarse con los valles perpendiculares o paralelos a la viga compuesta. Lo recomendable y más eficiente es la orientación perpendicular: cada nervio actúa como una pequeña vigueta apoyada sobre la viga, y la viga trabaja plenamente como compuesta. Con los valles paralelos a la viga el sistema funciona, pero no tan bien. Es importante identificar la orientación porque el diseño de los conectores depende de ella: los factores Rg y Rp cambian según la orientación, el número de conectores por valle y la relación wr/hr. Cuando hay placa, para la sección compuesta se considera solo el concreto sobre la cresta (espesor tc) y se desprecia el concreto dentro de los valles si estos son perpendiculares a la viga. El profesor dibuja ambas configuraciones con el acero de temperatura, el espesor de losa y el ancho efectivo b, y muestra que en las dos se colocan conectores de corte sobre el ala de la viga a través de la placa. Recomienda verificar en planos y en obra la orientación prevista, porque un cambio de orientación modifica el número de conectores por valle, los factores de reducción y, en consecuencia, la cantidad total de conectores requerida para desarrollar el cortante horizontal.",
+   "formulas": [],
+   "referencias_norma": [
+    "AISC 360-16 I3.2c",
+    "AISC 360-16 I8.2a (factores Rg y Rp)"
+   ]
+  },
+  {
+   "titulo": "Limitaciones geométricas de los conectores de corte",
+   "contenido": "Los conectores de corte (studs o shear connectors) deben cumplir varias limitaciones. El recubrimiento mínimo de concreto es de 1 in, lateral o superior. El diámetro del conector no debe superar 2.5 veces el espesor del ala de la viga, tf, a la que se suelda. El espaciamiento longitudinal (a lo largo de la viga) debe ser al menos 6 diámetros. El espaciamiento transversal entre conectores de una misma sección debe ser al menos 4 diámetros, y el profesor recomienda verificar que esos 4 diámetros, más unos 2 diámetros a cada borde, quepan en el ancho bf del ala; si no, el conector es demasiado grande. El espaciamiento máximo es 8 veces el espesor de la losa: con placa se usa la altura tc sobre la cresta, porque se desprecia el concreto del valle. El fabricante de la placa debe respetar los valores mínimos de hs, wr y hr y las relaciones entre ellos.",
+   "formulas": [
+    {
+     "nombre": "Diámetro máximo del conector",
+     "expresion": "dsa ≤ 2.5·tf",
+     "variables": "tf espesor del ala de la viga"
+    },
+    {
+     "nombre": "Espaciamientos",
+     "expresion": "s_long ≥ 6·dsa ; s_trans ≥ 4·dsa ; s_long ≤ 8·t (t = tc con placa)",
+     "variables": "dsa diámetro del conector"
+    }
+   ],
+   "referencias_norma": [
+    "AISC 360-16 I8.2d (requisitos de detalle de conectores)",
+    "AISC 360-16 I8.1"
+   ]
+  },
+  {
+   "titulo": "Zonificación del diagrama de momentos y cortante horizontal V'",
+   "contenido": "Para diseñar los conectores no basta con el momento máximo: hay que zonificar el diagrama de momentos de la viga, obtenido del modelo del pórtico, en regiones que van del punto de momento nulo al de momento máximo (positivo o negativo), y viceversa. En cada región se calcula la fuerza horizontal en la interfase acero-concreto y se coloca el número de conectores necesario entre el punto de momento máximo y el de momento nulo. En momento positivo (carita feliz) el concreto superior está en compresión y el acero en tracción, que es el caso ideal. El cortante horizontal es el menor entre la compresión que puede desarrollar el concreto (0.85·f'c·Ac), la tracción que puede desarrollar el acero (As·Fy) y la suma de resistencias de los conectores (ΣQn). En momento negativo (carita triste) la losa queda traccionada y el concreto no resiste tracción, por lo que debe colocarse refuerzo longitudinal adicional diseñado como en concreto armado, distinto del acero de temperatura. Entonces V' es el menor entre Asr·Fysr y ΣQn. El cortante horizontal tiende a deslizar las superficies y a cortar los conectores. Si estos fallasen y hay placa, las muescas proporcionan la última resistencia. Con V' se plantea la distribución plástica de esfuerzos y, por equilibrio, el momento resistente; para ello se necesita la profundidad del bloque de Whitney en la losa y la geometría del perfil.",
+   "formulas": [
+    {
+     "nombre": "Cortante horizontal en momento positivo",
+     "expresion": "V' = min(0.85·f'c·Ac, As·Fy, ΣQn)",
+     "variables": "Ac área de concreto dentro del ancho efectivo, As área del perfil, ΣQn suma de resistencias de conectores en la zona"
+    },
+    {
+     "nombre": "Cortante horizontal en momento negativo",
+     "expresion": "V' = min(Asr·Fysr, ΣQn)",
+     "variables": "Asr refuerzo longitudinal dentro del ancho efectivo, Fysr su fluencia"
+    },
+    {
+     "nombre": "Profundidad del bloque de compresión",
+     "expresion": "a = V'/(0.85·f'c·b)",
+     "variables": "b ancho efectivo"
+    }
+   ],
+   "referencias_norma": [
+    "AISC 360-16 I3.2d (transferencia de carga en momento positivo y negativo), ecuaciones I3-1a a I3-1c, I3-2a y I3-2b",
+    "AISC 360-16 I3.2a y I3.2b (resistencia a flexión positiva y negativa)"
+   ]
+  },
+  {
+   "titulo": "Resistencia de un conector de corte y número de conectores",
+   "contenido": "La resistencia nominal de un conector tipo stud depende de su área, de la resistencia y del módulo del concreto, y está limitada por la rotura del acero del conector afectada por Rg y Rp. El conector mínimo práctico es de 1/2 in. Con f'c = 3 ksi (≈ 210 kg/cm²) y Ec = 145^1.5·√f'c se obtiene directamente Qn. Los factores Rg y Rp se leen de la norma. Sin placa (losa maciza), Rg = 1.0 y Rp = 0.75. Con la placa paralela a la viga, dependen de la relación wr/hr. Con la placa perpendicular, dependen del número de conectores por valle (uno, dos, tres o más) y de su posición. Si no se cumple la condición del límite superior, debe aumentarse la resistencia del concreto, cambiar de conector o modificar el refuerzo. Con V' calculado para cada zona se obtiene el número de conectores n = V'/Qn entre el punto de momento máximo y el de momento nulo. El profesor comparte además una copia de un libro japonés con numerosos detalles de uniones y empalmes para el trabajo escalonado.",
+   "formulas": [
+    {
+     "nombre": "Resistencia de un conector tipo stud",
+     "expresion": "Qn = 0.5·Asa·√(f'c·Ec) ≤ Rg·Rp·Asa·Fu",
+     "variables": "Asa área del vástago (in²), f'c y Ec del concreto (ksi), Fu resistencia mínima a tracción del conector (65 ksi típico), Rg factor de grupo, Rp factor de posición"
+    },
+    {
+     "nombre": "Número de conectores por zona",
+     "expresion": "n = V'/Qn",
+     "variables": "colocados entre el momento máximo y el momento nulo"
+    }
+   ],
+   "referencias_norma": [
+    "AISC 360-16 I8.2a, ecuación I8-1 (Qn, Rg, Rp)",
+    "AISC 360-16 I8.2c (número requerido de conectores)"
+   ]
+  }
+ ],
+ "ejemplos": [
+  {
+   "titulo": "Ancho efectivo y espesor de losa de una viga compuesta",
+   "enunciado": "Viga compuesta interior de luz L = 6 m (≈ 240 in), separación entre vigas s = 4 m (≈ 160 in) y una distancia supuesta al borde de 60 in. Determinar el ancho efectivo y estimar el espesor de la losa.",
+   "pasos": [
+    "L/8 = 240/8 = 30 in.",
+    "s/2 = 160/2 = 80 in.",
+    "Distancia al borde = 60 in.",
+    "be por lado = min(30, 80, 60) = 30 in; con modulación simétrica, b = 30 + 30 = 60 in.",
+    "Espesor de losa: t ≈ s/21 = 400/21 ≈ 19 cm, se adopta 20 cm ≈ 8 in."
+   ],
+   "resultado": "Ancho efectivo b = 60 in; losa de 20 cm (8 in)."
+  }
+ ],
+ "conceptos_clave": [
+  {
+   "termino": "Placa colaborante",
+   "definicion": "Lámina de acero nervada que funciona como encofrado y como refuerzo de la losa; sus muescas generan adherencia."
+  },
+  {
+   "termino": "Cresta y valle",
+   "definicion": "Partes superior e inferior del nervio de la placa; hr es la altura del nervio y wr el ancho medio del valle."
+  },
+  {
+   "termino": "tc",
+   "definicion": "Espesor de concreto sobre la cresta de la placa; es el que se considera en la sección compuesta con nervios perpendiculares."
+  },
+  {
+   "termino": "Viga compuesta",
+   "definicion": "Viga de acero que, mediante conectores, trabaja con la losa de concreto como una sola sección."
+  },
+  {
+   "termino": "Zona de momento positivo/negativo",
+   "definicion": "Tramo del diagrama de momentos entre el punto de momento nulo y el máximo, donde se calcula V' y se distribuyen los conectores."
+  },
+  {
+   "termino": "Cortante horizontal V'",
+   "definicion": "Fuerza de deslizamiento en la interfase acero-concreto que deben resistir los conectores."
+  },
+  {
+   "termino": "Rg y Rp",
+   "definicion": "Factores de grupo y de posición que reducen la resistencia de los conectores según la presencia y orientación de la placa."
+  },
+  {
+   "termino": "Bloque de Whitney",
+   "definicion": "Bloque rectangular equivalente de compresión del concreto (0.85·f'c·a) usado en la distribución plástica."
+  },
+  {
+   "termino": "Vigas secundarias",
+   "definicion": "Vigas intermedias que reducen la luz de la placa (≈ 1.5 a 2 m) y entregan sus reacciones a las vigas principales."
+  }
+ ],
+ "preguntas": [
+  {
+   "pregunta": "¿Qué tres elementos deben estar presentes para que un sistema de placa colaborante trabaje como compuesto?",
+   "opciones": [
+    "Placa, acero de temperatura y concreto",
+    "Placa, encofrado de madera y concreto",
+    "Viga, columna y placa",
+    "Pernos, soldadura y placa"
+   ],
+   "correcta": 0,
+   "explicacion": "El profesor indica que la placa, el refuerzo por temperatura y el concreto son indispensables."
+  },
+  {
+   "pregunta": "Para una viga compuesta interior de L = 8 m con vigas a 2.5 m, el ancho efectivo total es:",
+   "opciones": [
+    "2.0 m",
+    "2.5 m",
+    "1.25 m",
+    "1.0 m"
+   ],
+   "correcta": 0,
+   "explicacion": "Por lado min(8/8 = 1.0, 2.5/2 = 1.25) = 1.0 m; total 2.0 m."
+  },
+  {
+   "pregunta": "¿Qué orientación de la placa respecto de la viga compuesta es la más eficiente?",
+   "opciones": [
+    "Valles paralelos a la viga",
+    "Valles perpendiculares a la viga",
+    "A 45 grados",
+    "Es indiferente"
+   ],
+   "correcta": 1,
+   "explicacion": "Con los valles perpendiculares cada nervio actúa como una vigueta apoyada en la viga."
+  },
+  {
+   "pregunta": "En zona de momento positivo, el cortante horizontal V' es el menor entre:",
+   "opciones": [
+    "As·Fy, 0.85·f'c·Ac y ΣQn",
+    "Asr·Fysr y ΣQn",
+    "0.6·Fy·Aw y ΣQn",
+    "As·Fu y f'c·Ag"
+   ],
+   "correcta": 0,
+   "explicacion": "AISC I3.2d: aplastamiento del concreto, fluencia del acero o resistencia de los conectores."
+  },
+  {
+   "pregunta": "En zona de momento negativo, ¿por qué hay que colocar refuerzo adicional en la losa?",
+   "opciones": [
+    "Porque el acero del perfil está en tracción",
+    "Porque la losa está en tracción y el concreto no la resiste",
+    "Porque lo exige el fabricante de la placa",
+    "Para reducir la deflexión"
+   ],
+   "correcta": 1,
+   "explicacion": "Con momento negativo la losa superior se tracciona; V' = min(Asr·Fysr, ΣQn)."
+  },
+  {
+   "pregunta": "El diámetro máximo de un conector soldado al ala (fuera del alma) es:",
+   "opciones": [
+    "1.5·tf",
+    "2.5·tf",
+    "4·tf",
+    "6·tf"
+   ],
+   "correcta": 1,
+   "explicacion": "dsa ≤ 2.5·tf."
+  },
+  {
+   "pregunta": "El espaciamiento longitudinal mínimo entre conectores es:",
+   "opciones": [
+    "4 diámetros",
+    "6 diámetros",
+    "8 diámetros",
+    "3 in"
+   ],
+   "correcta": 1,
+   "explicacion": "AISC I8.2d: 6·dsa longitudinal y 4·dsa transversal."
+  },
+  {
+   "pregunta": "Para un conector en losa maciza sin placa, los factores Rg y Rp valen:",
+   "opciones": [
+    "Rg = 0.85, Rp = 0.75",
+    "Rg = 1.0, Rp = 0.6",
+    "Rg = 1.0, Rp = 0.75",
+    "Rg = 0.7, Rp = 1.0"
+   ],
+   "correcta": 2,
+   "explicacion": "Sin placa: Rg = 1.0 y Rp = 0.75 (AISC 360-16)."
+  },
+  {
+   "pregunta": "Un conector de 1/2 in (Asa = 0.196 in²) en concreto de 3 ksi (Ec = 3024 ksi) sin placa y Fu = 65 ksi tiene Qn aproximadamente igual a:",
+   "opciones": [
+    "9.3 kips",
+    "12.7 kips",
+    "6.1 kips",
+    "17.6 kips"
+   ],
+   "correcta": 0,
+   "explicacion": "0.5·0.196·√(3·3024) = 9.33 kips ≤ 1.0·0.75·0.196·65 = 9.56 kips; gobierna 9.33 kips."
+  },
+  {
+   "pregunta": "¿Entre qué puntos del diagrama de momentos se distribuye el número de conectores n = V'/Qn?",
+   "opciones": [
+    "Entre apoyos extremos",
+    "Entre el punto de momento máximo y el de momento nulo",
+    "Solo en el centro de la luz",
+    "Uniformemente en toda la viga sin importar el diagrama"
+   ],
+   "correcta": 1,
+   "explicacion": "Cada zona definida entre momento máximo y momento nulo debe tener los conectores necesarios para V'."
+  },
+  {
+   "pregunta": "Con placa colaborante de valles perpendiculares, el espesor que se usa en la sección compuesta es:",
+   "opciones": [
+    "La altura total incluyendo el valle",
+    "El espesor tc del concreto sobre la cresta",
+    "La altura del nervio hr",
+    "Solo el espesor de la placa"
+   ],
+   "correcta": 1,
+   "explicacion": "Se desprecia el concreto dentro de los valles; se considera tc sobre la cresta."
+  }
+ ],
+ "ejercicios_propuestos": [
+  "Calcule el ancho efectivo de una viga compuesta de borde de 7 m de luz, con la viga interior adyacente a 2.0 m y un volado de losa de 0.30 m. Predimensione el espesor de losa con t ≈ s/21.",
+  "Una viga W16x31 (A = 9.13 in², A992) soporta una losa maciza de 4.5 in de f'c = 3 ksi con ancho efectivo de 72 in. Calcule V' en la zona de momento positivo suponiendo interacción completa y la profundidad del bloque de compresión a.",
+  "Para el ejercicio anterior, calcule Qn de un conector de 3/4 in (Fu = 65 ksi) sin placa y el número de conectores requerido entre el apoyo y el centro de la luz.",
+  "En una zona de momento negativo la losa tiene 6 barras de 1/2 in de grado 60 dentro del ancho efectivo. Calcule V' y el número de conectores de 5/8 in en concreto de 4 ksi necesarios entre el apoyo y el punto de inflexión.",
+  "Con placa colaborante perpendicular a la viga (hr = 2 in, tc = 2.5 in), verifique la altura mínima del conector, el recubrimiento sobre su cabeza y el espaciamiento longitudinal máximo."
+ ],
+ "avisos": [
+  "El profesor compartirá el manual técnico de Acero Deck y una copia de un libro japonés con detalles de uniones y empalmes para el trabajo escalonado.",
+  "Mañana (jueves) hay sesión de práctica dedicada a dudas y al desarrollo del trabajo escalonado con los jefes de práctica.",
+  "Se tomó asistencia: 5 alumnos ausentes.",
+  "Al inicio el profesor recomienda cuidarse de la gripe y practicar la tolerancia."
+ ],
+ "notas_transcripcion": [
+  "'Sysmit/Sismit' = CISMID; 'acero DEC' = Acero Deck; 'AD' son los perfiles AD-600/AD-730/AD-900 (los números no se oyen en la transcripción).",
+  "'Gerti Maraví' y 'César Málaga' son nombres de tesistas tal como se oyen; pueden tener errores de ortografía.",
+  "'Plaza Bea' = Plaza Vea; 'Santizabel' = Santa Isabel.",
+  "'Doctor' (el cortante en la interfase) se interpretó como V' (cortante horizontal); 'BR' / 'VR' = V'.",
+  "'STAT' = stud (conector de corte); 'bloc de Winnie' = bloque de Whitney.",
+  "Las conversiones de clase (6 m ≈ 240 in, 4 m ≈ 160 in) usan 40 in/m como aproximación.",
+  "La sección de conectores menciona el 'f'c del conector'; corresponde al f'c del concreto en la fórmula Qn = 0.5·Asa·√(f'c·Ec)."
+ ]
+}

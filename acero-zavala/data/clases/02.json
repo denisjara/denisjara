@@ -1,0 +1,396 @@
+{
+  "clase": 2,
+  "titulo": "Cargas en estructuras de acero: demanda vs. resistencia, cargas de gravedad, nieve, viento y sismo",
+  "fecha": null,
+  "duracion_min": 103,
+  "resumen": "La clase establece la filosofía de diseño: la demanda última Pu, obtenida del análisis estructural con las cargas de las normas E.020 y E.030 y sus combinaciones, debe ser menor o igual que la resistencia de diseño φPn que da la norma de diseño (AISC 360 LRFD). Se explica el origen probabilístico de los factores de carga mediante la confiabilidad estructural (histogramas de pesos de los usuarios de un puente). Se repasan los tipos de carga: muerta, viva, viva de techo, nieve, viento, sismo y lluvia/granizo, con valores mínimos de la E.020 para hospitales, bibliotecas, garajes y techos (30 y 50 kg/m²), y el tratamiento de cargas en techos curvos. Se estudia la carga de nieve (qs = 40 kg/m² y reducción según la pendiente), la carga de viento de la E.020 (velocidad mínima 75 km/h, variación con la altura, barlovento y sotavento, coeficientes de presión exterior e interior y protección de ventanas) y la carga sísmica de la E.030 como porcentaje del peso (ZUCS/R), con un ejemplo de estimación rápida para un colegio en la sierra (≈30 % del peso). Finalmente se describen los sistemas estructurales de acero (pórticos especiales, intermedios, ordinarios y arriostrados concéntricos y excéntricos), las irregularidades que reducen R y el límite de deriva de 1 % para acero. También se eligió al delegado del curso.",
+  "objetivos": [
+    "Al terminar, el estudiante podrá distinguir entre la demanda (Pu, del análisis con las normas de cargas) y la resistencia de diseño (φPn, de la norma de diseño) y plantear la condición Pu ≤ φPn.",
+    "Al terminar, el estudiante podrá explicar el origen probabilístico de los factores de carga y aplicar las combinaciones de carga LRFD.",
+    "Al terminar, el estudiante podrá seleccionar cargas vivas mínimas de la Norma E.020 para distintos usos y techos.",
+    "Al terminar, el estudiante podrá calcular la velocidad de diseño del viento a una altura h y la presión o succión con coeficientes de presión exterior e interior.",
+    "Al terminar, el estudiante podrá estimar rápidamente la cortante basal sísmica como porcentaje del peso con los factores Z, U, C, S y R de la E.030.",
+    "Al terminar, el estudiante podrá diferenciar los sistemas estructurales de acero y explicar el efecto de las irregularidades y el control de deriva."
+  ],
+  "temas": [
+    {
+      "titulo": "Filosofía de diseño: demanda (Pu) versus resistencia (φPn)",
+      "contenido": "Diseñar significa garantizar que la resistencia de un elemento supere a la demanda. La resistencia límite o de diseño se denota φPn y la proporcionan los códigos de diseño; en el curso se usará la especificación ANSI/AISC 360 por el método LRFD, con recomendaciones adicionales para zonas sísmicas. Las normas de cargas (E.020) y de sismo (E.030), en cambio, no dan resistencias sino demandas: indican los valores mínimos de las cargas que deben considerarse. El análisis estructural toma esas cargas (como mínimo las de la norma, o mayores según el criterio del ingeniero), las combina y produce las fuerzas últimas Pu en cada elemento. Un diseño es aceptable cuando Pu ≤ φPn. El profesor insiste en no confundir los papeles: la normativa de diseño entrega φPn; la normativa de cargas junto con el análisis estructural entregan Pu. Antes de evaluar cargas hay que definir la estructura: material (módulo de elasticidad), secciones y sus propiedades, y el tipo de apoyos (rígidos, flexibles o semirrígidos), porque de ello depende la respuesta. Las cargas pueden ser muerta, viva, viva de techo, nieve, viento y sismo; todas, salvo el sismo, están en la E.020 (que también contiene el capítulo de viento), y el sismo se obtiene con la E.030.",
+      "formulas": [
+        {
+          "nombre": "Condición de diseño LRFD",
+          "expresion": "Pu ≤ φ·Pn",
+          "variables": "Pu: demanda última (combinación de cargas factorizadas más desfavorable); φ: factor de resistencia; Pn: resistencia nominal"
+        }
+      ],
+      "referencias_norma": [
+        "AISC 360-16, Sección B3.1 (diseño por LRFD)",
+        "Norma E.020 Cargas",
+        "Norma E.030 Diseño Sismorresistente"
+      ]
+    },
+    {
+      "titulo": "Confiabilidad estructural y factores de carga",
+      "contenido": "Para explicar por qué las cargas se amplifican, el profesor plantea dos pueblos separados por un río y unidos por un puente metálico reticulado: en uno los pobladores pesan alrededor de 100 kg (95, 80, 110...) y en el otro unos 60 kg (62, 55, 48...). ¿Con qué carga se diseña? Como el peso de los usuarios varía, se tiene un histograma o distribución de probabilidades de la carga, y también una distribución del número de personas que cruzan. Las normas procesan esas distribuciones mediante la técnica de confiabilidad estructural: a partir de la data se estiman las probabilidades y el índice de confiabilidad β, y con ello se calibran los factores de carga (λ o γ), que representan los valores más probables de sobrecarga para una probabilidad de falla aceptable. Cada combinación λ1·D + λ2·L + ... produce un valor de demanda Pu,i y el diseño se hace con el más desfavorable de todos. El profesor aclara que el curso no es de confiabilidad, pero que existen tesis sobre estudio de cargas para quien desee profundizar. La norma peruana exige un conjunto de combinaciones de carga para hallar la máxima demanda; en la E.090 (basada en LRFD) son: 1.4D; 1.2D + 1.6L + 0.5(Lr o S o R); 1.2D + 1.6(Lr o S o R) + (0.5L o 0.8W); 1.2D + 1.3W + 0.5L + 0.5(Lr o S o R); 1.2D ± 1.0E + 0.5L + 0.2S; 0.9D ± (1.3W o 1.0E). En AISC 360 con ASCE 7-16 el factor del viento es 1.0W, porque el viento ya está a nivel de resistencia.",
+      "formulas": [
+        {
+          "nombre": "Resistencia requerida",
+          "expresion": "Pu = máx(Σ γi·Qi) sobre todas las combinaciones",
+          "variables": "γi: factor de carga; Qi: efecto de la carga i (D, L, Lr, S, R, W, E)"
+        },
+        {
+          "nombre": "Combinaciones LRFD (E.090)",
+          "expresion": "1.4D ; 1.2D+1.6L+0.5(Lr|S|R) ; 1.2D+1.6(Lr|S|R)+(0.5L|0.8W) ; 1.2D+1.3W+0.5L+0.5(Lr|S|R) ; 1.2D±1.0E+0.5L+0.2S ; 0.9D±(1.3W|1.0E)",
+          "variables": "D: muerta; L: viva; Lr: viva de techo; S: nieve; R: lluvia o granizo; W: viento; E: sismo"
+        }
+      ],
+      "referencias_norma": [
+        "Norma E.090, Sección 1.4 (combinaciones de carga LRFD)",
+        "ASCE 7-16, Sección 2.3.1 (combinaciones con factor 1.0W)"
+      ]
+    },
+    {
+      "titulo": "Tipos de cargas y cargas vivas mínimas (Norma E.020)",
+      "contenido": "Carga muerta (D): peso propio de los elementos y de todo lo permanente que no se mueve: vigas, columnas, techos, tabiquería y equipos fijos como bombas o aire acondicionado. Carga viva (L): todo lo que se mueve, ocupantes y mobiliario redistribuible. Carga viva de techo (Lr): mucho menor que la viva de piso. Viento (W): las ráfagas pueden provocar fallas. Nieve (S): en zonas altoandinas. Sismo (E): según la E.030. Lluvia o granizo (R): en zonas muy lluviosas como Iquitos, Tarapoto, Moyobamba, Tumbes o Piura. La Tabla 1 de la E.020 da cargas repartidas mínimas, no 'la carga': el ingeniero decide si usa el mínimo o algo mayor, y ahí interviene la experiencia. Ejemplos: en hospitales, salas de operación, laboratorios y zonas de servicio 300 kg/m², cuartos 200 kg/m² y corredores 400 kg/m²; si el hospital tiene depósitos o almacenes se usan los valores de almacenaje. En bibliotecas, sala de lectura 300, salas de almacenaje con anaqueles 750 y corredores 400 kg/m²; una viga principal que pase por varias zonas debe considerar los valores correspondientes. En garajes para autos, 250 kg/m² como mínimo; si ingresan camionetas o vehículos mayores se revisa el capítulo correspondiente de la norma. También hay valores para hoteles, oficinas y cines, y al final de la norma se listan pesos unitarios de materiales. Para techos, la carga viva depende de si son planos, inclinados o curvos: en techos curvos o de tijerales con cobertura liviana y sin equipos se considera como mínimo 30 kg/m²; en techos planos (inclinación del orden de 3 %) se considera 50 kg/m² según lo indicado en clase. Los equipos en azoteas (aire acondicionado, bombas, sistemas contra incendio) no están en la norma: sus pesos los proporcionan los ingenieros electricista, sanitario o de seguridad.",
+      "formulas": [],
+      "referencias_norma": [
+        "Norma E.020, Tabla 1 (cargas vivas mínimas repartidas)",
+        "Norma E.020, Artículo 7 (carga viva de techo)",
+        "Norma E.020, Anexo 1 (pesos unitarios)"
+      ]
+    },
+    {
+      "titulo": "Cargas sobre techos curvos e inclinados",
+      "contenido": "Ante la pregunta de un alumno (Sánchez) sobre cómo aplicar una carga distribuida en un techo curvo, el profesor explica que las cargas como el viento actúan perpendiculares a la superficie, por lo que cada carga tiene dos componentes, una horizontal y otra vertical. Los programas de cómputo comerciales trabajan con cargas en direcciones globales X e Y y no directamente perpendiculares al elemento, así que hay que descomponerlas. Como la intensidad varía con la altura, se puede discretizar el techo por sectores, asignando a cada tramo un valor W1, W2, W3..., función de la altura del sector. En un tijeral sobre columnas, el viento actúa sobre las columnas (horizontal) y sobre los planos inclinados del techo (perpendicular a ellos), y cada valor se descompone en componentes horizontal y vertical para el modelo. En la práctica, para un arco o bóveda se divide la cubierta en tramos de altura similar, se calcula la presión normal de cada tramo con su coeficiente y altura correspondientes, y se ingresa al programa como cargas proyectadas en X e Y aplicadas en los nudos o como cargas distribuidas por sector.",
+      "formulas": [
+        {
+          "nombre": "Descomposición de carga normal a una superficie inclinada",
+          "expresion": "wx = w·sen θ ; wy = w·cos θ",
+          "variables": "w: carga perpendicular a la superficie (kg/m²); θ: inclinación de la superficie respecto de la horizontal"
+        }
+      ],
+      "referencias_norma": []
+    },
+    {
+      "titulo": "Carga de nieve",
+      "contenido": "La E.020 define una carga básica de nieve sobre el terreno qs con un valor mínimo de 40 kg/m², equivalente a unos 40 cm de nieve fresca o 20 cm de nieve compactada. La carga de diseño sobre el techo, qt, depende de la inclinación. En un techo a dos aguas de longitud total 2L y altura de cumbrera h, la pendiente se analiza con la mitad de la longitud, tan φ = h/L, aproximación válida para ángulos pequeños. Si el techo a una o dos aguas tiene inclinación menor o igual a 15° (pendiente ≤ 27 %), o si un techo curvo tiene relación h/L ≤ 0.1, entonces qt = qs. Para inclinaciones entre 15° y 30°, qt = 0.80·qs. Para inclinaciones mayores a 30° se usa un factor adimensional función del ángulo. La norma también exige considerar casos de carga desbalanceada, en los que la nieve se acumula más en un faldón que en el otro, lo que recuerda que en cargas siempre se trabaja con probabilidades.",
+      "formulas": [
+        {
+          "nombre": "Pendiente de techo a dos aguas",
+          "expresion": "tan φ ≈ h / L",
+          "variables": "h: altura de la cumbrera; L: mitad de la luz total del techo"
+        },
+        {
+          "nombre": "Nieve en techos poco inclinados",
+          "expresion": "qt = qs (φ ≤ 15° o curvo con h/L ≤ 0.1)",
+          "variables": "qs: carga básica de nieve ≥ 40 kg/m²; qt: carga de nieve sobre el techo"
+        },
+        {
+          "nombre": "Nieve en techos de 15° a 30°",
+          "expresion": "qt = 0.80·qs",
+          "variables": "qs: carga básica de nieve"
+        }
+      ],
+      "referencias_norma": [
+        "Norma E.020, Artículo 11 (carga de nieve)"
+      ]
+    },
+    {
+      "titulo": "Carga de viento (Norma E.020)",
+      "contenido": "La cara del edificio que enfrenta al viento es el barlovento y la opuesta, donde el flujo baja y succiona, es el sotavento. La presión de viento de diseño ph es una carga repartida que puede ser presión o succión según la zona y el ángulo, y depende de la altura y de la velocidad a esa altura. La velocidad de diseño mínima es 75 km/h y es válida hasta 10 m de altura; por encima se amplifica con la altura. La velocidad básica V de la zona se obtiene de un mapa eólico; h es la altura total de la estructura (por ejemplo, la altura del galpón o del edificio). El coeficiente de forma C es adimensional y depende de la superficie (vertical, inclinada, curva) y de si está a barlovento o sotavento; por ejemplo, en un techo de tijeral de 7° (menor de 15°) a barlovento se consideran dos posibilidades, +0.3 y −0.7, y a sotavento −0.6; las succiones se indican con signo negativo. Además el viento puede entrar al interior por ventanas y puertas sin protección, generando una presión interna que trata de levantar el techo desde adentro. Por ello el coeficiente efectivo es la diferencia entre el de presión exterior (Tabla 4 de la E.020) y el de presión interior (Tabla 5, ±0.3 típicamente con aberturas). El profesor cuenta que en Japón, por los tifones, las ventanas tienen paneles protectores corredizos que sellan la casa, y en Estados Unidos se usan contraventanas o batientes. En zonas como el altiplano o Paracas se pueden presentar velocidades de 100 a 105 km/h, y en esos casos el viento puede ser más crítico que el sismo para estructuras livianas.",
+      "formulas": [
+        {
+          "nombre": "Velocidad de diseño a la altura h",
+          "expresion": "Vh = V·(h/10)^0.22 , con Vh ≥ 75 km/h",
+          "variables": "V: velocidad básica de la zona (km/h, mapa eólico); h: altura sobre el terreno (m)"
+        },
+        {
+          "nombre": "Presión o succión de viento",
+          "expresion": "ph = 0.005·C·Vh²",
+          "variables": "ph: presión (kg/m²); C: coeficiente de presión; Vh: velocidad de diseño (km/h)"
+        },
+        {
+          "nombre": "Coeficiente neto",
+          "expresion": "C = Cpe − Cpi",
+          "variables": "Cpe: coeficiente de presión exterior (Tabla 4); Cpi: coeficiente de presión interior (Tabla 5)"
+        }
+      ],
+      "referencias_norma": [
+        "Norma E.020, Artículo 12 (carga de viento)",
+        "Norma E.020, Tabla 4 (factores de forma) y Tabla 5 (presión interior)"
+      ]
+    },
+    {
+      "titulo": "Carga sísmica (Norma E.030): estimación como porcentaje del peso",
+      "contenido": "En la costa peruana los sismos se generan principalmente en el océano por la subducción de la placa de Nazca bajo la placa continental; existen múltiples fuentes sismogénicas. La onda viaja desde la fuente hasta el sitio atravesando distintas formaciones geológicas, lo que se representa con: el factor de zona Z (aceleración en roca), el factor de suelo S (amplificación por el suelo local), el factor de amplificación sísmica C (respuesta de la estructura según su periodo), el factor de uso U (importancia) y el coeficiente de reducción R (confianza en el sistema estructural). La cortante en la base es un porcentaje del peso: V = (ZUCS/R)·P. Para una estimación rápida sin norma ni computadora se adoptan los valores más desfavorables. El profesor ejemplifica un colegio solicitado por una comunidad de la sierra: Z = 0.35 (zona 3), U = 1.5 (institución educativa), C = 2.5 (valor máximo de la meseta del espectro hasta TP), S = 1.4 (peor suelo, asumido por no tener estudio) y R = 6 (sistema de acero ordinario, porque no se confía en la calidad de ejecución ni en la supervisión). El resultado es aproximadamente 0.30 del peso. En las peores condiciones (suelos muy blandos) puede llegarse a 0.40 del peso. Z y S los fija el estudio de suelos, que incluso podría sugerir C. El profesor resalta la responsabilidad social del ingeniero: ayudar gratuitamente a comunidades que nunca han tenido un ingeniero.",
+      "formulas": [
+        {
+          "nombre": "Cortante basal",
+          "expresion": "V = (Z·U·C·S / R)·P",
+          "variables": "Z: factor de zona; U: factor de uso; C: factor de amplificación sísmica (≤ 2.5); S: factor de suelo; R: coeficiente de reducción; P: peso sísmico"
+        },
+        {
+          "nombre": "Factor C (E.030-2018)",
+          "expresion": "T < TP: C = 2.5 ; TP < T < TL: C = 2.5·(TP/T) ; T > TL: C = 2.5·(TP·TL/T²)",
+          "variables": "T: periodo fundamental; TP, TL: periodos que definen la plataforma y la zona de desplazamiento constante"
+        }
+      ],
+      "referencias_norma": [
+        "Norma E.030, Tabla N° 1 (factor Z)",
+        "Norma E.030, Tabla N° 3 (factor S)",
+        "Norma E.030, Tabla N° 5 (categoría y factor U)",
+        "Norma E.030, Artículo 14 (factor C)",
+        "Norma E.030, Artículo 28 (fuerza cortante en la base)"
+      ]
+    },
+    {
+      "titulo": "Sistemas estructurales de acero, irregularidades y control de deriva",
+      "contenido": "El coeficiente R depende del sistema estructural (tabla de sistemas de la E.030). En acero: pórticos especiales resistentes a momento (SMF), cuyas uniones pueden deformarse hasta alcanzar su máxima capacidad; pórticos intermedios (IMF), cuya capacidad llega a la fluencia y pueden desarrollar comportamiento no lineal limitado; pórticos ordinarios (OMF), en los que se desconfía del sistema por falta de control de calidad, ejecución rápida o ausencia de supervisión; y pórticos arriostrados. Los arriostres reducen el desplazamiento lateral: ante el sismo una diagonal se comprime y la otra se tracciona, y el desplazamiento del pórtico arriostrado (Δ2) es mucho menor que el del pórtico no arriostrado (Δ1); por eso se recomiendan pórticos arriostrados en zonas sísmicas. Respondiendo a un alumno (Campos), se distinguió: en pórticos concéntricamente arriostrados (CBF) las diagonales concurren en los nudos y se espera que fallen los arriostres; en los excéntricamente arriostrados (EBF) las diagonales se desfasan creando un tramo de viga llamado enlace, que es el elemento diseñado para fluir, sin que fallen los arriostres. El R básico (R0) se reduce multiplicándolo por factores de irregularidad en altura (Ia) y en planta (Ip): cambios de ancho en planta entre pisos, alturas de entrepiso diferentes, esquinas entrantes, diafragmas con aberturas, sistemas no paralelos, etc.; si no aplica, el factor vale 1. Muy importante en acero es controlar la distorsión o deriva de entrepiso: el desplazamiento relativo Δ dividido entre la altura del piso h debe ser menor que 0.010 (1 %).",
+      "formulas": [
+        {
+          "nombre": "Coeficiente de reducción",
+          "expresion": "R = R0·Ia·Ip",
+          "variables": "R0: coeficiente básico del sistema; Ia: factor de irregularidad en altura; Ip: factor de irregularidad en planta (1.0 si regular)"
+        },
+        {
+          "nombre": "Límite de deriva para acero",
+          "expresion": "Δi / hei ≤ 0.010",
+          "variables": "Δi: desplazamiento relativo de entrepiso (inelástico); hei: altura del entrepiso"
+        }
+      ],
+      "referencias_norma": [
+        "Norma E.030, Tabla N° 7 (sistemas estructurales y R0)",
+        "Norma E.030, Tablas N° 8 y 9 (irregularidades)",
+        "Norma E.030, Tabla N° 11 (límites de distorsión: acero 0.010)",
+        "AISC 341 (pórticos SMF, IMF, OMF, SCBF, EBF)"
+      ]
+    }
+  ],
+  "ejemplos": [
+    {
+      "titulo": "Estimación rápida de la cortante basal de un colegio de acero en la sierra",
+      "enunciado": "Una comunidad de la sierra solicita un colegio con perfiles de acero donados por una mina. No hay estudio de suelos ni computadora. Estimar la fuerza sísmica en la base como porcentaje del peso, adoptando valores desfavorables: zona 3 (Z = 0.35), edificación educativa (U = 1.5), C máximo, suelo blando (S = 1.4) y sistema de acero ordinario (R = 6).",
+      "pasos": [
+        "Z = 0.35 por estar en zona 3.",
+        "U = 1.5 por ser institución educativa (edificación esencial).",
+        "C = 2.5, valor máximo de la meseta del espectro.",
+        "S = 1.4, suelo desfavorable asumido por falta de estudio.",
+        "R = 6, sistema ordinario por desconfianza en la ejecución.",
+        "ZUCS/R = 0.35 × 1.5 × 2.5 × 1.4 / 6 = 1.8375 / 6 = 0.306."
+      ],
+      "resultado": "V ≈ 0.30·P (30 % del peso); en las peores condiciones de suelo puede llegar a ≈ 0.40·P."
+    },
+    {
+      "titulo": "Coeficientes de viento para un techo de tijeral de 7°",
+      "enunciado": "Un galpón con techo a dos aguas de 7° de inclinación recibe viento perpendicular a la cumbrera. Determinar los coeficientes de presión exterior en el techo y el coeficiente neto si existen aberturas (Cpi = ±0.3).",
+      "pasos": [
+        "Como 7° < 15°, el faldón a barlovento tiene dos posibilidades: Cpe = +0.3 o Cpe = −0.7.",
+        "El faldón a sotavento tiene Cpe = −0.6 (succión).",
+        "Coeficiente neto C = Cpe − Cpi; con Cpi = +0.3: barlovento 0.3 − 0.3 = 0 o −0.7 − 0.3 = −1.0; sotavento −0.6 − 0.3 = −0.9.",
+        "Con Cpi = −0.3: barlovento 0.3 + 0.3 = +0.6 o −0.7 + 0.3 = −0.4; sotavento −0.6 + 0.3 = −0.3.",
+        "Se retienen los casos más desfavorables para cada efecto (máxima presión y máxima succión)."
+      ],
+      "resultado": "Barlovento: C entre +0.6 y −1.0; sotavento: C entre −0.3 y −0.9, según el signo de la presión interior."
+    }
+  ],
+  "conceptos_clave": [
+    {
+      "termino": "Demanda (Pu)",
+      "definicion": "Fuerza última en un elemento obtenida del análisis estructural con cargas factorizadas; se toma la combinación más desfavorable."
+    },
+    {
+      "termino": "Resistencia de diseño (φPn)",
+      "definicion": "Resistencia nominal reducida por el factor φ, dada por la norma de diseño (AISC 360 / E.090)."
+    },
+    {
+      "termino": "Factor de carga",
+      "definicion": "Coeficiente (λ o γ) calibrado por confiabilidad estructural que amplifica cada tipo de carga en las combinaciones LRFD."
+    },
+    {
+      "termino": "Confiabilidad estructural",
+      "definicion": "Técnica probabilística que, a partir de distribuciones de cargas y resistencias, define el índice β y calibra los factores de carga y resistencia."
+    },
+    {
+      "termino": "Carga muerta",
+      "definicion": "Peso propio y de todo elemento permanente e inmóvil: estructura, techos, tabiques, equipos fijos."
+    },
+    {
+      "termino": "Carga viva",
+      "definicion": "Cargas móviles: ocupantes, mobiliario y almacenamiento redistribuible; la E.020 da valores mínimos."
+    },
+    {
+      "termino": "Barlovento",
+      "definicion": "Cara de la estructura expuesta al viento, generalmente en presión."
+    },
+    {
+      "termino": "Sotavento",
+      "definicion": "Cara opuesta al viento, generalmente en succión."
+    },
+    {
+      "termino": "Presión interior",
+      "definicion": "Presión o succión que se genera dentro de la edificación cuando el viento ingresa por aberturas; se resta de la exterior."
+    },
+    {
+      "termino": "ZUCS/R",
+      "definicion": "Porcentaje del peso que representa la cortante basal sísmica según la E.030."
+    },
+    {
+      "termino": "Pórtico concéntricamente arriostrado (CBF)",
+      "definicion": "Pórtico con diagonales que concurren en los nudos; disipa energía en los arriostres."
+    },
+    {
+      "termino": "Pórtico excéntricamente arriostrado (EBF)",
+      "definicion": "Pórtico con diagonales desfasadas que forman un enlace en la viga, el cual fluye y disipa energía."
+    },
+    {
+      "termino": "Deriva o distorsión de entrepiso",
+      "definicion": "Cociente entre el desplazamiento relativo de entrepiso y su altura; para acero ≤ 0.010."
+    }
+  ],
+  "preguntas": [
+    {
+      "pregunta": "¿Qué proporciona cada normativa en la ecuación Pu ≤ φPn?",
+      "opciones": [
+        "E.020 y E.030 dan φPn; AISC 360 da Pu",
+        "E.020/E.030 junto con el análisis estructural dan Pu; AISC 360 da φPn",
+        "AISC 360 da ambos términos",
+        "El análisis estructural da φPn"
+      ],
+      "correcta": 1,
+      "explicacion": "Las normas de cargas dan demandas mínimas que, analizadas, producen Pu; la norma de diseño da la resistencia φPn."
+    },
+    {
+      "pregunta": "Los factores de carga de las combinaciones LRFD se obtienen principalmente a partir de:",
+      "opciones": [
+        "La experiencia de cada diseñador",
+        "Estudios de confiabilidad estructural sobre distribuciones de cargas",
+        "El módulo de elasticidad del material",
+        "Ensayos de tracción"
+      ],
+      "correcta": 1,
+      "explicacion": "Se calibran con técnicas probabilísticas (histogramas de cargas e índice de confiabilidad β)."
+    },
+    {
+      "pregunta": "Según la E.020, ¿cuál es la carga viva mínima en salas de almacenaje con anaqueles de una biblioteca?",
+      "opciones": [
+        "500 kg/m²",
+        "750 kg/m²",
+        "300 kg/m²",
+        "400 kg/m²"
+      ],
+      "correcta": 1,
+      "explicacion": "Bibliotecas: lectura 300, corredores 400 y almacenaje 750 kg/m²."
+    },
+    {
+      "pregunta": "¿Qué carga viva mínima indicó el profesor para un techo curvo o de tijeral con cobertura liviana sin equipos?",
+      "opciones": [
+        "250 kg/m²",
+        "30 kg/m²",
+        "50 kg/m²",
+        "100 kg/m²"
+      ],
+      "correcta": 1,
+      "explicacion": "Para coberturas livianas, curvas o de tijeral se consideran 30 kg/m² como mínimo."
+    },
+    {
+      "pregunta": "Un techo a dos aguas tiene inclinación de 20° y la carga básica de nieve es 40 kg/m². La carga de nieve sobre el techo es:",
+      "opciones": [
+        "40 kg/m²",
+        "32 kg/m²",
+        "20 kg/m²",
+        "50 kg/m²"
+      ],
+      "correcta": 1,
+      "explicacion": "Para 15° a 30°, qt = 0.80·qs = 0.80 × 40 = 32 kg/m²."
+    },
+    {
+      "pregunta": "Si la velocidad básica es 100 km/h, ¿cuál es la velocidad de diseño a 20 m de altura según la E.020?",
+      "opciones": [
+        "≈ 116 km/h",
+        "≈ 141 km/h",
+        "200 km/h",
+        "100 km/h"
+      ],
+      "correcta": 0,
+      "explicacion": "Vh = 100·(20/10)^0.22 = 100 × 1.165 ≈ 116.5 km/h."
+    },
+    {
+      "pregunta": "El coeficiente C usado para calcular la presión de viento con aberturas es:",
+      "opciones": [
+        "La diferencia entre el coeficiente de presión exterior y el de presión interior",
+        "Siempre igual a 0.8",
+        "La suma de presión exterior e interior",
+        "Solo el coeficiente de presión interior"
+      ],
+      "correcta": 0,
+      "explicacion": "C = Cpe − Cpi; el viento que ingresa por aberturas genera presión interna que se resta."
+    },
+    {
+      "pregunta": "Con Z = 0.35, U = 1.5, C = 2.5, S = 1.4 y R = 6, la cortante basal es aproximadamente:",
+      "opciones": [
+        "50 % del peso",
+        "10 % del peso",
+        "20 % del peso",
+        "30 % del peso"
+      ],
+      "correcta": 3,
+      "explicacion": "0.35 × 1.5 × 2.5 × 1.4 / 6 = 0.306."
+    },
+    {
+      "pregunta": "En un pórtico excéntricamente arriostrado, el elemento destinado a fluir y disipar energía es:",
+      "opciones": [
+        "La diagonal en compresión",
+        "La columna",
+        "El enlace (link) de la viga",
+        "La placa base"
+      ],
+      "correcta": 2,
+      "explicacion": "En EBF se diseña el enlace para fluir; en CBF son los arriostres los que disipan energía."
+    },
+    {
+      "pregunta": "¿Cuál es el límite de distorsión de entrepiso de la E.030 para estructuras de acero?",
+      "opciones": [
+        "0.007",
+        "0.010",
+        "0.020",
+        "0.005"
+      ],
+      "correcta": 1,
+      "explicacion": "Para acero el límite de Δ/h es 0.010 (1 %)."
+    },
+    {
+      "pregunta": "¿Qué efecto tienen las irregularidades en planta y en altura sobre el coeficiente R?",
+      "opciones": [
+        "Lo reducen al multiplicar R0 por factores Ia e Ip menores o iguales a 1",
+        "Lo duplican",
+        "Lo aumentan",
+        "No lo modifican"
+      ],
+      "correcta": 0,
+      "explicacion": "R = R0·Ia·Ip; las irregularidades castigan al sistema reduciendo R y aumentando la fuerza sísmica."
+    }
+  ],
+  "ejercicios_propuestos": [
+    "Un edificio de oficinas de acero de 4 pisos en Lima (Z = 0.45), suelo S1 (S = 1.0), U = 1.0, con pórticos especiales (R0 = 8) regulares, tiene un peso sísmico de 600 t. Asumiendo C = 2.5, calcule la cortante basal. Repita si el sistema es ordinario (R0 = 4) y comente la diferencia.",
+    "Calcule la presión de viento en una pared vertical a barlovento (Cpe = +0.8) y a sotavento (Cpe = −0.6) de una nave de 15 m de altura ubicada en una zona con V = 90 km/h, considerando Cpi = ±0.3. Indique los valores más desfavorables.",
+    "Para un techo a dos aguas de 30 m de luz total y 3 m de altura de cumbrera, calcule la pendiente, el ángulo y la carga de nieve de diseño si qs = 40 kg/m².",
+    "Una viga principal de una biblioteca recibe carga de una franja tributaria de 6 m que incluye 3 m de sala de lectura y 3 m de zona de anaqueles. Calcule la carga viva lineal mínima y la carga última con 1.2D + 1.6L si la carga muerta es 400 kg/m².",
+    "Con los datos del ejemplo del colegio en la sierra, recalcule ZUCS/R considerando la E.030-2018 (zona 3: S = 1.20 para suelo S3) y R0 = 4 para pórticos ordinarios de acero. Compare con el valor de clase."
+  ],
+  "avisos": [
+    "Las normas E.020 (Cargas) y E.030 (Sismo) están en el aula virtual / drive; deben leerse.",
+    "La clase anterior quedó grabada en la nube (servicio del centro de cómputo); estará disponible unas dos horas después. Un alumno reportó que el enlace mostraba un video de otro curso; el profesor lo comunicará al centro de cómputo.",
+    "Elección de delegados: delegado Renzo Campos, subdelegado Dante Lucano. Deben enviar sus datos por correo; la comunicación del profesor con el curso será a través de ellos (grupo de WhatsApp).",
+    "Se usará AISC 360 LRFD como norma de diseño, con recomendaciones para zonas sísmicas."
+  ],
+  "notas_transcripcion": [
+    "La transcripción termina abruptamente mientras se explica el límite de deriva (Δ/h ≤ 1 %); no se registra el ejemplo de cierre.",
+    "Las combinaciones de carga no se dictan en voz alta (se muestran en pantalla); se incluyeron las de la E.090 como referencia.",
+    "El profesor dice 'zona 3, Z = 0.35' (sierra) y luego 'estoy en la zona 2... suelo tipo 3, 1.4'; se interpretó S = 1.4 como suelo blando desfavorable. En la E.030-2018, S3 vale 1.40 en zona 2 y 1.20 en zona 3.",
+    "Se usó R = 6 para 'sistema ordinario'; en la E.030-2018 el R0 de pórticos ordinarios de acero es 4 (6 corresponde a sistemas de versiones anteriores). Se respetó el valor de clase y se planteó un ejercicio comparativo.",
+    "'Carga de llovizna o de granizo' corresponde a la carga de lluvia/granizo (R).",
+    "La carga de 50 kg/m² para techo 'plano' se reporta según lo dicho en clase; la E.020 establece 100 kg/m² para techos con inclinación ≤ 3° (reducible) y 50 kg/m² para techos curvos, con 30 kg/m² para coberturas livianas; conviene verificar con la norma.",
+    "'Tocho de dos aguas' = techo de dos aguas; 'pórticos arrastrados' = pórticos arriostrados.",
+    "Por la mención a votar 'el domingo', la clase se dictó días antes de las elecciones generales de abril de 2021; la fecha exacta no se dice."
+  ]
+}

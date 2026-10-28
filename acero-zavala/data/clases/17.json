@@ -1,0 +1,300 @@
+{
+  "clase": 17,
+  "titulo": "Diseño de atiesadores transversales intermedios (continuación) y estimación aproximada de demandas en vigas continuas",
+  "fecha": "lunes 31 de mayo de 2021",
+  "duracion_min": 98,
+  "resumen": "Se repasa la resistencia al corte sin y con flujo de corte y se continúa el ejemplo de la viga soldada A36 (alas de 12 × ¾ in, alma de 33 × 5/16 in, a = h = 33 in, Vr = 105 kips). El atiesador se rediseña con b = 5.75 in y tst = 5/16 in a ambos lados del alma (Ist = 42.92 in⁴). La pregunta de un alumno lleva a discutir la definición de bp en Ist2: la norma lo define como el menor entre a y h, mientras que el profesor lo había tomado como el ancho del atiesador. Se calculan ambos umbrales (16.88 y 25 in⁴), se adopta el de la norma y se concluye que cumple: 2 PL 5¾ × 5/16 in cada 33 in. Se cita la teoría de placas de Timoshenko. En la segunda parte, en Excel, se estiman las demandas de una viga continua de un pórtico con máquinas reciprocantes (impacto del 50%, coeficientes de momento y tablas de vigas). También se explica cómo el empotramiento sube el diagrama de momentos: PL/4 en la viga simple pasa a PL/8 en el centro y en los extremos.",
+  "objetivos": [
+    "Al terminar, el estudiante podrá verificar completamente un par de atiesadores transversales intermedios (b/t e Ist) para una viga soldada con flujo de corte.",
+    "Al terminar, el estudiante podrá interpretar correctamente el parámetro bp de la ecuación de Ist2 del AISC 360-16 (menor entre a y h).",
+    "Al terminar, el estudiante podrá especificar el atiesador en planos (dimensiones, espesor y espaciamiento).",
+    "Al terminar, el estudiante podrá estimar momentos de diseño en vigas continuas usando coeficientes, factores de impacto y tablas de vigas.",
+    "Al terminar, el estudiante podrá explicar el efecto del empotramiento sobre el diagrama de momentos de una viga con carga concentrada."
+  ],
+  "temas": [
+    {
+      "titulo": "Repaso de resistencia al corte sin y con flujo de corte",
+      "contenido": "La resistencia al corte se expresa como φVn, con Vn = 0.6·Fy·Aw·Cv. El coeficiente Cv vale 1 en algunos casos y menos de 1 en otros. Primero se decide si se necesitan atiesadores (umbral h/tw ≤ 2.46√(E/Fy)). Sin atiesadores se usa kv = 5.34 directamente; con atiesadores se propone el espaciamiento a y kv depende de a/h (en el ejemplo a = h, con lo que kv = 10 y el límite 1.10√(kvE/Fy) resultó 98.7). Para dar más resistencia se puede aumentar el espesor del alma con platabandas. La alternativa de diseño para vigas de gran peralte es aceptar el flujo de corte: entre atiesadores se permite el pandeo local del panel y la viga se trata como un tijeral. En ese caso, conocido a/h, se obtiene kv, se evalúan los dos límites (1.10 y 1.37 √(kvE/Fy)) y se elige la expresión de Cv2; cuando h/tw supera el límite 1, Vn es el valor básico multiplicado por un factor Z que depende de las condiciones geométricas (relación de áreas y h/bf). Un alumno preguntó si Vc1 y Vc2 deben calcularse con kv = 5.34; el profesor aclaró que kv = 5.34 solo corresponde cuando a/h > 3; si se propone un atiesador con a/h < 3, kv = 5 + 5/(a/h)². Comentó que proponer un espaciamiento muy largo equivale a poner atiesadores 'por las puras', porque kv queda como si no existieran.",
+      "formulas": [
+        {
+          "nombre": "Resistencia nominal al corte",
+          "expresion": "Vn = 0.6·Fy·Aw·Cv1 (sin campo de tensiones); Vn = 0.6·Fy·Aw·Z (con campo de tensiones)",
+          "variables": "Z = 1, o [Cv2 + (1 − Cv2)/(1.15√(1+(a/h)²))], o [Cv2 + (1 − Cv2)/(1.15(a/h + √(1+(a/h)²)))] según el caso"
+        },
+        {
+          "nombre": "kv",
+          "expresion": "kv = 5 + 5/(a/h)² si a/h ≤ 3; kv = 5.34 si a/h > 3",
+          "variables": "a: espaciamiento libre entre atiesadores; h: peralte libre del alma"
+        }
+      ],
+      "referencias_norma": [
+        "AISC 360-16 G2.1 y G2.2"
+      ]
+    },
+    {
+      "titulo": "Rediseño del atiesador con b = 5.75 in",
+      "contenido": "En el ejemplo de la clase anterior el atiesador de 3 × 5/16 in tenía Ist = 6.55 in⁴, insuficiente frente a la inercia requerida de unos 25 in⁴. El ancho máximo era bf/2 − tw/2 = 5.84 in; como 5.84 'no es ingenieril', se adopta 5.75 in (5¾ in), conservando tst = 5/16 in = 0.3125 in y colocando una plancha a cada lado del alma. La nueva inercia respecto al plano medio del alma es Ist = 0.3125·(2·5.75 + 0.3125)³/12 = 0.3125·(11.8125)³/12 ≈ 42.92 in⁴. La relación b/t = 5.75/0.3125 = 18.4 debería verificarse contra 0.56√(E/Fy) = 15.89 (el profesor no la recalculó en clase). Ist1 no cambia porque depende solo de h, ρst y Fyw/E: Ist1 = (33⁴/40)·1^1.3·(36/29000)^1.5 = 1.2967 in⁴ (el profesor confirmó el valor de la clase anterior). Tampoco cambia ρw = 20.66, porque se mantiene a = h y, por ende, los mismos Vc1 y Vc2 (diferencia de 5.23 kips en el denominador y −108.48 kips en el numerador, según la hoja usada en clase). Para Ist2, como a/h = 1, el factor [2.5/(a/h)² − 2] = 0.5, que coincide con el mínimo 0.5·bp·tw³, de modo que Ist2 = 0.5·bp·tw³.",
+      "formulas": [
+        {
+          "nombre": "Inercia de par de atiesadores",
+          "expresion": "Ist = tst·(2b + tw)³/12",
+          "variables": "b = 5.75 in, tst = tw = 0.3125 in → 42.92 in⁴"
+        },
+        {
+          "nombre": "Ist1",
+          "expresion": "Ist1 = (h⁴·ρst^1.3/40)·(Fyw/E)^1.5",
+          "variables": "h = 33 in, ρst = 1, Fyw = 36 ksi → 1.297 in⁴"
+        }
+      ],
+      "referencias_norma": [
+        "AISC 360-16 G2.3"
+      ]
+    },
+    {
+      "titulo": "Interpretación de bp en Ist2 y verificación final del atiesador",
+      "contenido": "Un alumno observó que la norma (final del Capítulo G, sección de atiesadores transversales) define bp como la menor dimensión entre a y h, mientras que el profesor había usado el ancho b del atiesador. El profesor explicó su interpretación: el término bp·tw³ es una inercia de referencia; si se toma bp = a o h se está pensando en el panel del alma que se sale de su plano, mientras que con b se piensa en la plancha del atiesador que podría salirse del plano por efecto del cortante. Calculó ambas versiones. Con b = 5.75 in: Ist2 = 0.5·5.75·0.3125³ ≈ 0.088 in⁴ y el umbral resultaba ≈ 25 in⁴. Con bp = h = 33 in (según la norma): Ist2 = 0.5·33·0.3125³ ≈ 0.504 in⁴. Hubo una corrección de signos sugerida por un alumno: la expresión es Ist2 + (Ist1 − Ist2)·ρw = 0.504 + (1.297 − 0.504)·20.66 ≈ 0.504 + 16.38 ≈ 16.88 in⁴. Como la inercia provista, 42.92 in⁴, supera a 16.88 in⁴ (e incluso a 25 in⁴ con el otro criterio), el atiesador cumple. Insistió en que en diseño hay que respetar las normas y protocolos, y que con la interpretación de la norma el umbral no sale más desfavorable. Para un criterio combinado de ambos modos habría que recurrir a la teoría de placas de Timoshenko (Teoría de la Elasticidad / Estabilidad Elástica, pandeo de planchas y campo de tensiones), de donde salen los coeficientes como kv. La solución final que va al plano es: atiesadores de 5¾ × 5/16 in (a ambos lados del alma) cada 33 in sobre el perfil soldado.",
+      "formulas": [
+        {
+          "nombre": "Ist2 (AISC 360-16)",
+          "expresion": "Ist2 = [2.5/(a/h)² − 2]·bp·tw³ ≥ 0.5·bp·tw³, con bp = menor(a, h)",
+          "variables": "tw: espesor del alma (in)"
+        },
+        {
+          "nombre": "Inercia requerida",
+          "expresion": "Ist,req = Ist2 + (Ist1 − Ist2)·ρw",
+          "variables": "ρw ≥ 0; resultado del ejemplo ≈ 16.88 in⁴"
+        }
+      ],
+      "referencias_norma": [
+        "AISC 360-16 G2.3, ecuaciones G2-13 y G2-14 y definición de bp",
+        "Timoshenko, teoría de placas (pandeo de planchas)"
+      ]
+    },
+    {
+      "titulo": "Viga de pórtico para máquinas reciprocantes: estimación de demandas en Excel",
+      "contenido": "En la hoja de Excel de la sección G se plantea un nuevo caso: la misma viga, pero como parte de un pórtico continuo de varios tramos que soporta máquinas reciprocantes, que generan grandes cortantes. Sobre la viga actúan cargas concentradas de las máquinas y la carga repartida del peso propio. Desde el lado conservador se puede tratar la viga como continua y usar coeficientes de momento aproximados (del tipo 1/24 en los apoyos extremos, 1/14 o 1/11 en los tramos y 1/10 en el apoyo interior) aplicados a wL². Por tratarse de máquinas, la carga viva se amplifica por un factor de impacto del 50%: el valor base 5 pasa a 7.5. Las longitudes de los tramos se convierten de metros a pulgadas (1 in = 2.54 cm), con cerca de 518 in por paño. Las cargas se mayoran (1.6 para la carga viva de las máquinas, sumada a la carga muerta mayorada). Como alternativa se buscan casos similares en las tablas de diagramas de vigas que el profesor entregó: vigas continuas de dos tramos con cargas concentradas, teniendo cuidado de que la posición de la carga coincida (por ejemplo, la tabla con cargas en los tercios no sirve si la carga real está solo en un tercio). Se elige una tabla de viga continua con carga concentrada que da el momento positivo bajo la carga y el negativo en el apoyo. El profesor recalca que es una aproximación que no reemplaza el análisis por computadora.",
+      "formulas": [
+        {
+          "nombre": "Momento por coeficientes",
+          "expresion": "Mu = C·wu·L², con C = 1/24, 1/14, 1/11, 1/10 según la ubicación",
+          "variables": "wu: carga uniforme mayorada; L: luz del tramo"
+        },
+        {
+          "nombre": "Carga con impacto",
+          "expresion": "L_imp = L·(1 + I), I = 0.50 para la máquina del ejemplo",
+          "variables": "I: factor de impacto"
+        }
+      ],
+      "referencias_norma": [
+        "ASCE 7 / Norma E.020: factores de impacto para maquinaria (valor del 50% supuesto en clase)",
+        "Tablas de diagramas de vigas del Manual AISC (Beam Diagrams and Formulas)"
+      ]
+    },
+    {
+      "titulo": "Efecto del empotramiento en el diagrama de momentos",
+      "contenido": "Para explicar la lógica que usaban los ingenieros 'antiguos' antes de los programas, el profesor toma una viga simplemente apoyada con carga P al centro: el diagrama es triangular con Mmáx = PL/4 al centro. Si la misma viga se empotra en ambos extremos con la misma carga, el diagrama tiene la misma forma, pero 'se sube' (se cuelga) una cantidad constante: aparecen momentos negativos en los empotramientos y el positivo del centro se reduce. De las tablas: en la viga doblemente empotrada con carga central, el momento vale PL/8 en el centro y PL/8 en los empotramientos. Así, el momento central es una fracción α = 1/2 del PL/4 simple, y el momento de empotramiento es igualmente PL/8. Cualquier condición real, como una viga unida a columnas que pueden rotar (efecto viga-columna), queda entre estos dos extremos, de modo que se pueden estimar las demandas con factores α y β aplicados al PL/4 de la viga simple. Con ese principio se puede aproximar el momento de la viga del pórtico de máquinas.",
+      "formulas": [
+        {
+          "nombre": "Viga simple, carga central",
+          "expresion": "Mmáx = P·L/4",
+          "variables": "P: carga concentrada; L: luz"
+        },
+        {
+          "nombre": "Viga doblemente empotrada, carga central",
+          "expresion": "M+ = P·L/8 (centro); M− = P·L/8 (empotramientos)",
+          "variables": "La suma |M+| + |M−| sigue siendo PL/4"
+        }
+      ],
+      "referencias_norma": [
+        "Manual AISC, Beam Diagrams and Formulas (casos 7 y 16)"
+      ]
+    }
+  ],
+  "ejemplos": [
+    {
+      "titulo": "Verificación final del atiesador 5¾ × 5/16 in",
+      "enunciado": "Viga soldada A36: alas 12 × ¾ in, alma 33 × 5/16 in, a = h = 33 in, Vr = 105 kips, ρw = 20.66 (de la clase 16). Verificar un par de atiesadores de b = 5.75 in y tst = 5/16 in.",
+      "pasos": [
+        "Ist provista = 0.3125·(2·5.75 + 0.3125)³/12 = 0.3125·1648.3/12 ≈ 42.92 in⁴",
+        "Ist1 = (33⁴/40)·(36/29000)^1.5 = 29,648·4.374×10⁻⁵ ≈ 1.297 in⁴",
+        "a/h = 1 → [2.5/1 − 2] = 0.5 → Ist2 = 0.5·bp·tw³",
+        "Con bp = h = 33 in (norma): Ist2 = 0.5·33·0.3125³ ≈ 0.504 in⁴",
+        "Ist,req = 0.504 + (1.297 − 0.504)·20.66 ≈ 0.504 + 16.38 ≈ 16.88 in⁴",
+        "Con bp = b = 5.75 in (criterio inicial del profesor): Ist,req ≈ 25 in⁴",
+        "42.92 in⁴ ≥ 16.88 in⁴ (y ≥ 25 in⁴) → cumple"
+      ],
+      "resultado": "Usar atiesadores de 5¾ × 5/16 in a ambos lados del alma, espaciados cada 33 in."
+    },
+    {
+      "titulo": "Viga simple vs. doblemente empotrada con carga central",
+      "enunciado": "Comparar los momentos de una viga de luz L con carga P al centro, primero simplemente apoyada y luego doblemente empotrada.",
+      "pasos": [
+        "Simplemente apoyada: Mmáx = PL/4 al centro",
+        "Doblemente empotrada: M centro = PL/8 y M empotramiento = −PL/8",
+        "El diagrama se 'sube' PL/8: α = 1/2 sobre el momento simple"
+      ],
+      "resultado": "El empotramiento reduce el momento positivo de PL/4 a PL/8 y genera PL/8 negativo en los extremos."
+    }
+  ],
+  "conceptos_clave": [
+    {
+      "termino": "bp",
+      "definicion": "En AISC 360-16 G2.3, la menor dimensión entre a y h usada en Ist2; no es el ancho del atiesador."
+    },
+    {
+      "termino": "Ist1",
+      "definicion": "Inercia mínima del atiesador para desarrollar toda la resistencia post-pandeo (campo de tensiones) de los paneles adyacentes."
+    },
+    {
+      "termino": "Ist2",
+      "definicion": "Inercia mínima del atiesador para desarrollar la resistencia al pandeo por corte del alma sin campo de tensiones."
+    },
+    {
+      "termino": "Factor de impacto",
+      "definicion": "Amplificación de la carga viva de maquinaria para considerar efectos dinámicos (50% en el ejemplo de máquinas reciprocantes)."
+    },
+    {
+      "termino": "Coeficientes de momento",
+      "definicion": "Fracciones de wL² (1/24, 1/14, 1/11, 1/10...) que permiten estimar de forma aproximada los momentos en vigas continuas."
+    },
+    {
+      "termino": "Teoría de placas de Timoshenko",
+      "definicion": "Base teórica del pandeo de planchas y del campo de tensiones de la que derivan coeficientes como kv."
+    }
+  ],
+  "preguntas": [
+    {
+      "pregunta": "Según AISC 360-16, el parámetro bp en la expresión de Ist2 es:",
+      "opciones": [
+        "El ancho del atiesador b",
+        "El ancho del ala bf",
+        "La menor dimensión entre a y h",
+        "La mayor dimensión entre a y h"
+      ],
+      "correcta": 2,
+      "explicacion": "La norma define bp como la menor de las dimensiones a y h."
+    },
+    {
+      "pregunta": "Para a/h = 1, el factor [2.5/(a/h)² − 2] de Ist2 vale:",
+      "opciones": [
+        "0.5",
+        "1.0",
+        "2.5",
+        "−0.5"
+      ],
+      "correcta": 0,
+      "explicacion": "2.5/1 − 2 = 0.5, que coincide con el mínimo 0.5·bp·tw³."
+    },
+    {
+      "pregunta": "¿Por qué no cambia Ist1 al aumentar el ancho del atiesador de 3 a 5.75 in?",
+      "opciones": [
+        "Porque depende de b",
+        "Porque ρw cambió",
+        "Porque a/h cambió",
+        "Porque depende solo de h, ρst y Fyw/E"
+      ],
+      "correcta": 3,
+      "explicacion": "Ist1 = (h⁴ρst^1.3/40)(Fyw/E)^1.5 no depende de las dimensiones del atiesador."
+    },
+    {
+      "pregunta": "La inercia de un par de atiesadores de 5.75 × 5/16 in sobre un alma de 5/16 in es aproximadamente:",
+      "opciones": [
+        "6.55 in⁴",
+        "42.92 in⁴",
+        "16.88 in⁴",
+        "129.7 in⁴"
+      ],
+      "correcta": 1,
+      "explicacion": "Ist = 0.3125·(11.8125)³/12 ≈ 42.92 in⁴."
+    },
+    {
+      "pregunta": "Si un atiesador se propone con a/h > 3, ¿qué ocurre?",
+      "opciones": [
+        "kv = 10",
+        "Cv = 0",
+        "kv = 5.34, como si no hubiera atiesador",
+        "Se duplica la resistencia"
+      ],
+      "correcta": 2,
+      "explicacion": "Con espaciamientos muy grandes kv = 5.34 y el atiesador no aporta: se pone 'por las puras'."
+    },
+    {
+      "pregunta": "La inercia requerida del atiesador según AISC 360-16 es:",
+      "opciones": [
+        "Ist2 + (Ist1 − Ist2)·ρw",
+        "Ist1 + (Ist2 − Ist1)·ρst",
+        "Ist1·Ist2·ρw",
+        "0.5·bp·tw³ siempre"
+      ],
+      "correcta": 0,
+      "explicacion": "Ist ≥ Ist2 + (Ist1 − Ist2)·ρw, interpolando entre Ist2 e Ist1."
+    },
+    {
+      "pregunta": "En una viga doblemente empotrada con carga P al centro, el momento en el centro vale:",
+      "opciones": [
+        "PL/4",
+        "PL/12",
+        "PL/16",
+        "PL/8"
+      ],
+      "correcta": 3,
+      "explicacion": "Las tablas dan PL/8 al centro y PL/8 negativo en los empotramientos."
+    },
+    {
+      "pregunta": "Para máquinas reciprocantes, el profesor amplificó la carga viva de 5 a 7.5 porque usó:",
+      "opciones": [
+        "Un factor de carga 1.5",
+        "Un factor de impacto del 50%",
+        "La combinación 1.2D + 1.6L",
+        "Un coeficiente 1/10"
+      ],
+      "correcta": 1,
+      "explicacion": "Carga con impacto = 5·(1 + 0.5) = 7.5."
+    },
+    {
+      "pregunta": "¿Qué recomienda el profesor sobre el ancho del atiesador cuando el máximo calculado es 5.84 in?",
+      "opciones": [
+        "Usar exactamente 5.84 in",
+        "Usar 6 in",
+        "Usar 5.75 in, una medida práctica",
+        "Usar 3 in"
+      ],
+      "correcta": 2,
+      "explicacion": "5.84 in 'no es ingenieril'; se redondea hacia abajo a una fracción comercial, 5¾ in."
+    },
+    {
+      "pregunta": "Al usar tablas de vigas para aproximar una viga continua con una sola carga en el primer tercio, ¿qué tabla NO conviene usar?",
+      "opciones": [
+        "Una con carga concentrada en la misma posición",
+        "Una viga continua de dos tramos con carga concentrada",
+        "Ninguna sirve",
+        "Una con cargas iguales en todos los tercios"
+      ],
+      "correcta": 3,
+      "explicacion": "La tabla con cargas en todos los tercios no representa la posición real de la carga."
+    }
+  ],
+  "ejercicios_propuestos": [
+    "Repita la verificación del atiesador del ejemplo con una sola plancha de 5.75 × 5/16 in a un lado del alma (inercia respecto a la cara del alma) y comente si cumple.",
+    "Para la viga de alas 12 × ¾ in y alma 33 × 5/16 in, cambie el espaciamiento a 50 in, recalcule kv, Cv2, Vc1, Vc2, ρw e Ist requerida y diseñe el atiesador.",
+    "Verifique b/t del atiesador de 5.75 × 5/16 in contra 0.56√(E/Fy) para A36 y, si no cumple, proponga un espesor que sí cumpla y recalcule Ist.",
+    "Una viga continua de dos tramos de 8 m soporta una máquina de 40 kN en cada centro de tramo (impacto del 50%) y una carga muerta de 5 kN/m. Estime con coeficientes o tablas los momentos positivo y negativo mayorados.",
+    "Una viga de 6 m con P = 30 kN al centro: calcule el momento máximo simplemente apoyada y doblemente empotrada, y dibuje ambos diagramas."
+  ],
+  "avisos": [
+    "Se usa la hoja de Excel 'sección G, clase 15' del curso; un alumno reportó un posible error en la hoja.",
+    "Se entregaron tablas de diagramas de vigas (Beam Diagrams) para estimar demandas.",
+    "Referencia bibliográfica: Timoshenko, teoría de placas (pandeo de planchas y campo de tensiones).",
+    "El profesor corregirá el examen parcial esa tarde; asistencia: 11 ausentes de 37 (31 de mayo, Día de la Prevención ante Desastres Naturales)."
+  ],
+  "notas_transcripcion": [
+    "'IST', 'IST 1', 'IST 2' se interpretaron como Ist, Ist1 e Ist2; la transcripción no distingue los subíndices y se reconstruyeron por contexto.",
+    "'Ro W', 'roe doble' = ρw; 'rost', 'Ro ST' = ρst; 'BP' = bp; 'BC y BC' = Vc1 y Vc2.",
+    "'0.46' y '0.50 con 35' corresponden a Ist2 ≈ 0.046 in⁴ (b = 3 in) y ≈ 0.5035 in⁴ (bp = 33 in).",
+    "'Transversus Stiffness' = Transverse Stiffeners (AISC 360-16 G2.3).",
+    "El factor (Fyw/E)^1.5 aparece una vez como 'a la 1.05' por error de dictado.",
+    "Los datos de la viga del pórtico de máquinas (longitudes 12-14 m, 518 in por paño, w = 5) se dictaron de forma confusa mientras se editaba el Excel; se registran como valores aproximados.",
+    "El profesor no recalculó b/t para b = 5.75 in; 5.75/0.3125 = 18.4 excede 15.89, observación técnica añadida en las notas.",
+    "Según la definición estricta del AISC 360-16, con Vr = 105 kips < Vc2 resulta ρw = 0 y la inercia requerida sería solo Ist2; el ejemplo de clase usa ρw = 20.66 (ver notas de la clase 16)."
+  ]
+}

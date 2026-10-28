@@ -1,0 +1,416 @@
+{
+  "clase": 5,
+  "titulo": "Miembros en compresión: esbeltez de la brida en tracción, pandeo local (Tabla B4.1a) y pandeo global flexionante de Euler",
+  "fecha": "lunes 19 de abril de 2021",
+  "duracion_min": 102,
+  "resumen": "La clase completa el diseño en tracción de la brida inferior del tijeral verificando L/r con la longitud entre nudos (L/rx = 117 < 300) y pasa al diseño de miembros en compresión. Se presentan los perfiles disponibles (W, M, S, C, T, ángulos, dobles ángulos, HSS) y sus equivalentes soldados de planchas (columna soldada, viga soldada, columna-viga soldada). Se distinguen el pandeo local (de cada placa) y el pandeo global (de todo el miembro). Para el pandeo local se clasifican los elementos en no atiesados (alas, con un borde libre) y atiesados (almas) y se compara la relación ancho-espesor λ = b/t con el límite λr de la Tabla B4.1a; un elemento esbelto vuelve esbelto al perfil. Se muestra un video que ilustra que un ángulo más grande pero más esbelto pandea antes. Luego se deduce la carga crítica de Euler, se introduce el factor de longitud efectiva K (Tabla del Comentario, valores teóricos y recomendados), el criterio de longitudes no arriostradas en el tijeral (Lx entre nudos, Ly entre arriostres) y las fórmulas E3 del AISC para pandeo inelástico y elástico. Se verifica la brida superior con 2L 2×2×5/16, que resiste solo 20 kips frente a Cu ≈ 50.8 kips.",
+  "objetivos": [
+    "Al terminar, el estudiante podrá determinar la longitud no arriostrada de las bridas de un tijeral para verificar su esbeltez.",
+    "Al terminar, el estudiante podrá clasificar los elementos de una sección como atiesados o no atiesados y como esbeltos o no esbeltos usando la Tabla B4.1a.",
+    "Al terminar, el estudiante podrá deducir y explicar la carga crítica de Euler y el esfuerzo crítico de Euler.",
+    "Al terminar, el estudiante podrá seleccionar el factor de longitud efectiva K según las condiciones de apoyo.",
+    "Al terminar, el estudiante podrá calcular el esfuerzo crítico Fcr por pandeo flexionante con las ecuaciones E3-2 y E3-3 del AISC 360-16.",
+    "Al terminar, el estudiante podrá verificar la resistencia de diseño a compresión φcPn de un doble ángulo."
+  ],
+  "temas": [
+    {
+      "titulo": "Verificación de esbeltez de la brida inferior en tracción",
+      "contenido": "Se completa el primer tanteo de la brida inferior (2L 2×2×5/16) revisando la esbeltez. La longitud a considerar es la distancia entre nudos del tijeral, que se definió con la longitud útil de las planchas de cobertura: en el ejemplo, plancha de 6 pies con longitud útil de 1.70 m más 0.10 m de cumbrera, es decir 1.80 m medidos a lo largo de la brida superior inclinada. Para la brida inferior horizontal se toma la proyección: 1.80·cos α. Como la pendiente es muy pequeña (ángulo de unos 0.01 rad), cos α ≈ 0.99 y la longitud resulta 1.79 m ≈ 70 pulg (dividiendo los centímetros entre 2.54). Para decidir qué radio de giro usar, el profesor razona sobre la deformación: las cargas de gravedad hacen bajar la brida dentro del plano del tijeral, girando alrededor del eje X de los dos ángulos (cuya posición se ubica con el valor ȳ de las tablas). Por eso se usa rx: L/rx = 70/0.601 ≈ 117 < 300, cumple. Así el diseño de la brida inferior queda: Tu = 50.8 kips frente a 75 kips de fluencia y L/r = 117. El diseño en tracción, concluye, es sencillo.",
+      "formulas": [
+        {
+          "nombre": "Longitud de la brida inferior entre nudos",
+          "expresion": "Lx,inf = (Lútil + 0.10 m)·cos α",
+          "variables": "Lútil: longitud útil de la plancha de cobertura; α: ángulo de la pendiente del techo"
+        },
+        {
+          "nombre": "Esbeltez en tracción",
+          "expresion": "L / rx ≤ 300",
+          "variables": "rx: radio de giro del doble ángulo respecto al eje horizontal"
+        }
+      ],
+      "referencias_norma": [
+        "AISC 360-16 Sección D1"
+      ]
+    },
+    {
+      "titulo": "Tipos de perfiles para tracción y compresión y sus equivalentes soldados",
+      "contenido": "En tracción y compresión se pueden usar diversas secciones de la serie americana: canales C, tes T, y perfiles en forma de H que se diferencian por su proporción: los W (ala ancha), los S (ala angosta y gran peralte, tipo estándar americano) y los M (intermedios, ni muy peraltados ni muy anchos). También ángulos simples, dobles ángulos (como los del ejemplo) y tubos HSS cuadrados, rectangulares o circulares. Los equivalentes armados con planchas soldadas con filetes, que son los más usados en el Perú por la escasa oferta de perfiles laminados, se denominan: columna soldada (ala ancha, equivalente al W), viga soldada (gran peralte y ala pequeña) y columna-viga soldada (proporción intermedia). La elección depende de la disponibilidad local y del tipo de solicitación: para las bridas y diagonales de tijerales se usan con frecuencia los dobles ángulos, que permiten conectar las piezas a una cartela intermedia; para columnas se prefieren secciones de ala ancha, con radios de giro parecidos en ambos ejes; y para vigas, secciones peraltadas. Los HSS son eficientes en compresión porque su radio de giro es igual o similar en ambas direcciones y no tienen bordes libres. En el Perú, al haber pocos perfiles laminados W y C, el diseñador suele recurrir a perfiles armados con planchas, cuya esbeltez local debe controlarse al escoger el espesor de las planchas.",
+      "formulas": [],
+      "referencias_norma": [
+        "AISC Steel Construction Manual, Parte 1 (dimensiones y propiedades)"
+      ]
+    },
+    {
+      "titulo": "Pandeo local: relación ancho-espesor y elementos atiesados y no atiesados",
+      "contenido": "En compresión existen dos posibilidades de pandeo: el local, que ocurre en una placa o elemento de la sección (ala o alma), y el global, que afecta a todo el miembro. La clave para el pandeo local es la relación ancho-espesor λ = b/t de cada elemento. Si se aplica la carga en el centroide de un ángulo 2×2×1/4 (b/t = 8) el elemento se acorta sin que las alas se ondulen; en un ángulo 6×6×1/4 (b/t = 24) las alas se ondulan localmente. Los límites están en la Tabla B4.1a (compresión axial); para flexión hay otra tabla (B4.1b) que se verá después. La tabla separa los elementos no atiesados (casos 1 a 4), que tienen un borde libre, como las alas, de los atiesados (caso 5 en adelante), que tienen ambos bordes restringidos, como las almas. El profesor prefiere el término 'atiesado' (tradicional en la UNI) frente a 'rigidizado', adoptado por comisiones de norma. Si λ ≤ λr el elemento es no esbelto y no hay pandeo local; si λ > λr es esbelto. Basta que un solo elemento sea esbelto para que el perfil se considere esbelto. Para ángulos simples λr = 0.45√(E/Fy) = 12.77 con A36, por lo que el 2×2×1/4 (8) es no esbelto y el 6×6×1/4 (24) es esbelto. Lo recomendable es trabajar con elementos no esbeltos. En perfiles W, el bf de tablas es el ancho total del ala, por lo que para un ala se usa b = bf/2 y λ = bf/(2tf).",
+      "formulas": [
+        {
+          "nombre": "Relación ancho-espesor",
+          "expresion": "λ = b / t",
+          "variables": "b: ancho del elemento (para alas de I, b = bf/2); t: espesor"
+        },
+        {
+          "nombre": "Límite para alas de ángulos simples",
+          "expresion": "λr = 0.45·√(E/Fy)",
+          "variables": "E = 29,000 ksi; Fy en ksi (A36 → 12.77)"
+        },
+        {
+          "nombre": "Límite para alas de perfiles laminados I y canales",
+          "expresion": "λr = 0.56·√(E/Fy)",
+          "variables": "A36 → 15.89; A572 Gr50 → 13.49"
+        },
+        {
+          "nombre": "Límite para almas de perfiles I y canales",
+          "expresion": "λr = 1.49·√(E/Fy)",
+          "variables": "λ = h/tw; A36 → 42.29; Gr50 → 35.88"
+        }
+      ],
+      "referencias_norma": [
+        "AISC 360-16 Sección B4.1",
+        "AISC 360-16 Tabla B4.1a (casos 1, 3 y 5)",
+        "AISC 360-16 Tabla B4.1b (flexión, se verá luego)"
+      ]
+    },
+    {
+      "titulo": "Video demostrativo: 'más grande no significa más resistente'",
+      "contenido": "Se proyecta un video en inglés con dos ángulos sometidos a compresión: uno con alas del doble de ancho que el otro. Intuitivamente se esperaría que el grande resista más, pero por su mayor relación ancho-espesor pandea con una carga menor (en el video se describe como pandeo torsional de las alas). El ángulo pequeño, con la misma carga, no presenta problema y necesita más carga para pandear. La conclusión es que la relación b/t, más que el tamaño, define si hay pandeo local, y que conviene escoger perfiles por debajo del umbral λr. La lección práctica para el diseño es que no basta con aumentar las dimensiones exteriores del perfil para ganar resistencia: si se aumenta el ancho del ala sin aumentar el espesor, la relación b/t crece y el elemento puede pasar de no esbelto a esbelto, perdiendo capacidad por pandeo local. Al proponer un perfil en compresión conviene revisar primero b/t frente a λr y solo después la esbeltez global KL/r. El fenómeno observado en el video también anticipa que los ángulos son sensibles a modos de pandeo torsional, que se tratarán en las Secciones E4 y E5.",
+      "formulas": [],
+      "referencias_norma": []
+    },
+    {
+      "titulo": "Ejemplos de clasificación: canal armado y perfil W; límites sísmicos",
+      "contenido": "Se analiza una canal con alas de 6 pulg × 3/16 pulg y alma de 12 pulg × 1/4 pulg en acero A572 Gr50 (Fy = 50 ksi, Fu = 65 ksi). Ala (no atiesada): b/t = 6/(3/16) = 32 > 0.56√(29000/50) = 13.49, esbelta. Alma (atiesada, restringida por las dos alas): h/t = 12/0.25 = 48 > 1.49√(29000/50) = 35.88, esbelta. Ambos elementos son esbeltos y el perfil es esbelto. Cada elemento se evalúa por separado: λf frente a λrf y λw frente a λrw. Para un perfil W de tablas con bf ≈ 15 pulg y tf ≈ 1.07 pulg, λ = bf/(2tf) ≈ 7 < 15.89 (A36), por lo que el ala no pandea localmente. Finalmente, para diseño sismorresistente existen límites más exigentes, porque se requieren elementos de ductilidad moderada o alta capaces de desarrollar grandes deformaciones plásticas: frente al 0.56√(E/Fy) de estructuras ordinarias, se exigen valores del orden de 0.38 (ductilidad moderada) y 0.30 (alta ductilidad). Estas tablas están en el capítulo 13 del proyecto de norma E.090 para perfiles laminados y de planchas soldadas.",
+      "formulas": [
+        {
+          "nombre": "Ala de perfil W",
+          "expresion": "λf = bf / (2·tf) ≤ 0.56·√(E/Fy)",
+          "variables": "bf: ancho total del ala; tf: espesor del ala"
+        },
+        {
+          "nombre": "Alma",
+          "expresion": "λw = h / tw ≤ 1.49·√(E/Fy)",
+          "variables": "h: altura libre del alma; tw: espesor del alma"
+        }
+      ],
+      "referencias_norma": [
+        "AISC 360-16 Tabla B4.1a",
+        "AISC 341 (límites para miembros de ductilidad moderada y alta)",
+        "Proyecto de Norma E.090 (2018), capítulo 13"
+      ]
+    },
+    {
+      "titulo": "Pandeo global: deducción de la carga crítica de Euler",
+      "contenido": "El pandeo global afecta a todo el miembro. Leonhard Euler (1744) analizó una columna articulada en ambos extremos (pin-pin). Al cargarla, el extremo superior baja y la columna forma una 'panza' lateral. Tomando el diagrama de cuerpo libre a una distancia x con deflexión y, la carga P genera un momento externo −P·y que se equilibra con el momento interno E·I·y''. Resulta la ecuación diferencial E·I·y'' + P·y = 0; con c² = P/(E·I) queda y'' + c²·y = 0, cuya solución es y = A·sen(cx) + B·cos(cx). Aplicando las condiciones de borde: y(0) = 0 implica B = 0; y(L) = 0 exige A·sen(cL) = 0, y para una solución no trivial (A ≠ 0) se requiere sen(cL) = 0, es decir cL = π (primer modo). Elevando al cuadrado y reemplazando c: Pcr = π²·E·I/L². Usando I = r²·A y dividiendo entre el área se obtiene el esfuerzo crítico de Euler Fe = π²·E/(L/r)². Para otras condiciones de borde (empotrado-empotrado, empotrado-articulado, empotrado-libre) la deformada cambia y la fórmula se generaliza reemplazando L por la longitud efectiva K·L.",
+      "formulas": [
+        {
+          "nombre": "Ecuación diferencial de la columna",
+          "expresion": "E·I·y'' + P·y = 0",
+          "variables": "E: módulo de elasticidad; I: momento de inercia; y: deflexión lateral"
+        },
+        {
+          "nombre": "Carga crítica de Euler",
+          "expresion": "Pcr = π²·E·I / (K·L)²",
+          "variables": "K: factor de longitud efectiva; L: longitud no arriostrada"
+        },
+        {
+          "nombre": "Esfuerzo crítico de Euler",
+          "expresion": "Fe = π²·E / (K·L/r)²",
+          "variables": "r: radio de giro = √(I/A)"
+        }
+      ],
+      "referencias_norma": [
+        "AISC 360-16 ecuación E3-4"
+      ]
+    },
+    {
+      "titulo": "Factor de longitud efectiva K y método de criterios",
+      "contenido": "El factor K depende de las condiciones de apoyo. La tabla del Comentario del AISC da, para cada caso, un valor teórico y un valor recomendado de diseño (propuesto por el Column Research Council, hoy Structural Stability Research Council): empotrado-empotrado 0.5 / 0.65; empotrado-articulado 0.7 / 0.80; articulado-articulado 1.0 / 1.0; empotrado con giro impedido y desplazamiento lateral libre 1.0 / 1.2; empotrado-libre (por ejemplo un panel publicitario en voladizo) 2.0 / 2.1; articulado en la base y giro impedido con desplazamiento libre en la cabeza 2.0 / 2.0. En un edificio, las losas actúan como restricciones en cada nivel; si además la estructura puede desplazarse lateralmente por sismo, el profesor sugiere un K del orden de 1.2. Elegir K según el tipo de apoyo es el llamado método de los criterios. En los tijerales se usa siempre K = 1. Para la brida superior comprimida hay dos longitudes: en el plano del tijeral (eje X) la brida pandea entre nudos, considerados articulados, así que Lx es la distancia entre nudos; fuera del plano (eje Y), ante el viento lateral, la brida se apoya en los arriostres colocados entre las viguetas dobles, de modo que Ly es la distancia entre viguetas dobles arriostradas. Sin arriostres la estructura se caería, porque nada la apuntala en esa dirección.",
+      "formulas": [
+        {
+          "nombre": "Esbeltez efectiva",
+          "expresion": "K·L/r ≤ 200 (recomendado)",
+          "variables": "Se evalúa en ambos ejes: K·Lx/rx y K·Ly/ry; controla el mayor"
+        }
+      ],
+      "referencias_norma": [
+        "AISC 360-16 Comentario, Apéndice 7, Tabla C-A-7.1",
+        "AISC 360-16 Sección E2 (nota: KL/r preferiblemente ≤ 200)"
+      ]
+    },
+    {
+      "titulo": "Resistencia a compresión por pandeo flexionante (AISC 360-16 E3) y Tabla E1.1",
+      "contenido": "El capítulo E del AISC trata la compresión. La Tabla User Note E1.1 funciona como un recetario: según el tipo de sección y si tiene elementos no esbeltos o esbeltos indica qué secciones y estados límite revisar. Para dobles ángulos no esbeltos: E3 (pandeo flexionante, FB) y E4 (pandeo flexotorsional, FTB); con elementos esbeltos se agrega E7 (pandeo local, LB). Las siglas son FB flexionante, TB torsional, FTB flexotorsional y LB local. Para el pandeo flexionante de secciones no esbeltas se propone un perfil, se calcula KL/r y se compara con el umbral 4.71√(E/Fy) (133.7 para A36). Si KL/r ≤ 4.71√(E/Fy) (o Fy/Fe ≤ 2.25), el pandeo es inelástico: Fcr = 0.658^(Fy/Fe)·Fy. Si es mayor, el pandeo es elástico: Fcr = 0.877·Fe. El diseñador prefiere estar en la zona inelástica, donde la fluencia ocurre antes que el pandeo. Históricamente, Engesser propuso usar el módulo tangente para el rango inelástico, Jasinski objetó y se habló de módulo reducido, y Shanley (años 40) aclaró el problema; la expresión exponencial del AISC recoge indirectamente ese efecto relacionando Fy con Fe. Finalmente Pn = Fcr·Ag, φc = 0.90, y se exige Pu ≤ φc·Pn. (En la gráfica de la clase el esfuerzo en el umbral se rotuló 0.15Fy; en la clase 6 se corrigió a 0.39Fy.)",
+      "formulas": [
+        {
+          "nombre": "Umbral elástico-inelástico",
+          "expresion": "K·L/r = 4.71·√(E/Fy)",
+          "variables": "A36: 133.7"
+        },
+        {
+          "nombre": "Pandeo inelástico (E3-2)",
+          "expresion": "Fcr = 0.658^(Fy/Fe) · Fy, si K·L/r ≤ 4.71√(E/Fy)",
+          "variables": "Fe: esfuerzo de Euler"
+        },
+        {
+          "nombre": "Pandeo elástico (E3-3)",
+          "expresion": "Fcr = 0.877 · Fe, si K·L/r > 4.71√(E/Fy)",
+          "variables": "0.877 considera la imperfección inicial (curvatura) del miembro"
+        },
+        {
+          "nombre": "Resistencia nominal y de diseño",
+          "expresion": "Pn = Fcr·Ag ; φc·Pn = 0.90·Fcr·Ag ≥ Pu",
+          "variables": "Ag: área bruta; Pu: compresión última"
+        }
+      ],
+      "referencias_norma": [
+        "AISC 360-16 Capítulo E, Tabla User Note E1.1",
+        "AISC 360-16 Sección E3, ecuaciones E3-1, E3-2, E3-3, E3-4",
+        "AISC 360-16 Secciones E4, E5 y E7"
+      ]
+    },
+    {
+      "titulo": "Ejemplo: primer tanteo de la brida superior del tijeral en compresión",
+      "contenido": "Se usa el mismo perfil de la brida inferior, 2L 2×2×5/16 (Ag = 2.32 pulg², rx = 0.601 pulg, ry = 0.853 pulg), con E = 29,000 ksi y Fy = 36 ksi. La longitud en el plano es la distancia entre nudos, Lx = 1.70 + 0.10 = 1.80 m = 70.9 pulg. Fuera del plano, con el arreglo de 8 planchas por faldón (6 de 6 pies y 2 de 7 pies), la distancia entre arriostres es Ly ≈ 3.50 m = 137.8 pulg. Con K = 1: K·Lx/rx ≈ 118 y K·Ly/ry ≈ 161, ambos menores que 200; controla 161. Como 161 > 133.7, el pandeo es elástico: Fe = π²·29000/161² ≈ 11 ksi y Fcr = 0.877·Fe ≈ 9.6 ksi. Pn ≈ 22 kips y φcPn ≈ 20 kips, muy por debajo de Cu ≈ 50.8 kips. El perfil no sirve y debe cambiarse; se deja de tarea probar 2L 3×3×3/16 o 2L 3×3×1/4.",
+      "formulas": [],
+      "referencias_norma": [
+        "AISC 360-16 E3"
+      ]
+    }
+  ],
+  "ejemplos": [
+    {
+      "titulo": "Esbeltez de la brida inferior en tracción",
+      "enunciado": "Brida inferior 2L 2×2×5/16 (rx = 0.601 pulg). Distancia entre nudos sobre la brida superior 1.80 m, pendiente α ≈ 0.01 rad. Verificar L/r ≤ 300.",
+      "pasos": [
+        "L = 1.80·cos(0.01) ≈ 1.79 m = 179/2.54 ≈ 70.5 pulg.",
+        "La brida se deforma en el plano del tijeral (alrededor del eje X) → usar rx.",
+        "L/rx = 70.5/0.601 ≈ 117 < 300."
+      ],
+      "resultado": "L/r ≈ 117 < 300: cumple. La brida inferior queda con 2L 2×2×5/16 (Tu = 50.8 kips, φPn,fluencia ≈ 75 kips)."
+    },
+    {
+      "titulo": "Clasificación de ángulos 2×2×1/4 y 6×6×1/4 (A36)",
+      "enunciado": "Determinar si las alas de ángulos simples 2×2×1/4 y 6×6×1/4 en acero A36 son esbeltas.",
+      "pasos": [
+        "λr = 0.45·√(29000/36) = 0.45·28.38 = 12.77.",
+        "2×2×1/4: λ = 2/0.25 = 8 < 12.77 → no esbelto, sin pandeo local.",
+        "6×6×1/4: λ = 6/0.25 = 24 > 12.77 → esbelto, con pandeo local."
+      ],
+      "resultado": "El ángulo pequeño es no esbelto; el grande es esbelto (más grande no significa más resistente)."
+    },
+    {
+      "titulo": "Clasificación de una canal en A572 Gr50",
+      "enunciado": "Canal con alas de 6×3/16 pulg y alma de 12×1/4 pulg, Fy = 50 ksi, Fu = 65 ksi, E = 29,000 ksi. Clasificar ala y alma.",
+      "pasos": [
+        "Ala (no atiesada): λf = 6/0.1875 = 32; λr = 0.56·√(29000/50) = 13.49 → 32 > 13.49, esbelta.",
+        "Alma (atiesada): λw = 12/0.25 = 48; λr = 1.49·√(29000/50) = 35.88 → 48 > 35.88, esbelta."
+      ],
+      "resultado": "Ala y alma esbeltas: el perfil se clasifica como esbelto y requiere la Sección E7."
+    },
+    {
+      "titulo": "Brida superior en compresión con 2L 2×2×5/16",
+      "enunciado": "Cu = 50.8 kips; 2L 2×2×5/16 A36: Ag = 2.32 pulg², rx = 0.601 pulg, ry = 0.853 pulg; Lx = 70.9 pulg, Ly = 137.8 pulg, K = 1. Verificar.",
+      "pasos": [
+        "K·Lx/rx = 70.9/0.601 ≈ 118; K·Ly/ry = 137.8/0.853 ≈ 161.5; ambos < 200; controla 161.5.",
+        "4.71·√(29000/36) = 133.7 < 161.5 → pandeo elástico.",
+        "Fe = π²·29000/161.5² ≈ 11.0 ksi.",
+        "Fcr = 0.877·11.0 ≈ 9.6 ksi.",
+        "Pn = 9.6·2.32 ≈ 22.3 kips; φcPn = 0.9·22.3 ≈ 20 kips.",
+        "20 kips < Cu = 50.8 kips → no cumple."
+      ],
+      "resultado": "φcPn ≈ 20 kips < 50.8 kips: el perfil 2L 2×2×5/16 no sirve como brida superior; se debe aumentar la sección."
+    }
+  ],
+  "conceptos_clave": [
+    {
+      "termino": "Pandeo local",
+      "definicion": "Inestabilidad de un elemento plano de la sección (ala o alma) que ocurre cuando su relación ancho-espesor supera el límite λr."
+    },
+    {
+      "termino": "Pandeo global",
+      "definicion": "Inestabilidad de todo el miembro (flexionante, torsional o flexotorsional)."
+    },
+    {
+      "termino": "Elemento no atiesado",
+      "definicion": "Elemento plano con un borde libre paralelo a la carga, por ejemplo las alas."
+    },
+    {
+      "termino": "Elemento atiesado",
+      "definicion": "Elemento plano restringido en ambos bordes, por ejemplo el alma entre dos alas."
+    },
+    {
+      "termino": "λr",
+      "definicion": "Relación ancho-espesor límite entre elemento no esbelto y esbelto en compresión (Tabla B4.1a)."
+    },
+    {
+      "termino": "Carga crítica de Euler",
+      "definicion": "Carga axial a la que una columna ideal elástica pasa a una configuración deformada lateralmente: Pcr = π²EI/(KL)²."
+    },
+    {
+      "termino": "Factor de longitud efectiva K",
+      "definicion": "Factor que convierte la longitud real en la longitud equivalente de una columna biarticulada, según los apoyos."
+    },
+    {
+      "termino": "Pandeo inelástico",
+      "definicion": "Pandeo que ocurre después de que parte de la sección ha fluido (KL/r ≤ 4.71√(E/Fy)); Fcr = 0.658^(Fy/Fe)·Fy."
+    },
+    {
+      "termino": "Pandeo elástico",
+      "definicion": "Pandeo que ocurre antes de la fluencia (KL/r > 4.71√(E/Fy)); Fcr = 0.877·Fe."
+    },
+    {
+      "termino": "Método de los criterios",
+      "definicion": "Asignar K a partir de las condiciones de apoyo idealizadas (tabla de valores recomendados), usado en el diseño preliminar."
+    },
+    {
+      "termino": "Columna soldada / viga soldada / columna-viga soldada",
+      "definicion": "Perfiles armados con planchas equivalentes, respectivamente, a perfiles de ala ancha, de gran peralte y ala angosta, e intermedios."
+    }
+  ],
+  "preguntas": [
+    {
+      "pregunta": "Para el ala de un ángulo simple en compresión axial, el límite λr de la Tabla B4.1a es:",
+      "opciones": [
+        "0.38√(E/Fy)",
+        "0.56√(E/Fy)",
+        "1.49√(E/Fy)",
+        "0.45√(E/Fy)"
+      ],
+      "correcta": 3,
+      "explicacion": "Caso 3 de la Tabla B4.1a: alas de ángulos simples, λr = 0.45√(E/Fy) ≈ 12.77 para A36."
+    },
+    {
+      "pregunta": "Un alma restringida por dos alas se clasifica como elemento:",
+      "opciones": [
+        "No atiesado",
+        "Atiesado",
+        "Compacto siempre",
+        "Esbelto siempre"
+      ],
+      "correcta": 1,
+      "explicacion": "Los elementos con ambos bordes restringidos (almas) son atiesados; los de borde libre (alas) son no atiesados."
+    },
+    {
+      "pregunta": "En un perfil W con bf = 15 pulg y tf = 1.07 pulg, la relación ancho-espesor del ala es:",
+      "opciones": [
+        "7.0",
+        "14.0",
+        "15.89",
+        "3.5"
+      ],
+      "correcta": 0,
+      "explicacion": "Se evalúa una sola ala: b = bf/2, por lo que λ = bf/(2tf) = 15/2.14 ≈ 7.0."
+    },
+    {
+      "pregunta": "Si en una canal el ala es no esbelta pero el alma es esbelta, el perfil se clasifica como:",
+      "opciones": [
+        "Esbelto",
+        "No esbelto",
+        "Compacto",
+        "Depende de K"
+      ],
+      "correcta": 0,
+      "explicacion": "Basta que un elemento sea esbelto para que el miembro se considere con elementos esbeltos (Sección E7)."
+    },
+    {
+      "pregunta": "En la deducción de Euler, la condición y(0) = 0 lleva a:",
+      "opciones": [
+        "A = 0",
+        "c = 0",
+        "B = 0",
+        "sen(cL) = 1"
+      ],
+      "correcta": 2,
+      "explicacion": "y(0) = A·sen 0 + B·cos 0 = B = 0."
+    },
+    {
+      "pregunta": "Para una columna empotrada en la base y libre en la cabeza (panel publicitario), el valor de K recomendado para diseño es:",
+      "opciones": [
+        "0.65",
+        "1.0",
+        "1.2",
+        "2.1"
+      ],
+      "correcta": 3,
+      "explicacion": "El valor teórico es 2.0 y el recomendado por el CRC/SSRC es 2.1."
+    },
+    {
+      "pregunta": "¿Cuál es el umbral de esbeltez entre pandeo inelástico y elástico para acero A36 (E = 29,000 ksi)?",
+      "opciones": [
+        "≈ 113.4",
+        "≈ 200",
+        "≈ 300",
+        "≈ 133.7"
+      ],
+      "correcta": 3,
+      "explicacion": "4.71√(29000/36) = 4.71·28.38 ≈ 133.7."
+    },
+    {
+      "pregunta": "Si K·L/r = 161 para un doble ángulo A36, el esfuerzo crítico se calcula con:",
+      "opciones": [
+        "Fcr = 0.658^(Fy/Fe)·Fy",
+        "Fcr = 0.877·Fe",
+        "Fcr = Fy",
+        "Fcr = 0.39·Fy"
+      ],
+      "correcta": 1,
+      "explicacion": "161 > 133.7: pandeo elástico, Fcr = 0.877·Fe (ecuación E3-3)."
+    },
+    {
+      "pregunta": "En la brida superior de un tijeral, la longitud no arriostrada fuera del plano (Ly) se define por:",
+      "opciones": [
+        "La distancia entre nudos",
+        "La luz total del tijeral",
+        "La distancia entre puntos arriostrados (viguetas dobles con arriostres)",
+        "El peralte del tijeral"
+      ],
+      "correcta": 2,
+      "explicacion": "Fuera del plano, la brida solo está restringida donde llegan los arriostres, ubicados entre las viguetas dobles."
+    },
+    {
+      "pregunta": "¿Qué valor de K se usa para los miembros de armaduras en el curso?",
+      "opciones": [
+        "0.5",
+        "0.65",
+        "1.0",
+        "2.0"
+      ],
+      "correcta": 2,
+      "explicacion": "Se idealizan los nudos como articulados: K = 1."
+    },
+    {
+      "pregunta": "Según la Tabla E1.1 del AISC, para un doble ángulo sin elementos esbeltos se deben revisar:",
+      "opciones": [
+        "Solo E3",
+        "E3 (flexionante) y E4 (flexotorsional)",
+        "E7 y E3",
+        "Solo pandeo local"
+      ],
+      "correcta": 1,
+      "explicacion": "Para dobles ángulos no esbeltos se revisan FB (E3) y FTB (E4); con elementos esbeltos se añade E7."
+    }
+  ],
+  "ejercicios_propuestos": [
+    "Verifique la brida superior del tijeral (Cu = 50.8 kips, Lx = 70.9 pulg, Ly = 137.8 pulg, K = 1, A36) con 2L 3×3×3/16 y con 2L 3×3×1/4 usando las propiedades de las tablas AISC.",
+    "Clasifique el ala y el alma de una canal C12×20.7 en acero A36 y en A572 Gr50 según la Tabla B4.1a.",
+    "Deduzca la carga crítica de una columna biarticulada para el segundo modo de pandeo (cL = 2π) y explique por qué no gobierna en la práctica.",
+    "Una columna W8×31 de 4.5 m, empotrada en la base y libre en la cabeza (K = 2.1), en A36: calcule KL/r, determine si el pandeo es elástico o inelástico y obtenga φcPn.",
+    "Para un ángulo simple L 4×4×1/4 en A36, determine si sus alas son esbeltas y compárelo con un L 4×4×1/2."
+  ],
+  "avisos": [
+    "Tarea para casa: rediseñar la brida superior probando 2L 3×3×3/16 o 2L 3×3×1/4 en la hoja Excel.",
+    "Los estudiantes deben seguir el desarrollo en su propia hoja Excel del ejemplo del tijeral (ejemplo B).",
+    "Se usan la AISC 360-16 (capítulo E, Tabla E1.1, Tabla B4.1a) y el capítulo 13 del proyecto de norma E.090 para límites sísmicos."
+  ],
+  "notas_transcripcion": [
+    "'tabla BA' / 'tabla BB' = Tablas B4.1a y B4.1b del AISC 360-16; 'sección e' se refiere a las secciones E3, E4, E5 y E7 (la transcripción pierde el número).",
+    "'Engeser', 'Jasinski', 'Shangle' = Engesser, Jasinski y Shanley. El profesor presentó a Engesser como sucesor de Euler; en realidad trabajó más de un siglo después (1889). Se mantuvo la idea técnica (módulo tangente/reducido).",
+    "La transcripción dice 'quien descubre el pandeo local fue Euler en 1744'; por el contexto es el pandeo global (flexionante).",
+    "Se dice que el CRC está 'en Londres'; el Column Research Council es una entidad norteamericana (hoy SSRC). Se omitió la ubicación.",
+    "En la tabla de K, el valor 'cero ochenta y cinco' para una columna de primer piso empotrada arriba y abajo se interpretó como el valor recomendado 0.65 (empotrado-empotrado) de la tabla; se indicó 1.2 para el caso con desplazamiento lateral.",
+    "'W de 30% 73' se interpretó como un perfil W30 de tablas con bf ≈ 15 pulg; 'TF de 1.7' se interpretó como tf ≈ 1.07 pulg para que bf/2tf ≈ 7.",
+    "El Fe de la brida superior se dijo '10 ksi' y Fcr '9 ksi'; el cálculo con KL/r = 161.5 da Fe ≈ 11.0 ksi y Fcr ≈ 9.6 ksi, con φcPn ≈ 20 kips como en clase.",
+    "En la gráfica de pandeo el profesor rotuló 0.15Fy en el umbral; en la clase 6 lo corrigió a 0.39Fy (Fcr en KL/r = 4.71√(E/Fy) es 0.658^2.25·Fy ≈ 0.39Fy).",
+    "Los límites sísmicos 0.38 y 0.30 se reportan tal como los citó el profesor del proyecto de norma E.090; en AISC 341 los coeficientes varían según el tipo de elemento."
+  ]
+}

@@ -1,0 +1,157 @@
+{
+  "clase": 12,
+  "titulo": "Diseño por corte (Cv, kv, atiesadores) y diseño completo de una viga compacta soldada desde cero",
+  "fecha": "miércoles 5 de mayo de 2021",
+  "duracion_min": 101,
+  "resumen": "La clase arranca con el diseño por corte según el Capítulo G de AISC 360-16. El profesor presenta la resistencia φVn = φ·0.6·Fy·Aw·Cv, con Aw = h·tw porque el corte lo toma el alma. Distingue dos casos. El caso A son los perfiles laminados en caliente con h/tw ≤ 2.24√(E/Fy), donde φ = 1.0 y Cv = 1. El caso B es todo lo demás (secciones soldadas incluidas): φ = 0.9 y Cv se calcula a partir del coeficiente de pandeo kv, que depende de si hay atiesadores transversales. Explica el límite 2.46√(E/Fy) para decidir si hacen falta atiesadores y la fórmula kv = 5 + 5/(a/h)², válida si a/h ≤ 3. También diferencia Cv1 (alma sin acción de campo de tensión) de Cv2 (con flujo de corte o campo de tensión), y deja este último para más adelante. En la segunda parte dimensiona desde cero una viga soldada compacta simplemente apoyada de 315 in (unos 8 m) con wu = 0.05 kip/in. Para eso usa reglas de predimensionamiento del peralte según la luz, los límites de compacidad de la Tabla B4.1b y el par de fuerzas C = T = Mu/d. Obtiene una sección de 14 in de peralte, alas de 6.5 × 5/16 in y alma de 3/16 in. Luego la verifica por corte, por flexión (fluencia y pandeo lateral-torsional con Cb calculado en una hoja Excel) y por deflexión (L/300).",
+  "objetivos": [
+    "Al terminar, el estudiante podrá calcular la resistencia nominal y de diseño al corte de vigas I laminadas y soldadas según el Capítulo G de AISC 360-16.",
+    "Al terminar, el estudiante podrá determinar kv y Cv1 para almas con y sin atiesadores transversales, y decidir cuándo los atiesadores son necesarios.",
+    "Al terminar, el estudiante podrá predimensionar el peralte de una viga a partir de su luz y dimensionar alma y alas de una sección soldada compacta usando los límites de la Tabla B4.1b y la demanda Mu.",
+    "Al terminar, el estudiante podrá verificar completamente una viga compacta: compacidad, corte, fluencia, pandeo lateral-torsional y deflexión por servicio."
+  ],
+  "temas": [
+    {
+      "titulo": "Resistencia al corte de vigas I: expresión general y casos",
+      "contenido": "El profesor recuerda que en una viga I el cortante lo resiste prácticamente solo el alma, de modo que el área de corte es Aw = h·tw, donde h es la altura libre del alma y tw su espesor (en AISC 360-16 para perfiles I laminados se usa Aw = d·tw; el profesor trabajó con h·tw). La resistencia nominal es Vn = 0.6·Fy·Aw·Cv, donde 0.6·Fy representa la fluencia por corte del acero y Cv es un coeficiente de reducción por pandeo del alma. El factor de resistencia φ depende del caso. En el caso A, perfiles laminados en caliente con h/tw ≤ 2.24√(E/Fy), se toma φv = 1.0 (y Ω = 1.50 en ASD) y Cv = 1. En el caso B, cualquier otro perfil, en particular toda sección armada o soldada, se toma φv = 0.90 (Ω = 1.67) y Cv debe calcularse. El profesor insiste en que una viga soldada cae siempre en el caso B, y que por eso hay que revisar la esbeltez del alma h/tw y la presencia de atiesadores. Comenta también que en la práctica el corte rara vez controla el diseño de vigas con cargas repartidas, aunque hay que tener cuidado con las cargas puntuales.",
+      "formulas": [
+        {"nombre": "Resistencia de diseño al corte (LRFD)", "expresion": "φv·Vn = φv·0.6·Fy·Aw·Cv1", "variables": "Fy: esfuerzo de fluencia (ksi); Aw: área del alma = h·tw (in²); Cv1: coeficiente de pandeo por corte del alma; φv = 1.0 (caso A) o 0.90 (caso B)"},
+        {"nombre": "Límite para el caso A (laminados)", "expresion": "h/tw ≤ 2.24·√(E/Fy) → φv = 1.0 y Cv1 = 1.0", "variables": "h: altura libre del alma; tw: espesor del alma; E = 29000 ksi"}
+      ],
+      "referencias_norma": ["AISC 360-16 Cap. G, sección G2.1 (ecuación G2-1)", "AISC 360-16 G1 (φv = 0.90, Ωv = 1.67)", "AISC 360-16 G2.1(a) (φv = 1.00, Ωv = 1.50 para perfiles I laminados con h/tw ≤ 2.24√(E/Fy))"]
+    },
+    {
+      "titulo": "Atiesadores transversales de alma y coeficiente kv",
+      "contenido": "Los atiesadores de alma son planchas soldadas perpendiculares al alma, solas o en pares, y repartidas a lo largo de la viga con un espaciamiento modular a. El profesor aclara que no aumentan la resistencia del material: lo que hacen es restringir el pandeo del alma y, con ello, elevar el esfuerzo de corte que el alma puede alcanzar. El criterio de la norma es este: si h/tw ≤ 2.46√(E/Fy), los atiesadores no son necesarios (se pueden poner o no). Si h/tw supera ese valor, el profesor indica que hay que colocarlos (estrictamente, la norma pide atiesadores cuando la resistencia sin ellos no alcanza). El coeficiente de pandeo por corte del panel de alma, kv, vale 5.34 para almas sin atiesadores. Con atiesadores vale kv = 5 + 5/(a/h)², siempre que a/h ≤ 3. Si a/h > 3, kv vuelve a 5.34, porque atiesadores tan espaciados ya no aportan nada. Ante la pregunta de un alumno sobre cómo elegir a, el profesor recomienda empezar con a = h (lo que da kv = 10) e ir aumentando según la demanda, manteniendo a entre h y 3h.",
+      "formulas": [
+        {"nombre": "Límite sin atiesadores", "expresion": "h/tw ≤ 2.46·√(E/Fy) → no se requieren atiesadores transversales", "variables": "E: módulo de elasticidad (29000 ksi); Fy en ksi"},
+        {"nombre": "kv sin atiesadores", "expresion": "kv = 5.34", "variables": "Coeficiente de pandeo por corte de la placa del alma"},
+        {"nombre": "kv con atiesadores", "expresion": "kv = 5 + 5/(a/h)²  (si a/h ≤ 3; si a/h > 3, kv = 5.34)", "variables": "a: distancia libre entre atiesadores transversales (in); h: altura libre del alma (in)"}
+      ],
+      "referencias_norma": ["AISC 360-16 G2.1(b) (ecuación G2-5 para kv)", "AISC 360-16 G2.3 (atiesadores transversales, límite 2.46√(E/Fy))"]
+    },
+    {
+      "titulo": "Coeficiente Cv1 y diferencia con Cv2 (campo de tensión)",
+      "contenido": "En el caso B, Cv1 se obtiene comparando la esbeltez del alma con el umbral 1.10√(kv·E/Fy). Si h/tw ≤ 1.10√(kv·E/Fy), el alma fluye por corte antes de pandearse y Cv1 = 1. Si h/tw supera ese umbral, Cv1 = 1.10√(kv·E/Fy)/(h/tw), es decir, el cociente entre el umbral y la esbeltez real. El profesor distingue dos coeficientes. Cv1 se usa cuando no se considera acción de campo de tensión (él lo llama sin flujo de corte, alma sin pandeo posterior). Cv2 se usa cuando se aprovecha la resistencia poscrítica del alma pandeada mediante el campo de tensión diagonal (con flujo de corte). Usar o no el campo de tensión es decisión del diseñador y corresponde a almas muy peraltadas con atiesadores. En esta parte del curso, dedicada a vigas compactas, solo se trabajará con Cv1. Cv2 y los requisitos adicionales de los atiesadores se verán más adelante.",
+      "formulas": [
+        {"nombre": "Cv1 – fluencia del alma", "expresion": "si h/tw ≤ 1.10·√(kv·E/Fy) → Cv1 = 1.0", "variables": "kv: coeficiente de pandeo por corte; E, Fy en ksi"},
+        {"nombre": "Cv1 – pandeo del alma", "expresion": "si h/tw > 1.10·√(kv·E/Fy) → Cv1 = 1.10·√(kv·E/Fy) / (h/tw)", "variables": "h/tw: esbeltez del alma"}
+      ],
+      "referencias_norma": ["AISC 360-16 G2.1(b) ecuaciones G2-3 y G2-4", "AISC 360-16 G2.2 (acción de campo de tensión, Cv2)"]
+    },
+    {
+      "titulo": "Predimensionamiento del peralte de vigas según la luz",
+      "contenido": "Para empezar el diseño de una viga sin usar tablas, el profesor propone estimar el peralte total d a partir de la luz L. Las reglas que dio son: d ≈ L/24 para luces hasta unos 10 m, d ≈ L/14 para luces entre unos 11 y 19 m, y d ≈ L/11 para luces de 20 m o más. El valor obtenido se pasa a pulgadas y se redondea a un número práctico, de ingeniería. En el ejemplo, L = 315 in ≈ 8 m da d ≈ 8/24 = 0.333 m ≈ 13.1 in, y se adopta d = 14 in. El profesor subraya que esto es solo un punto de partida para tantear. A partir de ahí se combinan los límites de compacidad (para fijar los espesores) con la demanda de momento (para fijar el área de las alas).",
+      "formulas": [
+        {"nombre": "Peralte aproximado (criterio del profesor)", "expresion": "d ≈ L/24 (L ≤ 10 m); d ≈ L/14 (11–19 m); d ≈ L/11 (L ≥ 20 m)", "variables": "d: peralte total de la viga; L: luz de la viga"}
+      ],
+      "referencias_norma": []
+    },
+    {
+      "titulo": "Dimensionamiento de una sección soldada compacta usando compacidad y demanda",
+      "contenido": "Con d fijado, el espesor del alma se obtiene imponiendo compacidad. Para el alma de una sección I en flexión (Tabla B4.1b, caso 15) el límite es λpw = 3.76√(E/Fy) = 106.7 para A36. Tomando h ≈ 0.95·d = 13.3 in, se necesita tw ≥ 13.3/106.7 ≈ 0.12 in, y se adopta tw = 3/16 in (0.1875 in). Para las alas el profesor usa la demanda. Mu se resiste con un par de fuerzas C = T separadas aproximadamente por d, así que C ≈ Mu/d = 620.2/14 ≈ 44.3 kip. Si el ala está en fluencia, C = bf·tf·Fy. Un primer tanteo con tf = 3/16 (todo con la misma plancha) da bf ≥ 6.56 in y se adopta bf = 6.5 in, pero entonces bf/2tf = 17.3 supera λpf = 0.38√(E/Fy) = 10.78 y el ala resulta no compacta. En el segundo tanteo se mantiene bf = 6.5 y se despeja tf ≥ 6.5/(2·10.78) = 0.30 in. Como no existe plancha de 0.30 in, se usa 5/16 in (0.3125 in). La sección propuesta es d = 14 in, alas de 6.5 × 5/16 in y alma de 3/16 in, todo sin usar tablas de perfiles, que es como se dimensionan las secciones soldadas.",
+      "formulas": [
+        {"nombre": "Compacidad del ala (I, flexión)", "expresion": "λf = bf/(2·tf) ≤ λpf = 0.38·√(E/Fy)", "variables": "bf: ancho del ala; tf: espesor del ala"},
+        {"nombre": "Compacidad del alma (I doblemente simétrica)", "expresion": "λw = h/tw ≤ λpw = 3.76·√(E/Fy)", "variables": "h: altura libre del alma; tw: espesor del alma"},
+        {"nombre": "Fuerza en el ala por par interno", "expresion": "C = T ≈ Mu/d;  C = bf·tf·Fy", "variables": "Mu: momento último (kip·in); d: peralte (in)"}
+      ],
+      "referencias_norma": ["AISC 360-16 Tabla B4.1b, casos 10/11 (alas) y 15 (almas)"]
+    },
+    {
+      "titulo": "Verificación por flexión de la viga compacta: fluencia y pandeo lateral-torsional",
+      "contenido": "Con la sección propuesta se recalcula la compacidad. Para el ala, λf = 6.5/(2·0.3125) = 10.4 ≤ 10.78, compacta. Para el alma, h = 14 − 2·(5/16) = 13.375 in y λw = 13.375/0.1875 = 71.3 ≤ 106.7, compacta. La sección es compacta, así que aplica F2 y se revisan fluencia y pandeo lateral-torsional. El módulo plástico se calcula con la tabla de áreas de la hoja Excel: Zx = 36.19 in³, Mp = 36 × 36.19 = 1302.8 kip·in y φMn = 0.9 × 1302.8 = 1172.6 kip·in. Para el pandeo lateral-torsional la viga está arriostrada a los tercios, Lb = 105 in. Cb se obtiene en la hoja con los momentos a 1/4, 1/2 y 3/4 del tramo central: Cb ≈ 1.014. La hoja da Lp = 1.76·ry·√(E/Fy) = 73.7 in y Lr = 199.8 in. Como Lp < Lb < Lr, se usa la zona 2 (ecuación F2-2), limitada a Mp, y resulta Mn = 1198.95 kip·in, con φMn = 1079.1 kip·in. Se toma el menor de los dos estados límite: φMn = 1079.1 kip·in ≥ Mu = 620.2 kip·in, cumple. El profesor recuerda que una viga está diseñada solo cuando se han revisado corte, flexión y deflexión.",
+      "formulas": [
+        {"nombre": "Fluencia (F2.1)", "expresion": "Mn = Mp = Fy·Zx;  φb = 0.90", "variables": "Zx: módulo plástico (in³)"},
+        {"nombre": "Pandeo lateral-torsional inelástico (F2-2)", "expresion": "Mn = Cb·[Mp − (Mp − 0.7·Fy·Sx)·(Lb − Lp)/(Lr − Lp)] ≤ Mp", "variables": "Cb: factor de gradiente de momento; Sx: módulo elástico; Lb: longitud no arriostrada; Lp, Lr: longitudes límite"},
+        {"nombre": "Longitud Lp", "expresion": "Lp = 1.76·ry·√(E/Fy)", "variables": "ry: radio de giro respecto al eje débil"},
+        {"nombre": "Factor Cb (F1-1)", "expresion": "Cb = 12.5·Mmax / (2.5·Mmax + 3·MA + 4·MB + 3·MC)", "variables": "Mmax: momento máximo absoluto en el tramo no arriostrado; MA, MB, MC: momentos absolutos a 1/4, 1/2 y 3/4 del tramo"}
+      ],
+      "referencias_norma": ["AISC 360-16 F2.1 (ecuación F2-1)", "AISC 360-16 F2.2 (ecuaciones F2-2, F2-5, F2-6)", "AISC 360-16 F1 (ecuación F1-1, Cb)"]
+    },
+    {
+      "titulo": "Verificación por corte y deflexión del ejemplo",
+      "contenido": "Para el corte, la viga es soldada, así que cae en el caso B (φv = 0.9). Primero se compara h/tw = 71.3 con 2.46√(E/Fy) = 69.8. Como lo supera ligeramente, el profesor decide colocar atiesadores con a = h, con lo que kv = 5 + 5/1² = 10. El umbral 1.10√(10 × 29000/36) = 98.7 es mayor que 71.3, por lo que Cv1 = 1. La resistencia es φVn = 0.9 × 0.6 × 36 × (13.375 × 0.1875) × 1 = 48.75 kip, muy superior a Vu = wL/2 = 0.05 × 315/2 = 7.875 kip. La deflexión de servicio se calcula en la hoja con Δ = 5·w·L⁴/(384·E·I), usando la carga de servicio y el momento de inercia de la sección. Se compara con el límite L/300 = 315/300 = 1.05 in y cumple. Con esto la viga queda verificada por corte, flexión y deflexión. El profesor concluye que los alumnos ya pueden diseñar una viga compacta desde la nada, con criterio y leyendo la norma.",
+      "formulas": [
+        {"nombre": "Cortante y momento de viga simplemente apoyada con carga uniforme", "expresion": "Vu = wu·L/2;  Mu = wu·L²/8", "variables": "wu: carga última repartida (kip/in); L: luz (in)"},
+        {"nombre": "Deflexión máxima por servicio", "expresion": "Δ = 5·w·L⁴/(384·E·I) ≤ L/300", "variables": "w: carga de servicio (kip/in); I: momento de inercia (in⁴); E = 29000 ksi"}
+      ],
+      "referencias_norma": ["AISC 360-16 G2.1", "AISC 360-16 Capítulo L (estados límite de servicio, deflexiones)"]
+    }
+  ],
+  "ejemplos": [
+    {
+      "titulo": "Dimensionamiento desde cero de una viga soldada compacta",
+      "enunciado": "Viga simplemente apoyada de acero A36 (Fy = 36 ksi, E = 29000 ksi), luz L = 315 in (≈ 8 m), carga última repartida wu = 0.05 kip/in, arriostrada lateralmente a los tercios. Dimensionar una sección I soldada compacta.",
+      "pasos": [
+        "Demanda: Vu = 0.05 × 315/2 = 7.875 kip; Mu = 0.05 × 315²/8 = 620.2 kip·in.",
+        "Peralte: L ≈ 8 m < 10 m → d ≈ L/24 = 0.333 m ≈ 13.1 in → se adopta d = 14 in.",
+        "Alma: λpw = 3.76√(29000/36) = 3.76 × 28.38 = 106.7; con h ≈ 0.95 × 14 = 13.3 in, tw ≥ 13.3/106.7 ≈ 0.12 in → tw = 3/16 in = 0.1875 in.",
+        "Ala por demanda: C ≈ Mu/d = 620.2/14 = 44.3 kip; con tf = 3/16: bf ≥ 44.3/(36 × 0.1875) = 6.56 in → bf = 6.5 in.",
+        "Compacidad del ala con tf = 3/16: 6.5/(2 × 0.1875) = 17.3 > λpf = 0.38 × 28.38 = 10.78 → no compacta; se rechaza.",
+        "Segundo tanteo: tf ≥ 6.5/(2 × 10.78) = 0.30 in → plancha comercial 5/16 in = 0.3125 in.",
+        "Sección propuesta: d = 14 in; alas 6.5 × 5/16 in; alma 13.375 × 3/16 in."
+      ],
+      "resultado": "Sección soldada I: d = 14 in, bf = 6.5 in, tf = 5/16 in, tw = 3/16 in (h = 13.375 in)."
+    },
+    {
+      "titulo": "Verificación completa de la viga soldada propuesta",
+      "enunciado": "Verificar la sección del ejemplo anterior (A36, L = 315 in, wu = 0.05 kip/in, Lb = 105 in) por compacidad, corte, flexión y deflexión.",
+      "pasos": [
+        "Compacidad: λf = 6.5/(2 × 0.3125) = 10.4 ≤ 10.78 (ala compacta); λw = 13.375/0.1875 = 71.3 ≤ 106.7 (alma compacta) → sección compacta.",
+        "Corte: soldada → caso B, φv = 0.9. h/tw = 71.3 > 2.46 × 28.38 = 69.8 → se colocan atiesadores con a = h → kv = 5 + 5/1² = 10.",
+        "Umbral: 1.10√(10 × 29000/36) = 98.7 ≥ 71.3 → Cv1 = 1.",
+        "φVn = 0.9 × 0.6 × 36 × (13.375 × 0.1875) × 1 = 48.75 kip ≥ Vu = 7.875 kip → cumple.",
+        "Fluencia: Zx = 36.19 in³ (hoja Excel) → Mp = 36 × 36.19 = 1302.8 kip·in; φMn = 0.9 × 1302.8 = 1172.6 kip·in.",
+        "LTB: Lb = 315/3 = 105 in; Lp = 73.7 in; Lr = 199.8 in; Cb ≈ 1.014 → zona 2 → Mn = 1198.95 kip·in ≤ Mp; φMn = 1079.1 kip·in.",
+        "Gobierna LTB: φMn = 1079.1 kip·in ≥ Mu = 620.2 kip·in → cumple.",
+        "Deflexión: Δ = 5wL⁴/(384EI) con la carga de servicio, comparada con L/300 = 1.05 in → cumple."
+      ],
+      "resultado": "La viga cumple: φVn = 48.75 kip > 7.875 kip; φMn = 1079.1 kip·in (LTB) > 620.2 kip·in; deflexión de servicio < L/300 = 1.05 in."
+    }
+  ],
+  "conceptos_clave": [
+    {"termino": "Área del alma (Aw)", "definicion": "Área que resiste el corte en un perfil I, tomada como h·tw (AISC usa d·tw para laminados)."},
+    {"termino": "Cv1", "definicion": "Coeficiente de pandeo por corte del alma sin acción de campo de tensión. Vale 1 si el alma fluye antes de pandearse; si no, es la razón entre 1.10√(kvE/Fy) y h/tw."},
+    {"termino": "Cv2 / campo de tensión", "definicion": "Coeficiente asociado a la resistencia poscrítica de almas pandeadas que, gracias a los atiesadores, desarrollan un flujo diagonal de tensiones."},
+    {"termino": "kv", "definicion": "Coeficiente de pandeo por corte de la placa del alma: 5.34 sin atiesadores, o 5 + 5/(a/h)² con atiesadores a ≤ 3h."},
+    {"termino": "Atiesador transversal de alma", "definicion": "Plancha soldada perpendicular al alma que restringe su pandeo. No aumenta la resistencia del material, pero sí el corte que el alma puede alcanzar."},
+    {"termino": "Sección soldada (armada)", "definicion": "Perfil formado por planchas soldadas. Para corte cae siempre en el caso B (φv = 0.9 y Cv1 por calcular)."},
+    {"termino": "Predimensionamiento por luz", "definicion": "Estimación inicial del peralte (L/24, L/14 o L/11 según la luz) para empezar a tantear una sección."}
+  ],
+  "preguntas": [
+    {"pregunta": "Según AISC 360-16, ¿en qué caso se puede tomar φv = 1.0 y Cv1 = 1.0 para corte en una viga I?", "opciones": ["En cualquier sección soldada con h/tw ≤ 2.46√(E/Fy)", "En perfiles I laminados en caliente con h/tw ≤ 2.24√(E/Fy)", "En toda viga con atiesadores a ≤ 3h", "Solo cuando kv = 5.34"], "correcta": 1, "explicacion": "La sección G2.1(a) limita φv = 1.0 y Cv1 = 1 a almas de perfiles I laminados con h/tw ≤ 2.24√(E/Fy)."},
+    {"pregunta": "¿Qué valor toma kv en un alma sin atiesadores transversales?", "opciones": ["10", "5.0", "5.34", "4.0"], "correcta": 2, "explicacion": "Sin atiesadores, o con a/h > 3, kv = 5.34."},
+    {"pregunta": "Si se colocan atiesadores con a = h, ¿cuánto vale kv?", "opciones": ["5.34", "10", "7.5", "6.25"], "correcta": 1, "explicacion": "kv = 5 + 5/(a/h)² = 5 + 5/1 = 10."},
+    {"pregunta": "¿Qué ocurre con kv si la separación de atiesadores es a > 3h?", "opciones": ["Se duplica", "Se calcula con 5 + 5/(a/h)²", "Vale 5.34, porque los atiesadores no aportan", "Se toma igual a 10"], "correcta": 2, "explicacion": "La fórmula con atiesadores solo vale para a/h ≤ 3. Más allá, el panel se comporta como no atiesado."},
+    {"pregunta": "En el ejemplo, h/tw = 71.3 y el umbral 1.10√(kvE/Fy) con kv = 10 es 98.7. ¿Cuánto vale Cv1?", "opciones": ["0.72", "1.38", "0.90", "1.0"], "correcta": 3, "explicacion": "Como h/tw ≤ 1.10√(kvE/Fy), el alma fluye por corte y Cv1 = 1."},
+    {"pregunta": "Según el criterio dado en clase, ¿qué peralte inicial corresponde a una viga de 8 m de luz?", "opciones": ["Aproximadamente L/24 ≈ 0.33 m", "Aproximadamente L/11 ≈ 0.73 m", "Aproximadamente L/14 ≈ 0.57 m", "Aproximadamente L/40 ≈ 0.20 m"], "correcta": 0, "explicacion": "Para luces de hasta unos 10 m el profesor propone d ≈ L/24."},
+    {"pregunta": "Para A36, ¿cuál es el límite λpf de compacidad del ala de una sección I en flexión?", "opciones": ["16.0", "24.1", "10.8", "106.7"], "correcta": 2, "explicacion": "λpf = 0.38√(29000/36) = 0.38 × 28.38 ≈ 10.8."},
+    {"pregunta": "¿Por qué se rechazó el ala de 6.5 × 3/16 in en el ejemplo?", "opciones": ["Porque no resistía el corte", "Porque bf/2tf = 17.3 > λpf y el ala resultaba no compacta", "Porque su área era insuficiente para C = 44.3 kip", "Porque superaba la deflexión admisible"], "correcta": 1, "explicacion": "El objetivo era una sección compacta, y la esbeltez 17.3 superaba el límite 10.78."},
+    {"pregunta": "Si Lp < Lb ≤ Lr en una sección compacta, ¿qué expresión se usa para Mn por LTB?", "opciones": ["Mn = Fcr·Sx con Fcr elástico", "Mn = Mp sin importar Cb", "Mn = Cb[Mp − (Mp − 0.7FySx)(Lb − Lp)/(Lr − Lp)] ≤ Mp", "Mn = 0.9·E·kc·Sx/λ²"], "correcta": 2, "explicacion": "Es la zona inelástica del pandeo lateral-torsional, ecuación F2-2."},
+    {"pregunta": "¿Qué tres verificaciones exige el profesor para dar una viga por diseñada?", "opciones": ["Corte, flexión y deflexión", "Tracción, compresión y torsión", "Fluencia, fractura y bloque de corte", "Solo flexión y deflexión"], "correcta": 0, "explicacion": "La viga solo está diseñada cuando cumple corte, flexión (todos sus estados límite) y deflexión por servicio."},
+    {"pregunta": "¿Qué función cumplen los atiesadores transversales de alma según el profesor?", "opciones": ["Aumentan el Fy del alma", "Restringen el pandeo del alma sin aumentar la resistencia del material", "Sustituyen la verificación por flexión", "Reducen el peso de la viga"], "correcta": 1, "explicacion": "Previenen el pandeo del alma y así permiten alcanzar mayores esfuerzos de corte, pero no cambian la resistencia del acero."}
+  ],
+  "ejercicios_propuestos": [
+    "Calcule φVn de una viga soldada A36 con h = 20 in y tw = 1/4 in, sin atiesadores. Repita el cálculo con atiesadores a = 30 in y compare los valores de Cv1.",
+    "Dimensione una viga soldada compacta de acero A572 Gr. 50 (Fy = 50 ksi), simplemente apoyada, de 7 m de luz, con wu = 0.08 kip/in. Use d ≈ L/24 y los límites de compacidad para A572 Gr. 50.",
+    "Para la viga de la clase (d = 14 in, alas de 6.5 × 5/16 in, alma de 3/16 in), calcule Ix y la deflexión con una carga de servicio de 0.035 kip/in, y compárela con L/300 y L/360.",
+    "Un perfil W laminado tiene h/tw = 55 y Fy = 50 ksi. Determine si aplica φv = 1.0 y Cv1 = 1 según G2.1(a).",
+    "Determine la separación máxima de atiesadores con la que un alma de h = 40 in y tw = 5/16 in (A36) alcanza Cv1 = 1."
+  ],
+  "avisos": [
+    "Al día siguiente (jueves 6 de mayo de 2021) hay práctica calificada, con materia hasta vigas compactas.",
+    "Se usa una hoja Excel elaborada en clase para calcular Zx, ry, Lp, Lr, Cb (diagramas de corte y momento) y la deflexión. El profesor la comparte con los alumnos.",
+    "El profesor recomienda leer siempre la norma AISC 360 (Capítulos F y G, Tabla B4.1b).",
+    "Ese día hubo 10 a 12 ausentes; el profesor expresó su preocupación por posibles casos de COVID."
+  ],
+  "notas_transcripcion": [
+    "La transcripción dice 'cb' o 'CV' para el coeficiente de corte; se interpretó como Cv (Cv1/Cv2). 'KB' se interpretó como kv.",
+    "'flujo de corte' se interpretó como acción de campo de tensión (tension field action), que corresponde a Cv2.",
+    "La carga se transcribió como 'punto cero cinco Kip por pulgada' = wu = 0.05 kip/in, lo que es coherente con Vu = 7.875 kip y Mu = 620.2 kip·in. La carga de servicio no se entiende en el audio.",
+    "Al principio el profesor confunde 1.31 con 1.10 en el umbral de Cv1 y luego se corrige a 1.10√(kvE/Fy).",
+    "Sobre la separación recomendada, se oye 'entre H y H'; se interpretó como a entre h y 3h, coherente con el límite a/h ≤ 3.",
+    "Nota técnica: con kv = 5.34 (sin atiesadores) el umbral es 1.10√(5.34 × 805.6) = 72.1 > 71.3, así que Cv1 = 1 también sin atiesadores. Según G2.3 los atiesadores no serían obligatorios, porque la resistencia sin ellos es suficiente. El profesor optó por ponerlos aplicando el criterio de 2.46√(E/Fy).",
+    "En la hoja Excel el profesor llama a esta sesión 'clase 10', por la numeración propia de su archivo. El Cb se oye como '1014' y luego como '1.1'; se adoptó Cb ≈ 1.014.",
+    "El límite L/300 se oye como 'cinco pulgada'; 315/300 = 1.05 in."
+  ]
+}

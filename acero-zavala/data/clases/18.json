@@ -1,0 +1,361 @@
+{
+  "clase": 18,
+  "titulo": "Trabajo escalonado (estación de servicio en acero), aberturas en almas de vigas e introducción a la flexocompresión y al efecto P-Δ",
+  "fecha": "miércoles 2 de junio de 2021",
+  "duracion_min": 99,
+  "resumen": "Se presenta el trabajo escalonado: diseñar en acero una estación de servicio con góndola, tiendas de dos niveles y servicios, en grupos de tres, sobre suelo flexible y con cargas muerta, viva, de sismo y de viento. La modulación parte de una luz L obtenida de los códigos de los alumnos, con secciones soldadas armadas y reticulados en las góndolas, en tres entregas acumulativas más un resumen de seis páginas. Se corrige un error de la hoja de corte (relación 2Aw/(Afc+Aft)), con lo que φVn sube a unos 195 kips. Luego se trata la perforación del alma para tuberías: atiesadores a ambos lados del hueco y platabanda para recuperar (h − d)·tw, o bien colgar las tuberías bajo la viga. Finalmente se introduce la flexocompresión: superposición P/A + M/S, efecto P-Δ, interacción P/Py + M/My ≤ 1, ecuaciones H1-1a/b del AISC, un tutorial de P-Δ en SAP2000 y el método B1-B2 del Apéndice 8.",
+  "objetivos": [
+    "Al terminar, el estudiante podrá organizar las entregas del trabajo escalonado de una estación de servicio en acero según los requisitos del curso.",
+    "Al terminar, el estudiante podrá evaluar el efecto de una perforación en el alma sobre la resistencia al corte y dimensionar una platabanda de refuerzo.",
+    "Al terminar, el estudiante podrá explicar el origen de las ecuaciones de interacción de flexocompresión a partir de la superposición de esfuerzos.",
+    "Al terminar, el estudiante podrá aplicar las ecuaciones H1-1a y H1-1b del AISC 360 identificando Pr, Mr, Pc y Mc.",
+    "Al terminar, el estudiante podrá describir cómo incluir el efecto P-Δ en SAP2000 y el método aproximado B1-B2 del Apéndice 8."
+  ],
+  "temas": [
+    {
+      "titulo": "Trabajo escalonado: estación de servicio en acero",
+      "contenido": "El trabajo, publicado en el aula virtual, se desarrolla en grupos de tres alumnos que pueden repartirse las estructuras o las partes del trabajo. El proyecto es una estación de servicio (grifo) en acero con: la góndola, donde están los surtidores (puede ser de un piso o de doble altura, recta, curva o en voladizo); tiendas en un edificio de dos niveles; y servicios (lavado, cambio de aceite, llantería), que también pueden tener dos niveles. Se ubica en el distrito más vulnerable sísmicamente de los integrantes (por ejemplo, Chorrillos frente a Rímac o Lince), con uso de estación de servicio y suelo flexible (el peor caso, salvo que vivan en zonas de suelo bueno como el centro de Lima o el Rímac). Se consideran cargas muerta, viva, de sismo y de viento. La distancia mínima entre columnas, L, se obtiene sumando los últimos dígitos de los códigos de los tres integrantes (en el ejemplo 1 + 4 + 3 = 8 m), y toda la modulación debe ser múltiplo β·L (β = 1/2, 1/4, 2, 3...), algo que se exigirá estrictamente y que debe sustentarse ante el profesor de práctica. Las vigas y columnas deben ser secciones soldadas armadas (no perfiles W) y las góndolas se diseñan con reticulados. El área del terreno y la configuración son libres: se puede basar en un grifo existente, pero adaptándolo a la modulación. El profesor mostró ejemplos: el grifo de su barrio (llantería, pizzería, lavandería, tienda y dos góndolas), el grifo Kio de la Panamericana (supermercado, panadería, oficinas de tres pisos y bungalows para camioneros), un antiguo grifo en la avenida Faucett y grifos japoneses en esquina con tijerales cruzados y góndola en voladizo. Los talleres de cambio de aceite pueden tener gata elevadora (doble altura) o zanja.",
+      "formulas": [
+        {
+          "nombre": "Modulación",
+          "expresion": "Luz = β·L, con L = suma de los últimos dígitos de los códigos (m)",
+          "variables": "β: múltiplo o fracción (1/2, 1/4, 1, 2, 3...)"
+        }
+      ],
+      "referencias_norma": [
+        "Norma E.020 (cargas)",
+        "Norma E.030 (diseño sismorresistente)",
+        "Norma E.090 (estructuras metálicas)"
+      ]
+    },
+    {
+      "titulo": "Entregables del trabajo escalonado",
+      "contenido": "Primera entrega (el lunes siguiente; se movió del domingo al lunes por las elecciones): planteamiento de la forma estructural, en un esquema que puede ser a mano alzada, con ejes (A, B, C... y 1, 2, 3...), es decir, el replanteo, más las cargas de gravedad (techo, sobrecarga según la norma de cargas, por ejemplo 100 kg/m² y 200 kg/m² según el uso), de sismo (a partir del peso de cada edificio) y de viento. Se estima que puede hacerse en unas tres horas si no se deja para la última noche. Segunda entrega: modelo estructural en SAP2000 con combinaciones de sismo, gravedad y viento, y diseño de vigas y columnas. Tercera entrega: diseño de las placas colaborantes (losa colaborante), plano en planta, plano en corte, detalles básicos, planilla de perfiles para estimar el peso y evaluación del costo aproximado del casco de acero, más un resumen de seis páginas. Las entregas son acumulativas: cada una incluye las anteriores corregidas, mostrando la evolución del proyecto. No hay exposición: el resumen de seis páginas hace las veces de sustentación, y el profesor descontaría al menos 8 puntos si falta. Las fechas cierran a las 11:59 p. m. del día indicado (se mencionaron el 7/6, el 27/6 y el 10/7).",
+      "formulas": [],
+      "referencias_norma": [
+        "Norma E.020 (sobrecargas)"
+      ]
+    },
+    {
+      "titulo": "Corrección de la hoja de corte (campo de tensiones)",
+      "contenido": "Un alumno detectó que en la hoja Excel de la clase 15/16 la celda de la relación 2Aw/(Afc + Aft) estaba mal escrita: al multiplicar por 2, por la precedencia de operadores, se multiplicaba todo el cociente. Como las áreas de ala son iguales, la relación correcta para la viga 12 × ¾ / 33 × 5/16 in es 2·10.31/(9 + 9) ≈ 1.15 < 2.5, de modo que se cumple la condición para usar la expresión de campo de tensiones con 1.15√(1 + (a/h)²), sin el término a/h sumado en el denominador. Con ello la resistencia de diseño sube a unos 195 kips. El profesor agradeció la revisión y explicó que a propósito entrega hojas que pueden tener errores para que el alumno que estudia las revise y no las use a ciegas en la práctica. Relató casos del examen parcial (una entrega casi en blanco, calificada con 0.2, y archivos ilegibles) y pidió usar conversores confiables o fotos claras, pues se dan 15 minutos para armar la entrega.",
+      "formulas": [
+        {
+          "nombre": "Relación de áreas",
+          "expresion": "2·Aw/(Afc + Aft) ≤ 2.5",
+          "variables": "Aw = h·tw; Afc, Aft: áreas de ala en compresión y tracción"
+        },
+        {
+          "nombre": "Vn con campo de tensiones",
+          "expresion": "Vn = 0.6·Fy·Aw·[Cv2 + (1 − Cv2)/(1.15·√(1 + (a/h)²))]",
+          "variables": "Para el ejemplo: Cv2 = 0.935, a/h = 1 → Vn ≈ 217 kips, φVn ≈ 195 kips"
+        }
+      ],
+      "referencias_norma": [
+        "AISC 360-16 G2.2, ecuación G2-7"
+      ]
+    },
+    {
+      "titulo": "Perforaciones en el alma de vigas para tuberías",
+      "contenido": "La viga se diseña para que Vu ≤ φVn en cada sección, con base en el área del alma. En los edificios pasan tuberías de agua, desagüe, ductos de aire acondicionado y redes; los desagües, que trabajan por gravedad, necesitan pendiente mínima y a veces obligan a atravesar las vigas, por lo que el ingeniero sanitario pedirá perforarlas. Ese detalle de perforación debe aparecer en los planos para que el maestro de obra lo ejecute. Reglas: donde haya un agujero se coloca un par de atiesadores a ambos lados ('es de ley'). Si el hueco tiene diámetro d, el alma remanente es (h − d)·tw y hay que verificar si φVn sigue siendo mayor que Vu. Si no lo es, se agrega una platabanda que aumenta el espesor en esa zona (por ejemplo, duplicando tw) para elevar el corte resistente. La perforación puede evitarse: en edificios de oficinas con vigas metálicas suele haber un falso cielo raso suspendido mediante una parrilla, y el espacio entre la viga y el cielo raso permite colgar las tuberías bajo la viga con abrazaderas y ángulos, sin perforarla. La altura libre que se ve no es la altura de análisis: el techo (placa colaborante) está sobre la viga.",
+      "formulas": [
+        {
+          "nombre": "Área de alma en la sección perforada",
+          "expresion": "Aw,net = (h − d)·tw",
+          "variables": "d: diámetro o altura de la perforación"
+        },
+        {
+          "nombre": "Área con platabanda",
+          "expresion": "Aw,ref = (h − d)·(tw + tp)",
+          "variables": "tp: espesor de platabanda; se verifica φ·0.6·Fy·Aw,ref·Cv ≥ Vu"
+        }
+      ],
+      "referencias_norma": [
+        "AISC Design Guide 2 (aberturas en almas de vigas), como referencia complementaria"
+      ]
+    },
+    {
+      "titulo": "Flexocompresión: superposición de esfuerzos, efecto P-Δ e interacción",
+      "contenido": "Todos los elementos trabajan en realidad en flexocompresión o flexotracción; en las vigas predominan los momentos y la carga axial es pequeña, por lo que se diseñan por flexión, pero en las columnas, sobre todo de los primeros pisos, hay mucho momento, cortante y carga axial a la vez, y debe aplicarse el Capítulo H. Se toma como ejemplo un tubo cuadrado B × B × t en voladizo (como el poste de un aviso publicitario) con carga axial P y carga lateral H. El esfuerzo axial es P/A y el de flexión M/S con M = H·L. Pero al desplazarse el extremo una cantidad Δ por la carga lateral, P queda excéntrica y aparece el momento de segundo orden P·Δ, que se suma: el momento requerido Mr debe incluir el efecto P-Δ. Los programas lo calculan solo si se les indica; de lo contrario dan momentos de primer orden. En un punto cualquiera del tubo actúan esfuerzos en las tres direcciones, pero se consideran preponderantes los axiales y de flexión. Si el límite es la fluencia: P/A + M/S ≤ Fy, es decir (P/A)/Fy + (M/S)/Fy ≤ 1; como Fy·A = Py y Fy·S = My, se obtiene la fórmula de interacción P/Py + M/My ≤ 1. Al graficar M/My en abscisas y P/Py en ordenadas, la línea límite separa la zona de diseño (interior) de la de falla (exterior); un valor unitario indica que se está en el límite.",
+      "formulas": [
+        {
+          "nombre": "Esfuerzo combinado",
+          "expresion": "σ = P/A + Mr/S ≤ Fy, con Mr = H·L + P·Δ",
+          "variables": "Δ: desplazamiento lateral del extremo; S: módulo de sección"
+        },
+        {
+          "nombre": "Interacción lineal elemental",
+          "expresion": "P/Py + M/My ≤ 1",
+          "variables": "Py = Fy·A; My = Fy·S"
+        }
+      ],
+      "referencias_norma": [
+        "AISC 360-16 Cap. H",
+        "AISC 360-16 Cap. C (análisis de segundo orden)"
+      ]
+    },
+    {
+      "titulo": "Ecuaciones de interacción del AISC (H1-1a y H1-1b)",
+      "contenido": "La norma plantea dos ecuaciones según la relación Pr/Pc. Pr, Mrx y Mry son las resistencias requeridas obtenidas del análisis estructural con efecto P-Δ (análisis de segundo orden). Pc = φPn es la resistencia axial disponible (Capítulo E en compresión o Capítulo D en tracción) y Mcx = φMnx, Mcy = φMny son las resistencias a flexión del Capítulo F, todas ya conocidas por los alumnos. Si Pr/Pc ≥ 0.2 se usa la ecuación con 8/9 multiplicando la suma de las relaciones de flexión; si Pr/Pc < 0.2 se usa la mitad de la relación axial más las relaciones de flexión directas. El resultado es una superficie de interacción bilineal con quiebre en 0.2; los puntos interiores son diseños aceptables, los exteriores fallas y la frontera es el límite. Existen fórmulas de interacción de diversos autores, pero se deben usar las de la norma.",
+      "formulas": [
+        {
+          "nombre": "Ecuación H1-1a",
+          "expresion": "Si Pr/Pc ≥ 0.2: Pr/Pc + (8/9)·(Mrx/Mcx + Mry/Mcy) ≤ 1.0",
+          "variables": "Pc = φc·Pn; Mcx = φb·Mnx; Mcy = φb·Mny"
+        },
+        {
+          "nombre": "Ecuación H1-1b",
+          "expresion": "Si Pr/Pc < 0.2: Pr/(2·Pc) + (Mrx/Mcx + Mry/Mcy) ≤ 1.0",
+          "variables": "Pr, Mr: resistencias requeridas que incluyen efectos de segundo orden"
+        }
+      ],
+      "referencias_norma": [
+        "AISC 360-16 H1.1, ecuaciones H1-1a y H1-1b"
+      ]
+    },
+    {
+      "titulo": "Efecto P-Δ en SAP2000 y método aproximado del Apéndice 8 (B1-B2)",
+      "contenido": "Se proyectó un tutorial de SAP2000 con dos formas de incluir P-Δ: (1) crear un caso de carga estático no lineal con P-Δ para cada combinación (limitado a análisis estáticos); (2) crear un caso inicial P-Δ con las cargas de gravedad esperadas y usar su matriz de rigidez modificada para todos los demás casos lineales, incluidos espectro de respuesta y tiempo-historia. En el ejemplo, una columna con carga muerta de 100 kips y carga lateral de 10 kips en la parte superior: el análisis de primer orden da un momento de unos 1200 kip·in, mientras que con P-Δ el desplazamiento lateral llega a 3.48 in y el momento a 1548 kip·in, por el ablandamiento que produce la compresión. Ambos métodos dan prácticamente lo mismo; el profesor recomienda el segundo. Como alternativa manual, el Apéndice 8 del AISC presenta el método aproximado de segundo orden: se separan, para una combinación como 1.2D ± E + 0.5L + 0.2S, las cargas de gravedad (análisis NT, sin traslación lateral) y las laterales (análisis LT, con traslación lateral), ambos de primer orden. Luego Mr = B1·Mnt + B2·Mlt y Pr = Pnt + B2·Plt. B1 depende de Cm y de la carga crítica del elemento; B2 depende de la carga total del entrepiso y su rigidez lateral. Se calcula primero B2, luego Pr y con Pr se obtiene B1. El profesor deja como lectura este método y cuenta la anécdota de un colega japonés cuya laptop falló por la altura en Puno y dio la charla en pizarra: lo que uno sabe lo lleva consigo, y con lápiz y papel este método se resuelve a mano.",
+      "formulas": [
+        {
+          "nombre": "Momento amplificado",
+          "expresion": "Mr = B1·Mnt + B2·Mlt",
+          "variables": "Mnt: momento del análisis sin traslación lateral; Mlt: momento por traslación lateral"
+        },
+        {
+          "nombre": "Carga axial amplificada",
+          "expresion": "Pr = Pnt + B2·Plt",
+          "variables": "Pnt, Plt: cargas axiales de los análisis NT y LT"
+        },
+        {
+          "nombre": "Factor B1",
+          "expresion": "B1 = Cm/(1 − α·Pr/Pe1) ≥ 1, con Cm = 0.6 − 0.4·(M1/M2)",
+          "variables": "α = 1.0 (LRFD) o 1.6 (ASD); Pe1 = π²EI*/(K1·L)²"
+        },
+        {
+          "nombre": "Factor B2",
+          "expresion": "B2 = 1/(1 − α·Pstory/Pe,story) ≥ 1",
+          "variables": "Pstory: carga vertical total del entrepiso; Pe,story: resistencia crítica al pandeo por desplazamiento lateral del entrepiso"
+        }
+      ],
+      "referencias_norma": [
+        "AISC 360-16 Apéndice 8 (ecuaciones A-8-1 a A-8-7)",
+        "AISC 360-16 Cap. C"
+      ]
+    }
+  ],
+  "ejemplos": [
+    {
+      "titulo": "Determinación de la luz de modulación del trabajo escalonado",
+      "enunciado": "Tres alumnos tienen códigos cuyos últimos dígitos son 1, 4 y 3. Determinar la luz base L y una modulación posible.",
+      "pasos": [
+        "L = 1 + 4 + 3 = 8 m",
+        "Góndola y tienda modulada a 8 m; columnas intermedias a β·L = 4 m (β = 1/2)",
+        "Tienda de 12 × 8 m: ejes a 4 m (3 × 4 m) y 8 m"
+      ],
+      "resultado": "Luz base L = 8 m; todas las dimensiones deben ser múltiplos β·L."
+    },
+    {
+      "titulo": "Efecto P-Δ en una columna en voladizo (tutorial SAP2000)",
+      "enunciado": "Columna en voladizo con carga muerta de 100 kips y carga lateral de 10 kips en el extremo superior. Comparar el análisis de primer orden y el análisis con P-Δ.",
+      "pasos": [
+        "Análisis lineal (primer orden): M base ≈ 1200 kip·in",
+        "Caso estático no lineal con P-Δ (D + lateral, factores 1.0): desplazamiento 3.48 in, M base ≈ 1548 kip·in",
+        "Método 2: caso inicial P-Δ con la carga muerta y caso lineal con su rigidez: resultados prácticamente iguales (≈ 1548 kip·in)"
+      ],
+      "resultado": "El efecto de segundo orden incrementa el momento ≈ 29% (de 1200 a 1548 kip·in)."
+    },
+    {
+      "titulo": "Corrección de la resistencia al corte con campo de tensiones",
+      "enunciado": "Viga A36 con alas 12 × ¾ in, alma 33 × 5/16 in, a = h, Cv2 = 0.935. Recalcular con la relación de áreas corregida.",
+      "pasos": [
+        "2Aw/(Afc+Aft) = 2·10.31/18 = 1.15 ≤ 2.5; h/bf = 2.75 ≤ 6",
+        "Vn = 0.6·36·10.31·[0.935 + 0.065/(1.15·√2)] ≈ 222.7·0.975 ≈ 217 kips",
+        "φVn = 0.9·217 ≈ 195 kips > Vu = 105 kips"
+      ],
+      "resultado": "φVn ≈ 195 kips (antes 213.48 nominal por el error de la hoja)."
+    }
+  ],
+  "conceptos_clave": [
+    {
+      "termino": "Góndola",
+      "definicion": "En una estación de servicio, la cubierta bajo la cual se ubican los surtidores de combustible."
+    },
+    {
+      "termino": "Trabajo escalonado",
+      "definicion": "Trabajo grupal entregado en etapas acumulativas, donde cada entrega incluye y corrige las anteriores."
+    },
+    {
+      "termino": "Platabanda en perforación",
+      "definicion": "Plancha adosada al alma alrededor de un hueco para recuperar el área de corte perdida (h − d)·tw."
+    },
+    {
+      "termino": "Efecto P-Δ",
+      "definicion": "Momento adicional de segundo orden P·Δ que aparece cuando la carga axial actúa sobre la configuración desplazada lateralmente."
+    },
+    {
+      "termino": "Diagrama de interacción",
+      "definicion": "Representación P/Pc vs M/Mc cuya frontera separa combinaciones de diseño (interiores) de combinaciones de falla (exteriores)."
+    },
+    {
+      "termino": "Análisis NT / LT",
+      "definicion": "Análisis de primer orden sin traslación lateral (cargas de gravedad) y con traslación lateral (cargas laterales), usados en el método B1-B2."
+    },
+    {
+      "termino": "B1 y B2",
+      "definicion": "Factores de amplificación del Apéndice 8 del AISC: B1 para el efecto P-δ del miembro y B2 para el efecto P-Δ del entrepiso."
+    },
+    {
+      "termino": "Caso inicial P-Δ",
+      "definicion": "Caso no lineal con las cargas de gravedad cuya rigidez modificada se usa en los demás casos lineales del modelo en SAP2000."
+    }
+  ],
+  "preguntas": [
+    {
+      "pregunta": "En el trabajo escalonado, las vigas y columnas deben diseñarse como:",
+      "opciones": [
+        "Perfiles W laminados",
+        "Secciones soldadas armadas",
+        "Perfiles tubulares",
+        "Secciones de concreto armado"
+      ],
+      "correcta": 1,
+      "explicacion": "Se exige usar secciones armadas soldadas; las góndolas se resuelven con reticulados."
+    },
+    {
+      "pregunta": "Si se perfora el alma con un agujero de altura d, el área de corte remanente es:",
+      "opciones": [
+        "h·tw",
+        "(h + d)·tw",
+        "d·tw",
+        "(h − d)·tw"
+      ],
+      "correcta": 3,
+      "explicacion": "Se pierde el material del hueco; queda (h − d)·tw."
+    },
+    {
+      "pregunta": "¿Qué alternativa evita perforar las vigas para una tubería de desagüe en un edificio de oficinas?",
+      "opciones": [
+        "Colocar atiesadores",
+        "Reducir la pendiente a cero",
+        "Suspender la tubería bajo la viga en el espacio del falso cielo",
+        "Aumentar el espesor de las alas"
+      ],
+      "correcta": 2,
+      "explicacion": "Con abrazaderas colgadas, la tubería pasa bajo la viga sin afectar su alma."
+    },
+    {
+      "pregunta": "La ecuación AISC H1-1a se aplica cuando:",
+      "opciones": [
+        "Pr/Pc ≥ 0.2",
+        "Pr/Pc < 0.2",
+        "Mr/Mc ≥ 0.2",
+        "Siempre en tracción"
+      ],
+      "correcta": 0,
+      "explicacion": "Para Pr/Pc ≥ 0.2 se usa Pr/Pc + 8/9(Mrx/Mcx + Mry/Mcy) ≤ 1."
+    },
+    {
+      "pregunta": "Para Pr/Pc < 0.2 la ecuación de interacción es:",
+      "opciones": [
+        "Pr/Pc + Mr/Mc ≤ 1",
+        "Pr/Pc + 8/9·Mr/Mc ≤ 1",
+        "Pr/(2Pc) + 8/9·Mr/Mc ≤ 1",
+        "Pr/(2Pc) + (Mrx/Mcx + Mry/Mcy) ≤ 1"
+      ],
+      "correcta": 3,
+      "explicacion": "Es la ecuación H1-1b del AISC 360."
+    },
+    {
+      "pregunta": "En la deducción elemental de la interacción, My representa:",
+      "opciones": [
+        "El momento plástico Fy·Z",
+        "El momento de primera fluencia Fy·S",
+        "El momento último del análisis",
+        "El momento de segundo orden"
+      ],
+      "correcta": 1,
+      "explicacion": "Se reemplaza Fy·S por My, el momento de primera fluencia."
+    },
+    {
+      "pregunta": "En el tutorial de SAP2000, el momento pasó de 1200 a 1548 kip·in porque:",
+      "opciones": [
+        "Se aumentó la carga lateral",
+        "Se cambió la sección",
+        "Se incluyó el efecto P-Δ por la compresión de la carga muerta",
+        "Se usó un factor de carga de 1.6"
+      ],
+      "correcta": 2,
+      "explicacion": "La carga axial actuando sobre la configuración deformada reduce la rigidez y amplifica los momentos."
+    },
+    {
+      "pregunta": "¿Qué método de SAP2000 recomienda el profesor para incluir P-Δ en todos los análisis (incluido el espectral)?",
+      "opciones": [
+        "Un caso inicial P-Δ cuya rigidez usan los demás casos",
+        "Un caso no lineal por combinación",
+        "Ignorar el P-Δ",
+        "Amplificar las cargas por 1.5"
+      ],
+      "correcta": 0,
+      "explicacion": "El caso inicial P-Δ con cargas de gravedad modifica la rigidez para todos los casos lineales."
+    },
+    {
+      "pregunta": "En el método del Apéndice 8, el momento requerido se calcula como:",
+      "opciones": [
+        "Mr = B2·Mnt + B1·Mlt",
+        "Mr = (B1 + B2)·Mnt",
+        "Mr = Mnt + Mlt",
+        "Mr = B1·Mnt + B2·Mlt"
+      ],
+      "correcta": 3,
+      "explicacion": "B1 amplifica el análisis sin traslación (NT) y B2 el de traslación lateral (LT)."
+    },
+    {
+      "pregunta": "Según el profesor, ¿qué ocurre si no se entrega el resumen de seis páginas del trabajo escalonado?",
+      "opciones": [
+        "Nada",
+        "Se descuentan al menos 8 puntos",
+        "Se desaprueba el curso",
+        "Se debe exponer el trabajo"
+      ],
+      "correcta": 1,
+      "explicacion": "El resumen es la 'sustentación' del trabajo; sin él la nota queda sobre 12."
+    },
+    {
+      "pregunta": "En el ejemplo de modulación, códigos terminados en 1, 4 y 3 dan una luz base de:",
+      "opciones": [
+        "4 m",
+        "6 m",
+        "8 m",
+        "12 m"
+      ],
+      "correcta": 2,
+      "explicacion": "1 + 4 + 3 = 8 m."
+    }
+  ],
+  "ejercicios_propuestos": [
+    "Una viga soldada A36 con alma 30 × 5/16 in (Cv1 = 1) tiene una perforación de 8 in de diámetro donde Vu = 90 kips. Verifique el corte en la sección perforada y, si no cumple, dimensione una platabanda.",
+    "Un tubo cuadrado HSS 8×8×3/8 (A500 Gr. B, Fy = 46 ksi; A = 10.4 in², S = 23.9 in³) en voladizo de 15 ft soporta P = 30 kips y H = 2 kips. Calcule P/Py + M/My con y sin un desplazamiento Δ = 2 in (efecto P-Δ).",
+    "Una columna tiene Pr = 250 kips, Pc = 600 kips, Mrx = 150 kip·ft, Mcx = 400 kip·ft y Mry = 0. Verifique la interacción con la ecuación AISC correspondiente.",
+    "Con Mnt = 80 kip·ft, Mlt = 60 kip·ft, B1 = 1.05 y B2 = 1.20, y Pnt = 300 kips, Plt = 40 kips, calcule Mr y Pr según el Apéndice 8.",
+    "Para su grupo, calcule L con sus códigos, proponga la modulación de una góndola y de una tienda de dos niveles en múltiplos β·L y estime la carga sísmica aproximada de la tienda."
+  ],
+  "avisos": [
+    "Trabajo escalonado en grupos de 3: estación de servicio (grifo) de acero con góndola, tiendas (2 niveles) y servicios; enunciado en el aula virtual.",
+    "Primera entrega: el lunes siguiente (estructuración, ejes, cargas de gravedad, sismo y viento). Segunda: modelo en SAP2000, combinaciones y diseño de vigas y columnas. Tercera: placas colaborantes, planos de planta y corte, detalles, planilla de perfiles, costo del casco de acero y resumen de 6 páginas. Fechas mencionadas: 7/6, 27/6 y 10/7, con cierre a las 11:59 p. m.",
+    "No habrá exposición; el resumen de 6 páginas es parte de la nota del tercer trabajo (descuento de al menos 8 puntos si falta).",
+    "La hoja Excel de corte (clase 15/16) se corregirá en el aula virtual por el error en la relación 2Aw/(Afc+Aft).",
+    "En exámenes: usar conversores confiables o fotos claras; hay 15 minutos para armar la entrega.",
+    "Lectura: Apéndice 8 del AISC 360 (método aproximado de segundo orden). Software: SAP2000 para el análisis P-Δ.",
+    "Asistencia: 9 ausentes de 37."
+  ],
+  "notas_transcripcion": [
+    "'grifo' = estación de servicio; 'góndala' = góndola; 'Kio/Kyo' = grifo Kio en la Panamericana; 'Fawcett/Fósil' = avenida Faucett.",
+    "Las fechas de entrega se dictaron de forma ambigua ('el tercer trabajo es para el 27' y luego 7/6, 27/6 y 10/7); se interpretó como primera entrega el lunes 7/6, segunda el 27/6 y tercera el 10/7.",
+    "'BN', 'BU', 'FIBN' = Vn, Vu, φVn; 'H D' = h − d; 'TP' = espesor de platabanda.",
+    "'PR, Mr, MRI' = Pr, Mrx, Mry; 'PC, MC, MSY' = Pc, Mcx, Mcy; 'B y B' = B1 y B2; 'apéndice 8' = AISC 360 Appendix 8.",
+    "La combinación '145' dictada como '1.2 de la muerta más menos el sismo, 0.5 de la viva y 0.2 de la nieve' corresponde a la combinación 1.2D + 1.0E + L + 0.2S del ASCE 7 (con factor 0.5 para L en ciertos casos).",
+    "Las fórmulas detalladas de B1 y B2 no se dictaron en clase (solo se mostraron en pantalla); se completaron con las del AISC 360-16 Apéndice 8.",
+    "La sección sobre aberturas no cita una sección de norma específica; la referencia a la AISC Design Guide 2 es complementaria."
+  ]
+}

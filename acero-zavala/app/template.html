@@ -1,0 +1,622 @@
+<title>Taller de Diseño en Acero</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: plano de taller. Riel lateral fijo con el índice del curso (como el cajetín de un plano),
+   área de trabajo a la derecha. En móvil el riel se vuelve un cajón desplegable. */
+:root{
+  --bg:#eef0f1;          /* papel de plano, gris acero muy claro */
+  --panel:#ffffff;
+  --ink:#1c2328;         /* tinta de dibujo */
+  --muted:#5b6670;
+  --line:#cfd5d9;
+  --steel:#36505f;       /* azul acero laminado */
+  --steel-soft:#dde5ea;
+  --primer:#a8432a;      /* anticorrosivo rojo óxido */
+  --primer-soft:#f3e0d9;
+  --ok:#2f7a4b; --ok-soft:#dcefe3;
+  --warn:#9a6b0b; --warn-soft:#f6ecd2;
+  --bad:#b23a32; --bad-soft:#f5dcd9;
+  --code-bg:#f4f6f7;
+  --f-display:"Barlow Condensed","Arial Narrow",Arial,sans-serif;
+  --f-body:"Barlow","Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  --f-mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --rail:300px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#13181b;--panel:#1b2226;--ink:#e3e8eb;--muted:#9aa6ae;--line:#2e383e;
+  --steel:#8fb3c7;--steel-soft:#24313a;--primer:#e07a5c;--primer-soft:#3a2520;
+  --ok:#6cc08f;--ok-soft:#1d3226;--warn:#e0b04f;--warn-soft:#352b15;--bad:#ec7a70;--bad-soft:#3a1f1d;--code-bg:#161c20;
+  color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#13181b;--panel:#1b2226;--ink:#e3e8eb;--muted:#9aa6ae;--line:#2e383e;
+  --steel:#8fb3c7;--steel-soft:#24313a;--primer:#e07a5c;--primer-soft:#3a2520;
+  --ok:#6cc08f;--ok-soft:#1d3226;--warn:#e0b04f;--warn-soft:#352b15;--bad:#ec7a70;--bad-soft:#3a1f1d;--code-bg:#161c20;
+  color-scheme:dark}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:16px;line-height:1.55}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:30;background:var(--panel)}
+a{color:var(--steel)}
+:focus-visible{outline:2px solid var(--primer);outline-offset:2px}
+h1,h2,h3,h4{font-family:var(--f-display);font-weight:600;line-height:1.15;text-wrap:balance;margin:0}
+h1{font-size:2.3rem;letter-spacing:.01em}
+h2{font-size:1.6rem}
+h3{font-size:1.25rem}
+p{margin:0}
+.mono{font-family:var(--f-mono)}
+.eyebrow{font-family:var(--f-display);text-transform:uppercase;letter-spacing:.12em;font-size:.8rem;color:var(--muted);font-weight:600}
+
+/* Shell */
+.shell{display:grid;grid-template-columns:var(--rail) minmax(0,1fr);min-height:100%}
+.rail{position:sticky;top:0;height:100vh;overflow-y:auto;background:var(--panel);border-right:1px solid var(--line);padding-block:20px 40px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:16px}
+.brand{display:grid;gap:2px;padding-bottom:14px;border-bottom:3px double var(--line);margin-bottom:14px}
+.brand b{font-family:var(--f-display);font-size:1.45rem;letter-spacing:.02em}
+.brand span{font-size:.82rem;color:var(--muted)}
+.nav-main{display:grid;gap:2px;margin-bottom:16px}
+.nav-main a,.nav-cls a{display:flex;align-items:center;gap:8px;text-decoration:none;color:var(--ink);padding:7px 10px;border-radius:6px;font-size:.95rem}
+.nav-main a:hover,.nav-cls a:hover{background:var(--steel-soft)}
+.nav-main a.on,.nav-cls a.on{background:var(--steel);color:var(--panel)}
+.nav-mod{margin-top:12px}
+.nav-mod .eyebrow{padding:0 10px 4px;display:block}
+.nav-cls a{font-size:.9rem;padding:5px 10px}
+.nav-cls .n{font-family:var(--f-mono);font-size:.78rem;color:var(--muted);width:2.2em;flex:none}
+.nav-cls a.on .n{color:inherit}
+.nav-cls .dot{margin-left:auto;width:8px;height:8px;border-radius:50%;border:1.5px solid var(--line);flex:none}
+.nav-cls .dot.done{background:var(--ok);border-color:var(--ok)}
+.nav-cls .dot.pend{border-style:dashed}
+.main{min-width:0;padding-block:28px 80px;padding-left:max(16px,4vw);padding-right:max(16px,env(safe-area-inset-right,0px),4vw)}
+.wrap{max-width:900px;margin:0 auto;display:grid;gap:28px}
+.topbar{display:none}
+@media (max-width:860px){
+  .shell{grid-template-columns:minmax(0,1fr)}
+  .rail{position:fixed;inset:0 auto 0 0;width:min(320px,88vw);z-index:40;transform:translateX(-105%);transition:transform .2s;padding-top:calc(20px + env(safe-area-inset-top,0px))}
+  .rail.open{transform:none;box-shadow:0 0 0 100vmax rgba(0,0,0,.35)}
+  .topbar{display:flex;position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--panel);border-bottom:1px solid var(--line);align-items:center;gap:12px;padding-block:10px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+  .topbar b{font-family:var(--f-display);font-size:1.2rem}
+  .main{padding-top:20px}
+  h1{font-size:1.9rem}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+
+/* Components */
+.btn{font:inherit;font-size:.92rem;font-weight:600;border:1px solid var(--line);background:var(--panel);color:var(--ink);padding:8px 14px;border-radius:6px;cursor:pointer;display:inline-flex;gap:6px;align-items:center;text-decoration:none}
+.btn:hover{border-color:var(--steel)}
+.btn.pri{background:var(--steel);border-color:var(--steel);color:var(--panel)}
+.btn.acc{background:var(--primer);border-color:var(--primer);color:#fff}
+.btn.sm{padding:5px 10px;font-size:.85rem}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:20px}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));gap:14px}
+.pill{display:inline-flex;align-items:center;gap:5px;font-size:.78rem;font-weight:600;padding:2px 9px;border-radius:99px;background:var(--steel-soft);color:var(--steel);white-space:nowrap}
+.pill.ok{background:var(--ok-soft);color:var(--ok)}
+.pill.warn{background:var(--warn-soft);color:var(--warn)}
+.pill.bad{background:var(--bad-soft);color:var(--bad)}
+.pill.pr{background:var(--primer-soft);color:var(--primer)}
+.lead{font-size:1.08rem;max-width:68ch}
+.muted{color:var(--muted)}
+.small{font-size:.88rem}
+.prose{display:grid;gap:12px;max-width:72ch}
+.prose ul{margin:0;padding-left:1.2em;display:grid;gap:4px}
+.hr{border:0;border-top:1px solid var(--line);margin:0}
+input[type=text],input[type=number],input[type=search],select{font:inherit;font-size:.95rem;padding:7px 9px;border:1px solid var(--line);border-radius:6px;background:var(--panel);color:var(--ink);width:100%}
+input[type=number]{font-family:var(--f-mono);font-size:.9rem}
+label{font-size:.85rem;color:var(--muted);display:grid;gap:3px}
+
+/* Hero (inicio) */
+.hero{display:grid;gap:14px;padding-bottom:22px;border-bottom:3px double var(--line)}
+.hero h1{font-size:clamp(2.2rem,5vw,3.4rem)}
+.hero .tag{font-family:var(--f-mono);font-size:.8rem;color:var(--primer)}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px}
+.stat{border-left:3px solid var(--steel);padding:4px 12px}
+.stat b{display:block;font-family:var(--f-display);font-size:1.9rem;font-variant-numeric:tabular-nums;line-height:1.1}
+.stat span{font-size:.82rem;color:var(--muted)}
+.bar{height:8px;border-radius:99px;background:var(--steel-soft);overflow:hidden}
+.bar i{display:block;height:100%;background:var(--ok)}
+
+/* Module map */
+.mods{display:grid;gap:14px}
+.mod{background:var(--panel);border:1px solid var(--line);border-radius:8px;display:grid;grid-template-columns:72px minmax(0,1fr);overflow:hidden}
+.mod .num{background:var(--steel);color:var(--panel);font-family:var(--f-display);font-size:2rem;display:grid;place-items:center;font-weight:700}
+.mod .body{padding:14px 16px;display:grid;gap:8px;min-width:0}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-family:var(--f-mono);font-size:.8rem;text-decoration:none;border:1px solid var(--line);padding:2px 8px;border-radius:4px;color:var(--ink);background:var(--bg)}
+.chip.done{border-color:var(--ok);color:var(--ok)}
+.chip.pend{border-style:dashed;color:var(--muted)}
+
+/* Clase */
+.cls-head{display:grid;gap:10px;padding-bottom:18px;border-bottom:3px double var(--line)}
+.cls-head .code{font-family:var(--f-mono);color:var(--primer);font-size:.85rem}
+.tabs{display:flex;gap:4px;flex-wrap:wrap;border-bottom:1px solid var(--line)}
+.tabs button{font:inherit;font-family:var(--f-display);font-size:1.05rem;letter-spacing:.03em;background:none;border:0;border-bottom:3px solid transparent;padding:8px 12px;color:var(--muted);cursor:pointer}
+.tabs button.on{color:var(--ink);border-bottom-color:var(--primer)}
+.topic{background:var(--panel);border:1px solid var(--line);border-radius:8px}
+.topic>summary{cursor:pointer;padding:14px 18px;font-family:var(--f-display);font-size:1.2rem;font-weight:600;list-style:none;display:flex;gap:12px;align-items:baseline}
+.topic>summary::-webkit-details-marker{display:none}
+.topic>summary .k{font-family:var(--f-mono);font-size:.8rem;color:var(--primer);flex:none}
+.topic>summary::after{content:"+";margin-left:auto;font-family:var(--f-mono);color:var(--muted)}
+.topic[open]>summary::after{content:"−"}
+.topic .in{padding:0 18px 18px;display:grid;gap:14px}
+.formula{border:1px solid var(--line);border-left:4px solid var(--steel);border-radius:6px;padding:10px 14px;background:var(--code-bg);display:grid;gap:4px;min-width:0}
+.formula .nm{font-size:.82rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.formula .ex{font-family:var(--f-mono);font-size:.95rem;overflow-x:auto;white-space:pre-wrap;word-break:break-word}
+.formula .vr{font-size:.86rem;color:var(--muted)}
+.refs{display:flex;flex-wrap:wrap;gap:6px}
+.example{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:18px;display:grid;gap:12px}
+.steps{counter-reset:s;display:grid;gap:8px;margin:0;padding:0;list-style:none}
+.steps li{counter-increment:s;display:grid;grid-template-columns:28px minmax(0,1fr);gap:10px;align-items:start}
+.steps li::before{content:counter(s);font-family:var(--f-mono);font-size:.8rem;background:var(--steel-soft);color:var(--steel);border-radius:4px;text-align:center;padding:2px 0}
+.steps li.hid{display:none}
+.result{background:var(--ok-soft);color:var(--ink);border-radius:6px;padding:10px 14px;font-weight:500}
+.note{border-left:3px solid var(--warn);background:var(--warn-soft);padding:10px 14px;border-radius:0 6px 6px 0;font-size:.92rem}
+.gl{display:grid;grid-template-columns:minmax(0,220px) minmax(0,1fr);gap:6px 18px}
+.gl dt{font-weight:600}
+.gl dd{margin:0;color:var(--muted)}
+@media (max-width:560px){.gl{grid-template-columns:minmax(0,1fr)}.gl dd{margin-bottom:8px}}
+
+/* Quiz */
+.q{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:16px 18px;display:grid;gap:10px}
+.q .opts{display:grid;gap:6px}
+.q .opt{font:inherit;text-align:left;background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:8px 12px;cursor:pointer;color:var(--ink);display:grid;grid-template-columns:24px minmax(0,1fr);gap:8px}
+.q .opt:hover:not(:disabled){border-color:var(--steel)}
+.q .opt .l{font-family:var(--f-mono);font-weight:600;color:var(--muted)}
+.q .opt.right{background:var(--ok-soft);border-color:var(--ok)}
+.q .opt.wrong{background:var(--bad-soft);border-color:var(--bad)}
+.q .opt:disabled{cursor:default}
+.q .exp{font-size:.92rem;color:var(--muted)}
+
+/* Calculadoras */
+.calc{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:20px;display:grid;gap:16px}
+.fields{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px}
+.out{background:var(--code-bg);border:1px solid var(--line);border-radius:6px;padding:14px;font-family:var(--f-mono);font-size:.88rem;overflow-x:auto;white-space:pre;line-height:1.6}
+.verdict{display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-weight:600}
+.calc-list{display:flex;flex-wrap:wrap;gap:6px}
+table.t{border-collapse:collapse;width:100%;font-size:.9rem}
+table.t th,table.t td{border-bottom:1px solid var(--line);padding:6px 8px;text-align:left;vertical-align:top}
+table.t th{font-family:var(--f-display);font-size:.95rem;letter-spacing:.03em}
+.tscroll{overflow-x:auto}
+mark{background:var(--primer-soft);color:inherit;padding:0 2px;border-radius:2px}
+.search-hit{display:grid;gap:3px;padding:10px 0;border-bottom:1px solid var(--line)}
+.search-hit a{font-weight:600;text-decoration:none}
+</style>
+
+<div class="topbar"><button class="btn sm" id="menuBtn" aria-label="Abrir índice">☰ Índice</button><b>Diseño en Acero</b></div>
+<div class="shell">
+  <nav class="rail" id="rail" aria-label="Índice del curso"></nav>
+  <main class="main"><div class="wrap" id="view"></div></main>
+</div>
+
+<script>
+const CURSO = /*__DATA__*/null;
+</script>
+<script>
+"use strict";
+/* ---------- utilidades ---------- */
+const $ = (s, el=document) => el.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const pad = n => String(n).padStart(2,"0");
+const store = {
+  get(k, d){ try{ const v = localStorage.getItem("acero:"+k); return v==null? d : JSON.parse(v);}catch(e){ return d; } },
+  set(k, v){ try{ localStorage.setItem("acero:"+k, JSON.stringify(v)); }catch(e){} }
+};
+let progress = store.get("progress", {});      // { "05": {done:true, quiz:{ok:8,total:11}} }
+const saveProgress = () => store.set("progress", progress);
+const CLS = CURSO.clases;                        // { "01": {...} }
+const ORDER = CURSO.orden;                       // ["01","02",...]
+const isReady = id => CLS[id] && CLS[id].estado === "ok";
+const fmt = (x, d=2) => (isFinite(x) ? Number(x).toLocaleString("es-PE",{maximumFractionDigits:d, minimumFractionDigits:0}) : "—");
+
+/* ---------- navegación lateral ---------- */
+function renderRail(active){
+  const done = id => progress[id]?.done;
+  let h = `<div class="brand"><b>Diseño en Acero</b><span>${esc(CURSO.meta.profesor)} · ${esc(CURSO.meta.institucion)} · ${esc(CURSO.meta.anio)}</span></div>
+  <div class="nav-main">
+    ${[["inicio","Inicio"],["plan","Plan de estudio"],["calculadoras","Calculadoras AISC"],["formulario","Formulario"],["glosario","Glosario"],["examen","Examen de práctica"],["buscar","Buscar"],["acerca","Acerca del curso"]]
+      .map(([k,t])=>`<a href="#${k}" class="${active===k?"on":""}">${t}</a>`).join("")}
+  </div>`;
+  for(const m of CURSO.modulos){
+    h += `<div class="nav-mod"><span class="eyebrow">Módulo ${m.n} · ${esc(m.corto)}</span><div class="nav-cls">`;
+    for(const id of m.clases){
+      const c = CLS[id];
+      const st = !isReady(id) ? "pend" : done(id) ? "done" : "";
+      h += `<a href="#clase-${id}" class="${active==="clase-"+id?"on":""}"><span class="n">${id}</span><span>${esc(c.corto||c.titulo)}</span><span class="dot ${st}" aria-hidden="true"></span></a>`;
+    }
+    h += `</div></div>`;
+  }
+  $("#rail").innerHTML = h;
+}
+
+/* ---------- vistas ---------- */
+function viewInicio(){
+  const ready = ORDER.filter(isReady);
+  const done = ready.filter(id=>progress[id]?.done).length;
+  const totalQ = ready.reduce((a,id)=>a+(CLS[id].preguntas?.length||0),0);
+  const totalE = ready.reduce((a,id)=>a+(CLS[id].ejemplos?.length||0),0);
+  const pct = ready.length? Math.round(100*done/ready.length):0;
+  const next = ready.find(id=>!progress[id]?.done);
+  return `
+  <section class="hero">
+    <span class="tag">ANSI/AISC 360-16 · LRFD · NTE E.020 / E.030 / E.090</span>
+    <h1>Taller de Diseño en Acero</h1>
+    <p class="lead">Programa de aprendizaje construido a partir de las clases grabadas del curso <b>Diseño en Acero</b> dictado por el ${esc(CURSO.meta.profesor)} (${esc(CURSO.meta.institucion)}, ${esc(CURSO.meta.anio)}). Cada clase se transcribió completa y se reorganizó en teoría, fórmulas, ejemplos resueltos, ejercicios y preguntas de autoevaluación.</p>
+    <div class="row">
+      ${next?`<a class="btn acc" href="#clase-${next}">${done?"Continuar":"Empezar"} con la clase ${next}</a>`:""}
+      <a class="btn" href="#plan">Ver plan de estudio</a>
+      <a class="btn" href="#calculadoras">Abrir calculadoras</a>
+    </div>
+  </section>
+  <section class="stats">
+    <div class="stat"><b>${ready.length}</b><span>clases analizadas de ${ORDER.length}</span></div>
+    <div class="stat"><b>${CURSO.meta.horas}</b><span>horas de clase</span></div>
+    <div class="stat"><b>${totalE}</b><span>ejemplos resueltos</span></div>
+    <div class="stat"><b>${totalQ}</b><span>preguntas de práctica</span></div>
+    <div class="stat"><b>${done}</b><span>clases completadas</span></div>
+  </section>
+  <section class="card" style="display:grid;gap:10px">
+    <div class="row" style="justify-content:space-between"><h3>Tu avance</h3><span class="pill ${pct===100?"ok":""}">${pct}%</span></div>
+    <div class="bar" role="progressbar" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100"><i style="width:${pct}%"></i></div>
+    <p class="small muted">El avance se guarda solo en este navegador. Marca una clase como completada al final de cada lección.</p>
+  </section>
+  <section style="display:grid;gap:14px">
+    <h2>Mapa del curso</h2>
+    ${modMap()}
+  </section>`;
+}
+function modMap(){
+  return `<div class="mods">${CURSO.modulos.map(m=>`
+    <div class="mod"><div class="num">${m.n}</div><div class="body">
+      <h3>${esc(m.titulo)}</h3>
+      <p class="small muted">${esc(m.descripcion)}</p>
+      <div class="chips">${m.clases.map(id=>`<a class="chip ${!isReady(id)?"pend":progress[id]?.done?"done":""}" href="#clase-${id}" title="${esc(CLS[id].titulo)}">Clase ${id}</a>`).join("")}</div>
+    </div></div>`).join("")}</div>`;
+}
+
+function viewPlan(){
+  let h = `<section class="cls-head"><span class="eyebrow">Programa completo</span><h1>Plan de estudio</h1>
+  <p class="lead">${esc(CURSO.meta.plan_intro)}</p></section>`;
+  h += `<section class="card prose"><h3>Cómo estudiar cada clase</h3><ul>
+    ${CURSO.meta.metodo.map(x=>`<li>${esc(x)}</li>`).join("")}</ul></section>`;
+  for(const m of CURSO.modulos){
+    h += `<section style="display:grid;gap:12px"><div><span class="eyebrow">Módulo ${m.n}</span><h2>${esc(m.titulo)}</h2></div>
+      <p class="muted">${esc(m.descripcion)}</p>
+      ${m.competencias?.length?`<div class="card prose"><b>Competencias del módulo</b><ul>${m.competencias.map(c=>`<li>${esc(c)}</li>`).join("")}</ul></div>`:""}
+      <div class="tscroll"><table class="t"><thead><tr><th>Clase</th><th>Tema</th><th>Duración</th><th>Estado</th></tr></thead><tbody>
+      ${m.clases.map(id=>{const c=CLS[id];return `<tr><td class="mono">${id}</td><td><a href="#clase-${id}">${esc(c.titulo)}</a>${c.fecha?`<div class="small muted">${esc(c.fecha)}</div>`:""}</td><td class="mono">${c.duracion_min?c.duracion_min+" min":"—"}</td><td>${!isReady(id)?`<span class="pill warn">${esc(c.estado_txt||"Pendiente")}</span>`:progress[id]?.done?`<span class="pill ok">Completada</span>`:`<span class="pill">Por estudiar</span>`}</td></tr>`}).join("")}
+      </tbody></table></div></section>`;
+  }
+  h += `<section class="card prose"><h3>Evaluación del curso (según la clase 01)</h3><ul>${CURSO.meta.evaluacion.map(x=>`<li>${esc(x)}</li>`).join("")}</ul></section>`;
+  return h;
+}
+
+let clsTab = "teoria";
+function viewClase(id){
+  const c = CLS[id]; if(!c) return `<p>Clase no encontrada.</p>`;
+  const i = ORDER.indexOf(id), prev = ORDER[i-1], next = ORDER[i+1];
+  const mod = CURSO.modulos.find(m=>m.clases.includes(id));
+  const head = `<section class="cls-head">
+    <span class="code">MÓDULO ${mod?.n} · CLASE ${id}${c.fecha?" · "+esc(c.fecha).toUpperCase():""}${c.duracion_min?" · "+c.duracion_min+" MIN":""}</span>
+    <h1>${esc(c.titulo)}</h1>
+    ${c.resumen?`<p class="lead">${esc(c.resumen)}</p>`:""}
+    <div class="row">
+      ${c.video?`<a class="btn" href="${esc(c.video)}" target="_blank" rel="noopener">▶ Ver la clase en YouTube</a>`:""}
+      ${isReady(id)?`<button class="btn ${progress[id]?.done?"":"pri"}" id="doneBtn">${progress[id]?.done?"✓ Completada (desmarcar)":"Marcar como completada"}</button>`:""}
+    </div></section>`;
+  if(!isReady(id)){
+    return head + `<section class="note">${esc(c.estado_txt||"Pendiente")}. ${esc(c.estado_det||"")}</section>` + navPN(prev,next);
+  }
+  const tabs = [["teoria","Teoría"],["ejemplos","Ejemplos ("+(c.ejemplos?.length||0)+")"],["practica","Ejercicios"],["quiz","Autoevaluación ("+(c.preguntas?.length||0)+")"],["glosario","Conceptos"],["notas","Avisos y notas"]];
+  let body = "";
+  if(clsTab==="teoria"){
+    body = `${c.objetivos?.length?`<div class="card prose"><b>Objetivos de aprendizaje</b><ul>${c.objetivos.map(o=>`<li>${esc(o)}</li>`).join("")}</ul></div>`:""}
+    ${c.temas.map((t,k)=>`<details class="topic" ${k===0?"open":""}><summary><span class="k">${id}.${k+1}</span><span>${esc(t.titulo)}</span></summary><div class="in">
+      <div class="prose">${paras(t.contenido)}</div>
+      ${(t.formulas||[]).map(f=>formulaBox(f)).join("")}
+      ${t.referencias_norma?.length?`<div class="refs">${t.referencias_norma.map(r=>`<span class="pill pr">${esc(r)}</span>`).join("")}</div>`:""}
+    </div></details>`).join("")}`;
+  } else if(clsTab==="ejemplos"){
+    body = (c.ejemplos||[]).map((e,k)=>`<article class="example" data-ex="${k}">
+      <span class="eyebrow">Ejemplo ${id}-${k+1}</span><h3>${esc(e.titulo)}</h3>
+      <p>${esc(e.enunciado)}</p>
+      <ol class="steps">${(e.pasos||[]).map((p,j)=>`<li class="${j>0?"hid":""}">${esc(p)}</li>`).join("")}</ol>
+      <div class="row"><button class="btn sm" data-step="${k}">Siguiente paso</button><button class="btn sm" data-all="${k}">Ver solución completa</button></div>
+      <div class="result" hidden data-res="${k}"><b>Resultado:</b> ${esc(e.resultado)}</div>
+    </article>`).join("") || `<p class="muted">Esta clase no tiene ejemplos numéricos.</p>`;
+  } else if(clsTab==="practica"){
+    body = `<div class="card prose"><b>Ejercicios propuestos</b><p class="small muted">Resuélvelos a mano o en tu hoja de cálculo y compara con la calculadora del tema.</p><ol style="display:grid;gap:10px;padding-left:1.2em;margin:0">${(c.ejercicios_propuestos||[]).map(x=>`<li>${esc(x)}</li>`).join("")}</ol></div>
+      ${calcLinksFor(c)}`;
+  } else if(clsTab==="quiz"){
+    body = quizHTML(c.preguntas||[], "cls-"+id);
+  } else if(clsTab==="glosario"){
+    body = `<dl class="gl card">${(c.conceptos_clave||[]).map(g=>`<dt>${esc(g.termino)}</dt><dd>${esc(g.definicion)}</dd>`).join("")}</dl>`;
+  } else {
+    body = `${c.avisos?.length?`<div class="card prose"><b>Avisos del profesor</b><ul>${c.avisos.map(a=>`<li>${esc(a)}</li>`).join("")}</ul></div>`:""}
+      ${c.notas_transcripcion?.length?`<div class="note prose"><b>Notas de revisión de la transcripción</b><p class="small">Puntos donde el audio era dudoso o donde un cálculo dicho en clase no cuadra con la norma, y cómo se interpretaron.</p><ul>${c.notas_transcripcion.map(a=>`<li>${esc(a)}</li>`).join("")}</ul></div>`:""}`;
+  }
+  return head + `<div class="tabs" role="tablist">${tabs.map(([k,t])=>`<button role="tab" data-tab="${k}" class="${clsTab===k?"on":""}" aria-selected="${clsTab===k}">${t}</button>`).join("")}</div>
+    <section style="display:grid;gap:14px">${body}</section>` + navPN(prev,next);
+}
+const paras = t => String(t||"").split(/\n{2,}/).map(p=>`<p>${esc(p)}</p>`).join("");
+const formulaBox = f => `<div class="formula"><span class="nm">${esc(f.nombre)}</span><div class="ex">${esc(f.expresion)}</div>${f.variables?`<div class="vr">${esc(f.variables)}</div>`:""}</div>`;
+function navPN(prev,next){
+  return `<div class="row" style="justify-content:space-between;border-top:1px solid var(--line);padding-top:16px">
+    ${prev?`<a class="btn" href="#clase-${prev}">← Clase ${prev}</a>`:"<span></span>"}
+    ${next?`<a class="btn" href="#clase-${next}">Clase ${next} →</a>`:""}</div>`;
+}
+function calcLinksFor(c){
+  const txt = (c.titulo+" "+c.temas.map(t=>t.titulo).join(" ")).toLowerCase();
+  const hits = CALCS.filter(k=>k.kw.some(w=>txt.includes(w)));
+  if(!hits.length) return "";
+  return `<div class="card" style="display:grid;gap:10px"><b>Calculadoras relacionadas</b><div class="calc-list">${hits.map(k=>`<a class="btn sm" href="#calc-${k.id}">${esc(k.t)}</a>`).join("")}</div></div>`;
+}
+
+/* ---------- quiz ---------- */
+const L = "ABCD";
+function quizHTML(qs, key){
+  if(!qs.length) return `<p class="muted">Sin preguntas.</p>`;
+  return `<div class="row" style="justify-content:space-between"><span class="muted small">Elige una opción; la respuesta se corrige al instante.</span><span class="pill" id="score-${key}">0 / ${qs.length}</span></div>`+
+  qs.map((q,i)=>`<div class="q" data-key="${key}" data-i="${i}" data-c="${q.correcta}">
+    <b>${i+1}. ${esc(q.pregunta)}</b>
+    <div class="opts">${q.opciones.map((o,j)=>`<button class="opt" data-j="${j}"><span class="l">${L[j]}</span><span>${esc(o)}</span></button>`).join("")}</div>
+    <p class="exp" hidden>${esc(q.explicacion)}${q._src?` <a href="#clase-${q._src}">(Clase ${q._src})</a>`:""}</p></div>`).join("") +
+  `<button class="btn" data-reset="${key}">Reiniciar preguntas</button>`;
+}
+function onQuizClick(btn){
+  const q = btn.closest(".q"); if(!q || q.dataset.answered) return;
+  q.dataset.answered = "1";
+  const c = +q.dataset.c, j = +btn.dataset.j;
+  q.querySelectorAll(".opt").forEach((b,k)=>{ b.disabled = true; if(k===c) b.classList.add("right"); });
+  if(j!==c) btn.classList.add("wrong"); else q.dataset.ok = "1";
+  q.querySelector(".exp").hidden = false;
+  const key = q.dataset.key, all = document.querySelectorAll(`.q[data-key="${key}"]`);
+  const ok = [...all].filter(x=>x.dataset.ok).length, ans = [...all].filter(x=>x.dataset.answered).length;
+  const sc = document.getElementById("score-"+key); if(sc) sc.textContent = `${ok} / ${all.length}`;
+  if(ans===all.length && key.startsWith("cls-")){
+    const id = key.slice(4); progress[id] = {...(progress[id]||{}), quiz:{ok,total:all.length}}; saveProgress();
+    sc.className = "pill " + (ok/all.length>=0.7?"ok":"warn");
+  }
+}
+
+/* ---------- formulario y glosario ---------- */
+function viewFormulario(){
+  let h = `<section class="cls-head"><span class="eyebrow">Referencia rápida</span><h1>Formulario</h1><p class="lead">Todas las fórmulas que aparecen en las clases, agrupadas por módulo. Usa el filtro para encontrar una ecuación por nombre o símbolo.</p>
+  <input type="search" id="fq" placeholder="Filtrar: Fcr, Lp, Cb, rezago, filete…" aria-label="Filtrar fórmulas"></section><div id="flist" style="display:grid;gap:22px"></div>`;
+  return h;
+}
+function fillFormulario(q=""){
+  q = q.trim().toLowerCase();
+  let h = "";
+  for(const m of CURSO.modulos){
+    let items = [];
+    for(const id of m.clases){ if(!isReady(id)) continue;
+      for(const t of CLS[id].temas) for(const f of (t.formulas||[])){
+        const s = (f.nombre+" "+f.expresion+" "+(f.variables||"")).toLowerCase();
+        if(!q || s.includes(q)) items.push({f,id});
+      }}
+    if(items.length) h += `<section style="display:grid;gap:10px"><h2>Módulo ${m.n} · ${esc(m.titulo)}</h2>${items.map(({f,id})=>formulaBox({...f,variables:(f.variables||"")+" · Clase "+id})).join("")}</section>`;
+  }
+  $("#flist").innerHTML = h || `<p class="muted">Nada coincide con “${esc(q)}”.</p>`;
+}
+function viewGlosario(){
+  return `<section class="cls-head"><span class="eyebrow">Vocabulario técnico</span><h1>Glosario</h1><p class="lead">Términos y definiciones de todas las clases, en orden alfabético.</p>
+  <input type="search" id="gq" placeholder="Buscar término…" aria-label="Buscar término"></section><dl class="gl card" id="glist"></dl>`;
+}
+function fillGlosario(q=""){
+  q=q.trim().toLowerCase();
+  const seen = new Map();
+  for(const id of ORDER) if(isReady(id)) for(const g of (CLS[id].conceptos_clave||[])){
+    const k = g.termino.toLowerCase(); if(!seen.has(k)) seen.set(k,{...g,id});
+  }
+  const arr=[...seen.values()].filter(g=>!q||(g.termino+" "+g.definicion).toLowerCase().includes(q)).sort((a,b)=>a.termino.localeCompare(b.termino,"es"));
+  $("#glist").innerHTML = arr.map(g=>`<dt>${esc(g.termino)}</dt><dd>${esc(g.definicion)} <a class="small" href="#clase-${g.id}">Clase ${g.id}</a></dd>`).join("") || `<dd class="muted">Sin resultados.</dd>`;
+}
+
+/* ---------- examen ---------- */
+function viewExamen(){
+  const mods = CURSO.modulos.filter(m=>m.clases.some(isReady));
+  return `<section class="cls-head"><span class="eyebrow">Autoevaluación global</span><h1>Examen de práctica</h1>
+  <p class="lead">Genera un examen con preguntas al azar de las clases que elijas. Sirve como repaso antes del parcial (módulos 1 a 3) o del final.</p></section>
+  <div class="card" style="display:grid;gap:12px">
+    <div class="row">${mods.map(m=>`<label style="display:flex;gap:6px;align-items:center;color:var(--ink)"><input type="checkbox" class="exm" value="${m.n}" checked> Módulo ${m.n}</label>`).join("")}</div>
+    <div class="row"><label style="display:flex;gap:8px;align-items:center">N.º de preguntas <input type="number" id="exn" value="20" min="5" max="80" style="width:90px"></label>
+    <button class="btn acc" id="exgo">Generar examen</button></div>
+  </div><section id="exbox" style="display:grid;gap:14px"></section>`;
+}
+function genExamen(){
+  const ms = [...document.querySelectorAll(".exm:checked")].map(x=>+x.value);
+  const n = Math.max(5, Math.min(80, +$("#exn").value||20));
+  let pool=[];
+  for(const m of CURSO.modulos) if(ms.includes(m.n)) for(const id of m.clases) if(isReady(id)) (CLS[id].preguntas||[]).forEach(q=>pool.push({...q,_src:id}));
+  for(let i=pool.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[pool[i],pool[j]]=[pool[j],pool[i]];}
+  $("#exbox").innerHTML = quizHTML(pool.slice(0,n), "exam"+Date.now());
+}
+
+/* ---------- buscador ---------- */
+function viewBuscar(){
+  return `<section class="cls-head"><span class="eyebrow">Todo el curso</span><h1>Buscar</h1><input type="search" id="sq" placeholder="Ej.: rezago de cortante, Cb, pernos A325, flujo de corte…" aria-label="Buscar en el curso"></section><div id="sres"></div>`;
+}
+function doSearch(q){
+  q=q.trim(); if(q.length<3){$("#sres").innerHTML=`<p class="muted">Escribe al menos 3 letras.</p>`;return;}
+  const ql=q.toLowerCase(), out=[];
+  const snip = (t)=>{const i=t.toLowerCase().indexOf(ql); const s=Math.max(0,i-80); return (s?"…":"")+esc(t.slice(s,i))+"<mark>"+esc(t.slice(i,i+q.length))+"</mark>"+esc(t.slice(i+q.length,i+q.length+120))+"…";};
+  for(const id of ORDER){ if(!isReady(id)) continue; const c=CLS[id];
+    c.temas.forEach((t,k)=>{ const tx=t.titulo+". "+t.contenido; if(tx.toLowerCase().includes(ql)) out.push({id,where:`Tema ${id}.${k+1}: ${t.titulo}`,s:snip(tx)}); });
+    (c.ejemplos||[]).forEach((e,k)=>{ const tx=e.titulo+". "+e.enunciado+" "+(e.pasos||[]).join(" "); if(tx.toLowerCase().includes(ql)) out.push({id,where:`Ejemplo ${id}-${k+1}: ${e.titulo}`,s:snip(tx)}); });
+  }
+  $("#sres").innerHTML = `<p class="muted small">${out.length} resultado(s)</p>` + out.slice(0,120).map(r=>`<div class="search-hit"><a href="#clase-${r.id}">${esc(r.where)}</a><span class="small muted">${r.s}</span></div>`).join("");
+}
+
+/* ---------- acerca ---------- */
+function viewAcerca(){
+  const m=CURSO.meta;
+  return `<section class="cls-head"><span class="eyebrow">Fuente y método</span><h1>Acerca del curso</h1></section>
+  <div class="card prose">
+    <p><b>Curso:</b> ${esc(m.curso)} · <b>Docente:</b> ${esc(m.profesor)} · <b>Institución:</b> ${esc(m.institucion)} · <b>Ciclo:</b> ${esc(m.anio)}</p>
+    <p><b>Fuente:</b> <a href="${esc(m.playlist)}" target="_blank" rel="noopener">lista de reproducción en YouTube</a> (${m.videos_playlist} videos, ${m.horas} h).</p>
+    <p><b>Método:</b> ${esc(m.metodo_fuente)}</p>
+    <b>Observaciones sobre la lista de reproducción</b>
+    <ul>${m.observaciones.map(x=>`<li>${esc(x)}</li>`).join("")}</ul>
+    <p><b>Normas de referencia usadas en clase:</b> ${esc(m.normas)}</p>
+    <p class="small muted">Las calculadoras implementan ecuaciones de la especificación ANSI/AISC 360-16 en unidades de kips y pulgadas. Son herramientas de estudio: verifica siempre las propiedades de los perfiles con el Manual AISC o el catálogo del fabricante.</p>
+  </div>`;
+}
+
+/* =================================================================
+   CALCULADORAS (AISC 360-16, unidades kip-in-ksi salvo indicación)
+   ================================================================= */
+const E_DEF = 29000;
+const CALCS = [
+  {id:"combos", t:"Combinaciones de carga", kw:["carga","combin","demanda"]},
+  {id:"viento", t:"Viento E.020", kw:["viento","galp","nave"]},
+  {id:"sismo",  t:"Cortante basal E.030", kw:["sismo","sísm","cortante basal","e.030"]},
+  {id:"traccion", t:"Tracción (Cap. D)", kw:["tracci","área neta","brida inferior"]},
+  {id:"bloque", t:"Bloque de corte (J4.3)", kw:["bloque","tracci","unión","uniones"]},
+  {id:"compresion", t:"Compresión (E3)", kw:["compres","pandeo","euler","columna"]},
+  {id:"flexion", t:"Flexión W (F2/F3)", kw:["flexi","viga","pandeo lateral","compacid","cb"]},
+  {id:"cb", t:"Factor Cb", kw:["cb","pandeo lateral","viga"]},
+  {id:"corte", t:"Corte en almas (G2)", kw:["corte","atiesador","alma"]},
+  {id:"flexocomp", t:"Flexocompresión (H1)", kw:["flexocompres","p-δ","p-delta","columna","h1"]},
+  {id:"pernos", t:"Pernos (J3)", kw:["perno","emperna","unión","uniones"]},
+  {id:"soldadura", t:"Soldadura de filete (J2)", kw:["soldad","filete","unión","uniones"]},
+];
+function num(id){ const v = parseFloat($("#"+id)?.value); return isNaN(v)? NaN : v; }
+function field(id,label,val,step="any"){ return `<label for="${id}">${label}<input type="number" id="${id}" value="${val}" step="${step}"></label>`; }
+function sel(id,label,opts,val){ return `<label for="${id}">${label}<select id="${id}">${opts.map(([v,t])=>`<option value="${v}" ${v==val?"selected":""}>${t}</option>`).join("")}</select></label>`; }
+function verdict(ratio){ const ok = ratio<=1; return `<div class="verdict"><span class="pill ${ok?"ok":"bad"}">${ok?"CUMPLE":"NO CUMPLE"}</span><span>Relación demanda/capacidad = ${fmt(ratio,3)}</span></div>`; }
+
+const SHAPES = { // valores del Manual AISC 15ª ed. (verificar); usados en los ejemplos del Manual
+  "W18x50":{A:14.7,d:18.0,bf:7.50,tf:0.570,tw:0.355,Ix:800,Zx:101,Sx:88.9,rx:7.38,Iy:40.1,ry:1.65,J:1.24,Cw:3040,rts:1.98,ho:17.4},
+  "W14x90":{A:26.5,d:14.0,bf:14.5,tf:0.710,tw:0.440,Ix:999,Zx:157,Sx:143,rx:6.14,Iy:362,ry:3.70,J:4.06,Cw:16000,rts:4.11,ho:13.3},
+  "W12x58":{A:17.0,d:12.2,bf:10.0,tf:0.640,tw:0.360,Ix:475,Zx:86.4,Sx:78.0,rx:5.28,Iy:107,ry:2.51,J:2.10,Cw:3570,rts:2.82,ho:11.6},
+};
+function shapeSel(id){ return sel(id,"Perfil de ejemplo",[["","— ingresar a mano —"],...Object.keys(SHAPES).map(k=>[k,k.replace("x","×")])],""); }
+function applyShape(name, map){ const s=SHAPES[name]; if(!s) return; for(const [k,fid] of Object.entries(map)){ const el=$("#"+fid); if(el && s[k]!=null) el.value=s[k]; } }
+
+const CALC_UI = {
+combos:{ intro:"Combinaciones LRFD de la Norma E.090 tal como se usaron en clase (cargas de servicio en cualquier unidad consistente). Se toma el máximo y el mínimo de todas las combinaciones.",
+  html:()=>`<div class="fields">${field("cD","D muerta",10)}${field("cL","L viva",6)}${field("cLr","Lr viva de techo",1)}${field("cS","S nieve",0)}${field("cW","W viento (±)",3)}${field("cE","E sismo (±)",4)}</div>`,
+  run(){ const D=num("cD"),Lv=num("cL"),Lr=num("cLr"),S=num("cS"),W=num("cW"),E=num("cE"); const r=Math.max(Lr,S);
+    const c=[["1.4D",1.4*D],["1.2D + 1.6L + 0.5(Lr ó S)",1.2*D+1.6*Lv+0.5*r],["1.2D + 1.6(Lr ó S) + 0.5L",1.2*D+1.6*r+0.5*Lv],["1.2D + 1.6(Lr ó S) + 0.8W",1.2*D+1.6*r+0.8*W],["1.2D + 1.3W + 0.5L + 0.5(Lr ó S)",1.2*D+1.3*W+0.5*Lv+0.5*r],["1.2D + 1.0E + 0.5L + 0.2S",1.2*D+E+0.5*Lv+0.2*S],["0.9D − 1.3W",0.9*D-1.3*W],["0.9D − 1.0E",0.9*D-E]];
+    const mx=c.reduce((a,b)=>b[1]>a[1]?b:a), mn=c.reduce((a,b)=>b[1]<a[1]?b:a);
+    return {out:c.map(([n,v])=>n.padEnd(36)+fmt(v,2).padStart(10)).join("\n")+`\n\nMáxima: ${mx[0]} = ${fmt(mx[1],2)}\nMínima: ${mn[0]} = ${fmt(mn[1],2)}  (si es negativa hay inversión de esfuerzos o levantamiento)`}; }},
+viento:{ intro:"Presión de viento según la NTE E.020 (Cap. 12): velocidad de diseño a la altura h y presión exterior o combinada. V en km/h, h en m, presión en kgf/m².",
+  html:()=>`<div class="fields">${field("vV","V (km/h) en h=10 m",75)}${field("vh","h altura (m)",12)}${field("vCe","C exterior",0.8)}${field("vCi","C interior (±0.3)",-0.3)}${field("vA","Área tributaria (m²)",36)}</div>`,
+  run(){ const V=Math.max(75,num("vV")), h=Math.max(10,num("vh")); const Vh=V*Math.pow(h/10,0.22); const C=num("vCe")-num("vCi"); const p=0.005*C*Vh*Vh;
+    return {out:`V usada = ${fmt(V,1)} km/h (mínimo 75 km/h)\nh usada = ${fmt(h,2)} m (por debajo de 10 m se toma 10 m)\nVh = V·(h/10)^0.22 = ${fmt(Vh,2)} km/h\nC = Ce − Ci = ${fmt(C,2)}\nph = 0.005·C·Vh² = ${fmt(p,1)} kgf/m²\nFuerza sobre el área = ${fmt(p*num("vA"),0)} kgf`}; }},
+sismo:{ intro:"Cortante basal estático de la NTE E.030-2018: V = Z·U·C·S/R · P, con C/R ≥ 0.11.",
+  html:()=>`<div class="fields">${sel("sZ","Zona",[["4","Z4 (0.45)"],["3","Z3 (0.35)"],["2","Z2 (0.25)"],["1","Z1 (0.10)"]],4)}${sel("sSu","Suelo",[["0","S0 roca dura"],["1","S1 roca o suelo rígido"],["2","S2 intermedio"],["3","S3 blando"]],1)}${sel("sU","Categoría (U)",[["1.5","A esencial (1.5)"],["1.3","B importante (1.3)"],["1.0","C común (1.0)"]],"1.0")}${field("sR0","R0 del sistema",8)}${field("sIa","Ia",1)}${field("sIp","Ip",1)}${field("sT","T periodo (s)",0.4)}${field("sP","P peso sísmico (t)",500)}</div>
+  <p class="small muted">R0 en acero (Tabla 7): SMF 8, IMF 5, OMF 4, SCBF 7, OCBF 4, EBF 8.</p>`,
+  run(){ const Zt={4:.45,3:.35,2:.25,1:.10}, St={4:[.8,1,1.05,1.1],3:[.8,1,1.15,1.2],2:[.8,1,1.2,1.4],1:[.8,1,1.6,2]}, Tp=[.3,.4,.6,1], TL=[3,2.5,2,1.6];
+    const z=+$("#sZ").value, s=+$("#sSu").value, Z=Zt[z], S=St[z][s], U=num("sU"), R=num("sR0")*num("sIa")*num("sIp"), T=num("sT");
+    let C = T<Tp[s]?2.5 : T<TL[s]? 2.5*Tp[s]/T : 2.5*Tp[s]*TL[s]/(T*T);
+    const CR=Math.max(C/R,0.11); const V=Z*U*CR*S*num("sP");
+    return {out:`Z = ${Z}   S = ${S}   Tp = ${Tp[s]} s   TL = ${TL[s]} s\nU = ${U}   R = R0·Ia·Ip = ${fmt(R,2)}\nC = ${fmt(C,3)}  (T = ${T} s)\nC/R = ${fmt(C/R,4)} → usado ${fmt(CR,4)} (mín. 0.11)\nZUCS/R = ${fmt(Z*U*CR*S,4)}\nV = ${fmt(V,2)} t  (${fmt(100*V/num("sP"),1)} % del peso)`}; }},
+traccion:{ intro:"Miembro en tracción, Capítulo D: fluencia en el área bruta y rotura en el área neta efectiva (Ae = U·An). Opcional: cálculo de An con agujeros en zigzag (s²/4g).",
+  html:()=>`<div class="fields">${field("tFy","Fy (ksi)",36)}${field("tFu","Fu (ksi)",58)}${field("tAg","Ag (in²)",2.86)}${field("tn","N.º agujeros en la línea",1)}${field("tdb","Ø perno (in)",0.75)}${field("tt","Espesor t (in)",0.375)}${field("ts2","Σ s²/4g (in)",0)}${field("tU","U (Tabla D3.1)",0.85)}${field("tPu","Pu (kips)",60)}${field("tL","L (in)",120)}${field("tr","r mín (in)",0.6)}</div>`,
+  run(){ const Fy=num("tFy"),Fu=num("tFu"),Ag=num("tAg"),dh=num("tdb")+0.125; const An=Ag-num("tn")*dh*num("tt")+num("ts2")*num("tt"); const Ae=num("tU")*An;
+    const pY=0.9*Fy*Ag, pR=0.75*Fu*Ae, phi=Math.min(pY,pR), sl=num("tL")/num("tr");
+    return {out:`Ø agujero de cálculo = db + 1/8" = ${fmt(dh,3)} in\nAn = Ag − n·dh·t + Σ(s²/4g)·t = ${fmt(An,3)} in²\nAe = U·An = ${fmt(Ae,3)} in²\n\nFluencia  φPn = 0.90·Fy·Ag = ${fmt(pY,1)} kips\nRotura    φPn = 0.75·Fu·Ae = ${fmt(pR,1)} kips\nGobierna: ${pY<=pR?"fluencia":"rotura"} → φPn = ${fmt(phi,1)} kips\n\nEsbeltez L/r = ${fmt(sl,0)} ${sl<=300?"≤ 300 (recomendado)":"> 300: excede lo recomendado"}`, ratio:num("tPu")/phi}; }},
+bloque:{ intro:"Bloque de corte (J4.3): Rn = 0.6·Fu·Anv + Ubs·Fu·Ant ≤ 0.6·Fy·Agv + Ubs·Fu·Ant, φ = 0.75.",
+  html:()=>`<div class="fields">${field("bFy","Fy (ksi)",36)}${field("bFu","Fu (ksi)",58)}${field("bAgv","Agv (in²)",3.0)}${field("bAnv","Anv (in²)",2.2)}${field("bAnt","Ant (in²)",0.6)}${sel("bU","Ubs",[["1","1.0 (tensión uniforme)"],["0.5","0.5 (no uniforme)"]],"1")}${field("bPu","Pu (kips)",80)}</div>`,
+  run(){ const Fy=num("bFy"),Fu=num("bFu"),U=+$("#bU").value; const a=0.6*Fu*num("bAnv")+U*Fu*num("bAnt"), b=0.6*Fy*num("bAgv")+U*Fu*num("bAnt"); const Rn=Math.min(a,b);
+    return {out:`Rotura por corte + tracción  = ${fmt(a,1)} kips\nFluencia por corte + tracción = ${fmt(b,1)} kips (límite)\nRn = ${fmt(Rn,1)} kips → φRn = 0.75·Rn = ${fmt(0.75*Rn,1)} kips`, ratio:num("bPu")/(0.75*Rn)}; }},
+compresion:{ intro:"Pandeo por flexión de miembros sin elementos esbeltos (E3). Fe = π²E/(KL/r)²; si KL/r ≤ 4.71√(E/Fy) → Fcr = 0.658^(Fy/Fe)·Fy; si no, Fcr = 0.877·Fe. φc = 0.90.",
+  html:()=>`<div class="fields">${field("cFy","Fy (ksi)",36)}${field("cE_","E (ksi)",E_DEF)}${field("cA","Ag (in²)",4.43)}${field("cK","K",1.0)}${field("cLL","L (in)",180)}${field("cr","r (in)",1.46)}${field("cPu","Pu (kips)",80)}</div>`,
+  run(){ const Fy=num("cFy"),E=num("cE_"),sl=num("cK")*num("cLL")/num("cr"); const Fe=Math.PI**2*E/sl**2; const lim=4.71*Math.sqrt(E/Fy);
+    const Fcr= sl<=lim? Math.pow(0.658,Fy/Fe)*Fy : 0.877*Fe; const phi=0.9*Fcr*num("cA");
+    return {out:`KL/r = ${fmt(sl,1)} ${sl>200?"(> 200: se recomienda no superar 200)":""}\nLímite 4.71√(E/Fy) = ${fmt(lim,1)} → pandeo ${sl<=lim?"inelástico":"elástico"}\nFe = π²E/(KL/r)² = ${fmt(Fe,2)} ksi\nFcr = ${fmt(Fcr,2)} ksi\nPn = Fcr·Ag = ${fmt(Fcr*num("cA"),1)} kips\nφcPn = ${fmt(phi,1)} kips\n\nRecuerda: verifica antes que ningún elemento sea esbelto (Tabla B4.1a); si lo es, usa E7.`, ratio:num("cPu")/phi}; }},
+flexion:{ intro:"Perfil I de doble simetría con alma compacta (F2, y F3 si el ala no es compacta). Calcula Lp, Lr y φMn para la longitud no arriostrada Lb y el factor Cb.",
+  html:()=>`<div class="fields">${shapeSel("fShape")}${field("fFy","Fy (ksi)",50)}${field("fE","E (ksi)",E_DEF)}${field("fbf","bf (in)",7.5)}${field("ftf","tf (in)",0.57)}${field("fhtw","h/tw",45.2)}${field("fZx","Zx (in³)",101)}${field("fSx","Sx (in³)",88.9)}${field("fry","ry (in)",1.65)}${field("frts","rts (in)",1.98)}${field("fJ","J (in⁴)",1.24)}${field("fho","ho (in)",17.4)}${field("fLb","Lb (in)",140)}${field("fCb","Cb",1.0)}${field("fMu","Mu (kip·in)",3000)}</div>`,
+  bind(){ $("#fShape").addEventListener("change",e=>{ applyShape(e.target.value,{bf:"fbf",tf:"ftf",Zx:"fZx",Sx:"fSx",ry:"fry",rts:"frts",J:"fJ",ho:"fho"}); const s=SHAPES[e.target.value]; if(s){ $("#fhtw").value=fmt((s.d-2*s.tf)/s.tw,1).replace(",","."); } runCalc("flexion"); }); },
+  run(){ const Fy=num("fFy"),E=num("fE"),Zx=num("fZx"),Sx=num("fSx"),ry=num("fry"),rts=num("frts"),J=num("fJ"),ho=num("fho"),Lb=num("fLb"),Cb=num("fCb");
+    const lf=num("fbf")/(2*num("ftf")), lpf=0.38*Math.sqrt(E/Fy), lrf=1.0*Math.sqrt(E/Fy), lpw=3.76*Math.sqrt(E/Fy);
+    const Mp=Fy*Zx, Lp=1.76*ry*Math.sqrt(E/Fy); const jc=J/(Sx*ho);
+    const Lr=1.95*rts*(E/(0.7*Fy))*Math.sqrt(jc+Math.sqrt(jc*jc+6.76*(0.7*Fy/E)**2));
+    let Mltb, zona;
+    if(Lb<=Lp){Mltb=Mp; zona="Lb ≤ Lp: plastificación, sin pandeo lateral torsional";}
+    else if(Lb<=Lr){Mltb=Math.min(Mp,Cb*(Mp-(Mp-0.7*Fy*Sx)*(Lb-Lp)/(Lr-Lp))); zona="Lp < Lb ≤ Lr: pandeo lateral torsional inelástico (F2-2)";}
+    else {const Fcr=Cb*Math.PI**2*E/(Lb/rts)**2*Math.sqrt(1+0.078*jc*(Lb/rts)**2); Mltb=Math.min(Mp,Fcr*Sx); zona=`Lb > Lr: pandeo lateral torsional elástico, Fcr = ${fmt(Fcr,2)} ksi (F2-3)`;}
+    let Mflb=Mp, ftxt="ala compacta";
+    if(lf>lpf && lf<=lrf){Mflb=Mp-(Mp-0.7*Fy*Sx)*(lf-lpf)/(lrf-lpf); ftxt="ala no compacta (F3-1)";}
+    else if(lf>lrf){ftxt="ala esbelta: usar F3-2 con kc";}
+    const Mn=Math.min(Mltb,Mflb), phi=0.9*Mn;
+    return {out:`Compacidad\n  ala  bf/2tf = ${fmt(lf,2)}  λp = ${fmt(lpf,2)}  λr = ${fmt(lrf,2)} → ${ftxt}\n  alma h/tw = ${num("fhtw")}  λp = ${fmt(lpw,1)} → ${num("fhtw")<=lpw?"alma compacta (F2/F3 aplican)":"alma NO compacta: usar F4/F5"}\n\nMp = Fy·Zx = ${fmt(Mp,0)} kip·in\nLp = 1.76·ry·√(E/Fy) = ${fmt(Lp,1)} in (${fmt(Lp/12,2)} ft)\nLr = ${fmt(Lr,1)} in (${fmt(Lr/12,2)} ft)\n${zona}\nMn (PLT) = ${fmt(Mltb,0)} kip·in\nMn (pandeo local del ala) = ${fmt(Mflb,0)} kip·in\n\nMn = ${fmt(Mn,0)} kip·in → φbMn = 0.90·Mn = ${fmt(phi,0)} kip·in (${fmt(phi/12,1)} kip·ft)`, ratio:num("fMu")/phi}; }},
+cb:{ intro:"Factor de modificación por gradiente de momento (F1-1): Cb = 12.5·Mmax / (2.5·Mmax + 3·MA + 4·MB + 3·MC), con momentos en valor absoluto en el tramo no arriostrado.",
+  html:()=>`<div class="fields">${field("bMmax","|Mmax|",100)}${field("bMA","|MA| (¼)",75)}${field("bMB","|MB| (½)",100)}${field("bMC","|MC| (¾)",75)}</div>`,
+  run(){ const M=num("bMmax"); const cb=12.5*M/(2.5*M+3*num("bMA")+4*num("bMB")+3*num("bMC")); return {out:`Cb = ${fmt(cb,3)}\n\nReferencias: momento uniforme → 1.00; carga uniforme simplemente apoyada sin arriostre intermedio → 1.14; carga puntual al centro → 1.32.`}; }},
+corte:{ intro:"Resistencia al corte del alma sin acción de campo de tensiones (G2.1): Vn = 0.6·Fy·Aw·Cv1, Aw = d·tw.",
+  html:()=>`<div class="fields">${field("vFy","Fy (ksi)",36)}${field("vE","E (ksi)",E_DEF)}${field("vd","d (in)",18)}${field("vtw","tw (in)",0.355)}${field("vh_","h (in)",16.86)}${sel("vRol","Tipo",[["1","Laminado en caliente"],["0","Soldado / armado"]],"1")}${field("va","a separación atiesadores (in, 0 = sin)",0)}${field("vVu","Vu (kips)",100)}</div>`,
+  run(){ const Fy=num("vFy"),E=num("vE"),tw=num("vtw"),h=num("vh_"),d=num("vd"),a=num("va"); const htw=h/tw, Aw=d*tw; const rolled=$("#vRol").value==="1";
+    let kv = (!a || a/h>3)? 5.34 : 5+5/((a/h)**2); let phi=0.9, Cv, txt;
+    if(rolled && htw<=2.24*Math.sqrt(E/Fy)){ phi=1.0; Cv=1; txt="perfil laminado con h/tw ≤ 2.24√(E/Fy): φv = 1.00, Cv1 = 1.0"; }
+    else { const lim=1.10*Math.sqrt(kv*E/Fy); Cv = htw<=lim?1:lim/htw; txt=`kv = ${fmt(kv,2)}; límite 1.10√(kv·E/Fy) = ${fmt(lim,1)} → Cv1 = ${fmt(Cv,3)}`; }
+    const Vn=0.6*Fy*Aw*Cv; const need = htw>2.46*Math.sqrt(E/Fy);
+    return {out:`h/tw = ${fmt(htw,1)}   Aw = d·tw = ${fmt(Aw,2)} in²\n${txt}\nVn = 0.6·Fy·Aw·Cv1 = ${fmt(Vn,1)} kips\nφvVn = ${fmt(phi*Vn,1)} kips\n\n${need?"h/tw > 2.46√(E/Fy): se requieren atiesadores transversales (G2.3)":"h/tw ≤ 2.46√(E/Fy): no se requieren atiesadores transversales"}`, ratio:num("vVu")/(phi*Vn)}; }},
+flexocomp:{ intro:"Interacción de flexión y fuerza axial (H1.1) con amplificación de primer orden B1 (Apéndice 8). Pc = φcPn y Mc = φbMn salen de las calculadoras de compresión y flexión.",
+  html:()=>`<div class="fields">${field("hPr","Pr = Pu (kips)",150)}${field("hPc","Pc = φcPn (kips)",400)}${field("hMx","Mrx 1er orden (kip·in)",1200)}${field("hMcx","Mcx = φbMnx (kip·in)",3000)}${field("hMy","Mry (kip·in)",0)}${field("hMcy","Mcy (kip·in)",1000)}${field("hM1","M1/M2 (curvatura doble +)",0)}${field("hPe1","Pe1 = π²EI/(K1L)² (kips)",2500)}</div>`,
+  run(){ const Pr=num("hPr"),Pc=num("hPc"); const Cm=0.6-0.4*num("hM1"); const B1=Math.max(1,Cm/(1-Pr/num("hPe1"))); const Mrx=B1*num("hMx"), Mry=num("hMy");
+    const m = Mrx/num("hMcx") + (num("hMcy")? Mry/num("hMcy"):0); const pr=Pr/Pc; let val, eq;
+    if(pr>=0.2){ val=pr+8/9*m; eq="H1-1a: Pr/Pc + 8/9·(Mrx/Mcx + Mry/Mcy)"; } else { val=pr/2+m; eq="H1-1b: Pr/(2Pc) + (Mrx/Mcx + Mry/Mcy)"; }
+    return {out:`Cm = 0.6 − 0.4·(M1/M2) = ${fmt(Cm,3)}\nB1 = Cm/(1 − Pr/Pe1) = ${fmt(B1,3)}\nMrx amplificado = ${fmt(Mrx,0)} kip·in\nPr/Pc = ${fmt(pr,3)} → ${eq}\nValor = ${fmt(val,3)}`, ratio:val}; }},
+pernos:{ intro:"Pernos en conexiones de aplastamiento (J3.6 y J3.10): corte del perno φRn = 0.75·Fnv·Ab por plano y aplastamiento/desgarre del agujero con deformación considerada.",
+  html:()=>`<div class="fields">${sel("pG","Perno y rosca",[["54","A325 rosca incluida (N) 54 ksi"],["68","A325 rosca excluida (X) 68 ksi"],["68b","A490 rosca incluida (N) 68 ksi"],["84","A490 rosca excluida (X) 84 ksi"],["27","A307 27 ksi"]],"54")}${field("pd","Ø perno (in)",0.75)}${field("pn","N.º pernos",4)}${field("pm","Planos de corte",1)}${field("pt","t plancha crítica (in)",0.375)}${field("pFu","Fu plancha (ksi)",58)}${field("plc","lc libre (in)",1.0)}${field("pRu","Ru total (kips)",60)}</div>`,
+  run(){ const Fnv=parseFloat($("#pG").value), d=num("pd"), Ab=Math.PI*d*d/4, n=num("pn"); const shear=0.75*Fnv*Ab*num("pm"); const t=num("pt"),Fu=num("pFu");
+    const br=0.75*Math.min(1.2*num("plc")*t*Fu, 2.4*d*t*Fu); const per=Math.min(shear,br);
+    return {out:`Ab = πd²/4 = ${fmt(Ab,3)} in²\nCorte por perno φRn = 0.75·${Fnv}·Ab·m = ${fmt(shear,2)} kips\nAplastamiento/desgarre por perno φRn = 0.75·min(1.2·lc·t·Fu ; 2.4·d·t·Fu) = ${fmt(br,2)} kips\nGobierna ${shear<=br?"corte del perno":"aplastamiento/desgarre"}: ${fmt(per,2)} kips/perno\nCapacidad del grupo = ${fmt(per*n,1)} kips\n\nEspaciamiento mínimo 2⅔·d (preferible 3d = ${fmt(3*d,2)} in).`, ratio:num("pRu")/(per*n)}; }},
+soldadura:{ intro:"Soldadura de filete (J2.4): φRn = 0.75·0.60·FEXX·(0.707·w)·L. Incluye tamaños mínimo (Tabla J2.4) y máximo en bordes.",
+  html:()=>`<div class="fields">${field("wF","FEXX (ksi)",70)}${field("ww","w tamaño (in)",0.25)}${field("wL","L total (in)",16)}${field("wt","t de la parte más delgada (in)",0.3125)}${field("wRu","Ru (kips)",80)}</div>`,
+  run(){ const F=num("wF"),w=num("ww"),t=num("wt"); const q=0.75*0.6*F*0.707*w; const R=q*num("wL");
+    const wmin = t<=0.25?0.125: t<=0.5?0.1875: t<=0.75?0.25:0.3125; const wmax = t<0.25? t : t-0.0625;
+    return {out:`Garganta efectiva = 0.707·w = ${fmt(0.707*w,4)} in\nResistencia por pulgada = ${fmt(q,3)} kips/in  (${fmt(q/(w*16),3)} kips/in por 1/16")\nφRn = ${fmt(R,1)} kips\n\nTamaño mínimo (Tabla J2.4) = ${fmt(wmin*16,0)}/16 in   ${w>=wmin?"✓":"✗ aumenta w"}\nTamaño máximo en borde = ${fmt(wmax,4)} in   ${w<=wmax+1e-9?"✓":"✗ reduce w"}\nRecuerda revisar también el metal base (J4).`, ratio:num("wRu")/R}; }},
+};
+function viewCalcs(sub){
+  const k = CALCS.find(x=>x.id===sub) || CALCS[0];
+  const ui = CALC_UI[k.id];
+  return `<section class="cls-head"><span class="eyebrow">Herramientas</span><h1>Calculadoras AISC</h1>
+    <p class="lead">Verifica tus ejercicios con las mismas ecuaciones del curso. Unidades: kips, pulgadas y ksi (excepto viento y sismo).</p>
+    <div class="calc-list">${CALCS.map(c=>`<a class="btn sm ${c.id===k.id?"pri":""}" href="#calc-${c.id}">${esc(c.t)}</a>`).join("")}</div></section>
+  <section class="calc"><h2>${esc(k.t)}</h2><p class="muted">${esc(ui.intro)}</p>${ui.html()}
+    <div id="calcVerdict"></div><div class="out" id="calcOut"></div></section>`;
+}
+function runCalc(id){
+  try{ const r = CALC_UI[id].run(); $("#calcOut").textContent = r.out; $("#calcVerdict").innerHTML = r.ratio!=null && isFinite(r.ratio) ? verdict(r.ratio) : ""; }
+  catch(e){ $("#calcOut").textContent = "Revisa los datos: " + e.message; }
+}
+
+/* ---------- router ---------- */
+let current = "";
+function route(){
+  const h = (location.hash||"#inicio").slice(1) || "inicio";
+  if(h!==current && !h.startsWith("clase-")) clsTab="teoria";
+  if(h.startsWith("clase-") && !current.startsWith(h)) clsTab = current===h? clsTab : "teoria";
+  current = h;
+  let html, after=null, active=h;
+  if(h==="inicio") html=viewInicio();
+  else if(h==="plan") html=viewPlan();
+  else if(h==="formulario"){ html=viewFormulario(); after=()=>{fillFormulario(); $("#fq").addEventListener("input",e=>fillFormulario(e.target.value));}; }
+  else if(h==="glosario"){ html=viewGlosario(); after=()=>{fillGlosario(); $("#gq").addEventListener("input",e=>fillGlosario(e.target.value));}; }
+  else if(h==="examen"){ html=viewExamen(); after=()=>$("#exgo").addEventListener("click",genExamen); }
+  else if(h==="buscar"){ html=viewBuscar(); after=()=>{ const i=$("#sq"); i.focus(); i.addEventListener("input",e=>doSearch(e.target.value)); }; }
+  else if(h==="acerca") html=viewAcerca();
+  else if(h==="calculadoras"||h.startsWith("calc-")){ const sub=h.startsWith("calc-")?h.slice(5):CALCS[0].id; active="calculadoras"; html=viewCalcs(sub);
+    after=()=>{ const ui=CALC_UI[sub]||CALC_UI[CALCS[0].id]; const id=CALC_UI[sub]?sub:CALCS[0].id; ui.bind&&ui.bind(); document.querySelectorAll(".calc input,.calc select").forEach(el=>el.addEventListener("input",()=>runCalc(id))); runCalc(id); }; }
+  else if(h.startsWith("clase-")) html=viewClase(h.slice(6));
+  else html=viewInicio();
+  $("#view").innerHTML = html; renderRail(active); $("#rail").classList.remove("open");
+  after&&after();
+  window.scrollTo(0,0);
+}
+document.addEventListener("click", e=>{
+  const t = e.target.closest("button"); if(!t) return;
+  if(t.classList.contains("opt")) return onQuizClick(t);
+  if(t.dataset.tab){ clsTab=t.dataset.tab; const y=window.scrollY; $("#view").innerHTML=viewClase(current.slice(6)); window.scrollTo(0,Math.min(y,$(".tabs").offsetTop-10)); return; }
+  if(t.dataset.step!=null){ const ex=t.closest(".example"); const h=ex.querySelector(".steps li.hid"); if(h) h.classList.remove("hid"); if(!ex.querySelector(".steps li.hid")){ ex.querySelector(".result").hidden=false; t.disabled=true; } return; }
+  if(t.dataset.all!=null){ const ex=t.closest(".example"); ex.querySelectorAll(".steps li").forEach(li=>li.classList.remove("hid")); ex.querySelector(".result").hidden=false; return; }
+  if(t.dataset.reset){ const id=current.slice(6); if(current.startsWith("clase-")) $("#view").innerHTML=viewClase(id); else genExamen(); return; }
+  if(t.id==="doneBtn"){ const id=current.slice(6); progress[id]={...(progress[id]||{}),done:!progress[id]?.done}; saveProgress(); $("#view").innerHTML=viewClase(id); renderRail(current); return; }
+  if(t.id==="menuBtn"){ $("#rail").classList.toggle("open"); return; }
+});
+document.addEventListener("keydown", e=>{ if(e.key==="Escape") $("#rail").classList.remove("open"); });
+window.addEventListener("hashchange", route);
+route();
+</script>
