@@ -14,3 +14,13 @@ Here are some ideas to get you started:
 - 😄 Pronouns: ...
 - ⚡ Fun fact: ...
 -->
+
+## Dashboard: Ley General de Contrataciones Públicas (Ley N.° 32069)
+
+Abre [`dashboard-ley-contrataciones-publicas.html`](dashboard-ley-contrataciones-publicas.html) en cualquier navegador. Es un archivo único, no necesita instalación y funciona sin conexión (salvo la fuente tipográfica y los enlaces externos).
+
+Incluye:
+- 9 capítulos que siguen la estructura de la Ley 32069 y su Reglamento (D.S. 009-2025-EF, modificado por el D.S. 001-2026-EF).
+- En cada capítulo: explicación, ejemplos y casos prácticos, preguntas con retroalimentación, tarjetas de reforzamiento, preguntas de verdadero/falso y enlaces a videos y normas oficiales.
+- Simuladores: selector de procedimiento, penalidad por mora, apelación, adicionales, garantía y multa (con la UIT 2026 de S/ 5,500).
+- Examen final con preguntas aleatorias y registro de avance.

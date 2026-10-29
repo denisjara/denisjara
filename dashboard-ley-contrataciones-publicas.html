@@ -1,0 +1,1308 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Contrataciones Públicas Perú</title>
+<meta name="description" content="Dashboard de estudio de la Ley N.° 32069, Ley General de Contrataciones Públicas, y su Reglamento (D.S. 009-2025-EF), con explicaciones, ejemplos, casos prácticos, preguntas, reforzamiento, calculadoras y recursos.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f4f6fb; --surface:#ffffff; --surface-2:#eef2f9; --border:#dde3ee;
+  --text:#1b2333; --muted:#5d6880; --primary:#c8102e; --primary-soft:#fde8eb;
+  --accent:#1f5fbf; --accent-soft:#e5eefc; --ok:#1e8e5a; --ok-soft:#e3f5ec;
+  --warn:#b7791f; --warn-soft:#fff4dd; --bad:#c53030; --bad-soft:#fde7e7;
+  --shadow:0 2px 10px rgba(20,30,60,.07); --radius:14px;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0f1420; --surface:#171e2d; --surface-2:#1f2839; --border:#2c374c;
+    --text:#e6ebf5; --muted:#9aa6bd; --primary:#ff5a6e; --primary-soft:#3a1d25;
+    --accent:#6ea8ff; --accent-soft:#1c2b47; --ok:#4cc38a; --ok-soft:#173326;
+    --warn:#f0b54a; --warn-soft:#3a2e14; --bad:#ff6b6b; --bad-soft:#3a1c1c;
+    --shadow:0 2px 12px rgba(0,0,0,.35);
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0f1420; --surface:#171e2d; --surface-2:#1f2839; --border:#2c374c;
+  --text:#e6ebf5; --muted:#9aa6bd; --primary:#ff5a6e; --primary-soft:#3a1d25;
+  --accent:#6ea8ff; --accent-soft:#1c2b47; --ok:#4cc38a; --ok-soft:#173326;
+  --warn:#f0b54a; --warn-soft:#3a2e14; --bad:#ff6b6b; --bad-soft:#3a1c1c;
+  --shadow:0 2px 12px rgba(0,0,0,.35);
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--text);line-height:1.6;font-size:15.5px}
+a{color:var(--accent)}
+.app{display:flex;min-height:100vh}
+/* Sidebar */
+.sidebar{width:290px;flex-shrink:0;background:var(--surface);border-right:1px solid var(--border);position:sticky;top:0;height:100vh;overflow-y:auto;padding:18px 14px;transition:transform .25s}
+.brand{display:flex;gap:10px;align-items:center;margin-bottom:14px}
+.brand .logo{width:42px;height:42px;border-radius:11px;background:linear-gradient(135deg,var(--primary),#8a0b20);color:#fff;display:grid;place-items:center;font-weight:800;font-size:18px}
+.brand h1{font-size:15px;margin:0;line-height:1.25}
+.brand small{color:var(--muted);font-size:12px}
+.search{width:100%;padding:9px 12px;border-radius:10px;border:1px solid var(--border);background:var(--surface-2);color:var(--text);font:inherit;font-size:14px;margin-bottom:10px}
+.nav-group{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:14px 6px 6px;font-weight:700}
+.nav a{display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:9px;text-decoration:none;color:var(--text);font-size:14px;margin-bottom:2px}
+.nav a:hover{background:var(--surface-2)}
+.nav a.active{background:var(--primary-soft);color:var(--primary);font-weight:600}
+.nav a .num{width:24px;height:24px;border-radius:7px;background:var(--surface-2);display:grid;place-items:center;font-size:12px;font-weight:700;flex-shrink:0}
+.nav a.active .num{background:var(--primary);color:#fff}
+.nav a .done{margin-left:auto;color:var(--ok);font-size:13px}
+/* Main */
+.main{flex:1;min-width:0}
+.topbar{position:sticky;top:0;z-index:20;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(8px);border-bottom:1px solid var(--border);padding:10px 24px;display:flex;align-items:center;gap:14px}
+.menu-btn{display:none;border:1px solid var(--border);background:var(--surface);color:var(--text);border-radius:9px;padding:6px 10px;font-size:18px;cursor:pointer}
+.progress-wrap{flex:1;max-width:420px}
+.progress-label{font-size:12px;color:var(--muted);display:flex;justify-content:space-between}
+.progress{height:8px;background:var(--surface-2);border-radius:99px;overflow:hidden;margin-top:3px}
+.progress>div{height:100%;background:linear-gradient(90deg,var(--accent),var(--ok));width:0;transition:width .5s}
+.icon-btn{border:1px solid var(--border);background:var(--surface);color:var(--text);border-radius:9px;padding:7px 11px;cursor:pointer;font:inherit;font-size:13px}
+.content{max-width:1080px;margin:0 auto;padding:26px 24px 80px}
+.hero{background:linear-gradient(135deg,var(--primary) 0%,#7d0a1d 60%,#3d0710 100%);color:#fff;border-radius:20px;padding:28px;position:relative;overflow:hidden;box-shadow:var(--shadow)}
+.hero h2{margin:0 0 6px;font-size:26px;line-height:1.2}
+.hero p{margin:0;opacity:.92;max-width:720px}
+.hero .chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+.hero .chip{background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.25);padding:4px 11px;border-radius:99px;font-size:12.5px}
+.module-head{display:flex;gap:14px;align-items:flex-start;margin-bottom:16px}
+.module-head .badge{background:var(--primary);color:#fff;border-radius:12px;min-width:48px;height:48px;display:grid;place-items:center;font-weight:800;font-size:18px}
+.module-head h2{margin:0;font-size:24px;line-height:1.25}
+.module-head .ref{color:var(--muted);font-size:13.5px}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0 18px;border-bottom:1px solid var(--border);padding-bottom:8px}
+.tab{border:1px solid var(--border);background:var(--surface);color:var(--text);padding:8px 13px;border-radius:10px;cursor:pointer;font:inherit;font-size:14px;font-weight:500}
+.tab.active{background:var(--accent);border-color:var(--accent);color:#fff}
+.grid{display:grid;gap:14px}
+.g2{grid-template-columns:repeat(auto-fit,minmax(280px,1fr))}
+.g3{grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
+.g4{grid-template-columns:repeat(auto-fit,minmax(170px,1fr))}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px;box-shadow:var(--shadow)}
+.card h3{margin:0 0 8px;font-size:17px}
+.card h4{margin:12px 0 6px;font-size:15px}
+.card p{margin:6px 0}
+.card ul,.card ol{margin:6px 0;padding-left:20px}
+.card li{margin:3px 0}
+.kpi{text-align:left}
+.kpi .v{font-size:24px;font-weight:800;color:var(--primary);line-height:1.1}
+.kpi .l{font-size:13px;color:var(--muted)}
+.box{border-radius:12px;padding:14px 16px;margin:12px 0;border-left:5px solid}
+.box.ej{background:var(--accent-soft);border-color:var(--accent)}
+.box.caso{background:var(--warn-soft);border-color:var(--warn)}
+.box.ok{background:var(--ok-soft);border-color:var(--ok)}
+.box.alerta{background:var(--bad-soft);border-color:var(--bad)}
+.box .t{font-weight:700;margin-bottom:4px;display:block}
+.tag{display:inline-block;font-size:11.5px;font-weight:700;padding:2px 8px;border-radius:99px;background:var(--surface-2);color:var(--muted);margin-right:4px}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{border-bottom:1px solid var(--border);padding:9px 8px;text-align:left;vertical-align:top}
+th{background:var(--surface-2);font-weight:700}
+.table-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:12px}
+details{border:1px solid var(--border);border-radius:12px;padding:10px 14px;margin:8px 0;background:var(--surface)}
+details summary{cursor:pointer;font-weight:600}
+details[open] summary{margin-bottom:6px}
+/* Quiz */
+.q{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:12px}
+.q .qt{font-weight:600;margin-bottom:10px}
+.opt{display:block;width:100%;text-align:left;border:1px solid var(--border);background:var(--surface-2);color:var(--text);padding:10px 12px;border-radius:10px;margin:6px 0;cursor:pointer;font:inherit;font-size:14.5px}
+.opt:hover:not([disabled]){border-color:var(--accent)}
+.opt.correct{background:var(--ok-soft);border-color:var(--ok)}
+.opt.wrong{background:var(--bad-soft);border-color:var(--bad)}
+.opt[disabled]{cursor:default}
+.fb{display:none;margin-top:8px;font-size:14px;padding:10px 12px;border-radius:10px;background:var(--surface-2)}
+.fb.show{display:block}
+.score{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:10px 0 16px}
+.btn{border:none;background:var(--primary);color:#fff;padding:9px 16px;border-radius:10px;cursor:pointer;font:inherit;font-weight:600;font-size:14px}
+.btn.sec{background:var(--surface-2);color:var(--text);border:1px solid var(--border)}
+/* Flashcards */
+.flash{perspective:900px;height:180px;cursor:pointer}
+.flash .inner{position:relative;width:100%;height:100%;transition:transform .55s;transform-style:preserve-3d}
+.flash.flipped .inner{transform:rotateY(180deg)}
+.flash .face{position:absolute;inset:0;backface-visibility:hidden;border-radius:14px;padding:16px;display:flex;align-items:center;justify-content:center;text-align:center;border:1px solid var(--border);font-size:14.5px;overflow:auto}
+.flash .front{background:var(--surface);font-weight:600}
+.flash .back{background:var(--accent-soft);transform:rotateY(180deg)}
+.flash .front::after{content:"toca para voltear ↻";position:absolute;bottom:8px;font-size:11px;color:var(--muted);font-weight:400}
+/* Links */
+.res{display:flex;gap:12px;align-items:flex-start;text-decoration:none;color:var(--text);background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px 14px;transition:transform .15s,border-color .15s}
+.res:hover{transform:translateY(-2px);border-color:var(--accent)}
+.res .ic{font-size:22px;line-height:1}
+.res b{display:block;font-size:14.5px}
+.res span{font-size:12.5px;color:var(--muted)}
+/* Animations */
+.flow{display:flex;align-items:stretch;gap:0;position:relative;margin:10px 0}
+.flow .ph{flex:1;background:var(--surface-2);border:1px solid var(--border);padding:14px;border-radius:12px;text-align:center;position:relative;z-index:1;transition:all .4s}
+.flow .ph.on{background:var(--primary);color:#fff;transform:translateY(-4px);box-shadow:0 8px 20px rgba(200,16,46,.3)}
+.flow .arrow{width:34px;display:grid;place-items:center;color:var(--muted);font-size:20px}
+.flow .ph b{display:block;font-size:15px}
+.flow .ph small{font-size:12px;opacity:.85}
+.steps{position:relative;padding-left:26px;margin:8px 0}
+.steps::before{content:"";position:absolute;left:9px;top:4px;bottom:4px;width:3px;background:var(--border);border-radius:3px}
+.step{position:relative;margin:10px 0;padding:10px 14px;background:var(--surface-2);border-radius:10px;border:1px solid var(--border);opacity:.45;transition:all .35s}
+.step::before{content:"";position:absolute;left:-23px;top:14px;width:13px;height:13px;border-radius:50%;background:var(--border);border:3px solid var(--surface)}
+.step.on{opacity:1;border-color:var(--accent);background:var(--accent-soft)}
+.step.on::before{background:var(--accent)}
+.pulse{animation:pulse 1.6s infinite}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(31,95,191,.35)}50%{box-shadow:0 0 0 8px rgba(31,95,191,0)}}
+.meter{height:22px;background:var(--surface-2);border-radius:99px;overflow:hidden;position:relative;border:1px solid var(--border)}
+.meter>div{height:100%;transition:width .5s,background .5s}
+.meter span{position:absolute;inset:0;display:grid;place-items:center;font-size:12px;font-weight:700}
+label.f{display:block;font-size:13px;font-weight:600;margin:10px 0 4px;color:var(--muted)}
+input.in,select.in{width:100%;padding:9px 11px;border-radius:10px;border:1px solid var(--border);background:var(--surface-2);color:var(--text);font:inherit;font-size:14.5px}
+.result{margin-top:12px;padding:14px;border-radius:12px;background:var(--surface-2);border:1px dashed var(--border);font-size:14.5px}
+.result .big{font-size:22px;font-weight:800;color:var(--primary)}
+.fade{animation:fade .35s ease}
+@keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.foot{margin-top:40px;font-size:12.5px;color:var(--muted);border-top:1px solid var(--border);padding-top:14px}
+.overlay{display:none}
+@media (max-width:900px){
+  .sidebar{position:fixed;z-index:50;left:0;top:0;transform:translateX(-100%);box-shadow:var(--shadow)}
+  .sidebar.open{transform:none}
+  .overlay.show{display:block;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:40}
+  .menu-btn{display:block}
+  .content{padding:18px 16px 70px}
+  .topbar{padding:10px 16px}
+  .flow{flex-direction:column}
+  .flow .arrow{width:auto;height:26px;transform:rotate(90deg)}
+  .hero{padding:20px}
+  .hero h2{font-size:21px}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar" id="sidebar">
+    <div class="brand">
+      <div class="logo">LCP</div>
+      <div><h1>Ley General de Contrataciones Públicas</h1><small>Ley N.° 32069 · D.S. 009-2025-EF</small></div>
+    </div>
+    <input class="search" id="search" placeholder="🔎 Buscar tema (ej. penalidad, JPRD)…">
+    <nav class="nav" id="nav"></nav>
+  </aside>
+  <div class="overlay" id="overlay"></div>
+  <main class="main">
+    <div class="topbar">
+      <button class="menu-btn" id="menuBtn" aria-label="Abrir menú">☰</button>
+      <div class="progress-wrap">
+        <div class="progress-label"><span>Tu avance</span><span id="progTxt">0%</span></div>
+        <div class="progress"><div id="progBar"></div></div>
+      </div>
+      <button class="icon-btn" id="themeBtn" title="Cambiar tema">🌓 Tema</button>
+    </div>
+    <div class="content" id="content"></div>
+  </main>
+</div>
+
+<script>
+/* =========================================================
+   DATOS CLAVE 2026
+   ========================================================= */
+const UIT = 5500; // D.S. 301-2025-EF
+const soles = n => "S/ " + Number(n).toLocaleString("es-PE",{minimumFractionDigits:2,maximumFractionDigits:2});
+const yt = q => "https://www.youtube.com/results?search_query=" + encodeURIComponent(q);
+
+const LINKS = {
+  ley: "https://leyes.congreso.gob.pe/Documentos/2021_2026/ADLP/Texto_Consolidado/32069-TXM.pdf",
+  oeceCol: "https://www.gob.pe/institucion/oece/colecciones/45029-ley-n-32069-ley-general-de-contrataciones-publicas-y-su-reglamento",
+  oece: "https://www.gob.pe/oece",
+  peruCompras: "https://www.gob.pe/perucompras",
+  catalogos: "https://www.catalogos.perucompras.gob.pe/",
+  seace: "https://prod2.seace.gob.pe/seacebus-uiwd-pub/buscadorPublico/buscadorPublico.xhtml",
+  rnp: "https://www.rnp.gob.pe/",
+  peruano: "https://diariooficial.elperuano.pe/",
+  mef: "https://www.gob.pe/mef",
+  cgr: "https://www.gob.pe/contraloria",
+  minjus: "https://www.gob.pe/minjus"
+};
+
+/* =========================================================
+   MÓDULOS
+   ========================================================= */
+const MODULES = [
+/* ---------------------------------------------------- 1 */
+{
+ id:"m1", num:"1", group:"Título I", title:"Disposiciones generales: objeto, ámbito y principios",
+ ref:"Arts. 1 al 8 de la Ley N.° 32069",
+ explain:`
+ <div class="grid g2">
+  <div class="card"><h3>🎯 Objeto y finalidad</h3>
+   <p>La Ley establece el marco para que el Estado <b>compre bienes, contrate servicios y ejecute obras</b> de forma <b>eficiente, oportuna y transparente</b>, maximizando el <b>valor por dinero</b> de los recursos públicos.</p>
+   <p>En palabras simples: <i>que el Estado compre bien, rápido y sin corrupción, pensando en el ciudadano</i>.</p>
+  </div>
+  <div class="card"><h3>🗺️ Ámbito de aplicación (Art. 3)</h3>
+   <p>Se aplica a toda contratación de bienes, servicios y obras <b>siempre que la entidad pague con fondos públicos</b>. Incluye ministerios, gobiernos regionales y locales, organismos públicos, universidades públicas, empresas del Estado, programas, proyectos, Fuerzas Armadas, PNP, etc.</p>
+   <p><b>Los contratos menores (≤ 8 UIT) también se rigen por esta ley.</b></p>
+  </div>
+ </div>
+ <div class="card" style="margin-top:14px"><h3>⚖️ Los 15 principios rectores (Art. 5)</h3>
+  <p>Sirven para <b>interpretar</b> la ley, <b>llenar vacíos</b> y como <b>parámetro de actuación</b> de todos los actores.</p>
+  <div class="table-wrap"><table>
+   <tr><th>Principio</th><th>¿Qué significa en la práctica?</th></tr>
+   <tr><td><b>a) Legalidad</b></td><td>Actuar según la Constitución, la Ley y dentro de las facultades atribuidas.</td></tr>
+   <tr><td><b>b) Eficacia y eficiencia</b></td><td>Priorizar el fin público sobre formalidades no esenciales.</td></tr>
+   <tr><td><b>c) Valor por dinero</b></td><td>No comprar solo lo más barato: considerar calidad, sostenibilidad, costos y plazos.</td></tr>
+   <tr><td><b>d) Integridad</b></td><td>Honestidad, veracidad; evitar y denunciar prácticas corruptas.</td></tr>
+   <tr><td><b>e) Presunción de veracidad</b></td><td>Se presume que los documentos presentados son verdaderos (admite prueba en contrario).</td></tr>
+   <tr><td><b>f) Causalidad</b></td><td>Responde quien realiza la conducta; nadie es sancionado por hecho ajeno.</td></tr>
+   <tr><td><b>g) Publicidad</b></td><td>Difundir los procesos para promover concurrencia y facilitar el control.</td></tr>
+   <tr><td><b>h) Libertad de concurrencia</b></td><td>Libre acceso de proveedores; evitar exigencias innecesarias.</td></tr>
+   <tr><td><b>i) Transparencia y facilidad de uso</b></td><td>Reglas claras; plataformas sencillas y accesibles.</td></tr>
+   <tr><td><b>j) Competencia</b></td><td>Condiciones de competencia efectiva; prohibidas las prácticas restrictivas.</td></tr>
+   <tr><td><b>k) Igualdad de trato</b></td><td>Mismas oportunidades; sin privilegios ni discriminación.</td></tr>
+   <tr><td><b>l) Equidad y colaboración</b></td><td>Equilibrio entre derechos y obligaciones; colaborar para lograr la finalidad.</td></tr>
+   <tr><td><b>m) Sostenibilidad</b></td><td>Considerar aspectos económicos, sociales y ambientales.</td></tr>
+   <tr><td><b>n) Innovación</b></td><td>Promover soluciones nuevas o la mejora de las existentes.</td></tr>
+   <tr><td><b>o) Vigencia tecnológica</b></td><td>Adquirir con calidad y modernidad; prever repotenciación.</td></tr>
+  </table></div>
+ </div>
+ <div class="grid g2" style="margin-top:14px">
+  <div class="card"><h3>🧭 Los 5 enfoques (Art. 6)</h3>
+   <ol><li><b>Integridad</b> – pactos de integridad, gestión de conflictos de intereses.</li>
+   <li><b>Gestión por resultados</b> – vincular el gasto con resultados medibles.</li>
+   <li><b>Gestión de riesgos</b> – identificar, analizar y tratar riesgos en todas las fases.</li>
+   <li><b>Gobernanza</b> – gestión ordenada, transparente y articulada.</li>
+   <li><b>Profesionalización</b> – capacitación y certificación de compradores públicos (OECE + DGA).</li></ol>
+  </div>
+  <div class="card"><h3>🚫 Supuestos excluidos (Art. 7)</h3>
+   <p>No se aplica la ley (pero <b>sí sus principios</b>) a, entre otros:</p>
+   <ul><li>Servicios financieros/bancarios (salvo seguros y arrendamiento financiero).</li>
+   <li>Servicio Exterior fuera del país; notarios bajo el monto del reglamento.</li>
+   <li>Servicios de árbitros, conciliadores, peritos, adjudicadores (JPRD).</li>
+   <li>Contrataciones con financiamiento de organismos internacionales con reglas propias.</li>
+   <li>Convenios entre entidades sin fines de lucro (solo costos).</li>
+   <li>Servicios públicos cuando hay un solo proveedor posible.</li>
+   <li>Proveedores no domiciliados (supuestos tasados), Gobierno a Gobierno, regímenes especiales.</li></ul>
+   <p>Aun excluidos, deben <b>publicar información en la Pladicop</b> (Art. 7.3).</p>
+  </div>
+ </div>`,
+ examples:`
+ <div class="box ej"><span class="t">📌 Ejemplo – Valor por dinero</span>
+ Una municipalidad compra laptops. La oferta A cuesta S/ 2,500 c/u con 1 año de garantía; la B, S/ 2,800 con 3 años de garantía y menor consumo eléctrico. Aplicando <b>valor por dinero</b>, la entidad puede diseñar factores de evaluación que premien garantía y eficiencia: el menor precio <b>no es el único criterio</b>.</div>
+ <div class="box ej"><span class="t">📌 Ejemplo – Libertad de concurrencia</span>
+ Las bases exigen "experiencia mínima de 15 años y oficina en Miraflores" para un servicio de limpieza de S/ 120,000. Son exigencias <b>desproporcionadas</b> que restringen la participación: vulneran libertad de concurrencia y competencia.</div>
+ <div class="box ej"><span class="t">📌 Ejemplo – Presunción de veracidad</span>
+ El postor presenta una constancia de experiencia. La entidad la acepta como cierta, pero en la <b>verificación posterior</b> puede comprobar su autenticidad. Si es falsa → nulidad + denuncia ante el Tribunal.</div>
+ <div class="box caso"><span class="t">🧩 Caso práctico</span>
+ <p>El Gobierno Regional X firma un convenio con una universidad pública para que esta le elabore estudios cobrando únicamente los costos, sin utilidad, con informe técnico y legal previo.</p>
+ <p><b>¿Aplica la Ley 32069?</b> No en su procedimiento: es un supuesto excluido (Art. 7.1.j), pero <b>sí</b> rigen los principios, lo <b>supervisa el OECE</b> y debe publicarse en la Pladicop.</p>
+ <p><b>Variante:</b> si la universidad cobrara un margen de ganancia, ya no calza en la exclusión y debería evaluarse un procedimiento de selección o una contratación directa entre entidades (Art. 55.1.a).</p></div>`,
+ quiz:[
+  {q:"¿Cuántos principios rectores enumera el artículo 5 de la Ley 32069?",o:["10","12","15","18"],a:2,e:"Son 15 principios (literales a al o), además de los del D. Leg. 1439 del Sistema Nacional de Abastecimiento."},
+  {q:"El principio que obliga a no buscar únicamente el menor precio, sino calidad, sostenibilidad, costos y plazos es:",o:["Eficacia","Valor por dinero","Competencia","Publicidad"],a:1,e:"Valor por dinero (Art. 5.1.c): maximizar lo que se obtiene en eficiencia, eficacia y economía."},
+  {q:"En un supuesto excluido del Art. 7, ¿qué se sigue aplicando?",o:["Nada de la ley","Solo las sanciones","Los principios de la contratación pública","Todo el procedimiento de selección"],a:2,e:"El Art. 7.1 excluye los supuestos 'con excepción de aquellas [disposiciones] referidas a los principios'."},
+  {q:"¿Cuál NO es uno de los enfoques del Art. 6?",o:["Gestión de riesgos","Profesionalización","Gestión por resultados","Centralización obligatoria"],a:3,e:"Los enfoques son: integridad, gestión por resultados, gestión de riesgos, gobernanza y profesionalización."},
+  {q:"La ley se aplica cuando la entidad contratante paga con:",o:["Fondos privados","Fondos públicos","Solo recursos ordinarios","Solo endeudamiento"],a:1,e:"Art. 3.1: se aplica siempre que las entidades contratantes asuman el pago con fondos públicos."},
+  {q:"El principio de causalidad establece que:",o:["Toda infracción es responsabilidad de la entidad","Responde quien realiza la conducta, no por hecho ajeno","El postor responde por su consorciado siempre","Se presume la culpa del proveedor"],a:1,e:"Art. 5.1.f: no es responsable ni sancionable un servidor o contratante por un hecho ajeno."}
+ ],
+ cards:[
+  ["Ley vigente","Ley N.° 32069 (publicada 24/06/2024). Reglamento: D.S. 009-2025-EF. Vigente desde abril de 2025; deroga la Ley 30225."],
+  ["Valor por dinero","Contratar a quien asegure la finalidad pública considerando calidad, sostenibilidad, costos y plazos, no solo el menor precio."],
+  ["Presunción de veracidad","Los documentos se presumen verdaderos; admite prueba en contrario (verificación posterior)."],
+  ["Los 5 enfoques","Integridad · Gestión por resultados · Gestión de riesgos · Gobernanza · Profesionalización"],
+  ["Supuestos excluidos","No aplica el procedimiento, pero SÍ los principios; publican en Pladicop y varios los supervisa el OECE."]
+ ],
+ remember:"Truco: “<b>LE-VI-PRE-CA</b>” → Legalidad, Eficacia, Valor por dinero, Integridad, Presunción de veracidad, Causalidad… y luego los de mercado: Publicidad, Concurrencia, Transparencia, Competencia, Igualdad; y los de futuro: Equidad, Sostenibilidad, Innovación, Vigencia tecnológica.",
+ res:[
+  ["📄","Texto consolidado de la Ley 32069","Congreso de la República (PDF oficial)",LINKS.ley],
+  ["🏛️","Ley y Reglamento – OECE","Colección oficial en gob.pe",LINKS.oeceCol],
+  ["🎬","Videos: principios de la Ley 32069","Búsqueda en YouTube",yt("principios Ley 32069 contrataciones públicas")],
+  ["🎬","Videos: principales cambios Ley 30225 vs 32069","Búsqueda en YouTube",yt("cambios Ley 32069 vs Ley 30225 contrataciones")]
+ ]
+},
+/* ---------------------------------------------------- 2 */
+{
+ id:"m2", num:"2", group:"Título II", title:"Actores del proceso de contratación",
+ ref:"Arts. 9 al 33",
+ explain:`
+ <div class="grid g3">
+  <div class="card"><h3>🏦 DGA – MEF</h3><p><b>Ente rector</b> del Sistema Nacional de Abastecimiento; máxima autoridad técnico-normativa (D. Leg. 1439). Aprueba bases estándar, listados (p. ej. comparación de precios) y reconoce contratos estandarizados.</p></div>
+  <div class="card"><h3>🛡️ OECE</h3><p><b>Organismo Especializado para las Contrataciones Públicas Eficientes</b> (sucesor del OSCE). Adscrito al MEF. Supervisa, brinda asistencia técnica, absuelve consultas, administra la <b>Pladicop</b> y el <b>RNP</b>, el registro de instituciones arbitrales y el banco de laudos.</p></div>
+  <div class="card"><h3>⚖️ Tribunal de Contrataciones Públicas</h3><p>Órgano del OECE. Resuelve <b>apelaciones</b> (cuantía &gt; 50 UIT) y <b>sanciona</b> a proveedores (multa e inhabilitación).</p></div>
+  <div class="card"><h3>🛒 Perú Compras</h3><p>Central de Compras Públicas: <b>acuerdos marco y catálogos electrónicos</b>, fichas técnicas (subasta inversa), compras corporativas obligatorias y centralizadas, incluso en emergencias.</p></div>
+  <div class="card"><h3>🏢 Entidades contratantes</h3><p>Quienes compran. Internamente intervienen el titular, la autoridad de gestión administrativa, el área usuaria, el área técnica estratégica, la DEC y los compradores públicos.</p></div>
+  <div class="card"><h3>👷 Proveedores</h3><p>Personas naturales, jurídicas, consorcios, nacionales o extranjeros. Deben tener <b>RNP vigente</b>, no estar impedidos y suscribir el <b>pacto de integridad</b>.</p></div>
+ </div>
+ <div class="card" style="margin-top:14px"><h3>👥 Roles dentro de la entidad (Art. 25)</h3>
+  <div class="table-wrap"><table>
+   <tr><th>Actor</th><th>Función principal</th><th>Ejemplo</th></tr>
+   <tr><td><b>Titular de la entidad</b></td><td>Máxima autoridad ejecutiva; facultades reservadas (p. ej. adicionales de obra &gt;15%).</td><td>Ministro, Gobernador, Alcalde</td></tr>
+   <tr><td><b>Autoridad de la gestión administrativa (AGA)</b></td><td>Aprueba, autoriza y supervisa los procesos; aprueba modificaciones, nulidades de oficio, contrataciones directas.</td><td>Secretaría General (ministerio), Gerencia Municipal, Gerencia General Regional</td></tr>
+   <tr><td><b>Área usuaria</b></td><td>Formula el requerimiento, verifica el cumplimiento y da la <b>conformidad</b>.</td><td>Unidad de Logística pide útiles; Hospital pide insumos</td></tr>
+   <tr><td><b>Área técnica estratégica</b></td><td>Formula requerimientos de otras áreas por su especialidad.</td><td>Oficina de TI formula todos los requerimientos de software</td></tr>
+   <tr><td><b>Dependencia encargada de las contrataciones (DEC)</b></td><td>Prepara la estrategia, conduce el proceso desde el requerimiento hasta su culminación.</td><td>Oficina de Abastecimiento</td></tr>
+   <tr><td><b>Compradores públicos</b></td><td>Servidores de la DEC (certificados por el OECE) que organizan, elaboran documentos, conducen el proceso y hacen seguimiento.</td><td>"Oficial de compra"</td></tr>
+  </table></div>
+  <p>El titular y la AGA pueden <b>delegar</b> facultades por resolución, salvo excepciones (Art. 25.2). Hay facultades <b>indelegables</b> (p. ej. autorizar suscribir pese a vicios, aprobar contratación directa por AGA).</p>
+ </div>
+ <div class="grid g2" style="margin-top:14px">
+  <div class="card"><h3>📇 RNP y Ficha Única del Proveedor (FUP)</h3>
+   <ul><li>Inscripción en el RNP con <b>vigencia indeterminada</b>, sujeta a actualización (si no actualiza → suspensión temporal).</li>
+   <li>La <b>FUP</b> consolida información del proveedor: impedimentos, contratos, procedimientos, penalidades, sanciones.</li>
+   <li>Las entidades <b>no pueden exigir</b> documentos que ya constan en la FUP.</li>
+   <li>Herramientas de <b>medición de desempeño</b> e incentivos a proveedores mejor calificados (reputación).</li></ul>
+  </div>
+  <div class="card"><h3>⛔ Impedimentos (Arts. 30-33)</h3>
+   <p>Se agrupan en 4 tipos:</p>
+   <ol><li><b>Personales</b> (1.A–1.G): altos funcionarios, servidores con influencia en el proceso, etc.</li>
+   <li><b>Por parentesco</b> (2.A–2.E): cónyuges, convivientes y parientes de los impedidos.</li>
+   <li><b>Personas jurídicas / representación</b> (3.A–3.G): empresas donde participan impedidos.</li>
+   <li><b>Por sanciones o registros</b> (4.A–4.E): inhabilitados, condenados, etc.</li></ol>
+   <p>Unos se verifican en la <b>FUP</b>, otros los verifica la <b>DEC</b> antes de contratar y otros se acreditan con <b>declaración jurada</b>.</p>
+  </div>
+ </div>`,
+ examples:`
+ <div class="box ej"><span class="t">📌 Ejemplo – ¿Quién da la conformidad?</span>
+ El área de Mantenimiento pidió el servicio de pintado del local. Terminado el servicio, <b>Mantenimiento (área usuaria)</b> verifica que se cumplió con los términos de referencia y emite la conformidad; recién entonces corre el plazo de pago.</div>
+ <div class="box ej"><span class="t">📌 Ejemplo – FUP</span>
+ Las bases piden "copia del RUC, ficha RNP y constancia de no estar inhabilitado". Si esa información está en la FUP, la entidad <b>no debe exigirla</b> (Art. 31.4).</div>
+ <div class="box caso"><span class="t">🧩 Caso práctico – Impedimento por parentesco</span>
+ <p>El hermano del gerente municipal (AGA) constituye una empresa y se presenta a una licitación de la misma municipalidad.</p>
+ <p><b>Análisis:</b> el gerente municipal tiene impedimento personal en el ámbito de su entidad; su pariente en 2.° grado de consanguinidad está alcanzado por el <b>impedimento por parentesco</b>. La DEC debe verificarlo antes de contratar (Art. 32.4). Si se contrata igual → <b>nulidad del contrato</b> (Art. 71.1.a) e infracción del proveedor (Art. 87.1.i: contratar estando impedido → inhabilitación de 6 a 24 meses).</p></div>`,
+ quiz:[
+  {q:"¿Qué organismo sucede al OSCE en la Ley 32069?",o:["Perú Compras","OECE","DGA","Contraloría"],a:1,e:"El Organismo Especializado para las Contrataciones Públicas Eficientes (OECE)."},
+  {q:"¿Quién es el ente rector del Sistema Nacional de Abastecimiento?",o:["OECE","Perú Compras","DGA del MEF","Tribunal de Contrataciones"],a:2,e:"Art. 10: la DGA es el ente rector y máxima autoridad técnico-normativa."},
+  {q:"En una municipalidad, la autoridad de la gestión administrativa es:",o:["El alcalde","El concejo municipal","La gerencia municipal","La oficina de logística"],a:2,e:"Art. 25.1.b: en los gobiernos locales, la gerencia municipal."},
+  {q:"¿Quién otorga la conformidad de la prestación?",o:["La DEC","El área usuaria","El Tribunal","El OECE"],a:1,e:"El área usuaria (o el área técnica estratégica) verifica el cumplimiento y emite la conformidad."},
+  {q:"La inscripción en el RNP tiene vigencia:",o:["1 año","2 años","Indeterminada, sujeta a actualización","5 años"],a:2,e:"Art. 29.3: vigencia indeterminada sujeta a la actualización de información."},
+  {q:"¿Puede la entidad exigir documentos que ya constan en la FUP?",o:["Sí, siempre","Solo en obras","No","Solo si el proveedor es extranjero"],a:2,e:"Art. 31.4: las entidades no pueden exigir la información que conste en la FUP."}
+ ],
+ cards:[
+  ["OECE","Supervisa, asiste, absuelve consultas, administra Pladicop, RNP, registro arbitral y banco de laudos. Su Tribunal resuelve apelaciones y sanciona."],
+  ["Perú Compras","Acuerdos marco, catálogos electrónicos, fichas técnicas, compras corporativas obligatorias y centralizadas."],
+  ["DEC","Dependencia Encargada de las Contrataciones: estrategia de contratación y conducción del proceso."],
+  ["Área usuaria","Formula el requerimiento y da la conformidad."],
+  ["FUP","Ficha Única del Proveedor: consolida impedimentos, contratos, penalidades y sanciones. No se piden documentos que ya están ahí."]
+ ],
+ remember:"Recuerda la cadena: <b>DGA</b> (norma) → <b>OECE</b> (supervisa y opera la plataforma) → <b>Perú Compras</b> (compra masiva) → <b>Entidad</b> (compra) → <b>Proveedor</b> (vende).",
+ res:[
+  ["🛡️","Portal del OECE","gob.pe/oece",LINKS.oece],
+  ["🛒","Perú Compras","gob.pe/perucompras",LINKS.peruCompras],
+  ["📇","Registro Nacional de Proveedores","rnp.gob.pe",LINKS.rnp],
+  ["🎬","Videos: actores de la contratación pública","Búsqueda en YouTube",yt("actores contratación pública OECE Ley 32069")],
+  ["🎬","Videos: impedimentos para contratar con el Estado","Búsqueda en YouTube",yt("impedimentos para contratar con el Estado Ley 32069")]
+ ]
+},
+/* ---------------------------------------------------- 3 */
+{
+ id:"m3", num:"3", group:"Título III", title:"Modalidades y herramientas de contratación eficiente",
+ ref:"Arts. 34 al 44",
+ explain:`
+ <div class="grid g3">
+  <div class="card"><h3>🧾 Contratos menores (Art. 34)</h3><p>Montos <b>iguales o inferiores a 8 UIT</b> (2026: <b>${soles(8*UIT)}</b>). No requieren procedimiento de selección, pero se rigen por la ley, se publican en la Pladicop y los supervisa el OECE.</p></div>
+  <div class="card"><h3>🤝 Compra por encargo (Art. 35)</h3><p>Una entidad encarga a otra entidad u <b>organismo internacional</b> (vía convenio) las fases de actuaciones preparatorias o selección.</p></div>
+  <div class="card"><h3>🏬 Compra centralizada (Art. 36)</h3><p>Por importancia estratégica o complejidad, se encarga a <b>Perú Compras</b> u otra entidad <b>todas las fases</b>, hasta el pago, incluso la distribución.</p></div>
+  <div class="card"><h3>👥 Compra corporativa (Art. 37)</h3><p>Dos o más entidades <b>consolidan</b> necesidades comunes para mejores condiciones. Puede ser facultativa u obligatoria (esta última a cargo de Perú Compras).</p></div>
+  <div class="card"><h3>💡 Compra pública de innovación (Art. 38)</h3><p>Para soluciones que <b>no existen en el mercado</b> o requieren I+D. El requerimiento puede definirse solo por objetivos o funcionalidades.</p></div>
+  <div class="card"><h3>📚 Acuerdos marco (Art. 39)</h3><p>Proceso en etapas: primero se seleccionan proveedores/condiciones; luego las entidades compran a través de <b>catálogos electrónicos</b>.</p></div>
+ </div>
+ <div class="grid g2" style="margin-top:14px">
+  <div class="card"><h3>🚨 Contrataciones por emergencia (Art. 40)</h3>
+   <p>Son situaciones de emergencia:</p>
+   <ol type="a"><li>Emergencias o desastres del SINAGERD.</li><li>Emergencias sanitarias declaradas por el MINSA.</li><li>Emergencias fitosanitarias/zoosanitarias (SENASA).</li><li>Riesgo para la seguridad, defensa u orden público (físico o digital).</li><li>Riesgo estructural o de ruina de infraestructura pública.</li></ol>
+   <p><b>Prevención:</b> procedimientos competitivos con estrategias para emergencias. <b>Ocurrencia o inminencia:</b> contratación directa (Art. 55.1.b) o con no domiciliados. <b>Rehabilitación:</b> no competitivo dentro de <b>1 año</b>; luego, competitivo.</p>
+  </div>
+  <div class="card"><h3>💻 Herramientas facilitadoras</h3>
+   <ul><li><b>Pladicop</b> (Art. 41): Plataforma Digital para las Contrataciones Públicas; integra SEACE, RNP y demás. Registro <b>obligatorio</b> de todas las fases. Los actos se entienden <b>notificados el mismo día de su publicación</b>.</li>
+   <li><b>Estandarización de requerimientos</b> (Art. 42): fichas técnicas y requerimientos estandarizados.</li>
+   <li><b>Catálogos electrónicos de acuerdos marco</b> (Art. 43).</li>
+   <li><b>Mecanismos diferenciados de adquisición – MDA</b> (Art. 44): tecnologías sanitarias para enfermedades raras, huérfanas, oncológicas y de alto costo.</li></ul>
+  </div>
+ </div>`,
+ examples:`
+ <div class="box ej"><span class="t">📌 Ejemplo – Contrato menor</span>
+ Una UGEL necesita reparar 3 puertas por S/ 9,800. Como no supera 8 UIT (${soles(8*UIT)}), es un <b>contrato menor</b>: no hay procedimiento de selección, pero debe registrar la información en la Pladicop y el proveedor debe tener RNP.</div>
+ <div class="box ej"><span class="t">📌 Ejemplo – Catálogo electrónico</span>
+ Un hospital necesita papel bond y tóner. Están en los <b>catálogos electrónicos de Perú Compras</b>: genera la orden directamente en la plataforma, sin convocar un procedimiento. Comprar por catálogo <b>no es fraccionamiento</b> (Art. 50.2.b).</div>
+ <div class="box ej"><span class="t">📌 Ejemplo – Compra corporativa</span>
+ Cinco ministerios necesitan el servicio de seguros vehiculares. En lugar de cinco procesos, consolidan la demanda en una <b>compra corporativa</b> y obtienen menores primas por volumen.</div>
+ <div class="box caso"><span class="t">🧩 Caso práctico – Emergencia</span>
+ <p>Un huaico destruye un puente vehicular en la sierra. El Gobierno Regional necesita restablecer el tránsito.</p>
+ <ol><li>Es una emergencia del SINAGERD (Art. 40.1.a).</li><li>Puede <b>contratar directamente</b> la instalación de un puente modular (Art. 55.1.b), regularizando luego la documentación según el reglamento.</li><li>La <b>rehabilitación</b> del puente puede ir por vía no competitiva solo <b>dentro del año</b> desde la emergencia.</li><li>La <b>reconstrucción definitiva</b> pasado ese plazo debe hacerse con procedimiento competitivo.</li></ol></div>`,
+ quiz:[
+  {q:"¿Hasta qué monto se considera contrato menor?",o:["Hasta 5 UIT","Igual o inferior a 8 UIT","Hasta 10 UIT","Hasta 50 UIT"],a:1,e:`Art. 34.1: montos iguales o inferiores a 8 UIT (2026: ${soles(8*UIT)}).`},
+  {q:"La contratación a través de catálogos electrónicos de acuerdo marco:",o:["Es fraccionamiento","No constituye fraccionamiento","Está prohibida en obras y bienes","Requiere licitación previa de la entidad"],a:1,e:"Art. 50.2.b: no constituye fraccionamiento."},
+  {q:"Los actos publicados en la Pladicop se entienden notificados:",o:["Al día hábil siguiente","A los 3 días","El mismo día de su publicación","Cuando el postor los descarga"],a:2,e:"Art. 41.4."},
+  {q:"Para la rehabilitación por emergencia se usa el procedimiento no competitivo dentro de:",o:["30 días","6 meses","1 año desde la emergencia","2 años"],a:2,e:"Art. 40.4: dentro del plazo de un año computado desde la ocurrencia."},
+  {q:"¿En qué modalidad varias entidades consolidan sus necesidades comunes?",o:["Compra por encargo","Compra corporativa","Compra pública de innovación","Contrato menor"],a:1,e:"Art. 37: compra corporativa."}
+ ],
+ cards:[
+  ["Contrato menor 2026",`≤ 8 UIT = ${soles(8*UIT)}. Sin procedimiento de selección; se publica en Pladicop; supervisa OECE.`],
+  ["Pladicop","Plataforma Digital para las Contrataciones Públicas: integra SEACE + RNP. Notificación el mismo día de publicación."],
+  ["Compra centralizada vs. por encargo","Centralizada: todas las fases hasta el pago. Por encargo: solo actuaciones preparatorias o selección."],
+  ["CPI","Compra Pública de Innovación: soluciones inexistentes en el mercado; requerimiento por objetivos o funcionalidades."],
+  ["MDA","Mecanismos diferenciados de adquisición para tecnologías sanitarias (enfermedades raras, huérfanas, oncológicas, alto costo)."]
+ ],
+ remember:"Pregúntate siempre primero: ¿está en <b>catálogo</b>? → ¿es <b>≤ 8 UIT</b>? → ¿es <b>emergencia</b>? Si nada de eso aplica, vas a un <b>procedimiento de selección</b>.",
+ res:[
+  ["🛒","Catálogos electrónicos Perú Compras","Tienda virtual del Estado",LINKS.catalogos],
+  ["🔍","Buscador público SEACE / Pladicop","Consulta de procedimientos",LINKS.seace],
+  ["🎬","Videos: contratos menores 8 UIT","Búsqueda en YouTube",yt("contratos menores 8 UIT Ley 32069")],
+  ["🎬","Videos: acuerdos marco y catálogos electrónicos","Búsqueda en YouTube",yt("acuerdos marco catálogos electrónicos Perú Compras tutorial")],
+  ["🎬","Videos: contratación por emergencia","Búsqueda en YouTube",yt("contratación directa por emergencia Ley 32069")]
+ ]
+},
+/* ---------------------------------------------------- 4 */
+{
+ id:"m4", num:"4", group:"Título IV · Cap. I", title:"Actuaciones preparatorias",
+ ref:"Arts. 45 al 52",
+ explain:`
+ <div class="card"><h3>🔄 Las 3 fases del proceso de contratación (Art. 45)</h3>
+  <div class="flow" id="flowAnim">
+   <div class="ph"><b>1. Actuaciones preparatorias</b><small>Requerimiento · mercado · estrategia · expediente</small></div><div class="arrow">➜</div>
+   <div class="ph"><b>2. Selección</b><small>Convocatoria → buena pro → contrato</small></div><div class="arrow">➜</div>
+   <div class="ph"><b>3. Ejecución contractual</b><small>Prestación · conformidad · pago · liquidación</small></div>
+  </div>
+  <button class="btn sec" onclick="playFlow()">▶ Animar fases</button>
+ </div>
+ <div class="grid g2" style="margin-top:14px">
+  <div class="card"><h3>📝 El requerimiento (Art. 46)</h3>
+   <p>Da <b>inicio</b> al proceso, en el marco de la <b>PMBSO</b> (Programación Multianual de Bienes, Servicios y Obras). Lo formula el área usuaria con la DEC.</p>
+   <ul><li><b>Bienes</b> → Especificaciones técnicas (EETT).</li>
+   <li><b>Servicios</b> → Términos de referencia (TdR).</li>
+   <li><b>Obras</b> → Expediente técnico u objetivos funcionales (según sistema de entrega).</li></ul>
+   <p>Debe ser <b>claro, objetivo</b>, preferentemente por <b>desempeño y funcionalidad</b>, sin direccionar a un proveedor. En obras, uso de <b>BIM</b> (Plan BIM Perú).</p>
+  </div>
+  <div class="card"><h3>📊 Interacción con el mercado y cuantía (Arts. 47-48)</h3>
+   <p>La entidad indaga el mercado para: verificar <b>oferta y competencia</b>, perfeccionar el requerimiento, <b>estimar el presupuesto</b> y elegir el procedimiento idóneo (incluye reuniones y talleres con proveedores).</p>
+   <p>La <b>cuantía</b> se determina conforme a la PMBSO y sirve para asignar recursos y definir el procedimiento.</p>
+  </div>
+  <div class="card"><h3>♟️ Estrategia de contratación (Art. 49)</h3>
+   <p>Análisis integral elaborado por la DEC. Contiene: tipo de procedimiento, modalidad de pago, verificación de estandarización, <b>perfil y asignación de riesgos</b>.</p>
+   <p>En obras complejas: análisis del <b>sistema de entrega</b>, uso de contratos estandarizados internacionales (NEC, FIDIC), BIM e incentivos.</p>
+  </div>
+  <div class="card"><h3>✂️ Prohibición de fraccionamiento (Art. 50)</h3>
+   <p>Prohibido dividir la contratación (en varios procedimientos o contratos menores) para:</p>
+   <ul><li>Evitar el procedimiento que corresponde a la <b>necesidad anual</b>.</li><li>Evadir la ley o los acuerdos comerciales.</li></ul>
+   <p><b>No es fraccionamiento:</b> falta de recursos o necesidad imprevisible adicional; compras por catálogo; otros justificados en el reglamento.</p>
+  </div>
+  <div class="card"><h3>📁 Expediente de contratación (Art. 51)</h3><p>Contiene todo lo actuado <b>desde el requerimiento hasta el cumplimiento total</b> del contrato, incluidas apelaciones y controversias.</p></div>
+  <div class="card"><h3>🧑‍⚖️ Evaluadores (Art. 52)</h3><p>Conducen los procedimientos competitivos: <b>oficial de compra</b> (comprador público de la DEC), <b>comité</b> o <b>jurado</b>. Comités y jurados incluyen <b>expertos</b> en el objeto. No pueden alterar el expediente, salvo factores de evaluación y excepciones.</p></div>
+ </div>`,
+ examples:`
+ <div class="box ej"><span class="t">📌 Ejemplo – Requerimiento por desempeño</span>
+ Mal: "Camioneta marca Toyota modelo Hilux". Bien: "Camioneta 4x4, doble cabina, motor diésel ≥ 2,400 cc, capacidad de carga ≥ 1 t, apta para trocha". El segundo describe <b>desempeño y funcionalidad</b> y no direcciona.</div>
+ <div class="box alerta"><span class="t">⚠️ Ejemplo – Fraccionamiento</span>
+ Una entidad necesita en el año uniformes por S/ 300,000. Para evitar la licitación, emite 7 órdenes de S/ 42,800 (contratos menores) a lo largo del año. Es <b>fraccionamiento prohibido</b>: debió convocar el procedimiento que correspondía a la necesidad anual. Genera responsabilidad funcional.</div>
+ <div class="box caso"><span class="t">🧩 Caso práctico – Estrategia de contratación</span>
+ <p>Un ministerio quiere contratar el servicio de vigilancia para 12 sedes durante 3 años.</p>
+ <ol><li><b>Requerimiento:</b> TdR con puestos, turnos, perfiles, equipamiento.</li>
+ <li><b>Interacción con el mercado:</b> cotizaciones y un taller con empresas de seguridad para ver si conviene dividir por ítems (sedes de Lima vs. regiones).</li>
+ <li><b>Cuantía:</b> S/ 4.2 millones → concurso público (≥ S/ 485,000 en 2026).</li>
+ <li><b>Riesgos:</b> incremento de la RMV (fórmula de reajuste), rotación de personal (penalidades por puesto no cubierto).</li>
+ <li><b>Estrategia:</b> concurso público por ítems, garantía de fiel cumplimiento, pago mensual previa conformidad.</li></ol></div>`,
+ quiz:[
+  {q:"¿Cuáles son las tres fases del proceso de contratación?",o:["Programación, convocatoria y pago","Actuaciones preparatorias, selección y ejecución contractual","Requerimiento, buena pro y liquidación","Planificación, selección y control"],a:1,e:"Art. 45."},
+  {q:"El requerimiento de servicios se plasma en:",o:["Especificaciones técnicas","Términos de referencia","Expediente técnico","Ficha técnica"],a:1,e:"Art. 46.4: bienes → EETT; servicios → TdR; obras → expediente técnico u objetivos funcionales."},
+  {q:"¿Quién elabora la estrategia de contratación?",o:["El área usuaria","El titular","La DEC","El OECE"],a:2,e:"Art. 49.1: la elabora la dependencia encargada de las contrataciones."},
+  {q:"¿Cuál de estos NO es fraccionamiento?",o:["Dividir la necesidad anual en varios contratos menores","Comprar por catálogo electrónico de acuerdo marco","Convocar 3 adjudicaciones para evitar una licitación","Partir el requerimiento para evadir acuerdos comerciales"],a:1,e:"Art. 50.2.b."},
+  {q:"La metodología BIM se utiliza en:",o:["Bienes comunes","Elaboración de expedientes técnicos de obra","Servicios de limpieza","Contratos menores"],a:1,e:"Art. 46.6: en el marco del Plan BIM Perú."},
+  {q:"Los evaluadores de los procedimientos competitivos pueden ser:",o:["Solo comités","Oficial de compra, comité o jurado","El Tribunal","El área usuaria exclusivamente"],a:1,e:"Art. 52.1."}
+ ],
+ cards:[
+  ["PMBSO","Programación Multianual de Bienes, Servicios y Obras: marco del que nace el requerimiento."],
+  ["EETT / TdR / Exp. técnico","Bienes / Servicios / Obras."],
+  ["Fraccionamiento","Dividir la necesidad para evitar el procedimiento correspondiente o evadir la ley. Prohibido."],
+  ["Estrategia de contratación","Procedimiento, modalidad de pago, estandarización y asignación de riesgos. La elabora la DEC."],
+  ["Evaluadores","Oficial de compra, comité o jurado (estos últimos con expertos)."]
+ ],
+ remember:"Fórmula: <b>Necesidad → Requerimiento → Mercado → Cuantía → Estrategia → Expediente aprobado</b>. Sin expediente aprobado no hay convocatoria.",
+ res:[
+  ["🏛️","Directivas y bases estándar – OECE/MEF","Colección oficial",LINKS.oeceCol],
+  ["🎬","Videos: cómo elaborar términos de referencia","Búsqueda en YouTube",yt("cómo elaborar términos de referencia especificaciones técnicas Ley 32069")],
+  ["🎬","Videos: estrategia de contratación","Búsqueda en YouTube",yt("estrategia de contratación Ley 32069 reglamento")],
+  ["🎬","Videos: fraccionamiento en contrataciones","Búsqueda en YouTube",yt("fraccionamiento contrataciones del Estado Perú")]
+ ]
+},
+/* ---------------------------------------------------- 5 */
+{
+ id:"m5", num:"5", group:"Título IV · Cap. II", title:"Selección: procedimientos competitivos y no competitivos",
+ ref:"Arts. 53 al 57 · Reglamento (arts. 60-102)",
+ explain:`
+ <div class="card"><h3>🏁 Procedimientos competitivos (Art. 54)</h3>
+  <ul><li><b>Licitación pública</b> → bienes y obras.</li><li><b>Concurso público</b> → servicios (incluye consultorías).</li></ul>
+  <p>El reglamento regula sus <b>modalidades abreviadas</b> (licitación pública abreviada, concurso público abreviado) y <b>diferenciadas</b>: <b>subasta inversa electrónica</b>, <b>comparación de precios</b>, compra pública de innovación, selección de evaluadores expertos, gerentes de proyectos, proyectos arquitectónicos, etc.</p>
+ </div>
+ <div class="card" style="margin-top:14px"><h3>💰 Topes 2026 (Ley de Presupuesto 2026 · UIT = ${soles(UIT)})</h3>
+  <div class="table-wrap"><table>
+   <tr><th>Objeto</th><th>Procedimiento</th><th>Cuantía</th></tr>
+   <tr><td rowspan="4"><b>Bienes</b></td><td>Licitación pública</td><td>≥ S/ 485,000</td></tr>
+   <tr><td>Licitación pública abreviada</td><td>&gt; S/ 44,000 y &lt; S/ 485,000</td></tr>
+   <tr><td>Subasta inversa electrónica (bien común con ficha técnica)</td><td>&gt; S/ 44,000</td></tr>
+   <tr><td>Comparación de precios</td><td>&gt; S/ 44,000 y ≤ S/ 100,000</td></tr>
+   <tr><td rowspan="4"><b>Servicios</b></td><td>Concurso público (servicios y consultoría)</td><td>≥ S/ 485,000</td></tr>
+   <tr><td>Concurso público abreviado</td><td>&gt; S/ 44,000 y &lt; S/ 485,000</td></tr>
+   <tr><td>Subasta inversa electrónica (servicio común)</td><td>&gt; S/ 44,000</td></tr>
+   <tr><td>Comparación de precios</td><td>&gt; S/ 44,000 y ≤ S/ 100,000</td></tr>
+   <tr><td rowspan="2"><b>Obras</b></td><td>Licitación pública</td><td>≥ S/ 5'000,000 (desde S/ 79'000,000 aplican reglas para obras de mayor envergadura)</td></tr>
+   <tr><td>Licitación pública abreviada</td><td>&gt; S/ 44,000 y &lt; S/ 5'000,000</td></tr>
+   <tr><td><b>Todos</b></td><td>Contrato menor</td><td>≤ 8 UIT = ${soles(8*UIT)}</td></tr>
+  </table></div>
+  <p style="font-size:13px;color:var(--muted)">Montos referenciales difundidos para 2026 según la Ley de Presupuesto del Sector Público 2026; verifica siempre la norma presupuestal vigente al convocar.</p>
+ </div>
+ <div class="grid g2" style="margin-top:14px">
+  <div class="card"><h3>🪜 Etapas típicas de una licitación / concurso</h3>
+   <div class="steps" id="stepsAnim">
+    <div class="step"><b>1. Convocatoria</b> en la Pladicop (bases estándar).</div>
+    <div class="step"><b>2. Registro de participantes</b>: lista abierta, abierta con invitación o cerrada.</div>
+    <div class="step"><b>3. Consultas y observaciones</b>: plazo ≥ 7 días hábiles (abreviadas ≥ 3). Posible <b>elevación del pliego al OECE</b>.</div>
+    <div class="step"><b>4. Integración de bases</b> (reglas definitivas).</div>
+    <div class="step"><b>5. Precalificación</b> (solo en algunos procedimientos, p. ej. bienes especializados u obras complejas).</div>
+    <div class="step"><b>6. Presentación y evaluación de ofertas</b> técnicas y económicas.</div>
+    <div class="step"><b>7. Otorgamiento de la buena pro</b> (publicado en la Pladicop).</div>
+    <div class="step"><b>8. Consentimiento</b>: al día siguiente de vencido el plazo de apelación (con una sola oferta: el mismo día).</div>
+    <div class="step"><b>9. Verificación posterior</b> (10 días hábiles) y <b>perfeccionamiento del contrato</b>.</div>
+   </div>
+   <button class="btn sec" onclick="playSteps()">▶ Ver paso a paso</button>
+  </div>
+  <div class="card"><h3>⚡ Subasta inversa y comparación de precios</h3>
+   <h4>Subasta inversa electrónica</h4>
+   <ul><li>Bienes y servicios <b>comunes con ficha técnica</b> (Perú Compras).</li><li>No hay evaluación técnica; <b>lances en línea</b>; gana el <b>menor precio</b>.</li><li>Calificación posterior hasta tener al menos 3 postores válidos; si solo participa 1 postor → <b>desierto</b>.</li></ul>
+   <h4>Comparación de precios</h4>
+   <ul><li>Bienes/servicios de entrega inmediata (≤ 5 días hábiles) o del listado de la DGA, hasta S/ 100,000.</li><li>Se invita a <b>mínimo 3 proveedores</b>; se necesitan al menos <b>2 ofertas</b> válidas; gana el menor monto (empate → sorteo).</li></ul>
+  </div>
+ </div>
+ <div class="card" style="margin-top:14px"><h3>🎯 Contratación directa – procedimiento no competitivo (Art. 55)</h3>
+  <div class="grid g2">
+   <ol type="a">
+    <li>Con <b>otra entidad</b> (más eficiente; no empresa del Estado habitual).</li>
+    <li><b>Emergencia</b> (ocurrencia o inminencia).</li>
+    <li><b>Desabastecimiento</b> que afecte el funcionamiento.</li>
+    <li><b>Proveedor único</b> o con derechos exclusivos.</li>
+    <li>Servicios <b>personalísimos</b> de personas naturales.</li>
+    <li><b>Publicidad estatal</b> en medios de comunicación.</li>
+    <li>Bienes y servicios para <b>I+D+i</b> (entidades del Sinacti certificadas).</li>
+   </ol>
+   <ol type="a" start="8">
+    <li>Adquisición o <b>arrendamiento de inmuebles</b> privados.</li>
+    <li><b>Defensa legal</b> de funcionarios y exfuncionarios.</li>
+    <li>Asesoría para la <b>defensa de la entidad</b> en arbitrajes o procesos judiciales.</li>
+    <li><b>Saldo de contrato</b> resuelto o nulo (por impedimento o documentación falsa) derivado de procedimiento competitivo.</li>
+    <li><b>Capacitación</b> con instituciones especializadas (bajo umbrales de acuerdos comerciales).</li>
+    <li>Contrataciones <b>secretas</b> de FF.AA., PNP y SINA (decreto supremo + opinión previa de la Contraloría).</li>
+   </ol>
+  </div>
+  <p>Las aprueba la <b>AGA</b> (indelegable) o el <b>titular</b>, según el reglamento. <b>No son impugnables</b> mediante apelación (Art. 72.3).</p>
+ </div>
+ <div class="grid g2" style="margin-top:14px">
+  <div class="card"><h3>🕳️ Desierto (Art. 56)</h3><p>Cuando <b>no se valida ninguna oferta</b>. El reglamento define el procedimiento a usar luego (p. ej. una subasta inversa desierta se reconvoca igual, o como licitación/concurso abreviado si hay riesgo de nuevo desierto).</p></div>
+  <div class="card"><h3>❌ Cancelación (Art. 57)</h3><p>En cualquier momento <b>antes de la buena pro</b> por: fuerza mayor o caso fortuito, desaparición de la necesidad, o reasignación del presupuesto a emergencias declaradas. Se notifica por resolución en la Pladicop. La entidad no incurre en responsabilidad frente a los postores.</p></div>
+ </div>`,
+ examples:`
+ <div class="box ej"><span class="t">📌 Ejemplo – Elegir el procedimiento</span>
+ <ul><li>Compra de 50 computadoras por S/ 210,000 → <b>Licitación pública abreviada</b> (bienes entre S/ 44,000 y S/ 485,000), salvo que exista ficha técnica de subasta inversa obligatoria.</li>
+ <li>Servicio de consultoría para un plan de desarrollo por S/ 600,000 → <b>Concurso público</b>.</li>
+ <li>Construcción de un colegio por S/ 12 millones → <b>Licitación pública</b> de obras.</li>
+ <li>Compra de combustible (bien común con ficha técnica) por S/ 150,000 → <b>Subasta inversa electrónica</b>.</li></ul></div>
+ <div class="box ej"><span class="t">📌 Ejemplo – Proveedor único</span>
+ Un hospital necesita repuestos originales para un tomógrafo cuyo fabricante tiene un único distribuidor autorizado en el Perú con exclusividad acreditada → <b>contratación directa por proveedor único</b> (Art. 55.1.d), sustentada con informe técnico y legal.</div>
+ <div class="box caso"><span class="t">🧩 Caso práctico – Consultas y observaciones</span>
+ <p>En un concurso público, las bases exigen que el jefe de proyecto tenga "maestría en gestión pública y 10 años de experiencia". Un participante observa que es excesivo para un servicio de S/ 520,000.</p>
+ <ol><li>Formula la <b>observación</b> en la Pladicop dentro de los 7 días hábiles siguientes a la convocatoria.</li>
+ <li>El evaluador la absuelve en el pliego. Si no la acoge, el participante puede solicitar la <b>elevación del pliego al OECE</b> (cuando el procedimiento lo prevé).</li>
+ <li>El OECE emite pronunciamiento; luego se <b>integran las bases</b>.</li>
+ <li><b>Ojo:</b> lo que no se cuestionó en esta etapa difícilmente podrá discutirse después en apelación.</li></ol></div>`,
+ quiz:[
+  {q:"Según la Ley 32069, el procedimiento competitivo para servicios es:",o:["Licitación pública","Concurso público","Adjudicación simplificada","Subasta inversa"],a:1,e:"Art. 54.1.b. (La adjudicación simplificada era de la Ley 30225.)"},
+  {q:"En 2026, una compra de bienes por S/ 300,000 corresponde en principio a:",o:["Licitación pública","Licitación pública abreviada","Contrato menor","Comparación de precios"],a:1,e:"Bienes > S/ 44,000 y < S/ 485,000 → licitación pública abreviada (salvo subasta inversa obligatoria por ficha técnica)."},
+  {q:"En la subasta inversa electrónica gana:",o:["La mejor oferta técnica","El menor precio mediante lances","El que tenga más experiencia","Por sorteo"],a:1,e:"Reglamento art. 96: lances en línea; buena pro al menor precio."},
+  {q:"El plazo mínimo para consultas y observaciones en licitación/concurso público es:",o:["3 días hábiles","5 días hábiles","7 días hábiles","10 días calendario"],a:2,e:"Reglamento art. 66.1: no menor a 7 días hábiles (abreviadas: no menor a 3)."},
+  {q:"¿Cuál es un supuesto de contratación directa?",o:["Bienes comunes con ficha técnica","Proveedor único con derechos exclusivos","Obras mayores a S/ 5 millones","Cuando la entidad tiene poco tiempo por mala planificación"],a:1,e:"Art. 55.1.d."},
+  {q:"La cancelación del procedimiento puede hacerse:",o:["Después de firmado el contrato","Antes de la buena pro","Solo por el Tribunal","Durante la ejecución"],a:1,e:"Art. 57.1: en cualquier momento previo a la adjudicación de la buena pro."},
+  {q:"En comparación de precios, ¿cuántas ofertas válidas se requieren como mínimo para evaluar?",o:["1","2","3","5"],a:1,e:"Reglamento art. 98.1: al menos dos ofertas que cumplan los requisitos de calificación (se invita a mínimo 3)."}
+ ],
+ cards:[
+  ["Licitación vs. Concurso","Licitación pública: bienes y obras. Concurso público: servicios y consultorías."],
+  ["Topes 2026 bienes/servicios","≥ S/ 485,000 → LP/CP. Entre S/ 44,000 y S/ 485,000 → abreviada. ≤ S/ 44,000 → contrato menor."],
+  ["Topes 2026 obras","≥ S/ 5 millones → licitación pública. Entre S/ 44,000 y S/ 5 millones → licitación pública abreviada."],
+  ["Consentimiento de la buena pro","Al día siguiente de vencido el plazo de apelación sin que se apele; con una sola oferta, el mismo día."],
+  ["Contratación directa","13 supuestos (Art. 55.1 a–m). Aprobada por AGA (indelegable) o titular. No es apelable."],
+  ["Desierto","Cuando no se valida ninguna oferta."]
+ ],
+ remember:"Regla de oro: <b>Objeto + Cuantía = Procedimiento</b>. Bienes y obras → <b>Licitación</b>; servicios → <b>Concurso</b>. Si es común con ficha → <b>Subasta</b>. Si es sencillo y ≤ S/ 100 mil → <b>Comparación de precios</b>.",
+ res:[
+  ["🧮","Herramienta: selector de procedimiento","Calculadora interactiva en este dashboard","#tools"],
+  ["🔍","Buscador público SEACE / Pladicop","Revisa convocatorias reales",LINKS.seace],
+  ["🎬","Videos: licitación pública abreviada","Búsqueda en YouTube",yt("licitación pública abreviada Ley 32069")],
+  ["🎬","Videos: subasta inversa electrónica","Búsqueda en YouTube",yt("subasta inversa electrónica Ley 32069 tutorial")],
+  ["🎬","Videos: contratación directa supuestos","Búsqueda en YouTube",yt("contratación directa supuestos Ley 32069")],
+  ["🎬","Videos: cómo participar en SEACE (proveedores)","Búsqueda en YouTube",yt("cómo participar en procedimientos SEACE Pladicop proveedor")]
+ ]
+},
+/* ---------------------------------------------------- 6 */
+{
+ id:"m6", num:"6", group:"Título IV · Cap. III", title:"Ejecución contractual: contrato, garantías, adicionales, pagos y penalidades",
+ ref:"Arts. 58 al 69 · Reglamento (arts. 103-122)",
+ explain:`
+ <div class="grid g2">
+  <div class="card"><h3>📜 El contrato (Arts. 58-60)</h3>
+   <p>Acuerdo entre entidad y proveedor con obligaciones recíprocas. En obras se usan <b>sistemas de entrega</b> (p. ej. solo construcción; diseño y construcción), que pueden permitir construir en paralelo al diseño.</p>
+   <p>Si el proveedor tiene <b>multas impagas</b>, se incorpora cláusula de compromiso de pago vía retención. En obras: <b>liquidaciones parciales</b>.</p>
+   <p><b>Contratos estandarizados internacionales</b> (NEC, FIDIC, etc.) reconocidos por la DGA, con control simultáneo y posterior de la Contraloría.</p>
+   <h4>Cláusulas obligatorias (Art. 60)</h4>
+   <ol><li>Garantías</li><li>Anticorrupción y antisoborno</li><li>Solución de controversias</li><li>Resolución por incumplimiento</li><li>Gestión de riesgos</li></ol>
+  </div>
+  <div class="card"><h3>🔐 Garantías (Art. 61 · Regl. art. 113-118)</h3>
+   <ul><li><b>Fiel cumplimiento:</b> <b>10%</b> del monto del contrato original, vigente hasta la conformidad (bienes/servicios) o el consentimiento de la liquidación (obras).</li>
+   <li><b>Prestaciones accesorias:</b> 10% del monto de esas prestaciones.</li>
+   <li><b>Adelantos:</b> por el monto del adelanto.</li></ul>
+   <h4>Mecanismos</h4>
+   <ul><li><b>Fideicomiso</b> (adelanto y fiel cumplimiento).</li><li><b>Carta fianza financiera</b>.</li><li><b>Contrato de seguro</b> (póliza de caución).</li><li><b>Retención de pago</b> (fiel cumplimiento): contratos ≤ S/ 480,000 en bienes y servicios y ≤ S/ 5'000,000 en obras; las <b>MYPE</b> pueden usarla siempre.</li></ul>
+   <p>Deben ser <b>incondicionales, solidarias, irrevocables y de realización automática</b>; el emisor honra en máximo <b>3 días hábiles</b>.</p>
+  </div>
+ </div>
+ <div class="grid g2" style="margin-top:14px">
+  <div class="card"><h3>➕ Modificaciones y adicionales (Arts. 63-64)</h3>
+   <p>Supuestos: adicionales, reducciones, ampliaciones de plazo, hecho sobreviniente no imputable, otros del reglamento. No deben romper el <b>equilibrio económico-financiero</b>.</p>
+   <div class="table-wrap"><table>
+    <tr><th>Tipo</th><th>Límite</th><th>Quién aprueba</th></tr>
+    <tr><td>Bienes, servicios y consultorías de obra</td><td>Hasta <b>25%</b> (adicional o reducción)</td><td>AGA</td></tr>
+    <tr><td>Obras (solo construcción)</td><td>Hasta <b>15%</b> (neto de deductivos)</td><td>AGA</td></tr>
+    <tr><td>Obras</td><td>&gt; 15% hasta <b>30%</b></td><td>Titular (con recursos)</td></tr>
+    <tr><td>Obras</td><td>&gt; 30% hasta <b>50%</b></td><td>Titular, <b>previa autorización de la Contraloría</b> (15 días hábiles; apelación 30)</td></tr>
+    <tr><td>Contratos estandarizados internacionales</td><td>Máx. 50% del presupuesto de obra</td><td>Según el contrato</td></tr>
+   </table></div>
+   <p>Adicionales por deficiencias del expediente técnico → se informa al Tribunal y a la Contraloría.</p>
+  </div>
+  <div class="card"><h3>💵 Adelantos y pagos (Arts. 66-67)</h3>
+   <ul><li>Adelantos: <b>directo</b>; para materiales, insumos, equipamiento y mobiliario; otros. Los directos no exceden en conjunto el <b>30%</b> del contrato original.</li>
+   <li><b>Pago:</b> máximo <b>10 días hábiles</b> después de la conformidad, prorrogable <b>5 días hábiles</b> con justificación.</li>
+   <li>Demora injustificada = <b>falta grave</b> de la AGA; la entidad paga <b>intereses legales</b>.</li>
+   <li>Pago por consumo; pago al inicio si es condición de mercado; MYPE: <b>factura negociable</b> (hasta 180 días).</li>
+   <li>El contratista puede <b>ceder su derecho de pago</b>; la cesión de posición contractual solo en casos del reglamento.</li></ul>
+  </div>
+ </div>
+ <div class="grid g2" style="margin-top:14px">
+  <div class="card"><h3>⏱️ Penalidades (Regl. arts. 119-120)</h3>
+   <p><b>Penalidad por mora</b> (automática, por cada día de atraso):</p>
+   <div class="box ok" style="font-size:17px;text-align:center"><b>Penalidad diaria = 0.10 × Monto ÷ (F × Plazo en días)</b></div>
+   <ul><li>Bienes y servicios: <b>F = 0.40</b></li><li>Obras: ≤60 días F=0.40 · 61–120 días F=0.25 · &gt;120 días F=0.15</li><li>Consultorías de obra: ≤60 días F=0.40 · &gt;60 días F=0.25</li></ul>
+   <p>También <b>otras penalidades</b> objetivas y razonables previstas en las bases. La suma de penalidades no puede exceder el <b>10% del monto vigente</b> del contrato o ítem; alcanzado el tope, la entidad puede <b>resolver el contrato</b>.</p>
+  </div>
+  <div class="card"><h3>🛑 Resolución del contrato (Art. 68)</h3>
+   <p>Cualquiera de las partes puede resolver (total o parcialmente) por:</p>
+   <ol type="a"><li>Caso fortuito o fuerza mayor.</li><li>Incumplimiento atribuible.</li><li>Hecho sobreviniente no imputable.</li><li>Incumplimiento de la cláusula anticorrupción.</li><li>Documentación falsa o inexacta en la ejecución.</li><li>Condición de terminación anticipada.</li></ol>
+   <p>Si es imputable → indemnización de daños. En casos de corrupción de funcionarios no se paga resarcimiento al contratista.</p>
+   <p><b>Procedimiento por incumplimiento (Regl. art. 122):</b> requerir por escrito el cumplimiento en un plazo de <b>10% a 15%</b> del plazo del contrato (3 días si el contrato dura menos de 30 días; 15 días en obras de más de 60 días), bajo apercibimiento de resolver. <b>No se requiere apercibimiento</b> si se llegó al tope de penalidad o el incumplimiento es irreversible.</p>
+   <h4>Responsabilidad por vicios ocultos (Art. 69)</h4>
+   <ul><li>Obras: <b>no menos de 7 años</b>.</li><li>Bienes y servicios: <b>no menos de 1 año</b>.</li><li>Expediente técnico: <b>no menos de 3 años</b> desde la conformidad de obra.</li><li>Supervisión: igual al plazo del contratista de obra.</li></ul>
+  </div>
+ </div>
+ <div class="card" style="margin-top:14px"><h3>👁️ Supervisión (Art. 62)</h3><p>El contrato de supervisión debe durar al menos hasta la recepción de la obra o conclusión del servicio. Mientras se contrata, puede designarse un <b>inspector de obra</b>. Supervisor e inspector responden administrativa, civil y penalmente.</p></div>`,
+ examples:`
+ <div class="box ej"><span class="t">📌 Ejemplo – Penalidad por mora</span>
+ Contrato de bienes por <b>S/ 120,000</b>, plazo <b>30 días</b>, el proveedor entrega con <b>5 días</b> de atraso.<br>
+ Penalidad diaria = 0.10 × 120,000 ÷ (0.40 × 30) = 12,000 ÷ 12 = <b>S/ 1,000 por día</b>.<br>
+ Total: 5 × 1,000 = <b>S/ 5,000</b> (tope 10% = S/ 12,000, no superado).</div>
+ <div class="box ej"><span class="t">📌 Ejemplo – Garantía de fiel cumplimiento</span>
+ Contrato de servicios por S/ 900,000 → garantía de <b>S/ 90,000</b> (10%). Como supera S/ 480,000, no procede la retención, salvo que el contratista sea <b>MYPE</b>.</div>
+ <div class="box ej"><span class="t">📌 Ejemplo – Adicional de obra</span>
+ Obra contratada en S/ 8,000,000 (solo construcción). Se requiere un adicional de S/ 1,600,000 con deductivo vinculado de S/ 200,000 → incidencia neta S/ 1,400,000 = <b>17.5%</b>. Supera el 15% → lo aprueba el <b>titular</b> (hasta 30%), con disponibilidad presupuestal.</div>
+ <div class="box caso"><span class="t">🧩 Caso práctico – Retraso y resolución</span>
+ <p>Contrato de suministro de alimentos por S/ 200,000, plazo 20 días. El proveedor no entrega.</p>
+ <ol><li>Penalidad diaria = 0.10 × 200,000 ÷ (0.40 × 20) = <b>S/ 2,500</b>.</li>
+ <li>Tope 10% = S/ 20,000 → se alcanza al <b>día 8</b> de atraso.</li>
+ <li>Alcanzado el tope, la entidad puede <b>resolver el contrato</b> sin requerir previamente el cumplimiento (por haber llegado al máximo de penalidad), ejecutar la <b>garantía de fiel cumplimiento</b> y comunicar al Tribunal para el procedimiento sancionador (Art. 87.1.j).</li>
+ <li>Si el proveedor no somete la resolución a controversia dentro del plazo de caducidad, esta queda <b>consentida</b>.</li></ol></div>`,
+ quiz:[
+  {q:"La garantía de fiel cumplimiento equivale a:",o:["5% del contrato","10% del monto del contrato original","15%","20%"],a:1,e:"Reglamento art. 113.1."},
+  {q:"En bienes y servicios, el factor F para la penalidad por mora es:",o:["0.15","0.25","0.40","0.50"],a:2,e:"Reglamento art. 120.1."},
+  {q:"El tope acumulado de penalidades es:",o:["5% del contrato","10% del monto vigente","15%","25%"],a:1,e:"Reglamento art. 119.2."},
+  {q:"La AGA puede aprobar adicionales en bienes y servicios hasta:",o:["10%","15%","25%","50%"],a:2,e:"Art. 64.1."},
+  {q:"Los adicionales de obra mayores al 30% y hasta 50% requieren:",o:["Solo la AGA","Opinión del OECE","Autorización previa de la Contraloría","Aprobación del Tribunal"],a:2,e:"Art. 64.3.b."},
+  {q:"Luego de la conformidad, la entidad debe pagar en un máximo de:",o:["5 días hábiles","10 días hábiles (prorrogable 5)","15 días calendario","30 días"],a:1,e:"Art. 67.3."},
+  {q:"La responsabilidad del contratista de obra por vicios ocultos no puede ser inferior a:",o:["1 año","3 años","5 años","7 años"],a:3,e:"Art. 69.2.b."}
+ ],
+ cards:[
+  ["Fórmula penalidad","0.10 × Monto ÷ (F × Plazo). F=0.40 bienes/servicios; obras 0.40/0.25/0.15."],
+  ["Topes","Penalidades ≤ 10% · Adelantos directos ≤ 30% · Garantía FC = 10%."],
+  ["Adicionales","Bienes/servicios 25% (AGA). Obras 15% AGA · 30% Titular · 50% Titular + Contraloría."],
+  ["Pago","10 días hábiles tras la conformidad (+5 justificados). Demora: intereses legales y falta grave."],
+  ["Vicios ocultos","Obras ≥ 7 años · Bienes/servicios ≥ 1 año · Expediente técnico ≥ 3 años."],
+  ["Cláusulas obligatorias","Garantías · Anticorrupción · Solución de controversias · Resolución · Gestión de riesgos."]
+ ],
+ remember:"Los números del contrato: <b>10 – 10 – 30 – 25 – 15/30/50 – 10 días</b> → garantía 10%, penalidades 10%, adelantos 30%, adicionales B/S 25%, obras 15/30/50, pago en 10 días hábiles.",
+ res:[
+  ["🧮","Calculadora de penalidad por mora","Herramienta interactiva","#tools"],
+  ["🏛️","Contraloría – adicionales de obra","gob.pe/contraloria",LINKS.cgr],
+  ["🎬","Videos: penalidad por mora cálculo","Búsqueda en YouTube",yt("penalidad por mora cálculo Ley 32069 reglamento")],
+  ["🎬","Videos: garantías en contrataciones públicas","Búsqueda en YouTube",yt("garantía de fiel cumplimiento Ley 32069")],
+  ["🎬","Videos: adicionales de obra","Búsqueda en YouTube",yt("prestaciones adicionales de obra Ley 32069")],
+  ["🎬","Videos: contratos NEC y FIDIC en Perú","Búsqueda en YouTube",yt("contratos NEC FIDIC Perú obras públicas")]
+ ]
+},
+/* ---------------------------------------------------- 7 */
+{
+ id:"m7", num:"7", group:"Título IV · Subcap. II", title:"Nulidad del procedimiento y del contrato",
+ ref:"Arts. 70 y 71",
+ explain:`
+ <div class="grid g2">
+  <div class="card"><h3>📛 Nulidad de actos del procedimiento (Art. 70)</h3>
+   <p><b>Causales:</b></p>
+   <ol type="a"><li>Dictados por órgano incompetente.</li><li>Contravienen normas legales.</li><li>Contienen un imposible jurídico.</li><li>Prescinden de normas esenciales del procedimiento.</li><li>Prescinden de la forma prescrita (solo si es insubsanable).</li></ol>
+   <p><b>¿Quién la declara?</b></p>
+   <ul><li><b>Tribunal</b>: solo al resolver apelaciones; indica a qué etapa se retrotrae.</li>
+   <li><b>AGA de oficio</b>: hasta la buena pro. <b>Después</b> de la buena pro, solo por (1) <b>vicio trascendente</b> que afecte la finalidad o (2) <b>adjudicatario impedido</b>.</li>
+   <li><b>Jefe de Perú Compras</b>: en procedimientos de catálogos electrónicos.</li></ul>
+   <p>Ante otros vicios, la AGA puede autorizar suscribir el contrato con informes técnico-legales y <b>análisis costo-beneficio</b> (indelegable).</p>
+  </div>
+  <div class="card"><h3>📕 Nulidad del contrato (Art. 71)</h3>
+   <p>Después de perfeccionado, la AGA puede declararla cuando:</p>
+   <ol type="a"><li>Se suscribió con proveedor <b>impedido</b>.</li><li>Hubo <b>documentación falsa, adulterada o inexacta</b> que sustentó la buena pro (previo descargo).</li><li>Se suscribió <b>pese a una apelación en trámite</b>.</li><li>Se prescindió del procedimiento competitivo, no se cumplieron las condiciones de la contratación directa o se <b>simuló un supuesto excluido</b>.</li><li>Sentencia firme que acredita <b>pagos indebidos, dádivas o comisiones</b>.</li></ol>
+   <p>Aun con vicio, la AGA puede autorizar <b>continuar la ejecución</b> con análisis costo-beneficio (indelegable). Siempre se inicia el <b>deslinde de responsabilidades</b>.</p>
+  </div>
+ </div>`,
+ examples:`
+ <div class="box ej"><span class="t">📌 Ejemplo – Nulidad de oficio antes de la buena pro</span>
+ Durante la evaluación, la DEC advierte que las bases integradas aplicaron un factor de evaluación prohibido. La AGA declara la nulidad de oficio y retrotrae el procedimiento a la etapa de convocatoria.</div>
+ <div class="box ej"><span class="t">📌 Ejemplo – Después de la buena pro</span>
+ Tras otorgada la buena pro, se detecta un error formal menor en la publicación de un acta que no afecta el resultado. No es vicio trascendente: la AGA puede <b>autorizar la suscripción</b> del contrato con informes técnico y legal.</div>
+ <div class="box caso"><span class="t">🧩 Caso práctico – Documento falso</span>
+ <p>Seis meses después de firmado un contrato de obra, la entidad verifica que el certificado de experiencia del residente era <b>falso</b> y fue decisivo para obtener la buena pro.</p>
+ <ol><li>La AGA otorga plazo de descargo y declara la <b>nulidad del contrato</b> (Art. 71.1.b).</li>
+ <li>Puede contratar directamente el <b>saldo de obra</b> (Art. 55.1.k) para no paralizarla.</li>
+ <li>Comunica al <b>Tribunal</b>: infracción del Art. 87.1.m (documento falso) → inhabilitación de <b>24 a 60 meses</b>.</li>
+ <li>Denuncia penal y deslinde de responsabilidades de quienes no verificaron.</li></ol></div>`,
+ quiz:[
+  {q:"La AGA puede declarar de oficio la nulidad del procedimiento sin restricción:",o:["Hasta la firma del contrato","Hasta el otorgamiento de la buena pro","Durante toda la ejecución","Nunca"],a:1,e:"Art. 70.2.b; después de la buena pro solo por vicio trascendente o adjudicatario impedido."},
+  {q:"¿Es causal de nulidad del contrato haberlo suscrito con apelación en trámite?",o:["Sí","No","Solo en obras","Solo si lo pide el postor"],a:0,e:"Art. 71.1.c."},
+  {q:"El Tribunal declara la nulidad del procedimiento:",o:["De oficio en cualquier momento","Solo al conocer un recurso de apelación","A pedido del OECE","Solo en contratos menores"],a:1,e:"Art. 70.2.a."},
+  {q:"Continuar la ejecución pese a un vicio de nulidad requiere:",o:["Nada","Informes técnico y legal con análisis costo-beneficio de la AGA (indelegable)","Opinión del Tribunal","Acuerdo del contratista"],a:1,e:"Art. 71.3."}
+ ],
+ cards:[
+  ["Causales de nulidad (actos)","Incompetencia · contra la ley · imposible jurídico · omisión de normas esenciales · forma insubsanable."],
+  ["Nulidad después de buena pro","Solo: vicio trascendente o adjudicatario impedido."],
+  ["Nulidad del contrato","Impedido · documentos falsos/inexactos · apelación en trámite · sin procedimiento / simulación · corrupción con sentencia."],
+  ["Costo-beneficio","La AGA puede mantener el contrato pese al vicio con informes (indelegable)."]
+ ],
+ remember:"Nulidad = <b>ICI-NF</b>: <b>I</b>ncompetente, <b>C</b>ontra la ley, <b>I</b>mposible jurídico, <b>N</b>ormas esenciales omitidas, <b>F</b>orma insubsanable.",
+ res:[
+  ["📄","Texto de la Ley (arts. 70-71)","PDF oficial",LINKS.ley],
+  ["🎬","Videos: nulidad de oficio en contrataciones","Búsqueda en YouTube",yt("nulidad de oficio procedimiento de selección Ley 32069")],
+  ["🎬","Videos: nulidad del contrato","Búsqueda en YouTube",yt("nulidad del contrato contrataciones del Estado documento falso")]
+ ]
+},
+/* ---------------------------------------------------- 8 */
+{
+ id:"m8", num:"8", group:"Título V", title:"Solución de controversias: apelación, JPRD, conciliación y arbitraje",
+ ref:"Arts. 72 al 86 · Reglamento (arts. 303 y ss.)",
+ explain:`
+ <div class="card"><h3>🧭 Dos momentos, dos vías</h3>
+  <div class="grid g2">
+   <div class="box ej" style="margin:0"><span class="t">ANTES del contrato</span><b>Recurso de apelación</b> (única vía para discrepancias en el procedimiento de selección y catálogos).</div>
+   <div class="box caso" style="margin:0"><span class="t">DESDE el perfeccionamiento</span><b>JPRD · Conciliación · Arbitraje</b> (y otros de contratos estandarizados).</div>
+  </div>
+ </div>
+ <div class="grid g2" style="margin-top:14px">
+  <div class="card"><h3>📮 Recurso de apelación (Arts. 72-75)</h3>
+   <ul><li><b>Cuándo:</b> después de la buena pro, de la declaratoria de desierto o de los resultados de catálogos.</li>
+   <li><b>Plazo (Regl. 304):</b> <b>8 días hábiles</b> (licitación y concurso públicos); <b>5 días hábiles</b> (abreviadas, comparación de precios, selección de expertos y subasta inversa salvo que su cuantía sea de LP/CP).</li>
+   <li><b>Quién resuelve:</b> <b>Tribunal</b> si la cuantía supera <b>50 UIT</b> (2026: ${soles(50*UIT)}) y en catálogos; en los demás casos, la <b>AGA</b> de la entidad.</li>
+   <li><b>Garantía:</b> según el texto consolidado vigente de la Ley, hasta el <b>0.5%</b> de la cuantía, con tope de <b>50 UIT</b> (MYPE: <b>25 UIT</b>).</li>
+   <li><b>Efecto:</b> <b>suspende</b> el procedimiento; lo resuelto agota la vía administrativa. Silencio → denegatoria ficta (contencioso-administrativo).</li>
+   <li><b>No apelables:</b> contrataciones no competitivas (directas) y actuaciones que fije el reglamento.</li></ul>
+  </div>
+  <div class="card"><h3>🧑‍🔧 Junta de Prevención y Resolución de Disputas – JPRD (Arts. 79-80)</h3>
+   <ul><li>Para contratos de <b>obras y suministro</b> (según reglamento).</li>
+   <li>Absuelve consultas y <b>resuelve controversias técnicas y contractuales</b> mediante <b>decisiones obligatorias</b> de inmediato cumplimiento.</li>
+   <li>No conoce validez, nulidad o eficacia del contrato.</li>
+   <li>Plazo de caducidad para someter: <b>20 días hábiles</b> desde que se comunica el desacuerdo.</li>
+   <li>Si nadie expresa desacuerdo en 20 días hábiles (o no se inicia arbitraje a tiempo), la decisión adquiere <b>mérito ejecutivo</b>.</li>
+   <li>Si el contrato la prevé, es <b>presupuesto de arbitrabilidad</b>.</li></ul>
+  </div>
+  <div class="card"><h3>🤝 Conciliación (Arts. 81-82)</h3>
+   <ul><li>Pactable en el contrato, <b>previa al arbitraje</b>; obligatoria en <b>contratos menores</b>.</li>
+   <li>Materias: resolución, ampliación de plazo, recepción y conformidad, valorizaciones/metrados, liquidación, obligaciones de ejecución.</li>
+   <li><b>La nulidad del contrato NO es conciliable.</b></li>
+   <li>Ante centro acreditado por el MINJUSDH. La decisión de conciliar es de la <b>AGA</b>, con informe costo-beneficio.</li></ul>
+  </div>
+  <div class="card"><h3>⚖️ Arbitraje (Arts. 83-84)</h3>
+   <ul><li>Resuelve controversias sobre validez, nulidad, interpretación, ejecución, terminación o eficacia.</li>
+   <li><b>De derecho</b>, en español; <b>institucional</b> (institución registrada en el OECE). <b>Ad hoc solo si la controversia ≤ 10 UIT.</b></li>
+   <li>Árbitro único (por defecto) o tribunal de 3.</li>
+   <li><b>Plazo de caducidad: 30 días hábiles</b> (desde la notificación del acto o la entrega del bien, entregable o la obra, con excepciones). Catálogos: 10 días hábiles.</li>
+   <li>Laudo <b>inapelable, definitivo y obligatorio</b>; solo cabe <b>recurso de anulación</b> (la entidad requiere autorización del titular con costo-beneficio). Laudos son de acceso público.</li></ul>
+  </div>
+ </div>
+ <div class="card" style="margin-top:14px"><h3>🛡️ Medidas cautelares y contracautela (Arts. 85-86)</h3>
+  <ul><li>Antes del tribunal arbitral: juez comercial (o civil) del domicilio de la entidad.</li>
+  <li>Siempre con <b>traslado previo</b> a la contraparte.</li>
+  <li><b>No proceden</b> cautelares que paralicen obras de salud, educación, vías, saneamiento y conservación vial.</li>
+  <li><b>Contracautela:</b> caución juratoria para contratos de hasta <b>200 UIT</b> y para MYPE; en los demás casos, <b>carta fianza</b>, no menor a la garantía de fiel cumplimiento cuando se discute validez, resolución o eficacia.</li></ul>
+ </div>
+ <div class="box alerta"><span class="t">⚠️ No arbitrables</span>Pretensiones de enriquecimiento sin causa o indemnizaciones derivadas de adicionales <b>no aprobados por la Contraloría</b> → Poder Judicial (Art. 76.3). Los adicionales aprobados por la entidad <b>sí</b> pueden ir a JPRD o arbitraje.</div>`,
+ examples:`
+ <div class="box ej"><span class="t">📌 Ejemplo – ¿Tribunal o entidad?</span>
+ Licitación pública abreviada de bienes por S/ 250,000. 50 UIT en 2026 = ${soles(50*UIT)}. Como S/ 250,000 no supera ese monto, la apelación la resuelve la <b>AGA de la entidad</b>. Si fuera S/ 300,000 → <b>Tribunal</b>.</div>
+ <div class="box ej"><span class="t">📌 Ejemplo – Plazo de apelación</span>
+ Buena pro de un concurso público notificada el lunes 2. El plazo de 8 días hábiles vence el miércoles 11 (sin feriados). En un concurso público abreviado serían 5 días hábiles → vence el lunes 9.</div>
+ <div class="box caso"><span class="t">🧩 Caso práctico – Ampliación de plazo denegada</span>
+ <p>Un contratista de obra solicita ampliación de plazo por lluvias extraordinarias y la entidad la deniega. El contrato tiene JPRD.</p>
+ <ol><li>El contratista comunica su desacuerdo y somete la controversia a la <b>JPRD dentro de 20 días hábiles</b>.</li>
+ <li>La JPRD decide a favor del contratista: la decisión es <b>obligatoria</b> y la entidad debe cumplirla de inmediato.</li>
+ <li>Si la entidad discrepa, debe comunicarlo en 20 días hábiles e iniciar <b>arbitraje institucional</b> dentro del plazo de caducidad; si no lo hace, la decisión adquiere <b>mérito ejecutivo</b>.</li>
+ <li>Para solicitar una medida cautelar, el contratista debe ofrecer contracautela (carta fianza si el contrato supera 200 UIT y no es MYPE).</li></ol></div>`,
+ quiz:[
+  {q:"Antes del perfeccionamiento del contrato, las discrepancias se resuelven mediante:",o:["Arbitraje","Conciliación","Recurso de apelación","JPRD"],a:2,e:"Art. 72.1."},
+  {q:"El Tribunal resuelve la apelación cuando la cuantía es superior a:",o:["8 UIT","50 UIT","100 UIT","200 UIT"],a:1,e:`Art. 74.1.a: más de 50 UIT (2026: ${soles(50*UIT)}).`},
+  {q:"El plazo para apelar en una licitación pública es:",o:["3 días hábiles","5 días hábiles","8 días hábiles","15 días hábiles"],a:2,e:"Reglamento art. 304.1; en abreviadas, 5 días hábiles."},
+  {q:"El arbitraje ad hoc solo procede cuando la controversia no supera:",o:["5 UIT","10 UIT","50 UIT","200 UIT"],a:1,e:"Art. 84.1."},
+  {q:"¿Cuál NO es materia conciliable?",o:["Ampliación de plazo","Liquidación","Nulidad del contrato","Valorizaciones"],a:2,e:"Art. 81.2."},
+  {q:"Las decisiones de la JPRD son:",o:["Simples recomendaciones","Obligatorias y de inmediato cumplimiento","Apelables ante el Tribunal","Opcionales para la entidad"],a:1,e:"Art. 79.3."},
+  {q:"La contracautela puede ser caución juratoria en contrataciones de hasta:",o:["50 UIT","100 UIT","200 UIT","2000 UIT"],a:2,e:"Art. 86.1 (y para MYPE)."}
+ ],
+ cards:[
+  ["Apelación","8 días hábiles (LP/CP) · 5 (abreviadas, CdP, SIE menor). Tribunal > 50 UIT. Suspende el procedimiento."],
+  ["Garantía de apelación","Texto consolidado: hasta 0.5% de la cuantía; tope 50 UIT (MYPE 25 UIT)."],
+  ["JPRD","Decisiones obligatorias. 20 días hábiles para someter y para manifestar desacuerdo."],
+  ["Arbitraje","Institucional (ad hoc ≤ 10 UIT). 30 días hábiles de caducidad. Laudo inapelable; solo anulación."],
+  ["Contracautela","Caución juratoria ≤ 200 UIT o MYPE; si no, carta fianza."]
+ ],
+ remember:"<b>Antes</b> del contrato → <b>A</b>pelación. <b>Después</b> → <b>J-C-A</b>: Junta, Conciliación, Arbitraje.",
+ res:[
+  ["🧮","Calculadora: ¿quién resuelve mi apelación?","Herramienta interactiva","#tools"],
+  ["🛡️","OECE – Tribunal y registro arbitral","gob.pe/oece",LINKS.oece],
+  ["🤝","MINJUSDH – centros de conciliación","gob.pe/minjus",LINKS.minjus],
+  ["🎬","Videos: recurso de apelación Ley 32069","Búsqueda en YouTube",yt("recurso de apelación Ley 32069 Tribunal de Contrataciones")],
+  ["🎬","Videos: Junta de Prevención y Resolución de Disputas","Búsqueda en YouTube",yt("Junta de Prevención y Resolución de Disputas JPRD Perú obras")],
+  ["🎬","Videos: arbitraje en contrataciones públicas","Búsqueda en YouTube",yt("arbitraje contrataciones públicas Perú Ley 32069")]
+ ]
+},
+/* ---------------------------------------------------- 9 */
+{
+ id:"m9", num:"9", group:"Título VI", title:"Infracciones y sanciones",
+ ref:"Arts. 87 al 100",
+ explain:`
+ <div class="card"><h3>🚩 Infracciones de participantes, postores, proveedores y subcontratistas (Art. 87)</h3>
+  <div class="table-wrap"><table>
+   <tr><th>Lit.</th><th>Infracción</th><th>Sanción</th></tr>
+   <tr><td>a</td><td>Desistirse o retirar injustificadamente su propuesta de manera <b>reiterada</b></td><td rowspan="5">Multa (1.ª o 2.ª vez en 4 años). Si ya tuvo 2+ sanciones en 4 años: inhabilitación temporal <b>3 a 12 meses</b></td></tr>
+   <tr><td>b</td><td>No perfeccionar injustificadamente el contrato o acuerdo marco</td></tr>
+   <tr><td>c</td><td>Subcontratar sin autorización, en exceso, o con subcontratista sin RNP/impedido</td></tr>
+   <tr><td>d</td><td>Negarse a cumplir obligaciones posteriores al pago</td></tr>
+   <tr><td>e</td><td>Contratar sin RNP vigente o por encima de su capacidad libre de contratación</td></tr>
+   <tr><td>f</td><td>Expedientes técnicos deficientes que retrasan la obra</td><td rowspan="3">Inhabilitación <b>6 a 18 meses</b> (reincidencia 12 a 24). Opción de multa si es 1.ª/2.ª sanción y ≤ 8 meses</td></tr>
+   <tr><td>g</td><td>Supervisar obras de manera negligente con perjuicio económico</td></tr>
+   <tr><td>h</td><td>Perfeccionar el contrato pese a suspensión/nulidad notificada</td></tr>
+   <tr><td>i</td><td>Contratar estando <b>impedido</b></td><td rowspan="4">Inhabilitación <b>6 a 24 meses</b></td></tr>
+   <tr><td>j</td><td>Ocasionar la <b>resolución del contrato</b> (consentida o firme)</td></tr>
+   <tr><td>k</td><td>No sanear vicios ocultos reconocidos o declarados</td></tr>
+   <tr><td>l</td><td>Presentar <b>información inexacta</b> (con ventaja o beneficio concreto)</td></tr>
+   <tr><td>m</td><td>Presentar <b>documentos falsos o adulterados</b></td><td>Inhabilitación <b>24 a 60 meses</b></td></tr>
+  </table></div>
+  <p>En <b>contratos menores</b> solo aplican las infracciones d, e, i, j, l y m.</p>
+ </div>
+ <div class="grid g2" style="margin-top:14px">
+  <div class="card"><h3>💸 Multa (Art. 89)</h3>
+   <ul><li>Entre <b>3% y 10%</b> de la oferta o del contrato; nunca menos de <b>1 UIT</b>.</li>
+   <li>Si no se puede determinar el monto: <b>1 a 15 UIT</b>.</li>
+   <li><b>MYPE:</b> máximo 8% (o 8 UIT).</li>
+   <li>Contratos menores: puede ser menor.</li>
+   <li>Descuentos de hasta <b>30%</b> por pronto pago; cobranza coactiva por el OECE.</li></ul>
+  </div>
+  <div class="card"><h3>⛓️ Inhabilitación definitiva (Art. 91)</h3>
+   <p>Por infracciones i, j, k, l o m cuando en los últimos <b>4 años</b> ya tiene <b>más de dos inhabilitaciones temporales</b> que sumen <b>más de 36 meses</b>, o si ya tenía inhabilitación definitiva.</p>
+   <h4>Prescripción (Art. 93)</h4>
+   <ul><li>General: <b>4 años</b>.</li><li>Documentos falsos: <b>7 años</b>.</li></ul>
+   <h4>Procedimiento sancionador</h4>
+   <p>Lo conduce el <b>Tribunal</b> (fase instructiva y sancionadora). Responsabilidad <b>objetiva</b> salvo tipos que admitan justificación. Caducidad del procedimiento: <b>9 meses</b> (reglamento). El reconocimiento de responsabilidad reduce la sanción.</p>
+  </div>
+ </div>
+ <div class="grid g2" style="margin-top:14px">
+  <div class="card"><h3>🔽 Sanción por debajo del mínimo (Art. 92.4)</h3><p>En información inexacta o documento falso, si se prueba que lo entregó un <b>tercero</b> y que el proveedor actuó con <b>debida diligencia</b>, habiendo iniciado acciones legales contra el responsable.</p></div>
+  <div class="card"><h3>🤝 Consorcios (Art. 92.5)</h3><p>La sanción recae en el <b>integrante que cometió la infracción</b>; las declaraciones juradas solo comprometen la situación de cada integrante.</p></div>
+ </div>
+ <div class="card" style="margin-top:14px"><h3>🏛️ Sanciones a instituciones arbitrales y centros JPRD (Arts. 94-100)</h3><p>Las impone el <b>OECE</b>: amonestación escrita, multa, retiro temporal del registro y exclusión.</p></div>`,
+ examples:`
+ <div class="box ej"><span class="t">📌 Ejemplo – Multa</span>
+ Un postor ganador de S/ 400,000 no firma el contrato sin justificación (lit. b), primera infracción. Multa entre 3% y 10%: entre <b>S/ 12,000 y S/ 40,000</b>. Si es MYPE, máximo 8% = S/ 32,000. Con pronto pago, hasta 30% de descuento.</div>
+ <div class="box ej"><span class="t">📌 Ejemplo – Información inexacta vs. documento falso</span>
+ <b>Inexacta:</b> declarar 5 años de experiencia cuando son 3, obteniendo puntaje (lit. l → 6 a 24 meses). <b>Falso:</b> presentar un certificado que la empresa emisora nunca emitió (lit. m → 24 a 60 meses).</div>
+ <div class="box caso"><span class="t">🧩 Caso práctico – Reincidencia</span>
+ <p>La empresa Z fue inhabilitada en 2023 por 20 meses (lit. j) y en 2025 por 18 meses (lit. l). En 2026 vuelve a presentar información inexacta.</p>
+ <ol><li>En los últimos 4 años tiene <b>2 inhabilitaciones</b> que suman 38 meses.</li>
+ <li>La inhabilitación definitiva exige <b>más de dos</b> inhabilitaciones temporales que sumen más de 36 meses → con solo 2 aún <b>no procede</b>; corresponde una nueva temporal (6 a 24 meses), graduada considerando sus antecedentes.</li>
+ <li>Si en el futuro sumara una tercera con el total mayor a 36 meses y cometiera otra infracción i–m → <b>inhabilitación definitiva</b>.</li></ol></div>`,
+ quiz:[
+  {q:"Presentar documentos falsos se sanciona con inhabilitación temporal de:",o:["3 a 12 meses","6 a 24 meses","24 a 60 meses","Definitiva siempre"],a:2,e:"Art. 90.1.d."},
+  {q:"La multa no puede ser menor a:",o:["0.5 UIT","1 UIT","3 UIT","5 UIT"],a:1,e:"Art. 89.2: entre 3% y 10%, nunca inferior a una UIT."},
+  {q:"Para MYPE, la multa no puede ser mayor al:",o:["5%","8%","10%","15%"],a:1,e:"Art. 89.3."},
+  {q:"El plazo de prescripción de la infracción por documentos falsos es:",o:["2 años","4 años","7 años","10 años"],a:2,e:"Art. 93.2."},
+  {q:"¿Quién sanciona a los proveedores?",o:["La entidad","El OECE directamente","El Tribunal de Contrataciones Públicas","Perú Compras"],a:2,e:"Art. 88.1."},
+  {q:"En un consorcio, la sanción recae en:",o:["Todos los integrantes siempre","El integrante que cometió la infracción","El representante común","El operador tributario"],a:1,e:"Art. 92.5."}
+ ],
+ cards:[
+  ["Sanciones","Multa · Inhabilitación temporal · Inhabilitación definitiva."],
+  ["Rangos de inhabilitación","a–e reincidente: 3–12 m · f–h: 6–18 m · i–l: 6–24 m · m (falsos): 24–60 m."],
+  ["Multa","3% a 10% (mín. 1 UIT). Sin monto: 1–15 UIT. MYPE ≤ 8%. Pronto pago: hasta 30% de descuento."],
+  ["Prescripción","4 años; documentos falsos 7 años."],
+  ["Inhabilitación definitiva","Más de 2 inhabilitaciones temporales en 4 años que sumen más de 36 meses + nueva infracción i–m."]
+ ],
+ remember:"Escala del castigo: <b>retirarse → multa</b>; <b>impedido/resolución/inexacta → 6–24</b>; <b>falso → 24–60</b>; <b>reincidente grave → definitiva</b>.",
+ res:[
+  ["🛡️","OECE – Tribunal de Contrataciones Públicas","gob.pe/oece",LINKS.oece],
+  ["📇","Consulta de proveedores sancionados (RNP)","rnp.gob.pe",LINKS.rnp],
+  ["🎬","Videos: infracciones y sanciones Ley 32069","Búsqueda en YouTube",yt("infracciones y sanciones Ley 32069 Tribunal")],
+  ["🎬","Videos: información inexacta vs documento falso","Búsqueda en YouTube",yt("información inexacta documento falso Tribunal de Contrataciones")]
+ ]
+}
+];
+
+/* =========================================================
+   ESTADO (localStorage con try/catch)
+   ========================================================= */
+const store = {
+  get(k,d){try{const v=localStorage.getItem("lcp32069_"+k);return v?JSON.parse(v):d}catch(e){return d}},
+  set(k,v){try{localStorage.setItem("lcp32069_"+k,JSON.stringify(v))}catch(e){}}
+};
+let progress = store.get("progress",{}); // {m1:{score:4,total:6}}
+let current = "home";
+
+/* =========================================================
+   NAVEGACIÓN
+   ========================================================= */
+const navItems = [
+  {id:"home",num:"⌂",title:"Inicio y panorama",group:"General"},
+  ...MODULES.map(m=>({id:m.id,num:m.num,title:m.title,group:m.group})),
+  {id:"tools",num:"🧮",title:"Herramientas y simuladores",group:"Práctica"},
+  {id:"exam",num:"📝",title:"Examen final",group:"Práctica"},
+  {id:"glosario",num:"📖",title:"Glosario y recursos",group:"Práctica"}
+];
+function renderNav(filter=""){
+  const nav=document.getElementById("nav"); const f=filter.trim().toLowerCase();
+  let html="",lastG="";
+  navItems.forEach(it=>{
+    if(f){
+      const m=MODULES.find(x=>x.id===it.id);
+      const hay=(it.title+" "+(m?(m.explain+m.examples):"")).toLowerCase();
+      if(!hay.includes(f)) return;
+    }
+    const g = it.group.startsWith("Título")?"Contenido de la Ley":it.group;
+    if(g!==lastG){html+=`<div class="nav-group">${g}</div>`;lastG=g}
+    const done=progress[it.id]&&progress[it.id].score/progress[it.id].total>=0.7;
+    html+=`<a href="#${it.id}" class="${current===it.id?"active":""}" data-id="${it.id}"><span class="num">${it.num}</span><span>${it.title}</span>${done?'<span class="done">✔</span>':""}</a>`;
+  });
+  nav.innerHTML=html||'<p style="font-size:13px;color:var(--muted);padding:6px">Sin resultados.</p>';
+}
+function updateProgress(){
+  const total=MODULES.length; let done=0;
+  MODULES.forEach(m=>{const p=progress[m.id];if(p&&p.score/p.total>=0.7)done++});
+  const pct=Math.round(done/total*100);
+  document.getElementById("progBar").style.width=pct+"%";
+  document.getElementById("progTxt").textContent=`${done}/${total} capítulos aprobados · ${pct}%`;
+}
+function go(id){
+  current=id||"home";
+  const c=document.getElementById("content");
+  if(current==="home") c.innerHTML=homeView();
+  else if(current==="tools") c.innerHTML=toolsView();
+  else if(current==="exam") c.innerHTML=examView();
+  else if(current==="glosario") c.innerHTML=glosarioView();
+  else { const m=MODULES.find(x=>x.id===current); c.innerHTML=m?moduleView(m):homeView(); if(m) showTab(m.id,"explain"); }
+  c.classList.remove("fade"); void c.offsetWidth; c.classList.add("fade");
+  renderNav(document.getElementById("search").value);
+  window.scrollTo({top:0,behavior:"smooth"});
+  document.getElementById("sidebar").classList.remove("open");
+  document.getElementById("overlay").classList.remove("show");
+  if(current==="tools") initTools();
+  if(current==="home") setTimeout(playFlow,400);
+}
+
+/* =========================================================
+   VISTAS
+   ========================================================= */
+function homeView(){
+  return `
+  <section class="hero">
+   <h2>Ley N.° 32069 – Ley General de Contrataciones Públicas</h2>
+   <p>Dashboard de estudio completo y actualizado: explicaciones claras, ejemplos, casos prácticos, preguntas, reforzamiento, simuladores y enlaces a videos para dominar las contrataciones con el Estado peruano.</p>
+   <div class="chips"><span class="chip">📅 Publicada: 24/06/2024</span><span class="chip">⚙️ Reglamento: D.S. 009-2025-EF (mod. D.S. 001-2026-EF)</span><span class="chip">✅ Vigente desde abril de 2025</span><span class="chip">🔁 Deroga la Ley 30225</span><span class="chip">💰 UIT 2026: ${soles(UIT)}</span></div>
+  </section>
+  <div class="grid g4" style="margin-top:16px">
+   <div class="card kpi"><div class="v">${soles(8*UIT)}</div><div class="l">Contrato menor (≤ 8 UIT)</div></div>
+   <div class="card kpi"><div class="v">${soles(50*UIT)}</div><div class="l">Apelación ante el Tribunal (&gt; 50 UIT)</div></div>
+   <div class="card kpi"><div class="v">10%</div><div class="l">Garantía de fiel cumplimiento · tope de penalidades</div></div>
+   <div class="card kpi"><div class="v">15</div><div class="l">Principios rectores (Art. 5)</div></div>
+  </div>
+  <div class="card" style="margin-top:16px"><h3>🔄 El proceso de contratación en 3 fases</h3>
+   <div class="flow" id="flowAnim">
+    <div class="ph"><b>1. Actuaciones preparatorias</b><small>Requerimiento · mercado · estrategia</small></div><div class="arrow">➜</div>
+    <div class="ph"><b>2. Selección</b><small>Convocatoria → buena pro → contrato</small></div><div class="arrow">➜</div>
+    <div class="ph"><b>3. Ejecución contractual</b><small>Prestación · conformidad · pago</small></div>
+   </div>
+   <button class="btn sec" onclick="playFlow()">▶ Repetir animación</button>
+  </div>
+  <div class="grid g2" style="margin-top:16px">
+   <div class="card"><h3>🆕 ¿Qué cambió frente a la Ley 30225?</h3>
+    <ul><li><b>OSCE → OECE</b>; <b>SEACE → Pladicop</b> (plataforma integrada).</li>
+    <li>Nuevos procedimientos: licitación y concurso públicos con <b>modalidades abreviadas</b>; desaparece la adjudicación simplificada.</li>
+    <li><b>Valor por dinero</b> y gestión de riesgos como ejes.</li>
+    <li><b>Compradores públicos</b> certificados y <b>Ficha Única del Proveedor</b>.</li>
+    <li><b>Contratos estandarizados internacionales</b> (NEC, FIDIC), BIM y nuevos sistemas de entrega.</li>
+    <li><b>JPRD</b> fortalecida; arbitraje institucional (ad hoc solo ≤ 10 UIT).</li>
+    <li>Nuevas reglas de sanciones, multas con descuento por pronto pago.</li></ul>
+   </div>
+   <div class="card"><h3>🧭 Cómo usar este dashboard</h3>
+    <ol><li>Elige un capítulo en el menú lateral.</li>
+    <li>Lee la <b>Explicación</b> y luego los <b>Ejemplos y casos</b>.</li>
+    <li>Responde las <b>Preguntas</b>: con 70% o más el capítulo queda aprobado ✔.</li>
+    <li>Repasa con las <b>tarjetas de Reforzamiento</b>.</li>
+    <li>Profundiza con los <b>Recursos</b> (videos, normas oficiales).</li>
+    <li>Practica en <b>Herramientas</b> y rinde el <b>Examen final</b>.</li></ol>
+    <button class="btn" onclick="location.hash='m1'">Empezar por el capítulo 1 →</button>
+   </div>
+  </div>
+  <div class="card" style="margin-top:16px"><h3>🗂️ Estructura de la Ley 32069</h3>
+   <div class="grid g3">
+    ${MODULES.map(m=>`<a class="res" href="#${m.id}"><span class="ic">${m.num}</span><div><b>${m.title}</b><span>${m.group} · ${m.ref}</span></div></a>`).join("")}
+   </div>
+  </div>
+  ${foot()}`;
+}
+function moduleView(m){
+  return `
+  <div class="module-head"><div class="badge">${m.num}</div><div><span class="tag">${m.group}</span><h2>${m.title}</h2><div class="ref">${m.ref}</div></div></div>
+  <div class="tabs" id="tabs-${m.id}">
+   <button class="tab" data-t="explain" onclick="showTab('${m.id}','explain')">📘 Explicación</button>
+   <button class="tab" data-t="examples" onclick="showTab('${m.id}','examples')">💡 Ejemplos y casos prácticos</button>
+   <button class="tab" data-t="quiz" onclick="showTab('${m.id}','quiz')">❓ Preguntas</button>
+   <button class="tab" data-t="cards" onclick="showTab('${m.id}','cards')">🔁 Reforzamiento</button>
+   <button class="tab" data-t="res" onclick="showTab('${m.id}','res')">🎬 Videos y recursos</button>
+  </div>
+  <div id="pane-${m.id}"></div>
+  <div style="display:flex;justify-content:space-between;margin-top:20px;gap:10px;flex-wrap:wrap">${navBtns(m)}</div>
+  ${foot()}`;
+}
+function navBtns(m){
+  const i=MODULES.indexOf(m);
+  const prev=i>0?`<button class="btn sec" onclick="location.hash='${MODULES[i-1].id}'">← ${MODULES[i-1].title}</button>`:`<button class="btn sec" onclick="location.hash='home'">← Inicio</button>`;
+  const next=i<MODULES.length-1?`<button class="btn" onclick="location.hash='${MODULES[i+1].id}'">${MODULES[i+1].title} →</button>`:`<button class="btn" onclick="location.hash='tools'">Herramientas →</button>`;
+  return prev+next;
+}
+function showTab(id,t){
+  const m=MODULES.find(x=>x.id===id); const pane=document.getElementById("pane-"+id); if(!pane) return;
+  document.querySelectorAll(`#tabs-${id} .tab`).forEach(b=>b.classList.toggle("active",b.dataset.t===t));
+  if(t==="explain") pane.innerHTML=m.explain;
+  if(t==="examples") pane.innerHTML=m.examples;
+  if(t==="quiz") pane.innerHTML=quizHTML(m.id,m.quiz,true);
+  if(t==="cards") pane.innerHTML=`<div class="box ok"><span class="t">🧠 Recuerda</span>${m.remember}</div><div class="grid g3">${m.cards.map(c=>`<div class="flash" onclick="this.classList.toggle('flipped')"><div class="inner"><div class="face front">${c[0]}</div><div class="face back">${c[1]}</div></div></div>`).join("")}</div>
+  <h3 style="margin-top:22px">✍️ Repaso rápido: Verdadero o Falso</h3>${tfHTML(m)}`;
+  if(t==="res") pane.innerHTML=`<div class="grid g2">${m.res.map(r=>`<a class="res" href="${r[3]}" ${r[3].startsWith("#")?"":'target="_blank" rel="noopener"'}><span class="ic">${r[0]}</span><div><b>${r[1]}</b><span>${r[2]}</span></div></a>`).join("")}</div>
+  <div class="box ej" style="margin-top:16px"><span class="t">💡 Sugerencia de estudio</span>Los enlaces de video abren búsquedas actualizadas en YouTube, para que encuentres el material más reciente sobre la Ley 32069 (canales del OECE, del MEF, colegios profesionales y especialistas). Prioriza videos publicados desde 2025.</div>`;
+  if(t==="explain" && id==="m4") setTimeout(playFlow,300);
+  if(t==="explain" && id==="m5") setTimeout(playSteps,300);
+}
+
+/* ---------- Quiz ---------- */
+let quizState={};
+function quizHTML(key,qs,save){
+  quizState[key]={answered:0,correct:0,total:qs.length,save};
+  return `<div class="score" id="score-${key}"><span class="tag">0 / ${qs.length} respondidas</span>${progress[key]?`<span class="tag">Mejor intento previo: ${progress[key].score}/${progress[key].total}</span>`:""}</div>`+
+  qs.map((q,i)=>`<div class="q" id="q-${key}-${i}"><div class="qt">${i+1}. ${q.q}</div>${q.o.map((o,j)=>`<button class="opt" onclick="answer('${key}',${i},${j})">${String.fromCharCode(97+j)}) ${o}</button>`).join("")}<div class="fb" id="fb-${key}-${i}"></div></div>`).join("")+
+  `<button class="btn sec" onclick="retry('${key}')">↺ Reintentar</button>`;
+}
+let QBANK={}; MODULES.forEach(m=>QBANK[m.id]=m.quiz);
+function answer(key,i,j){
+  const q=QBANK[key][i]; const box=document.getElementById(`q-${key}-${i}`);
+  const btns=box.querySelectorAll(".opt"); if(btns[0].disabled) return;
+  btns.forEach((b,k)=>{b.disabled=true;if(k===q.a)b.classList.add("correct");if(k===j&&j!==q.a)b.classList.add("wrong")});
+  const ok=j===q.a; const fb=document.getElementById(`fb-${key}-${i}`);
+  fb.innerHTML=(ok?"✅ <b>¡Correcto!</b> ":"❌ <b>Incorrecto.</b> ")+q.e; fb.classList.add("show");
+  const st=quizState[key]; st.answered++; if(ok) st.correct++;
+  const sc=document.getElementById("score-"+key);
+  if(st.answered===st.total){
+    const pct=Math.round(st.correct/st.total*100);
+    sc.innerHTML=`<span class="tag" style="font-size:14px">Resultado: ${st.correct}/${st.total} (${pct}%)</span> ${pct>=70?'<span class="tag" style="background:var(--ok-soft);color:var(--ok)">✔ Aprobado</span>':'<span class="tag" style="background:var(--bad-soft);color:var(--bad)">Repasa y vuelve a intentar</span>'}`;
+    if(st.save){const prev=progress[key]; if(!prev||st.correct>=prev.score){progress[key]={score:st.correct,total:st.total};store.set("progress",progress)} updateProgress(); renderNav(document.getElementById("search").value);}
+    if(key==="exam") examFinish(st);
+  } else sc.querySelector(".tag").textContent=`${st.answered} / ${st.total} respondidas`;
+}
+function retry(key){ if(key==="exam"){go("exam");return} showTab(key,"quiz"); }
+
+/* ---------- Verdadero/Falso ---------- */
+const TF={
+ m1:[["Los contratos menores están fuera de la Ley 32069.",false,"Art. 3.1: los contratos menores se rigen por esta ley."],["Los principios sirven para integrar vacíos de la ley.",true,"Art. 5.3."]],
+ m2:[["El Tribunal de Contrataciones es un órgano de Perú Compras.",false,"Es un órgano del OECE."],["La falta de actualización en el RNP genera suspensión temporal.",true,"Art. 29.4."]],
+ m3:[["La Pladicop integra el RNP y el sistema electrónico de contrataciones.",true,"Art. 41 y reglamento."],["La compra corporativa obligatoria está a cargo de cada entidad.",false,"Está a cargo de Perú Compras (Art. 37.2)."]],
+ m4:[["Adquirir por catálogo electrónico es fraccionamiento.",false,"Art. 50.2.b: no lo es."],["La estrategia de contratación integra el expediente de contratación.",true,"Art. 49.1."]],
+ m5:[["La contratación directa puede impugnarse con recurso de apelación.",false,"Art. 72.3: no se impugnan las contrataciones no competitivas."],["La subasta inversa se usa para bienes y servicios comunes con ficha técnica.",true,"Reglamento art. 96.1."]],
+ m6:[["Las MYPE pueden otorgar la garantía de fiel cumplimiento mediante retención de pago.",true,"Art. 61.3."],["Los adelantos directos pueden llegar al 50% del contrato.",false,"Art. 66.3: en conjunto no exceden el 30%."]],
+ m7:[["Después de la buena pro, la AGA puede anular por cualquier vicio.",false,"Solo por vicio trascendente o adjudicatario impedido."],["La facultad de continuar un contrato pese a vicios es indelegable.",true,"Art. 71.3."]],
+ m8:[["La nulidad del contrato es materia conciliable.",false,"Art. 81.2."],["El laudo arbitral solo admite recurso de anulación.",true,"Art. 84.9."]],
+ m9:[["Las MYPE pueden recibir multas de hasta 10%.",false,"Máximo 8% (Art. 89.3)."],["La infracción por documentos falsos prescribe a los 7 años.",true,"Art. 93.2."]]
+};
+function tfHTML(m){
+  return (TF[m.id]||[]).map((t,i)=>`<div class="q"><div class="qt">${t[0]}</div><button class="opt" style="display:inline-block;width:auto;margin-right:8px" onclick="tf(this,${t[1]},true,'${m.id}',${i})">Verdadero</button><button class="opt" style="display:inline-block;width:auto" onclick="tf(this,${t[1]},false,'${m.id}',${i})">Falso</button><div class="fb"></div></div>`).join("");
+}
+function tf(btn,ans,pick,id,i){
+  const box=btn.parentElement; const bs=box.querySelectorAll(".opt"); if(bs[0].disabled) return;
+  bs.forEach(b=>b.disabled=true); btn.classList.add(ans===pick?"correct":"wrong");
+  const fb=box.querySelector(".fb"); fb.innerHTML=(ans===pick?"✅ Correcto. ":"❌ Incorrecto. ")+`Es <b>${ans?"verdadero":"falso"}</b>: `+TF[id][i][2]; fb.classList.add("show");
+}
+
+/* ---------- Herramientas ---------- */
+function toolsView(){
+  return `
+  <div class="module-head"><div class="badge">🧮</div><div><span class="tag">Práctica</span><h2>Herramientas y simuladores</h2><div class="ref">Aplica los números de la ley a casos reales · UIT 2026 = ${soles(UIT)}</div></div></div>
+  <div class="grid g2">
+   <div class="card"><h3>🎯 Selector de procedimiento de selección</h3>
+    <label class="f">Objeto</label><select class="in" id="tObj"><option value="b">Bienes</option><option value="s">Servicios</option><option value="o">Obras</option></select>
+    <label class="f">Cuantía estimada (S/)</label><input class="in" id="tMonto" type="number" value="250000" min="0">
+    <label class="f">¿Es bien/servicio común con ficha técnica de Perú Compras?</label><select class="in" id="tFicha"><option value="n">No</option><option value="s">Sí</option></select>
+    <label class="f">¿Está en catálogo electrónico de acuerdo marco?</label><select class="in" id="tCat"><option value="n">No</option><option value="s">Sí</option></select>
+    <div class="result" id="tRes"></div>
+   </div>
+   <div class="card"><h3>⏱️ Calculadora de penalidad por mora</h3>
+    <label class="f">Tipo de contrato</label><select class="in" id="pTipo"><option value="bs">Bienes / servicios</option><option value="o">Obras</option><option value="c">Consultoría de obras</option></select>
+    <label class="f">Monto del contrato o ítem (S/)</label><input class="in" id="pMonto" type="number" value="120000" min="0">
+    <label class="f">Plazo de ejecución (días)</label><input class="in" id="pPlazo" type="number" value="30" min="1">
+    <label class="f">Días de atraso</label><input class="in" id="pAtraso" type="number" value="5" min="0">
+    <div class="result" id="pRes"></div>
+   </div>
+   <div class="card"><h3>📮 ¿Quién resuelve mi apelación?</h3>
+    <label class="f">Cuantía del procedimiento o ítem (S/)</label><input class="in" id="aMonto" type="number" value="300000" min="0">
+    <label class="f">Procedimiento</label><select class="in" id="aProc"><option value="lp">Licitación / concurso público</option><option value="ab">Modalidad abreviada / comparación de precios / expertos</option><option value="sie">Subasta inversa electrónica</option></select>
+    <label class="f">¿Eres MYPE?</label><select class="in" id="aMype"><option value="n">No</option><option value="s">Sí</option></select>
+    <div class="result" id="aRes"></div>
+   </div>
+   <div class="card"><h3>➕ Semáforo de adicionales</h3>
+    <label class="f">Tipo</label><select class="in" id="dTipo"><option value="o">Obra (solo construcción)</option><option value="bs">Bienes / servicios / consultoría de obra</option></select>
+    <label class="f">Monto del contrato original (S/)</label><input class="in" id="dOrig" type="number" value="8000000" min="0">
+    <label class="f">Adicionales acumulados (S/)</label><input class="in" id="dAd" type="number" value="1600000" min="0">
+    <label class="f">Deductivos vinculados (S/) – solo obras</label><input class="in" id="dDed" type="number" value="200000" min="0">
+    <div class="meter" style="margin-top:12px"><div id="dBar"></div><span id="dPct"></span></div>
+    <div class="result" id="dRes"></div>
+   </div>
+   <div class="card"><h3>🔐 Garantía de fiel cumplimiento</h3>
+    <label class="f">Monto del contrato (S/)</label><input class="in" id="gMonto" type="number" value="900000" min="0">
+    <label class="f">Objeto</label><select class="in" id="gObj"><option value="bs">Bienes / servicios</option><option value="o">Obras</option></select>
+    <label class="f">¿El contratista es MYPE?</label><select class="in" id="gMype"><option value="n">No</option><option value="s">Sí</option></select>
+    <div class="result" id="gRes"></div>
+   </div>
+   <div class="card"><h3>💸 Simulador de multa</h3>
+    <label class="f">Monto de la oferta o contrato (S/) – 0 si no se determina</label><input class="in" id="mMonto" type="number" value="400000" min="0">
+    <label class="f">¿MYPE?</label><select class="in" id="mMype"><option value="n">No</option><option value="s">Sí</option></select>
+    <div class="result" id="mRes"></div>
+   </div>
+  </div>
+  ${foot()}`;
+}
+function initTools(){
+  const ids=["tObj","tMonto","tFicha","tCat","pTipo","pMonto","pPlazo","pAtraso","aMonto","aProc","aMype","dTipo","dOrig","dAd","dDed","gMonto","gObj","gMype","mMonto","mMype"];
+  ids.forEach(i=>{const el=document.getElementById(i); if(el){el.addEventListener("input",calcAll);el.addEventListener("change",calcAll)}});
+  calcAll();
+}
+const val=id=>parseFloat(document.getElementById(id).value)||0;
+const sel=id=>document.getElementById(id).value;
+function calcAll(){
+  // Selector
+  const obj=sel("tObj"),mt=val("tMonto"),ficha=sel("tFicha")==="s",cat=sel("tCat")==="s"; let r="";
+  const MEN=8*UIT;
+  if(cat && obj!=="o") r=`<div class="big">Catálogo electrónico</div>Compra directamente en los catálogos de Perú Compras (no es fraccionamiento).`;
+  else if(mt<=MEN) r=`<div class="big">Contrato menor</div>No requiere procedimiento de selección (≤ 8 UIT = ${soles(MEN)}). Publica en la Pladicop; el proveedor necesita RNP.`;
+  else if(obj==="o"){ r = mt>=5000000?`<div class="big">Licitación pública (obras)</div>${mt>=79000000?"Obra de mayor envergadura (≥ S/ 79 millones): aplican reglas diferenciadas del reglamento.":"Cuantía ≥ S/ 5 millones."}`:`<div class="big">Licitación pública abreviada (obras)</div>Cuantía mayor a 8 UIT y menor a S/ 5 millones.`; }
+  else if(ficha) r=`<div class="big">Subasta inversa electrónica</div>Bien/servicio común con ficha técnica: lances en línea, gana el menor precio.`;
+  else {
+    const n=obj==="b"?"Licitación pública":"Concurso público";
+    r = mt>=485000?`<div class="big">${n}</div>Cuantía ≥ S/ 485,000.`:`<div class="big">${n} abreviad${obj==="b"?"a":"o"}</div>Cuantía entre S/ 44,000 y S/ 485,000.${mt<=100000?" <br>Si el bien/servicio es de entrega inmediata o está en el listado de la DGA, también puedes usar <b>comparación de precios</b> (≤ S/ 100,000).":""}`;
+  }
+  r+=`<br><small style="color:var(--muted)">Siempre revisa si procede un supuesto de contratación directa (Art. 55) o un supuesto excluido (Art. 7).</small>`;
+  document.getElementById("tRes").innerHTML=r;
+  // Penalidad
+  const tp=sel("pTipo"),M=val("pMonto"),P=Math.max(1,val("pPlazo")),A=val("pAtraso");
+  let F=0.40; if(tp==="o")F=P<=60?0.40:(P<=120?0.25:0.15); if(tp==="c")F=P<=60?0.40:0.25;
+  const diaria=0.10*M/(F*P), tope=0.10*M, total=Math.min(diaria*A,tope), diasTope=Math.ceil(tope/diaria);
+  document.getElementById("pRes").innerHTML=`F = <b>${F}</b><br>Penalidad diaria = 0.10 × ${soles(M)} ÷ (${F} × ${P}) = <b>${soles(diaria)}</b><br><div class="big">${soles(total)}</div>Penalidad aplicable por ${A} día(s) (tope 10% = ${soles(tope)}).<br>${diaria*A>=tope?'<b style="color:var(--bad)">⚠ Se alcanzó el tope: la entidad puede resolver el contrato.</b>':`El tope se alcanzaría al día <b>${diasTope}</b> de atraso.`}`;
+  // Apelación
+  const am=val("aMonto"),ap=sel("aProc"),mype=sel("aMype")==="s";
+  const trib=am>50*UIT; let plazo= ap==="lp"?8:(ap==="sie"?(am>=485000?8:5):5);
+  const gar=Math.min(am*0.005,(mype?25:50)*UIT);
+  document.getElementById("aRes").innerHTML=`<div class="big">${trib?"Tribunal de Contrataciones Públicas":"Autoridad de la gestión administrativa de la entidad"}</div>${trib?"La cuantía supera":"La cuantía no supera"} 50 UIT (${soles(50*UIT)}).<br>Plazo para apelar: <b>${plazo} días hábiles</b> desde la notificación de la buena pro.<br>Garantía (texto consolidado de la Ley, hasta 0.5%, tope ${mype?25:50} UIT): <b>hasta ${soles(gar)}</b>.<br><small style="color:var(--muted)">Confirma el porcentaje vigente en la Ley y el Reglamento al momento de apelar.</small>`;
+  // Adicionales
+  const dt=sel("dTipo"),O=val("dOrig")||1,AD=val("dAd"),DD=dt==="o"?val("dDed"):0;
+  const pct=(AD-DD)/O*100; let color="var(--ok)",msg="";
+  if(dt==="bs"){ msg=pct<=25?"✅ Dentro del 25%: lo aprueba la AGA si es indispensable para la finalidad.":"⛔ Supera el 25%: no procede como adicional; evalúa una nueva contratación."; color=pct<=25?"var(--ok)":"var(--bad)"; }
+  else { if(pct<=15){msg="✅ Hasta 15%: aprueba la AGA.";color="var(--ok)"} else if(pct<=30){msg="🟡 Más de 15% hasta 30%: aprueba el Titular, con recursos disponibles.";color="var(--warn)"} else if(pct<=50){msg="🟠 Más de 30% hasta 50%: Titular con autorización previa de la Contraloría.";color="#e07a1f"} else {msg="⛔ Supera el 50%: no procede.";color="var(--bad)"} }
+  document.getElementById("dBar").style.width=Math.min(100,Math.max(0,pct*2))+"%"; document.getElementById("dBar").style.background=color;
+  document.getElementById("dPct").textContent=pct.toFixed(2)+"% del contrato";
+  document.getElementById("dRes").innerHTML=`Incidencia neta: <b>${soles(AD-DD)}</b> (${pct.toFixed(2)}%)<br>${msg}`;
+  // Garantía
+  const gm=val("gMonto"),go_=sel("gObj"),gmy=sel("gMype")==="s"; const lim=go_==="o"?5000000:480000;
+  document.getElementById("gRes").innerHTML=`<div class="big">${soles(gm*0.10)}</div>Garantía de fiel cumplimiento (10%).<br>Retención de pago: ${gmy?"<b>✅ procede</b> (MYPE).":(gm<=lim?`<b>✅ procede</b> (cuantía ≤ ${soles(lim)}).`:`<b>❌ no procede</b> (supera ${soles(lim)}); usar carta fianza, póliza de caución o fideicomiso.`)}`;
+  // Multa
+  const mm=val("mMonto"),mmy=sel("mMype")==="s"; let txt;
+  if(mm<=0){ txt=`<div class="big">${mmy?"1 a 8 UIT":"1 a 15 UIT"}</div>= ${soles(UIT)} a ${soles((mmy?8:15)*UIT)} (monto no determinable).`; }
+  else { const mn=Math.max(UIT,mm*0.03), mx=Math.max(UIT,mm*(mmy?0.08:0.10)); txt=`<div class="big">${soles(mn)} – ${soles(mx)}</div>Entre 3% y ${mmy?"8% (MYPE)":"10%"}, nunca menos de 1 UIT.<br>Con pronto pago (hasta 30% de descuento) el mínimo podría bajar a ${soles(mn*0.7)}.`; }
+  document.getElementById("mRes").innerHTML=txt;
+}
+
+/* ---------- Examen final ---------- */
+let examQs=[];
+function examView(){
+  const all=[]; MODULES.forEach(m=>m.quiz.forEach(q=>all.push({...q,mod:m.title})));
+  examQs=all.sort(()=>Math.random()-0.5).slice(0,20); QBANK.exam=examQs;
+  return `<div class="module-head"><div class="badge">📝</div><div><span class="tag">Práctica</span><h2>Examen final</h2><div class="ref">20 preguntas aleatorias de todos los capítulos · aprueba con 14 o más</div></div></div>
+  ${quizHTML("exam",examQs,false)}<div id="examEnd"></div>${foot()}`;
+}
+function examFinish(st){
+  const best=store.get("examBest",0); if(st.correct>best) store.set("examBest",st.correct);
+  document.getElementById("examEnd").innerHTML=`<div class="box ${st.correct>=14?"ok":"alerta"}"><span class="t">${st.correct>=14?"🏆 ¡Felicitaciones, aprobaste!":"📚 Sigue practicando"}</span>Obtuviste ${st.correct}/20. Mejor resultado histórico: ${Math.max(best,st.correct)}/20. Pulsa “Reintentar” para un examen con nuevas preguntas.</div>`;
+}
+
+/* ---------- Glosario ---------- */
+function glosarioView(){
+  const G=[["AGA","Autoridad de la gestión administrativa: aprueba y supervisa los procesos de contratación."],["Área usuaria","Unidad cuya necesidad se atiende; formula el requerimiento y otorga la conformidad."],["Bases estándar","Documentos tipo aprobados por la DGA para cada procedimiento."],["BIM","Building Information Modeling: metodología colaborativa para gestionar información de inversiones."],["Buena pro","Adjudicación del procedimiento al postor con la mejor oferta."],["Compradores públicos","Servidores de la DEC certificados que conducen las contrataciones."],["Consentimiento","Firmeza de la buena pro cuando no se apela dentro del plazo."],["Contrato menor","Contratación ≤ 8 UIT sin procedimiento de selección."],["DEC","Dependencia encargada de las contrataciones."],["DGA","Dirección General de Abastecimiento del MEF; ente rector."],["Fraccionamiento","División indebida de la necesidad para evadir el procedimiento correspondiente."],["FUP","Ficha Única del Proveedor."],["JPRD","Junta de Prevención y Resolución de Disputas."],["Laudo","Decisión del árbitro o tribunal arbitral; inapelable."],["MDA","Mecanismos diferenciados de adquisición para tecnologías sanitarias."],["OECE","Organismo Especializado para las Contrataciones Públicas Eficientes."],["Pladicop","Plataforma Digital para las Contrataciones Públicas."],["PMBSO","Programación Multianual de Bienes, Servicios y Obras."],["RNP","Registro Nacional de Proveedores."],["Sistema de entrega","Forma de organizar diseño y construcción de una obra (solo construcción, diseño y construcción, etc.)."],["UIT","Unidad Impositiva Tributaria; 2026: S/ 5,500."],["Valor por dinero","Maximizar el valor obtenido, no solo el menor precio."]];
+  return `<div class="module-head"><div class="badge">📖</div><div><span class="tag">Práctica</span><h2>Glosario y recursos oficiales</h2><div class="ref">Términos clave de la Ley 32069</div></div></div>
+  <div class="card"><div class="table-wrap"><table><tr><th>Término</th><th>Definición</th></tr>${G.map(g=>`<tr><td><b>${g[0]}</b></td><td>${g[1]}</td></tr>`).join("")}</table></div></div>
+  <h3 style="margin-top:22px">🔗 Normas y portales oficiales</h3>
+  <div class="grid g2">
+   <a class="res" href="${LINKS.ley}" target="_blank" rel="noopener"><span class="ic">📄</span><div><b>Ley N.° 32069 – texto consolidado</b><span>Congreso de la República</span></div></a>
+   <a class="res" href="${LINKS.oeceCol}" target="_blank" rel="noopener"><span class="ic">🏛️</span><div><b>Ley y Reglamento (D.S. 009-2025-EF) – OECE</b><span>Colección oficial gob.pe</span></div></a>
+   <a class="res" href="${LINKS.oece}" target="_blank" rel="noopener"><span class="ic">🛡️</span><div><b>OECE</b><span>Opiniones, directivas, Tribunal</span></div></a>
+   <a class="res" href="${LINKS.peruCompras}" target="_blank" rel="noopener"><span class="ic">🛒</span><div><b>Perú Compras</b><span>Acuerdos marco, fichas técnicas</span></div></a>
+   <a class="res" href="${LINKS.seace}" target="_blank" rel="noopener"><span class="ic">🔍</span><div><b>Buscador público SEACE / Pladicop</b><span>Procedimientos convocados</span></div></a>
+   <a class="res" href="${LINKS.rnp}" target="_blank" rel="noopener"><span class="ic">📇</span><div><b>Registro Nacional de Proveedores</b><span>Inscripción y consultas</span></div></a>
+   <a class="res" href="${LINKS.peruano}" target="_blank" rel="noopener"><span class="ic">📰</span><div><b>Diario Oficial El Peruano</b><span>Normas legales actualizadas</span></div></a>
+   <a class="res" href="${LINKS.mef}" target="_blank" rel="noopener"><span class="ic">🏦</span><div><b>MEF – DGA</b><span>Sistema Nacional de Abastecimiento</span></div></a>
+  </div>
+  <h3 style="margin-top:22px">🎬 Listas de videos sugeridas</h3>
+  <div class="grid g2">
+   <a class="res" href="${yt("Ley 32069 curso completo contrataciones públicas")}" target="_blank" rel="noopener"><span class="ic">▶️</span><div><b>Curso completo Ley 32069</b><span>YouTube</span></div></a>
+   <a class="res" href="${yt("Reglamento Ley 32069 DS 009-2025-EF explicación")}" target="_blank" rel="noopener"><span class="ic">▶️</span><div><b>Reglamento D.S. 009-2025-EF explicado</b><span>YouTube</span></div></a>
+   <a class="res" href="${yt("OECE capacitación Ley General de Contrataciones Públicas")}" target="_blank" rel="noopener"><span class="ic">▶️</span><div><b>Capacitaciones del OECE</b><span>YouTube</span></div></a>
+   <a class="res" href="${yt("Pladicop tutorial registro procedimiento")}" target="_blank" rel="noopener"><span class="ic">▶️</span><div><b>Tutoriales de la Pladicop</b><span>YouTube</span></div></a>
+   <a class="res" href="${yt("certificación compradores públicos OECE examen")}" target="_blank" rel="noopener"><span class="ic">▶️</span><div><b>Certificación de compradores públicos</b><span>YouTube</span></div></a>
+   <a class="res" href="${yt("D.S. 001-2026-EF modificación reglamento Ley 32069")}" target="_blank" rel="noopener"><span class="ic">▶️</span><div><b>Modificaciones 2026 al Reglamento</b><span>YouTube</span></div></a>
+  </div>
+  ${foot()}`;
+}
+function foot(){return `<div class="foot">Material educativo basado en el texto consolidado de la Ley N.° 32069 y su Reglamento (D.S. 009-2025-EF y modificatorias). Montos calculados con la UIT 2026 (S/ 5,500 – D.S. 301-2025-EF) y los topes de la Ley de Presupuesto 2026. Antes de aplicar a un caso real, verifica siempre la versión vigente de las normas en los portales oficiales.</div>`}
+
+/* ---------- Animaciones ---------- */
+let flowTimer;
+function playFlow(){
+  const phs=document.querySelectorAll("#flowAnim .ph"); if(!phs.length) return; clearInterval(flowTimer); let i=0;
+  phs.forEach(p=>p.classList.remove("on"));
+  flowTimer=setInterval(()=>{phs.forEach(p=>p.classList.remove("on")); if(i<phs.length){phs[i].classList.add("on");i++} else {clearInterval(flowTimer); phs.forEach(p=>p.classList.add("on")); setTimeout(()=>phs.forEach(p=>p.classList.remove("on")),900)}},900);
+}
+let stepTimer;
+function playSteps(){
+  const st=document.querySelectorAll("#stepsAnim .step"); if(!st.length) return; clearInterval(stepTimer); let i=0;
+  st.forEach(s=>s.classList.remove("on","pulse"));
+  stepTimer=setInterval(()=>{ if(i>0) st[i-1].classList.remove("pulse"); if(i<st.length){st[i].classList.add("on","pulse");i++} else {clearInterval(stepTimer); st[st.length-1].classList.remove("pulse")} },850);
+}
+
+/* ---------- Init ---------- */
+(function(){
+  try{const t=localStorage.getItem("lcp32069_theme"); if(t) document.documentElement.setAttribute("data-theme",t)}catch(e){}
+  document.getElementById("themeBtn").onclick=()=>{
+    const cur=document.documentElement.getAttribute("data-theme")||(matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light");
+    const nx=cur==="dark"?"light":"dark"; document.documentElement.setAttribute("data-theme",nx);
+    try{localStorage.setItem("lcp32069_theme",nx)}catch(e){}
+  };
+  document.getElementById("menuBtn").onclick=()=>{document.getElementById("sidebar").classList.add("open");document.getElementById("overlay").classList.add("show")};
+  document.getElementById("overlay").onclick=()=>{document.getElementById("sidebar").classList.remove("open");document.getElementById("overlay").classList.remove("show")};
+  document.getElementById("search").addEventListener("input",e=>renderNav(e.target.value));
+  window.addEventListener("hashchange",()=>go(location.hash.slice(1)));
+  updateProgress(); go(location.hash.slice(1)||"home");
+})();
+</script>
+</body>
+</html>
