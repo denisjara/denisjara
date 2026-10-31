@@ -32,13 +32,25 @@ try {
 
     Write-Paso "3. nwd_health_check"
     $hc = Invoke-NwdTool nwd_health_check
-    $hcData = Get-NwdData $hc
-    $conectado = Find-NwdProperty $hc "host_connected"
-    Check "Conectado a Navisworks" ($conectado -eq $true) "host_connected = $conectado"
     Save-NwdJson $hc "$Salida\01-health-check.json"
+    $conectado = Find-NwdProperty $hc "host_connected"
+    $detalle = "host_connected = $conectado"
+    if ($null -eq $conectado) {
+        # Versiones anteriores del servidor no incluyen host_connected: se prueba leyendo el documento
+        try {
+            $prueba = Invoke-NwdTool nwd_get_document_info
+            $okDoc = Find-NwdProperty $prueba "ok"
+            $conectado = ($okDoc -eq $true) -or ($null -ne (Find-NwdProperty $prueba "title"))
+            $detalle = "comprobado leyendo el documento (ok = $okDoc)"
+        } catch { $conectado = $false; $detalle = "$_" }
+    }
+    Check "Conectado a Navisworks" ($conectado -eq $true) $detalle
 
     if ($conectado -ne $true) {
-        Write-Host "`nEl servidor funciona pero no ve Navisworks. Abre Navisworks 2027 con un modelo y repite." -ForegroundColor Yellow
+        Write-Host "`nRespuesta del health check:" -ForegroundColor Yellow
+        $txt = if ($hc -is [string]) { $hc } else { $hc | ConvertTo-Json -Depth 10 }
+        Write-Host ($txt.Substring(0, [Math]::Min(1500, $txt.Length)))
+        Write-Host "`nEl servidor funciona pero no ve Navisworks. Comprueba que hay un modelo abierto y repite." -ForegroundColor Yellow
         return
     }
 
