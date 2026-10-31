@@ -62,6 +62,20 @@ Cambia `"Muro"` por cualquier texto que aparezca en los nombres de los elementos
 - `informe.html`: resumen visual
 - archivos `.json`: respuesta exacta del MCP en cada paso
 
+## Modelo de prueba
+
+`modelo/edificio-demo.ifc` es un edificio de 2 niveles + cubierta (12 x 8 m) con 72 elementos: losas, muros, columnas, vigas, puertas, ventanas, escalera, ductos y tuberías. Todos tienen nombres en español y propiedades (`Pset_*Common` y `Datos_Demo`: Disciplina, Código, Material, Nivel, Costo_CLP...).
+
+![Vista previa](modelo/vista-previa.png)
+
+Ábrelo en Navisworks con **Abrir → Tipo: IFC (*.ifc)** y prueba, por ejemplo:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\demo-completa.ps1 -Buscar "Columna" -Interactuar
+```
+
+Trae un **choque intencional**: la `Tubería aguas lluvia 01` atraviesa las vigas del Nivel 1, útil para probar Clash Detective (Sanitaria contra Estructura). Para regenerarlo: `pip install ifcopenshell numpy` y luego `python modelo\generar_modelo.py`.
+
 ## Usar el cliente en tus propios scripts
 
 ```powershell
