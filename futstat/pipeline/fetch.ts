@@ -14,7 +14,7 @@ import type { CompetitionConfig } from './config';
 import { HttpError, getScoreboard, getStandings, getSummary, httpStats, setConcurrency } from './espn/client';
 import { leagueInfo, normalizeScoreboard, normalizeStandings, normalizeSummary, summaryHasContent } from './espn/normalize';
 import type { SummaryResult } from './espn/normalize';
-import { loadStore, mergeMatches, prunePlayerLines, saveStore, upsertPlayerLines } from './store';
+import { inferUnknownPositions, loadStore, mergeMatches, prunePlayerLines, saveStore, upsertPlayerLines } from './store';
 import type { CompetitionStore, MatchRecord, PlayerLine } from './types';
 import type { StandingGroup, TeamRef } from '../src/types/data';
 
@@ -241,6 +241,7 @@ export async function updateCompetition(comp: CompetitionConfig, opts: FetchOpti
     }
   }
 
+  inferUnknownPositions(store.players);
   saveStore(store);
   return {
     ...reportFor(store, now),

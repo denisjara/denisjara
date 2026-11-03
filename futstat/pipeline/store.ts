@@ -201,6 +201,35 @@ export function upsertPlayerLines(existing: PlayerLine[], incoming: PlayerLine[]
   );
 }
 
+/**
+ * Substitutes come with position "SUB" in ESPN rosters ('?' after normalization). Fill them with the
+ * player's most frequent known position in the given lines (e.g. from the matches he started).
+ * Returns the number of lines updated. Mutates the lines in place.
+ */
+export function inferUnknownPositions(players: PlayerLine[]): number {
+  const counts = new Map<string, Map<PlayerLine['position'], number>>();
+  for (const p of players) {
+    if (p.position === '?') continue;
+    let c = counts.get(p.playerId);
+    if (!c) counts.set(p.playerId, (c = new Map()));
+    c.set(p.position, (c.get(p.position) ?? 0) + 1);
+  }
+  let updated = 0;
+  for (const p of players) {
+    if (p.position !== '?') continue;
+    const c = counts.get(p.playerId);
+    if (!c) continue;
+    let best: PlayerLine['position'] = '?';
+    let bestN = 0;
+    for (const [pos, n] of c) if (n > bestN) [best, bestN] = [pos, n];
+    if (best !== '?') {
+      p.position = best;
+      updated++;
+    }
+  }
+  return updated;
+}
+
 /** Drop player lines older than `maxAgeDays` or whose match is no longer in the store. */
 export function prunePlayerLines(players: PlayerLine[], matches: MatchRecord[], opts: MergeOptions = {}): PlayerLine[] {
   const now = (opts.now ?? new Date()).getTime();
