@@ -290,6 +290,19 @@ function translateLegNote(note: string | undefined): string | undefined {
   return undefined;
 }
 
+/**
+ * ESPN's `neutralSite` is practically never true, even for finals. Single-match finals of cups and
+ * continental competitions (and single-match league/promotion finals such as the Championship
+ * play-off at Wembley or Argentina's Apertura/Clausura finals) are played at neutral venues.
+ * Two-legged ties carry "Ida"/"Vuelta" in the label and are never matched here.
+ */
+export function isNeutralRound(round: string | undefined, comp: Pick<CompetitionConfig, 'kind'>): boolean {
+  if (!round) return false;
+  if (comp.kind !== 'league' && (round === 'Final' || round === 'Tercer puesto')) return true;
+  if (round === 'Playoff de ascenso · Final') return true;
+  return comp.kind === 'league' && /^(Apertura|Clausura)( \d{4})? · Final$/.test(round);
+}
+
 export function roundLabel(seasonSlug: string | undefined, comp: RawCompetition | undefined): string | undefined {
   const parts: string[] = [];
   for (const tok of (seasonSlug ?? '').split('---')) {
@@ -510,7 +523,7 @@ function normalizeEvent(ev: RawEvent, comp: CompetitionConfig, currentSeasonYear
   if (detail) m.statusDetail = detail;
   const round = roundLabel(seasonSlug, c);
   if (round) m.round = round;
-  if (c.neutralSite === true) m.neutral = true;
+  if (c.neutralSite === true || isNeutralRound(round, comp)) m.neutral = true;
   const venue = c.venue?.fullName ?? ev.venue?.displayName;
   if (venue) m.venue = venue;
 

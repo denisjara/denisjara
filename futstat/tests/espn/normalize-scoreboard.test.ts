@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { normalizeScoreboard, parseMinute, roundLabel } from '../../pipeline/espn/normalize';
+import { isNeutralRound, normalizeScoreboard, parseMinute, roundLabel } from '../../pipeline/espn/normalize';
 import { NOW, comp, fixture } from './helpers';
 
 const laliga = normalizeScoreboard(fixture('scoreboard-laliga-2026.json'), comp('laliga'), { now: NOW });
@@ -171,6 +171,20 @@ describe('helpers', () => {
     expect(parseMinute("120'+1'")).toBe(120);
     expect(parseMinute('', 555)).toBe(10);
     expect(parseMinute(undefined)).toBe(0);
+  });
+
+  it('isNeutralRound: single-match finals are neutral, two-legged ties and league games are not', () => {
+    const cup = { kind: 'cup' as const };
+    const league = { kind: 'league' as const };
+    expect(isNeutralRound('Final', cup)).toBe(true);
+    expect(isNeutralRound('Final', { kind: 'continental' })).toBe(true);
+    expect(isNeutralRound('Semifinales · Ida', cup)).toBe(false);
+    expect(isNeutralRound('Playoff de ascenso · Final', league)).toBe(true);
+    expect(isNeutralRound('Playoff de ascenso · Final · Vuelta', league)).toBe(false);
+    expect(isNeutralRound('Apertura · Final', league)).toBe(true);
+    expect(isNeutralRound('Clausura 2025 · Final · Ida', league)).toBe(false);
+    expect(isNeutralRound('Playoffs Conferencia Este · Final', league)).toBe(false);
+    expect(isNeutralRound(undefined, cup)).toBe(false);
   });
 
   it('roundLabel translates ESPN season slugs and notes', () => {

@@ -88,8 +88,8 @@ function applySummary(m: MatchRecord, res: SummaryResult): void {
       m.score.penAway = res.pens.away;
     }
   }
+  // ESPN reports neutralSite=false even for finals: only trust a positive flag
   if (res.neutral === true) m.neutral = true;
-  else if (res.neutral === false) delete m.neutral;
 }
 
 /** Add cosmetic fields (colour, logo, short name) from the scoreboard team refs to standings rows. */
@@ -286,7 +286,7 @@ function printTable(reports: CompetitionReport[]): void {
     String(r.seconds),
     r.ok ? 'ok' : `ERROR: ${r.error ?? ''}`.slice(0, 60),
   ]);
-  const total = (k: keyof CompetitionReport) => String(reports.reduce((n, r) => n + (Number(r[k]) || 0), 0));
+  const total = (k: keyof CompetitionReport) => String(Math.round(reports.reduce((n, r) => n + (Number(r[k]) || 0), 0) * 10) / 10);
   rows.push(['TOTAL', total('matches'), total('finishedCurrent'), total('upcoming14'), total('withStats'), total('withSummary'), total('playerLines'), total('standingRows'), total('summariesFetched'), total('seconds'), '']);
   const widths = head.map((h, i) => Math.max(h.length, ...rows.map((r) => r[i].length)));
   const fmt = (cells: string[]) => cells.map((c, i) => (i === 0 || i === cells.length - 1 ? c.padEnd(widths[i]) : c.padStart(widths[i]))).join('  ');

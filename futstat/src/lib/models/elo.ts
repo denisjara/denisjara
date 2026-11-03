@@ -128,7 +128,7 @@ function probsFrom(we: number, pDraw: number): [number, number, number] {
  */
 export function eloProbs(diff: number, params?: { drawBase?: number; drawScale?: number }): Prob1X2 {
   const drawBase = params?.drawBase ?? DEFAULT_DRAW_BASE;
-  const drawScale = params?.drawScale ?? DEFAULT_DRAW_SCALE;
+  const drawScale = params?.drawScale !== undefined && params.drawScale > 0 ? params.drawScale : DEFAULT_DRAW_SCALE;
   const d = Number.isFinite(diff) ? diff : 0;
   const pDraw = drawBase * Math.exp(-((d / drawScale) ** 2));
   const [home, draw, away] = probsFrom(eloExpectation(d), pDraw);
