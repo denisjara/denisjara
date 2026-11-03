@@ -27,9 +27,10 @@ acierta el modelo frente a las casas de apuestas.
 5. [Fuente de datos y limitaciones](#fuente-de-datos-y-limitaciones)
 6. [Actualización automática](#actualización-automática)
 7. [Uso local](#uso-local)
-8. [Estructura del proyecto](#estructura-del-proyecto)
-9. [Contrato de datos](#contrato-de-datos)
-10. [Juego responsable (+18)](#juego-responsable-18)
+8. [Seguridad y robustez](#seguridad-y-robustez)
+9. [Estructura del proyecto](#estructura-del-proyecto)
+10. [Contrato de datos](#contrato-de-datos)
+11. [Juego responsable (+18)](#juego-responsable-18)
 
 ---
 
@@ -93,7 +94,14 @@ cubiertas por tests y utilizables tanto en Node como en el navegador. El pipelin
   cronológico, de modo que los partidos europeos e internacionales conectan la fuerza relativa entre ligas.
 - Estilo *World Football Elo*: `ΔR = K · G · (W − We)`, con `K = 20`, ventaja de campo de 65 puntos y
   multiplicador por diferencia de goles `G` (1 con uno o ninguno, 1,5 con dos y `(11 + dif) / 8` con tres o más).
-- Los equipos nuevos arrancan en `1500 + (tier − 5) · 30` según el prestigio de su competición.
+- Los equipos nuevos arrancan en `1500 + (tier − 5) · 30` según el prestigio de su liga doméstica; los recién
+  ascendidos, algo por debajo de la media de su liga.
+- Los equipos que **solo aparecen en copas** (categorías no cubiertas: Primera Federación, League One, amateurs de la
+  FA Cup…) arrancan con tier 1 (1380 puntos) y, en la Copa del Rey y la DFB-Pokal, cuyas primeras rondas enfrentan a
+  clubes regionales con los de primera, con tier −2 (1290). En el backtest del Elo sobre los 611 partidos de copa con
+  algún equipo sin liga, el RPS baja de 0,213 (tier 3, el valor anterior) a 0,195.
+- Las **selecciones nacionales** (Nations League) tienen su propio Elo y su propio ranking: el ranking Elo global se
+  calcula solo entre clubes.
 - La probabilidad de empate se modela explícitamente: `P(empate) = base · exp(−(dif / escala)²)`, con
   `base` y `escala` ajustados por máxima verosimilitud sobre los partidos históricos.
 
@@ -121,9 +129,19 @@ cubiertas por tests y utilizables tanto en Node como en el navegador. El pipelin
 
 ### 4. Ensamble y recalibración de λ
 
-- La probabilidad final 1X2 es un **pool lineal** de las tres fuentes: Dixon-Coles (50 %), Elo (20 %) y
-  mercado sin margen (30 %). Si una fuente falta (por ejemplo, partido sin cuotas) los pesos se
-  renormalizan.
+- La probabilidad final 1X2 es un **pool lineal** de las fuentes, con dos juegos de pesos calibrados por separado:
+  - **con cuotas:** Dixon-Coles 5 %, Elo 15 % y mercado sin margen 80 %;
+  - **sin cuotas:** Dixon-Coles 50 % y Elo 50 %.
+- Los pesos salen de una rejilla sobre el backtest *walk-forward* (3.666 partidos, 2.629 con cuotas de cierre),
+  quedándose con el menor RPS. Con cuotas: 0,2/0,2/0,6 → 0,1992; 0,1/0,1/0,8 → 0,1978; 0,05/0,15/0,8 → 0,1977.
+  Sin cuotas: 0,7/0,3 → 0,2183; 0,5/0,5 → 0,2182. El peso del mercado se limita al 80 %: el backtest usa **cuotas de
+  cierre** (las más precisas), mientras que los partidos próximos se predicen con cuotas previas; sin ese límite el
+  óptimo sería copiar el mercado y el modelo no aportaría una opinión propia.
+- En cruces entre ligas sin Dixon-Coles, la parte de goles sale del modelo Elo→goles y pesa el 20 % de lo que
+  pesaría Dixon-Coles.
+- Si alguno de los equipos tiene **menos de 10 partidos en el Elo** (recién llegado, equipo de copa) y hay cuotas, el
+  peso de Dixon-Coles y Elo baja de forma lineal en favor del mercado (en esos 404 partidos el RPS pasa de 0,1773 a
+  0,1763).
 - Después se **recalibran los goles esperados**: se buscan los `(λ_local, λ_visitante)` cuya matriz de
   Dixon-Coles reproduce el 1X2 del ensamble (y la línea de 2,5 goles cuando existe). Así **todos** los
   mercados derivados son coherentes con la probabilidad final y no solo el 1X2.
@@ -165,14 +183,22 @@ esperado** (`EV = p · cuota − 1`).
 
 ### 8. Simulación Monte Carlo de temporada
 
-- Se simulan **10 000 veces** los partidos que quedan con los goles esperados del modelo.
+- Se simulan **10 000 veces** los partidos que quedan con los goles esperados del modelo. El calendario es el real:
+  en las temporadas que acaban el año siguiente (Ago→May, fase de liga UEFA) también se descargan los partidos de
+  enero a mayo; solo si la fuente aún no los publica se completan cruces de forma sintética.
 - Resultado: puntos esperados, posición esperada, distribución completa de posiciones y probabilidades
   de cada zona (campeón, Champions, Europa, playoff, descenso…, según la competición).
 
 ### 9. Backtest *walk-forward*
 
 - Cada partido terminado se predice **solo con la información disponible antes de jugarse** y se compara
-  con lo que pasó.
+  con lo que pasó: Elo previo al partido, Dixon-Coles re-ajustado cada semana con los partidos anteriores y, para
+  cada competición, los parámetros de empate del Elo, el modelo Elo→goles y las medias de goles ajustados **solo
+  con partidos anteriores al inicio de su temporada** (sin fuga de información). La única excepción es la liga
+  doméstica asignada a cada equipo, que solo decide qué modelo de goles se usa.
+- Resultado del 3 de noviembre de 2026 (3.666 partidos): RPS 0,2034, Brier 0,5907 y acierto 51,8 % (antes de
+  recalibrar los pesos y el Elo inicial de los equipos de copa y de quitar la fuga de información: 0,2049, 0,5939 y
+  51,2 %). El mercado de cierre, en los 2.629 partidos con cuotas, marca 0,1970.
 - Métricas: **Brier** multiclase, **log-loss**, **RPS** (*Ranked Probability Score*, la métrica de
   referencia para 1X2 por respetar el orden local-empate-visitante) y porcentaje de acierto.
 - Comparación contra Elo solo, Dixon-Coles solo, el **mercado** (cuotas de cierre sin margen) y una
@@ -188,6 +214,9 @@ esperado** (`EV = p · cuota − 1`).
   **fraccional (¼ de Kelly)** y con tope del 5 % del bankroll, para reducir la varianza y el impacto de los
   errores del modelo.
 - Cada selección lleva *edge* (`p − 1/cuota`), cuota justa y una confianza alta/media/baja.
+- Como el ensamble da un 80 % de peso al mercado cuando hay cuotas, solo aparecen selecciones de valor cuando el
+  modelo discrepa mucho de la casa; es normal que algunos días no haya ninguna. En el backtest frente a cuotas de
+  cierre, apostar a esas selecciones habría perdido dinero: no son una recomendación.
 
 ### Parámetros principales
 
@@ -196,7 +225,11 @@ esperado** (`EV = p · cuota − 1`).
 | `dcXi` | 0,0019 | Decaimiento temporal diario de Dixon-Coles (vida media ≈ 365 días) |
 | `dcWindowDays` | 540 | Ventana de partidos usada para ajustar Dixon-Coles |
 | `eloK` / `eloHomeAdv` / `eloInit` | 20 / 65 / 1500 | Elo: factor K, ventaja de campo, rating inicial |
-| `wDixonColes` / `wElo` / `wMarket` | 0,5 / 0,2 / 0,3 | Pesos del ensamble |
+| `wDixonColes` / `wElo` / `wMarket` | 0,05 / 0,15 / 0,8 | Pesos del ensamble con cuotas |
+| `wDixonColesNoMarket` / `wEloNoMarket` | 0,5 / 0,5 | Pesos del ensamble sin cuotas |
+| `eloGoalWeightFactor` | 0,2 | Peso relativo de Elo→goles frente a Dixon-Coles |
+| `lowDataGames` / `lowDataFloor` | 10 / 0 | Partidos Elo por debajo de los cuales el mercado gana peso |
+| `cupOnlyTier` | 1 | Tier del Elo inicial de equipos que solo juegan copas |
 | `minEv` / `minProb` / `maxOdds` | 0,05 / 0,12 / 8 | Filtros de apuestas de valor |
 | `kellyFraction` / `kellyCap` | 0,25 / 0,05 | Kelly fraccional y tope por apuesta |
 | `simIterations` | 10 000 | Iteraciones de la simulación de temporada |
@@ -223,8 +256,8 @@ cambios) y cuotas de DraftKings.
   competiciones (por ejemplo, la Nations League) no los tienen.
 - **No se modelan** alineaciones confirmadas, lesiones, sanciones, rotaciones, clima ni motivación.
 - La API de ESPN **no es oficial ni está documentada**: puede cambiar o fallar sin aviso. El pipeline
-  tolera caídas parciales (una competición que falla no detiene las demás) y reutiliza el almacén de la
-  ejecución anterior.
+  tolera caídas parciales (una competición que falla no detiene las demás), descarta los registros que no
+  entiende y reutiliza el almacén de la ejecución anterior (ver [Seguridad y robustez](#seguridad-y-robustez)).
 - Los datos se recalculan **tres veces al día**; solo los marcadores en vivo se refrescan en tiempo real
   desde el navegador.
 
@@ -238,8 +271,9 @@ El workflow [`.github/workflows/futstat-daily.yml`](../.github/workflows/futstat
 ```
 cron 05:17 / 12:17 / 18:17 UTC ─┐
 ejecución manual ───────────────┼─▶ npm ci ─▶ restaurar data-store (caché) ─▶ data:fetch (ESPN)
-push a main (futstat/**) ───────┘      ─▶ guardar data-store ─▶ data:build (modelos + JSON) ─▶ data:validate
-                                       ─▶ npm test ─▶ npm run build ─▶ GitHub Pages
+push a main (futstat/**) ───────┘      ─▶ comprobar (sin recortes) y guardar data-store ─▶ data:build (modelos + JSON)
+                                       ─▶ data:validate ─▶ npm test ─▶ npm run build ─▶ npm audit ─▶ GitHub Pages
+pull request a main ───────────────▶ ci.yml: npm ci ─▶ npm audit ─▶ typecheck ─▶ tests ─▶ build (datos de prueba)
 ```
 
 - **Horario:** 05:17, 12:17 y 18:17 UTC (06:17, 13:17 y 19:17 en Madrid en horario de invierno; una hora
@@ -247,8 +281,20 @@ push a main (futstat/**) ───────┘      ─▶ guardar data-store
 - **Almacén incremental:** `data-store/` se conserva entre ejecuciones con la caché de GitHub Actions, así
   que cada pasada solo descarga lo nuevo y mantiene el histórico de cuotas. La **primera ejecución** parte
   de cero y tarda bastante más (descarga hasta 180 días de resúmenes).
-- **Seguridad de la publicación:** si fallan la validación de datos, los tests o la compilación, no se
-  despliega nada y la web sigue mostrando la última versión buena.
+- **Seguridad de la publicación:** `data:build` genera los JSON en un directorio temporal y solo sustituye
+  `public/data/` si pasan la validación (contrato + umbrales de cordura). Si fallan la validación de datos, los
+  tests o la compilación, no se despliega nada y la web sigue mostrando la última versión buena. Si ESPN no
+  responde, la descarga termina con un aviso y se compila con el almacén de la ejecución anterior: la web muestra la
+  fecha **real** de los datos (`meta.dataUpdatedAt`, la última descarga correcta; el indicador pasa a ámbar a las
+  30 h) y la validación **rechaza publicar si esa descarga tiene más de 72 h**, de modo que el job falla en rojo y
+  la web conserva la última versión buena. Una vulnerabilidad alta o crítica en una dependencia de producción
+  (`npm audit`, al final del job para no impedir la descarga de datos) también bloquea la publicación. Más detalles en
+  [`.github/SECURITY.md`](../.github/SECURITY.md).
+- **Copia de seguridad del almacén:** los lunes (pasada de las 05:17 UTC) y en cada ejecución manual se sube
+  `data-store/` como artefacto `futstat-data-store-<id>` (90 días). Para usarlo: descárgalo desde la ejecución en la
+  pestaña Actions y copia los `*.json` en `futstat/data-store/` (en local). Si la caché de CI se perdiera, la siguiente
+  ejecución vuelve a descargar los últimos 180 días; el histórico de cuotas previas y los resúmenes más antiguos solo
+  se conservan en estas copias.
 
 ### Cómo activarlo (una sola vez)
 
@@ -271,7 +317,8 @@ push a main (futstat/**) ───────┘      ─▶ guardar data-store
 
 ## Uso local
 
-Requisitos: **Node.js 22** (el mismo que usa CI) y npm.
+Requisitos: **Node.js 22** (el mismo que usa CI; mínimo 20) y npm. `npm run dev` y `npm run preview` solo
+escuchan en `127.0.0.1` (no se exponen a la red local).
 
 ```bash
 cd futstat
@@ -289,9 +336,9 @@ npm run dev
 | Comando | Qué hace |
 |---|---|
 | `npm run data:fetch` | Descarga/actualiza `data-store/` desde ESPN. |
-| `npm run data:build` | Ajusta los modelos y escribe `public/data/*.json`. |
+| `npm run data:build` | Ajusta los modelos, valida y, solo si todo es correcto, sustituye `public/data/*.json`. |
 | `npm run data:update` | `data:fetch` + `data:build`. |
-| `npm run data:validate` | Comprueba que los JSON generados cumplen el contrato de datos. |
+| `npm run data:validate` | Comprueba que los JSON publicados cumplen el contrato y los umbrales de cordura. |
 | `npm run data:mock` | Genera datos de ejemplo realistas en `public/mock-data/` (sin red). |
 | `npm run dev` | Servidor de desarrollo de Vite. |
 | `npm run build` | Typecheck de la app + compilación a `dist/`. |
@@ -308,8 +355,18 @@ npm run data:fetch -- --only=laliga,premier
 # Sin resúmenes de partido (rápido, sin estadísticas de jugadores)
 npm run data:fetch -- --no-summaries
 
-# Limitar los resúmenes por competición y la concurrencia
-npm run data:fetch -- --max-summaries=50 --concurrency=4
+# Limitar los resúmenes por competición, la concurrencia y el tiempo (por defecto 30 min)
+npm run data:fetch -- --max-summaries=50 --concurrency=4 --budget-minutes=10
+```
+
+### Opciones del build y de la validación
+
+```bash
+npm run data:build -- --only=laliga,premier   # publicar solo algunas competiciones (desarrollo)
+npm run data:build -- --no-sanity             # solo el contrato, sin umbrales de cordura (datos parciales)
+npm run data:build -- --allow-stale           # publicar aunque la última descarga correcta tenga más de 72 h
+npm run data:build -- --out=/tmp/futstat-out  # otra salida: debe no existir, estar vacía o ser una salida de FutStat
+npm run data:validate -- --no-sanity          # ídem para la validación suelta (también admite --allow-stale)
 ```
 
 ### Desarrollar la interfaz sin red
@@ -329,10 +386,95 @@ npx vitest run tests/espn       # solo la normalización de ESPN y el almacén
 
 ---
 
+## Seguridad y robustez
+
+Objetivo: que la web **nunca se quede en blanco ni se rompa** por datos malos, que la actualización diaria **nunca
+publique datos rotos ni dañe los datos guardados**, y que usar o desarrollar el proyecto no ponga en riesgo tu equipo.
+
+### La web
+
+- **Content Security Policy**: scripts solo del propio sitio, imágenes solo del propio sitio y del CDN de ESPN
+  (`*.espncdn.com`), conexiones solo al propio sitio y al marcador público de ESPN, sin `object`/`embed`, sin
+  formularios y con `upgrade-insecure-requests`. En producción (`npm run build`) el plugin `futstat:csp`
+  (`scripts/csp.ts`) la endurece: sin `'unsafe-inline'`, con los `sha256` de los bloques en línea calculados en cada
+  build y con **Trusted Types** (ningún texto puede acabar en `innerHTML`/`eval`). `index.html` conserva una CSP más
+  permisiva solo para `npm run dev`.
+- **Nunca en blanco**: `index.html` trae dentro de `#root` una pantalla de arranque estática; si el código de la app
+  no llega a cargar (404 tras un despliegue, bloqueador, navegador antiguo), a los 8 s ofrece recargar.
+- **Tipografías autoalojadas** (`src/assets/fonts`, licencia OFL): la web no contacta con Google Fonts (ni envía la
+  IP del visitante a terceros); los únicos orígenes externos son el CDN de imágenes y el marcador de ESPN.
+- **Datos anómalos**: la capa `src/app/lib/sanitize.ts` normaliza cada JSON (números no finitos → "—", listas
+  acotadas, ids y enumerados válidos, mapas sin prototipo) y las tablas de etiquetas no resuelven claves como
+  `__proto__`; los gráficos no pueden entrar en bucle con rangos degenerados.
+- **ErrorBoundaries** en la aplicación, las rutas y los paneles: si una parte falla con datos inesperados se muestra un
+  aviso en esa parte y el resto sigue funcionando.
+- Los datos que lee la web se validan antes de publicarse (ver abajo) y la app los trata de forma defensiva.
+- La web es 100 % estática (sin servidor, cuentas, cookies ni formularios). React escapa todo el texto que pinta; los
+  enlaces externos se abren con `rel="noopener noreferrer"`.
+
+### Los datos (pipeline)
+
+- **Descarga defensiva** (`pipeline/espn/client.ts`): solo `https` a `*.espn.com` (también tras redirecciones),
+  respuestas de 25 MB como máximo (se corta la lectura si se superan), tipo de contenido JSON, errores de JSON o de
+  forma tipados, reintentos con espera exponencial y un **cortacircuitos**: si ESPN deja de responder, la descarga
+  termina en segundos con un aviso en lugar de agotar el tiempo de CI.
+- **Normalización que nunca lanza** (`pipeline/espn/normalize.ts`): cada partido, jugador y fila de clasificación se
+  procesa por separado; un registro dañado se descarta y se cuenta en el resumen final. Los textos se limpian
+  (caracteres de control y bidi, `<`/`>`, `javascript:`; máximo 120 caracteres), los ids deben ser tokens seguros
+  (acaban en nombres de archivo), los logos solo se aceptan por `https` desde `*.espncdn.com` y los números
+  imposibles (marcadores fuera de 0–30, porcentajes fuera de rango, NaN/Infinity) se descartan.
+- **Escrituras atómicas con copia de seguridad** (`pipeline/store.ts`): cada `data-store/<competición>.json` se
+  escribe en un temporal con `fsync` y se renombra; la versión válida anterior se guarda como `.json.bak`. Si un
+  archivo aparece dañado al cargarlo, se recupera la copia (o se parte de cero) con un aviso: nunca un fallo. Una
+  respuesta incompleta de ESPN no borra partidos guardados ni la clasificación, y por encima de 600 MB de almacén se
+  dejan de descargar resúmenes.
+- **Puerta de calidad antes de publicar** (`pipeline/build.ts` + `scripts/validate-data.ts`): los JSON se generan en
+  `public/data.tmp`, se validan contra el contrato (`src/types/data.ts`), sin `null`/NaN, sin textos con `<script` ni
+  `javascript:`, logos permitidos, nombres de archivo seguros, y contra **umbrales de cordura** (al menos 15
+  competiciones con datos, 2.000 partidos analizados, algún partido próximo o reciente en la portada, tamaño
+  razonable). Solo si todo pasa se sustituye `public/data` con renombrados atómicos (la versión anterior se conserva
+  hasta el final); si no, el build sale con error y `public/data` queda intacto.
+- **Almacén validado en profundidad al cargarlo**: cada partido, línea de jugador y fila de clasificación se comprueba
+  campo a campo (nombres, fechas, estados, marcadores, estadísticas, eventos, cuotas); lo irreparable se descarta con
+  un aviso en lugar de tumbar o bloquear el build. Cuotas con un margen imposible (fuera de −2 %…30 %) se descartan
+  sin rechazar toda la publicación; partidos "en juego" de hace horas o "terminados" en el futuro se publican como
+  pendientes; un partido terminado no pierde su marcador ni su resumen por un fallo puntual del scoreboard.
+- En CI, además, el almacén se compara con el restaurado de la caché: si una competición desaparece o pierde más del
+  25 % de sus datos, no se guarda en caché ni se publica. Se ejecutan los tests y se compila la web: cualquier fallo
+  impide el despliegue.
+
+### Cadena de suministro y CI
+
+- Versiones exactas en `package.json`, `package-lock.json` versionado e instalación con `npm ci`.
+- **Dependencias auditadas** en cada publicación y en cada pull request (`npm audit`): una vulnerabilidad alta o
+  crítica en una dependencia de producción bloquea el despliegue. Hoy `npm audit` no informa de ninguna.
+- **Pull requests** (incluidos los de Dependabot): `.github/workflows/ci.yml` ejecuta auditoría, typecheck, tests y
+  compilación antes de fusionar (márcalo como check obligatorio en la protección de `main`).
+- **Dependabot** propone las subidas cada semana (esperando 7 días desde cada versión nueva) y **CodeQL** analiza el
+  código y los workflows en cada cambio y cada semana.
+- Workflows con **mínimos privilegios**: sin permisos por defecto, actions fijadas por SHA y credenciales que no se
+  guardan en el checkout. Política de avisos de seguridad en [`.github/SECURITY.md`](../.github/SECURITY.md).
+
+### Tu Mac
+
+- La web publicada se ejecuta dentro del **sandbox del navegador**: no puede leer tus archivos ni ejecutar nada en
+  el sistema, y la CSP limita a dónde puede conectarse.
+- En local, `npm run dev` y `npm run preview` escuchan **solo en `127.0.0.1`** (no se exponen a tu red Wi-Fi) y con
+  un puerto fijo. El pipeline solo habla con la API pública de ESPN, sin claves ni credenciales, y solo escribe dentro
+  de `futstat/` (`data-store/` y `public/data/`).
+- `npm run data:build -- --out=<dir>` **nunca borra contenido ajeno**: solo acepta un directorio que no exista, esté
+  vacío o contenga una salida anterior de FutStat (rechaza `.`, `src`, tu carpeta personal o cualquier carpeta con
+  otros archivos). Un cerrojo impide lanzar dos builds o dos descargas a la vez sobre los mismos datos, y los
+  temporales de un proceso interrumpido se limpian solos (y nunca se copian a `dist/`).
+- No se necesita ningún secreto para usar o desarrollar el proyecto.
+
+---
+
 ## Estructura del proyecto
 
 ```
 .github/workflows/futstat-daily.yml   Actualización 3 veces al día y despliegue en GitHub Pages
+.github/workflows/ci.yml              Comprobaciones de cada pull request (auditoría, typecheck, tests, build)
 futstat/
 ├── ARCHITECTURE.md        Contrato entre módulos, fuente de datos y reglas de desarrollo
 ├── src/
@@ -343,13 +485,13 @@ futstat/
 ├── pipeline/
 │   ├── config.ts          Competiciones, parámetros del modelo y rutas
 │   ├── types.ts           Registros internos normalizados (partidos, jugadores, almacén)
-│   ├── espn/              Cliente HTTP con reintentos + normalización de las respuestas de ESPN
-│   ├── store.ts           Almacén incremental en data-store/<competición>.json (escritura atómica)
+│   ├── espn/              Cliente HTTP endurecido (límites, cortacircuitos) + normalización defensiva de ESPN
+│   ├── store.ts           Almacén incremental en data-store/<competición>.json (escritura atómica + .bak)
 │   ├── fetch.ts           CLI de descarga
 │   ├── analytics/         Ratings, predicción, mercados, proyecciones, jugadores, simulación, backtest
 │   └── build.ts           CLI: data-store → public/data/*.json
-├── scripts/               Utilidades (datos de ejemplo, validación)
-├── tests/                 Tests de Vitest (modelos, normalización ESPN, almacén) y fixtures reales
+├── scripts/               Utilidades (datos de ejemplo, validación = puerta de calidad)
+├── tests/                 Tests de Vitest (modelos, normalización y robustez ESPN, almacén, build) y fixtures reales
 ├── public/data/           JSON generados (no se versionan; los produce CI)
 └── data-store/            Almacén incremental (no se versiona; se guarda en la caché de CI)
 ```

@@ -86,7 +86,7 @@ export default function CalendarPage() {
   const rawDay = params.get('d') ?? '';
   const selected = days.includes(rawDay) ? rawDay : todayKey;
   const comp = params.get('c') ?? '';
-  const q = params.get('q') ?? '';
+  const q = (params.get('q') ?? '').slice(0, 60);
   const onlyValue = params.get('valor') === '1';
   const sort = (params.get('orden') === 'hora' ? 'hora' : 'comp') as SortMode;
 
@@ -195,7 +195,7 @@ export default function CalendarPage() {
           <label htmlFor="cal-q" className="sr-only">
             Buscar equipo
           </label>
-          <input id="cal-q" type="search" value={q} onChange={(e) => set({ q: e.target.value })} placeholder="Buscar equipo…" className="input h-9 pl-9" />
+          <input id="cal-q" type="search" maxLength={60} autoComplete="off" value={q} onChange={(e) => set({ q: e.target.value.slice(0, 60) })} placeholder="Buscar equipo…" className="input h-9 pl-9" />
         </div>
         <div className="flex w-full flex-wrap items-center gap-2 lg:w-auto">
           <label htmlFor="cal-comp" className="sr-only">

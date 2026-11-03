@@ -5,6 +5,7 @@ import { Card, EmptyState, MatchRow, Section } from '../../../components';
 import type { LiveScore } from '../../../lib/live';
 import { MatchBlocks, MatchPredictionRow } from '../MatchPredictionRow';
 import { HitSummary } from '../shared';
+import { noUpcomingText } from './OverviewTab';
 
 export interface MatchesTabProps {
   data: CompetitionFile;
@@ -46,7 +47,7 @@ export function MatchesTab({ data, live, liveScores }: MatchesTabProps) {
         {upcoming.length ? (
           <MatchBlocks matches={upcoming} live={liveScores} />
         ) : (
-          <EmptyState icon={<CalendarClock />} title="Sin partidos próximos" description="No hay partidos programados en los próximos 14 días." />
+          <EmptyState icon={<CalendarClock />} title="Sin partidos próximos" description={noUpcomingText(data)} />
         )}
       </Section>
 

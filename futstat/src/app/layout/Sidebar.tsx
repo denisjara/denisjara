@@ -1,9 +1,9 @@
-import { useMemo, useState, type ReactNode } from 'react';
+import { useId, useMemo, useState, type ReactNode } from 'react';
 import { NavLink } from 'react-router-dom';
-import { ChevronDown } from 'lucide-react';
+import { ChevronDown, Star } from 'lucide-react';
 import type { CompetitionMeta } from '../../types/data';
 import { useMeta } from '../lib/data';
-import { groupCompetitions } from '../lib/competitions';
+import { featuredCompetitions, groupCompetitions, nextMatchLabel } from '../lib/competitions';
 import { cx } from '../components/Card';
 import { Skeleton } from '../components/States';
 import { MAIN_NAV } from './nav';
@@ -16,6 +16,7 @@ function navCls({ isActive }: { isActive: boolean }) {
 }
 
 function CompLink({ c, onNavigate }: { c: CompetitionMeta; onNavigate?: () => void }) {
+  const next = nextMatchLabel(c);
   return (
     <NavLink
       to={`/c/${c.id}`}
@@ -31,13 +32,18 @@ function CompLink({ c, onNavigate }: { c: CompetitionMeta; onNavigate?: () => vo
       {({ isActive }) => (
         <>
           {isActive && <span className="absolute inset-y-1.5 left-0 w-[3px] rounded-r bg-accent-text" aria-hidden="true" />}
-          <span className="w-5 shrink-0 text-center text-[14px] leading-none" aria-hidden="true">{c.flag}</span>
+          <span className="w-5 shrink-0 overflow-hidden whitespace-nowrap text-center text-[14px] leading-none" aria-hidden="true">{c.flag}</span>
           <span className="min-w-0 flex-1 truncate">{c.shortName}</span>
-          {c.upcomingCount > 0 && (
+          {c.upcomingCount > 0 ? (
             <span className="num shrink-0 rounded px-1 text-[10.5px] text-ink-3 group-hover:text-ink-2" aria-label={`${c.upcomingCount} próximos partidos`}>
               {c.upcomingCount}
             </span>
-          )}
+          ) : next ? (
+            <span className="shrink-0 whitespace-nowrap px-1 text-[10.5px] text-ink-3 group-hover:text-ink-2" title={`Próximo partido: ${next}`}>
+              <span className="sr-only">Próximo partido: </span>
+              {next}
+            </span>
+          ) : null}
         </>
       )}
     </NavLink>
@@ -46,7 +52,8 @@ function CompLink({ c, onNavigate }: { c: CompetitionMeta; onNavigate?: () => vo
 
 function Group({ title, children, defaultOpen = true }: { title: string; children: ReactNode; defaultOpen?: boolean }) {
   const [open, setOpen] = useState(defaultOpen);
-  const id = `nav-${title.toLowerCase().replace(/\s+/g, '-')}`;
+  // id único por instancia (la barra lateral y el cajón móvil pueden coexistir en el DOM)
+  const id = `nav-${useId().replace(/:/g, '')}`;
   return (
     <div>
       <button
@@ -73,6 +80,7 @@ function Group({ title, children, defaultOpen = true }: { title: string; childre
 export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
   const { data: meta, error } = useMeta();
   const groups = useMemo(() => (meta ? groupCompetitions(meta.competitions) : null), [meta]);
+  const featured = useMemo(() => (meta ? featuredCompetitions(meta.competitions) : []), [meta]);
 
   return (
     <div className="flex flex-col gap-5">
@@ -91,6 +99,20 @@ export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
           </li>
         ))}
       </ul>
+
+      {featured.length > 0 && (
+        <div>
+          <h2 className="mb-1.5 flex items-center gap-1.5 px-3 font-display text-[15px] font-extrabold uppercase tracking-[0.06em] text-ink-1">
+            <Star className="h-3.5 w-3.5 text-accent-text" aria-hidden="true" />
+            Destacadas
+          </h2>
+          <div className="space-y-px">
+            {featured.map((c) => (
+              <CompLink key={c.id} c={c} onNavigate={onNavigate} />
+            ))}
+          </div>
+        </div>
+      )}
 
       <div>
         <h2 className="mb-1.5 px-3 font-display text-[15px] font-extrabold uppercase tracking-[0.06em] text-ink-1">Ligas</h2>

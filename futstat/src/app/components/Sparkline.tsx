@@ -18,14 +18,18 @@ export interface SparklineProps {
 
 /** Línea mínima de 2px con punto final (r=3, anillo de superficie). Sin ejes. */
 export function Sparkline({ values, width = 80, height = 24, color, area, domain, ariaLabel, className }: SparklineProps) {
-  const vs = values.filter((v) => Number.isFinite(v));
+  const vs = (Array.isArray(values) ? values : []).filter((v) => typeof v === 'number' && Number.isFinite(v));
   if (vs.length < 2) return <svg width={width} height={height} className={className} aria-hidden="true" />;
   const pad = 4;
   const lo = domain ? domain[0] : Math.min(...vs);
   const hi = domain ? domain[1] : Math.max(...vs);
-  const span = hi - lo || 1;
+  // Rango vacío o desbordado (valores de ±1e308…): línea plana centrada en lugar de coordenadas NaN/±Infinity.
+  const span = Number.isFinite(hi - lo) && hi - lo > 0 ? hi - lo : 0;
   const x = (i: number) => pad + (i * (width - pad * 2)) / (vs.length - 1);
-  const y = (v: number) => height - pad - ((v - lo) / span) * (height - pad * 2);
+  const y = (v: number) => {
+    const r = span ? (v - lo) / span : 0.5;
+    return height - pad - (Number.isFinite(r) ? Math.min(1, Math.max(0, r)) : 0.5) * (height - pad * 2);
+  };
   const d = vs.map((v, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join('');
   const stroke = color ?? 'rgb(var(--c-ink-2))';
   const lastX = x(vs.length - 1);

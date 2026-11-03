@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { AlertTriangle, RefreshCw, SearchX } from 'lucide-react';
+import { AlertTriangle, Home, RefreshCw, SearchX } from 'lucide-react';
 import { DataError } from '../lib/data';
 import { cx } from './Card';
 
@@ -68,15 +68,20 @@ export interface ErrorStateProps {
   onRetry?: () => void;
   className?: string;
   compact?: boolean;
+  /** muestra también "Ir al inicio" (por defecto en errores de página completa) */
+  home?: boolean;
 }
 
-/** Error de carga con mensaje en español y botón de reintento. */
-export function ErrorState({ error, title, onRetry, className, compact }: ErrorStateProps) {
+/**
+ * Error de carga con mensaje en español y botón de reintento. Solo se muestran mensajes propios
+ * (DataError); nunca detalles técnicos ni pilas de llamadas.
+ */
+export function ErrorState({ error, title, onRetry, className, compact, home = !compact }: ErrorStateProps) {
   const notFound = error instanceof DataError && error.notFound;
   const t = title ?? (notFound ? 'No hay datos disponibles' : 'No se pudieron cargar los datos');
   const msg = notFound
     ? 'Este análisis todavía no se ha publicado. Los datos se actualizan cada día.'
-    : error instanceof Error
+    : error instanceof DataError
       ? error.message
       : 'Inténtalo de nuevo en unos segundos.';
   return (
@@ -86,10 +91,19 @@ export function ErrorState({ error, title, onRetry, className, compact }: ErrorS
       </div>
       <p className="font-display text-[20px] font-bold uppercase tracking-wide text-ink-1">{t}</p>
       <p className="mt-1 max-w-md text-[13px] text-ink-2">{msg}</p>
-      {onRetry && !notFound && (
-        <button type="button" onClick={onRetry} className="btn mt-4">
-          <RefreshCw className="h-4 w-4" aria-hidden="true" /> Reintentar
-        </button>
+      {((onRetry && !notFound) || home) && (
+        <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
+          {onRetry && !notFound && (
+            <button type="button" onClick={onRetry} className="btn">
+              <RefreshCw className="h-4 w-4" aria-hidden="true" /> Reintentar
+            </button>
+          )}
+          {home && (
+            <a href="#/" className="btn-ghost">
+              <Home className="h-4 w-4" aria-hidden="true" /> Ir al inicio
+            </a>
+          )}
+        </div>
       )}
     </div>
   );

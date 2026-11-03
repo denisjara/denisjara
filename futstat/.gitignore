@@ -7,3 +7,9 @@ public/mock-data/
 # Datos generados por el pipeline (se regeneran a diario en GitHub Actions)
 public/data/
 data-store/
+# Restos de una publicación interrumpida (build/mock): nunca se versionan
+public/*.tmp/
+public/*.prev/
+# Variables de entorno locales (el proyecto no necesita secretos, pero por si acaso)
+.env
+.env.*

@@ -1,0 +1,87 @@
+# ---------------------------------------------------------------------------
+# FutStat Lab — comprobaciones de cada pull request (incluidos los de Dependabot)
+#
+# Antes de fusionar nada en main: instalación reproducible, auditoría de
+# dependencias, typecheck, tests (modelos, pipeline con un mundo sintético y
+# validador de datos) y compilación de la web con los datos de prueba.
+# Si este check falla, NO fusiones: el push a main dispararía la actualización
+# diaria con el código roto y la web dejaría de actualizarse.
+# Recomendado: márcalo como obligatorio en Settings → Branches → main
+# ("Require status checks to pass": "Comprobaciones de PR").
+#
+# Seguridad:
+#   - Solo `pull_request` (nunca `pull_request_target`): el código del PR se
+#     ejecuta sin secretos y con un token de solo lectura.
+#   - Sin caché del almacén de datos, sin despliegue y sin descargar datos de ESPN.
+#   - Actions fijadas a SHA; permisos mínimos; token no guardado en el checkout.
+# ---------------------------------------------------------------------------
+name: "FutStat Lab — comprobaciones de PR"
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions: {}
+
+concurrency:
+  group: futstat-ci-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    name: Comprobaciones de PR
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: futstat
+    steps:
+      - name: Descargar el código
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
+
+      - name: Preparar Node.js 22
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: futstat/package-lock.json
+
+      - name: Instalar dependencias
+        timeout-minutes: 10
+        run: npm ci --no-audit --no-fund
+
+      # Bloqueante: una vulnerabilidad alta o crítica en una dependencia que acaba en la web.
+      - name: Auditar dependencias de producción (bloqueante)
+        timeout-minutes: 5
+        run: npm audit --omit=dev --audit-level=high
+
+      # Informativo: auditoría completa (incluidas las herramientas de desarrollo).
+      - name: Auditar todas las dependencias (informativo)
+        timeout-minutes: 5
+        continue-on-error: true
+        run: npm audit --audit-level=moderate
+
+      - name: Typecheck (app y pipeline)
+        timeout-minutes: 5
+        run: npm run typecheck
+
+      # Incluye el pipeline completo sobre un mundo sintético + validador de datos.
+      - name: Tests
+        timeout-minutes: 10
+        run: npm test
+
+      # Compila la web con los datos de prueba (public/mock-data) para comprobar que
+      # el build y la CSP de producción funcionan sin depender de ESPN.
+      - name: Generar datos de prueba
+        timeout-minutes: 5
+        run: npm run data:mock
+
+      - name: Compilar la web (datos de prueba)
+        timeout-minutes: 10
+        env:
+          VITE_DATA_DIR: mock-data
+        run: npm run build

@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
-import type { MatchStatus, MatchSummary } from '../../types/data';
-import { useCompetitionMeta } from '../lib/data';
+import type { FormMatch, MatchStatus, MatchSummary } from '../../types/data';
+import { isValidCompId, isValidNumericId, useCompetitionMeta } from '../lib/data';
 import { minute, relativeDay, time } from '../lib/format';
 import { cx } from './Card';
 
@@ -39,7 +39,7 @@ export function StatusPill({ status, detail, date, className, withDay }: StatusP
   return (
     <span className={cx('num text-[12px] font-medium text-ink-2', className)}>
       {withDay && date ? `${relativeDay(date)} · ` : ''}
-      {date ? time(date) : '–'}
+      {date ? time(date) : '—'}
     </span>
   );
 }
@@ -61,11 +61,11 @@ export function CompetitionBadge({ compId, name, link, className, short = true }
   const label = meta ? (short ? meta.shortName : meta.name) : name ?? compId;
   const inner = (
     <>
-      <span aria-hidden="true" className="text-[13px] leading-none">{meta?.flag ?? '⚽'}</span>
+      <span aria-hidden="true" className="max-w-[2em] shrink-0 overflow-hidden whitespace-nowrap text-[13px] leading-none">{meta?.flag ?? '⚽'}</span>
       <span className="truncate">{label}</span>
     </>
   );
-  const cls = cx('inline-flex min-w-0 items-center gap-1.5 text-[12px] font-semibold text-ink-2', className);
+  const cls = cx('inline-flex min-w-0 max-w-full items-center gap-1.5 text-[12px] font-semibold text-ink-2', className);
   if (link) {
     return (
       <Link to={`/c/${compId}`} className={cx(cls, 'hover:text-ink-1')}>
@@ -76,7 +76,16 @@ export function CompetitionBadge({ compId, name, link, className, short = true }
   return <span className={cls}>{inner}</span>;
 }
 
-/** Ruta del análisis de un partido (o de su competición si no hay detalle publicado). */
+/**
+ * Ruta del análisis de un partido (o de su competición si no hay detalle publicado).
+ * Los ids se validan: un id raro en los datos nunca produce una ruta extraña.
+ */
 export function matchHref(m: Pick<MatchSummary, 'id' | 'compId' | 'hasDetail'>): string {
-  return m.hasDetail ? `/m/${m.id}` : `/c/${m.compId}`;
+  if (m.hasDetail && isValidNumericId(m.id)) return `/m/${m.id}`;
+  return isValidCompId(m.compId) ? `/c/${m.compId}` : '/partidos';
+}
+
+/** Ruta del análisis de un partido de forma (FormMatch) solo si está publicado (hasDetail); si no, undefined. */
+export function formMatchHref(m: Pick<FormMatch, 'matchId' | 'hasDetail'>): string | undefined {
+  return m.hasDetail === true && isValidNumericId(m.matchId) ? `/m/${m.matchId}` : undefined;
 }

@@ -329,7 +329,11 @@ export function buildPlayerProps(input: PlayerPropsInput): PlayerProp[] {
     const s90 = shrink(per90(a.shots, a.minutes), n90, prior.shots, PRIOR_N_RATES);
     const t90 = shrink(per90(a.shotsOnTarget, a.minutes), n90, prior.sot, PRIOR_N_RATES);
     const xg90 = XG_PROXY_CALIBRATION * (XG_PER_SHOT * s90 + XG_PER_SOT * t90);
-    const g90 = shrink(per90(a.goals, a.minutes), n90, xg90, PRIOR_N_GOALS);
+    // ESPN sometimes credits goalkeepers with "goals" that are really goals conceded (Koeman, Telstar: goals 2 with 0
+    // shots → pGoal 14.6 %). For keepers only goals backed by shots count; outfield players keep theirs (some leagues
+    // have no player shot data at all).
+    const goalsForModel = a.ref.position === 'G' ? Math.min(a.goals, a.shots) : a.goals;
+    const g90 = shrink(per90(goalsForModel, a.minutes), n90, xg90, PRIOR_N_GOALS);
     const a90 = shrink(per90(a.assists, a.minutes), n90, prior.assists, PRIOR_N_GOALS);
     const c90 = shrink(per90(a.yellow + a.red, a.minutes), n90, prior.cards, PRIOR_N_CARDS);
     const f90 = shrink(per90(a.foulsCommitted, a.minutes), n90, prior.fouls, PRIOR_N_RATES);
@@ -337,7 +341,9 @@ export function buildPlayerProps(input: PlayerPropsInput): PlayerProp[] {
     const lGoal = g90 * share * teamFactor;
     const lAssist = a90 * share * teamFactor;
     const lShots = s90 * share * shotsF;
-    const lSot = t90 * share * sotF;
+    // shots on target are a subset of shots: with independent opponent factors (sotF/shotsF up to ~1.5) λ_sot could
+    // exceed λ_shots and publish P(≥1 on target) > P(≥1 shot)
+    const lSot = Math.min(t90 * share * sotF, lShots);
     const lCard = c90 * share * cardsF;
     const lFouls = f90 * share * foulsF;
     props.push({

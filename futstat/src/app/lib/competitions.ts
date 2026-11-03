@@ -3,6 +3,7 @@
  * Competiciones continentales/copas), etiquetas y orden.
  */
 import type { CompetitionKind, CompetitionMeta, MatchSummary } from '../../types/data';
+import { dayMonth } from './format';
 
 const EUROPE = new Set([
   'España', 'Inglaterra', 'Italia', 'Alemania', 'Francia', 'Países Bajos', 'Portugal', 'Turquía', 'Escocia', 'Bélgica',
@@ -32,6 +33,29 @@ export const KIND_LABEL: Record<CompetitionKind, string> = {
 /** Orden de menús: tier desc, luego nombre. */
 export function byTier(a: CompetitionMeta, b: CompetitionMeta): number {
   return b.tier - a.tier || a.name.localeCompare(b.name, 'es');
+}
+
+/**
+ * Fecha corta del próximo partido ("28 nov", "14 ene 2027") cuando la competición NO tiene partidos en los
+ * próximos 14 días pero sí uno programado más adelante (CompetitionMeta.nextMatchDate). Si no aplica → undefined.
+ */
+export function nextMatchLabel(c: Pick<CompetitionMeta, 'upcomingCount' | 'nextMatchDate'> | undefined, now: Date = new Date()): string | undefined {
+  if (!c || (c.upcomingCount ?? 0) > 0 || !c.nextMatchDate) return undefined;
+  const t = Date.parse(c.nextMatchDate);
+  // fechas inválidas o ya pasadas (datos de hace unas horas) no se muestran
+  if (!Number.isFinite(t) || t < now.getTime() - 6 * 3_600_000) return undefined;
+  const d = new Date(t);
+  const label = dayMonth(d);
+  return d.getFullYear() !== now.getFullYear() ? `${label} ${d.getFullYear()}` : label;
+}
+
+/** Ids de las competiciones destacadas (grupo superior del menú), en este orden. */
+export const FEATURED_COMPETITIONS = ['champions', 'laliga', 'premier', 'seriea', 'bundesliga', 'libertadores'] as const;
+
+/** Competiciones destacadas presentes en meta, en el orden de FEATURED_COMPETITIONS. */
+export function featuredCompetitions(list: CompetitionMeta[]): CompetitionMeta[] {
+  const byId = new Map(list.map((c) => [c.id, c]));
+  return FEATURED_COMPETITIONS.map((id) => byId.get(id)).filter((c): c is CompetitionMeta => !!c);
 }
 
 export interface NavGroups {

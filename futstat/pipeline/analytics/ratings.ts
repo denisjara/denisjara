@@ -144,10 +144,44 @@ export function kMultiplierFor(kind: CompetitionConfig['kind'] | undefined): num
   return 1;
 }
 
-/** Tier "efectivo" de un equipo sin liga doméstica conocida, según la competición donde aparece. */
+/** Slugs de ESPN de competiciones de selecciones nacionales (sin `nationalTeams` explícito en la configuración). */
+export const NATIONAL_TEAM_SLUGS = new Set([
+  'uefa.nations',
+  'uefa.euro',
+  'uefa.euroq',
+  'fifa.world',
+  'fifa.worldq.uefa',
+  'fifa.worldq.conmebol',
+  'fifa.friendly',
+  'conmebol.america',
+  'concacaf.nations.league',
+  'concacaf.gold',
+]);
+
+/** true si la competición enfrenta a selecciones nacionales (no clubes). */
+export function isNationalTeamComp(comp: CompetitionConfig | undefined): boolean {
+  if (!comp) return false;
+  return comp.nationalTeams ?? NATIONAL_TEAM_SLUGS.has(comp.slug);
+}
+
+/**
+ * Tier del Elo inicial de los equipos que solo aparecen en una copa concreta (categorías no cubiertas), cuando la
+ * copa no lo fija con `cupOnlyTier`. Backtest del Elo (3 nov 2026; RPS de los 611 partidos de copa con algún equipo
+ * sin liga en el dataset): con tier 3 para todas 0,2129; con MODEL.cupOnlyTier = 1 para todas 0,2024; con estas
+ * excepciones 0,1952 (Copa del Rey 0,2237 → 0,1778 y DFB-Pokal 0,1935 → 0,1691: sus primeras rondas enfrentan a
+ * clubes amateurs/regionales con los de primera). FA Cup, Carabao, Coppa Italia y Copa Chile tienen su mínimo cerca
+ * de 1 (bajar la Carabao empeora la FA Cup: sus equipos de League One/Two juegan ambas).
+ */
+export const CUP_ONLY_TIER: Record<string, number> = { copadelrey: -2, dfbpokal: -2 };
+
+/**
+ * Tier "efectivo" de un equipo sin liga doméstica conocida, según la competición donde aparece. En copas son
+ * equipos de categorías inferiores no cubiertas (en la FA Cup incluso amateurs): `cupOnlyTier` de la copa,
+ * CUP_ONLY_TIER o MODEL.cupOnlyTier.
+ */
 export function fallbackTier(comp: CompetitionConfig | undefined): number {
   if (!comp) return 4;
-  if (comp.kind === 'cup') return 3; // equipos de categorías inferiores
+  if (comp.kind === 'cup') return comp.cupOnlyTier ?? CUP_ONLY_TIER[comp.id] ?? MODEL.cupOnlyTier;
   if (comp.kind === 'continental') return Math.min(6, Math.max(2, comp.tier - 4));
   return comp.tier;
 }

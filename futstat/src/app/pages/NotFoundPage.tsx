@@ -3,6 +3,8 @@ import { ArrowLeft, CalendarDays } from 'lucide-react';
 
 export default function NotFoundPage() {
   const { pathname } = useLocation();
+  // La ruta se muestra como texto (React la escapa) y recortada para no desbordar.
+  const shown = pathname.length > 60 ? `${pathname.slice(0, 57)}…` : pathname;
   return (
     <div className="relative overflow-hidden rounded-card border border-line bg-surface-1/80 px-6 py-16 text-center sm:py-24">
       <div className="pitch-lines pointer-events-none absolute inset-0 opacity-[0.06]" aria-hidden="true" />
@@ -12,7 +14,7 @@ export default function NotFoundPage() {
           4<span className="text-accent-text">0</span>4
         </h1>
         <p className="mt-4 text-[15px] text-ink-2">
-          La jugada se ha anulado: la página <code className="num rounded bg-surface-3 px-1.5 py-0.5 text-[13px] text-ink-1">{pathname}</code> no existe o se ha
+          La jugada se ha anulado: la página <code className="num break-all rounded bg-surface-3 px-1.5 py-0.5 text-[13px] text-ink-1">{shown}</code> no existe o se ha
           movido.
         </p>
         <div className="mt-8 flex flex-wrap items-center justify-center gap-3">

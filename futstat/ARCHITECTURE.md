@@ -12,11 +12,15 @@ futstat/
   pipeline/config.ts         Competiciones, parámetros del modelo, rutas
   pipeline/types.ts          Registros internos normalizados (MatchRecord, PlayerLine, CompetitionStore)
   pipeline/espn/             Cliente HTTP + normalización de ESPN
-  pipeline/store.ts          Persistencia incremental en data-store/<compId>.json
+  pipeline/store.ts          Persistencia incremental en data-store/<compId>.json (validación profunda al cargar)
+  pipeline/oddsGuard.ts      Descarta precios con margen imposible (normalize, store y publish)
   pipeline/fetch.ts          CLI: descarga/actualiza data-store
   pipeline/analytics/        Modelos de alto nivel (ratings, predicción, mercados, proyecciones, jugadores, simulación, backtest)
   pipeline/build.ts          CLI: data-store → public/data/*.json
   scripts/mock-data.ts       Genera JSON falsos (pero realistas) en public/mock-data/ para desarrollar la UI
+  scripts/validate-data.ts   Puerta de calidad de los JSON publicados (contrato + cordura + frescura)
+  scripts/check-store.ts     Puerta de calidad del data-store en CI (integridad + sin recortes)
+  scripts/csp.ts             CSP de producción (hashes de bloques en línea + Trusted Types) para vite.config.ts
   src/app/ ...               App React
   tests/                     Vitest
 ```
@@ -26,7 +30,8 @@ futstat/
 - **No hagas commits ni push.** El orquestador hace commit al final.
 - Edita **solo** los archivos/directorios que te asignaron. Puedes leer todo.
 - No añadas dependencias npm salvo que tu tarea lo diga explícitamente. Ya instaladas:
-  react 18.3, react-dom, react-router-dom 6.28, lucide-react, tailwindcss 3.4, vite 5.4, vitest 2.1, tsx, typescript 5.6.
+  react 18.3, react-dom, react-router-dom 7.18, lucide-react, tailwindcss 3.4, vite 6.4, vitest 4.1, tsx, typescript 5.6.
+  Versiones fijadas exactas (sin `^`); `overrides.vite = "$vite"` mantiene un único Vite en todo el árbol.
 - TypeScript estricto. Código Node se ejecuta con `npx tsx`. Imports relativos SIN extensión `.ts`.
 - Typecheck: `npx tsc -p tsconfig.node.json --noEmit` (pipeline, models, tests) y
   `npx tsc -p tsconfig.app.json --noEmit` (app). Otros agentes trabajan en paralelo: si ves errores en

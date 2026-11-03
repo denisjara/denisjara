@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { defineConfig, loadEnv, type Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
+import { inlineStyleAttributes, productionCspPolicy } from './scripts/csp';
 
 /**
  * Vite copia todo public/ a dist/, incluidos los datos falsos de public/mock-data (solo para desarrollar la UI).
@@ -16,8 +17,34 @@ function dropMockData(dataDir: string): Plugin {
       outDir = path.resolve(c.root, c.build.outDir);
     },
     closeBundle() {
-      if (dataDir === 'mock-data' || !outDir) return;
+      if (!outDir) return;
+      // Restos de una publicación interrumpida del pipeline (public/data.tmp, public/data.prev): nunca se publican.
+      for (const leftover of ['data.tmp', 'data.prev', 'mock-data.tmp', 'mock-data.prev']) {
+        fs.rmSync(path.join(outDir, leftover), { recursive: true, force: true });
+      }
+      if (dataDir === 'mock-data') return;
       fs.rmSync(path.join(outDir, 'mock-data'), { recursive: true, force: true });
+    },
+  };
+}
+
+/**
+ * CSP de PRODUCCIÓN (solo `vite build`): sustituye la CSP de desarrollo de index.html por la de scripts/csp.ts,
+ * calculada sobre el HTML final (hashes de los <script>/<style> en línea, sin 'unsafe-inline', con Trusted Types).
+ */
+function productionCsp(): Plugin {
+  return {
+    name: 'futstat:csp',
+    apply: 'build',
+    transformIndexHtml: {
+      order: 'post',
+      handler(html) {
+        // Un atributo style="" en el HTML quedaría bloqueado sin 'unsafe-inline': mejor fallar el build que publicarlo roto.
+        if (inlineStyleAttributes(html)) throw new Error('futstat:csp: index.html tiene atributos style=""; usa una clase en el <style> de la cabecera.');
+        const meta = /(<meta\s+http-equiv="Content-Security-Policy"\s+content=")[^"]*(")/i;
+        if (!meta.test(html)) throw new Error('futstat:csp: falta <meta http-equiv="Content-Security-Policy"> en index.html.');
+        return html.replace(meta, (_, a: string, b: string) => `${a}${productionCspPolicy(html)}${b}`);
+      },
     },
   };
 }
@@ -29,7 +56,18 @@ export default defineConfig(({ mode }) => {
   const dataDir = env.VITE_DATA_DIR || 'data';
   return {
     base: './',
-    plugins: [react(), dropMockData(dataDir)],
+    plugins: [react(), dropMockData(dataDir), productionCsp()],
+    // Seguridad en el equipo de desarrollo: los servidores de `npm run dev` y `npm run preview`
+    // escuchan solo en 127.0.0.1 (no se exponen a la red local / wifi) y, si el puerto está
+    // ocupado, fallan en lugar de saltar a otro puerto en silencio.
+    server: {
+      host: '127.0.0.1',
+      strictPort: true,
+    },
+    preview: {
+      host: '127.0.0.1',
+      strictPort: true,
+    },
     build: {
       outDir: 'dist',
       sourcemap: false,

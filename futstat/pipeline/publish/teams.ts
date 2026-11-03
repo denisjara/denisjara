@@ -58,10 +58,11 @@ export function buildTeamFile(ctx: BuildContext, teamId: string, comps: string[]
     const m = all[i];
     if (!m.currentSeason || !isFinishedRecord(m)) continue;
     const v = teamView(m, teamId, ctx.xg);
-    if (v) matches.push(toFormMatch(v));
+    if (v) matches.push(toFormMatch(v, ctx.detailIds));
   }
 
   const form = buildFormBlock(teamId, all, history, venue, ctx.xg, {
+    detailIds: ctx.detailIds,
     preElo: ctx.suite.eloBuild.preMatch,
     team: teamRef(ctx, teamId),
     currentElo: currentElo(ctx, teamId),
@@ -73,13 +74,14 @@ export function buildTeamFile(ctx: BuildContext, teamId: string, comps: string[]
     competitions: comps,
     primaryCompId,
     elo: currentElo(ctx, teamId),
-    globalEloRank: ctx.globalEloRank.get(teamId) ?? ctx.globalEloRank.size + 1,
+    globalEloRank: ctx.globalEloRank.get(teamId) ?? (ctx.nationalTeams.has(teamId) ? ctx.rankPool.national : ctx.rankPool.clubs) + 1,
     eloHistory: history.slice(-TEAM_ELO_HISTORY).map((h) => ({ date: h.date, elo: round(h.elo, 1) })),
     stats: teamStatsFor(ctx, teamId, primaryCompId),
     form,
     matches,
     upcoming,
-    players: players.filter((p) => p.team.id === teamId),
+    // (con --only, solo jugadores asignados a competiciones publicadas: el compId debe existir en meta.json)
+    players: players.filter((p) => p.team.id === teamId && ctx.publish.some((c) => c.id === p.compId)),
   };
   const comp = ctx.configById.get(primaryCompId);
   if (comp) {

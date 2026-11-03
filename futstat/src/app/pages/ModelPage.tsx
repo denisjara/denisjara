@@ -154,8 +154,8 @@ function PerformanceTab({ bt }: { bt: BacktestSummary }) {
           <Card>
             <CalibrationPlot bins={bt.calibration ?? []} ariaLabel="Curva de calibración del modelo: probabilidad predicha frente a frecuencia observada, con el número de predicciones por tramo" />
             <div className="mt-4 grid grid-cols-3 gap-2">
-              <MiniStat label="ECE" value={ece !== undefined ? `${num(ece * 100, 1)} pp` : '–'} hint="desv. media" />
-              <MiniStat label="Máx. desvío" value={worst ? `${signed(worst.d * 100, 1)} pp` : '–'} hint={worst ? worst.label : '–'} />
+              <MiniStat label="ECE" value={ece !== undefined ? `${num(ece * 100, 1)} pp` : '—'} hint="desv. media" />
+              <MiniStat label="Máx. desvío" value={worst ? `${signed(worst.d * 100, 1)} pp` : '—'} hint={worst ? worst.label : '—'} />
               <MiniStat label="Fuera IC" value={`${outside}/${(bt.calibration ?? []).length}`} hint="tramos" />
             </div>
             {(bt.calibration ?? []).length > 0 && (
@@ -329,7 +329,7 @@ function CompetitionsTab({ rows }: { rows: CompRow[] }) {
       sortValue: (r) => expectedCalibrationError(r.backtest.calibration ?? []),
       cell: (r) => {
         const e = expectedCalibrationError(r.backtest.calibration ?? []);
-        return e === undefined ? '–' : `${num(e * 100, 1)} pp`;
+        return e === undefined ? '—' : `${num(e * 100, 1)} pp`;
       },
     },
     {

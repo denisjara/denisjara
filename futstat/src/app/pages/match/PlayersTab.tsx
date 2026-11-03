@@ -3,6 +3,7 @@ import { Crosshair, Footprints, Goal, Handshake, Square, Users } from 'lucide-re
 import type { MatchFile, MatchSummary, PlayerProp, TeamRef } from '../../../types/data';
 import { Card, DataTable, EmptyState, Meter, SegmentedControl, TeamCrest, cx, type Column } from '../../components';
 import { fairOddsFromProb, int, pct } from '../../lib/format';
+import { lookup } from '../../lib/lookup';
 import { Panel } from './parts';
 
 interface TabProps {
@@ -55,8 +56,8 @@ function buildColumns(display: Display, showTeam: boolean): Column<Row>[] {
       sortValue: (r) => r.player.name,
       cell: (r) => (
         <span className="flex min-w-0 items-center gap-2">
-          <span className="w-8 shrink-0 rounded bg-surface-3 px-1 text-center font-mono text-[10px] text-ink-2" title={POS_TITLE[r.player.position] ?? ''}>
-            {POS[r.player.position] ?? '—'}
+          <span className="w-8 shrink-0 rounded bg-surface-3 px-1 text-center font-mono text-[10px] text-ink-2" title={lookup(POS_TITLE, r.player.position) ?? ''}>
+            {lookup(POS, r.player.position) ?? '—'}
           </span>
           {showTeam && <TeamCrest team={r.team} size={16} />}
           <span className="min-w-0">
@@ -69,10 +70,10 @@ function buildColumns(display: Display, showTeam: boolean): Column<Row>[] {
               {r.player.short || r.player.name}
             </span>
             <span className="num block whitespace-nowrap text-2xs text-ink-3">
-              {r.goals} G · {r.assists} A · {r.apps} PJ
+              {int(r.goals)} G · {int(r.assists)} A · {int(r.apps)} PJ
             </span>
             <span className="num block whitespace-nowrap text-2xs text-ink-3 sm:hidden">
-              Forma {Math.round(r.formIndex)} · {int(r.expMinutes)}′
+              Forma {int(r.formIndex)} · {int(r.expMinutes)}′
             </span>
           </span>
         </span>
@@ -87,8 +88,8 @@ function buildColumns(display: Display, showTeam: boolean): Column<Row>[] {
       sortValue: (r) => r.formIndex,
       cell: (r) => (
         <span className="inline-flex flex-col items-end gap-1">
-          <span className="text-ink-1">{Math.round(r.formIndex)}</span>
-          <Meter value={r.formIndex / 100} height={3} className="!w-9" label={`Forma ${Math.round(r.formIndex)} de 100`} />
+          <span className="text-ink-1">{int(r.formIndex)}</span>
+          <Meter value={r.formIndex / 100} height={3} className="!w-9" label={`Forma ${int(r.formIndex)} de 100`} />
         </span>
       ),
     },

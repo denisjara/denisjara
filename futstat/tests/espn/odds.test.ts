@@ -40,12 +40,28 @@ function oddsOf(odds: unknown[]) {
 
 describe('American -> decimal odds', () => {
   it('positive, negative and EVEN prices', () => {
-    const o = oddsOf([ml('+105', '-140', 'EVEN')]);
-    expect(o?.home).toBe(2.05);
-    expect(o?.draw).toBe(1.714);
-    expect(o?.away).toBe(2);
-    expect(o?.margin).toBeCloseTo(1 / 2.05 + 1 / 1.714 + 1 / 2 - 1, 3);
+    const o = oddsOf([ml('-140', '+260', '+400')]);
+    expect(o?.home).toBe(1.714);
+    expect(o?.draw).toBe(3.6);
+    expect(o?.away).toBe(5);
+    expect(o?.margin).toBeCloseTo(1 / 1.714 + 1 / 3.6 + 1 / 5 - 1, 3);
     expect(o?.provider).toBe('DraftKings');
+    const even = oddsOf([ml('EVEN', '+240', '+270')]);
+    expect(even?.home).toBe(2);
+    expect(even?.away).toBe(3.7);
+  });
+
+  it('a 1X2 trio with an impossible margin is dropped, the other markets are kept (PIPE-03)', () => {
+    // -10000/+100/+100 → 1.01/2/2: overround 0.99; three +400 → 5/5/5: overround −0.4 (arbitrage)
+    for (const [h, d, a] of [['-10000', '+100', '+100'], ['+400', '+400', '+400']]) {
+      const o = oddsOf([{ ...ml(h, d, a), total: { over: { close: { line: 'o2.5', odds: '-110' } }, under: { close: { line: 'u2.5', odds: '-110' } } } }]);
+      expect(o?.home).toBeUndefined();
+      expect(o?.draw).toBeUndefined();
+      expect(o?.away).toBeUndefined();
+      expect(o?.margin).toBeUndefined();
+      expect(o?.over).toBeCloseTo(1.909, 3);
+      expect(o?.totalLine).toBe(2.5);
+    }
   });
 
   it('extreme prices', () => {

@@ -37,10 +37,11 @@ const H = 3_600_000;
 
 /**
  * Filas de temporada de todos los jugadores (temporada actual de cada competición, todas juntas) ordenadas por forma.
- * compId = competición donde el jugador suma más minutos (desempate: tier).
+ * compId = competición publicada donde el jugador suma más minutos (desempate: tier).
  */
 export function globalPlayerRows(ctx: BuildContext): PlayerSeasonRow[] {
   const rows = buildPlayerSeasonRows(ctx.currentLines, ctx.teamRefs, 'global');
+  const published = new Set(ctx.publish.map((c) => c.id));
   const minutesByComp = new Map<string, Map<string, number>>();
   for (const l of ctx.currentLines) {
     let m = minutesByComp.get(l.playerId);
@@ -52,6 +53,7 @@ export function globalPlayerRows(ctx: BuildContext): PlayerSeasonRow[] {
     let best = r.compId;
     let bestKey = -1;
     for (const [compId, mins] of m ?? []) {
+      if (!published.has(compId)) continue;
       const key = mins * 100 + (ctx.configById.get(compId)?.tier ?? 0);
       if (key > bestKey) {
         best = compId;
@@ -68,7 +70,8 @@ export function globalPlayerRows(ctx: BuildContext): PlayerSeasonRow[] {
  * (los equipos de categorías no cubiertas solo tienen datos de copa: 2-3 partidos que inflan su forma).
  */
 export function rankablePlayers(ctx: BuildContext, rows: PlayerSeasonRow[]): PlayerSeasonRow[] {
-  return rows.filter((r) => r.minutes >= GLOBAL_MIN_MINUTES && ctx.configById.get(r.compId)?.kind !== 'cup');
+  const published = new Set(ctx.publish.map((c) => c.id));
+  return rows.filter((r) => r.minutes >= GLOBAL_MIN_MINUTES && published.has(r.compId) && ctx.configById.get(r.compId)?.kind !== 'cup');
 }
 
 export function buildPlayersFile(ctx: BuildContext, rows: PlayerSeasonRow[]): PlayersFile {
@@ -92,7 +95,15 @@ export function collectValueBets(ctx: BuildContext): { match: MatchSummary; pick
 }
 
 export function buildValueFile(ctx: BuildContext, bets: { match: MatchSummary; pick: ValuePick }[]): ValueFile {
-  return { generatedAt: ctx.refDate, bets, minEv: MODEL.minEv, kellyFraction: MODEL.kellyFraction };
+  return {
+    generatedAt: ctx.refDate,
+    bets,
+    minEv: MODEL.minEv,
+    kellyFraction: MODEL.kellyFraction,
+    kellyCap: MODEL.kellyCap,
+    minProb: MODEL.minProb,
+    maxOdds: MODEL.maxOdds,
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -211,7 +222,9 @@ export function buildMetaFile(
   counts: { players: number; valueBets: number },
   version: string,
 ): MetaFile {
-  return {
+  // frescura real de los datos: la descarga correcta más reciente (no la hora del build)
+  const dataTimes = competitions.map((c) => (c.dataUpdatedAt ? Date.parse(c.dataUpdatedAt) : NaN)).filter(Number.isFinite);
+  const meta: MetaFile = {
     generatedAt: ctx.refDate,
     version,
     dataSource: 'ESPN (API pública)',
@@ -225,4 +238,6 @@ export function buildMetaFile(
     },
     teams: teamIndex,
   };
+  if (dataTimes.length) meta.dataUpdatedAt = new Date(Math.max(...dataTimes)).toISOString();
+  return meta;
 }

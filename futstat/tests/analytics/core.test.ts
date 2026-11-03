@@ -18,6 +18,7 @@ import {
 } from '../../pipeline/analytics/ratings';
 import {
   contextFor,
+  defaultWeights,
   jsDivergence,
   over25FromLine,
   predictMatch,
@@ -71,8 +72,11 @@ describe('ratings: Elo global', () => {
     const pre = eb.preMatch.get(first.id)!;
     expect(pre.home).toBeCloseTo(MODEL.eloInit + (8 - 5) * MODEL.eloTierOffset, 6);
     expect(initialElo('B3', eb.homeLeague, SYN_CONFIG_MAP)).toBe(MODEL.eloInit);
-    // equipo solo de copa: tier de respaldo 3
-    expect(initialElo('L0', eb.homeLeague, SYN_CONFIG_MAP, SYN_CONFIG_MAP.get('copa'))).toBe(MODEL.eloInit - 2 * MODEL.eloTierOffset);
+    // equipo solo de copa (categoría inferior no cubierta): tier de respaldo MODEL.cupOnlyTier, o el de la copa
+    expect(initialElo('L0', eb.homeLeague, SYN_CONFIG_MAP, SYN_CONFIG_MAP.get('copa'))).toBe(MODEL.eloInit + (MODEL.cupOnlyTier - 5) * MODEL.eloTierOffset);
+    expect(MODEL.cupOnlyTier).toBeLessThanOrEqual(2);
+    const copa = { ...SYN_CONFIG_MAP.get('copa')!, cupOnlyTier: 1 };
+    expect(initialElo('L0', eb.homeLeague, SYN_CONFIG_MAP, copa)).toBe(MODEL.eloInit - 4 * MODEL.eloTierOffset);
     expect(kMultiplierFor('league')).toBe(1);
     expect(kMultiplierFor('continental')).toBe(1.2);
     expect(kMultiplierFor('cup')).toBe(0.9);
@@ -221,10 +225,12 @@ describe('predict', () => {
   });
 
   it('con cuotas: mercado sin margen en el ensamble y apuestas de valor cuando la cuota está mal puesta', () => {
-    // la casa infravalora al local unos 10 pp respecto al modelo (margen ~5%)
+    // la casa infravalora al local unos 10 pp respecto al modelo (margen ~5%). Pesos fijos del test (no los de
+    // MODEL, que se recalibran con el backtest): con el mercado al 30 % el modelo conserva ventaja sobre la cuota
     const fav = TEAMS_A[2].ref;
     const dog = TEAMS_A[7].ref;
-    const p0 = predictMatch(scheduled('liga-a', future, fav, dog), ctxA).quick.p;
+    const ctxW: PredictContext = { ...ctxA, weights: { ...defaultWeights(), dixonColes: 0.5, elo: 0.2, market: 0.3, lowDataGames: 0 } };
+    const p0 = predictMatch(scheduled('liga-a', future, fav, dog), ctxW).quick.p;
     const odds = {
       provider: 'TestBook',
       home: 0.95 / (p0.home - 0.1),
@@ -234,7 +240,7 @@ describe('predict', () => {
       over: 1.9,
       under: 1.95,
     };
-    const res = predictMatch(scheduled('liga-a', future, fav, dog, { odds }), ctxA);
+    const res = predictMatch(scheduled('liga-a', future, fav, dog, { odds }), ctxW);
     expect(res.model.market).toBeDefined();
     expect(res.model.market!.method).toBe('shin');
     expect(sum3(res.model.market!.probs)).toBeCloseTo(1, 3);

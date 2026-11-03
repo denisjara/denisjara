@@ -23,6 +23,16 @@ export interface CompetitionConfig {
   simulationZones?: { label: string; from: number; to: number }[];
   /** fetch per-match summaries (player stats, extended team stats). Default true. */
   summaries?: boolean;
+  /**
+   * Competition between national teams (Nations League, Euro, World Cup...). They are kept out of the club Elo
+   * ranking. Default: detected from the ESPN slug (see NATIONAL_TEAM_SLUGS in pipeline/analytics/ratings.ts).
+   */
+  nationalTeams?: boolean;
+  /**
+   * Cups: tier used for the initial Elo of teams that only appear in this cup (no league of theirs in the dataset,
+   * e.g. non-league clubs in the FA Cup). Default MODEL.cupOnlyTier.
+   */
+  cupOnlyTier?: number;
 }
 
 export const COMPETITIONS: CompetitionConfig[] = [
@@ -104,6 +114,23 @@ export const UPCOMING_DAYS = 14;
 /** Recent results window published (days). */
 export const RESULTS_DAYS = 30;
 
+/**
+ * Plausible bookmaker overround (margin = Σ 1/odds − 1) of a 1X2 or over/under market. Real books sit around 2-12 %;
+ * outside this range the trio is a feed error (e.g. moneyline "-10000"/"+100"/"+100" → margin 0.99, or three "+400"
+ * → −0.4). Such prices are dropped (the rest of the snapshot is kept) instead of feeding the ensemble with weight 0.8
+ * and making the validator reject the WHOLE publication.
+ */
+export const ODDS_MARGIN_MIN = -0.02;
+export const ODDS_MARGIN_MAX = 0.3;
+export function isPlausibleMargin(m: number | undefined): m is number {
+  return typeof m === 'number' && Number.isFinite(m) && m >= ODDS_MARGIN_MIN && m <= ODDS_MARGIN_MAX;
+}
+/** Overround of a set of decimal prices (undefined when any price is missing or ≤ 1). */
+export function overroundOf(...prices: (number | undefined)[]): number | undefined {
+  if (!prices.every((p) => typeof p === 'number' && Number.isFinite(p) && p > 1)) return undefined;
+  return (prices as number[]).reduce((s, p) => s + 1 / p, 0) - 1;
+}
+
 // ---------------------------------------------------------------------------
 // Model parameters (documented in the methodology page)
 // ---------------------------------------------------------------------------
@@ -118,13 +145,42 @@ export const MODEL = {
   eloInit: 1500,
   /** initial Elo offset by competition tier when a team is first seen: init + (tier-5)*tierOffset */
   eloTierOffset: 30,
-  /** ensemble weights when bookmaker odds exist (backtest: closing market is the strongest single source) */
-  wDixonColes: 0.2,
-  wElo: 0.2,
-  wMarket: 0.6,
-  /** ensemble weights when there are no odds */
-  wDixonColesNoMarket: 0.7,
-  wEloNoMarket: 0.3,
+  /**
+   * tier of the initial Elo of teams that only appear in cups (no league in the dataset: lower divisions) → 1440 - 120
+   * = 1380 Elo. Was 3; backtest (Elo RPS on cup matches with a cup-only team, 611 matches): tier 3 0.2129, 2 0.2069,
+   * 1 0.2024. Cups with amateur rounds go lower via CUP_ONLY_TIER (pipeline/analytics/ratings.ts).
+   */
+  cupOnlyTier: 1,
+  /**
+   * Ensemble weights, chosen with a walk-forward backtest grid (build of 3 Nov 2026: 3,666 finished matches of the
+   * current seasons, 2,629 with closing odds; leak-free pre-season draw/Elo→goals parameters). RPS (lower = better):
+   *  - with odds (n=2629): 0.2/0.2/0.6 → 0.19915 · 0.15/0.15/0.7 → 0.19837 · 0.1/0.1/0.8 → 0.19775 ·
+   *    0.05/0.15/0.8 → 0.19773 (best of the grid) · market only → 0.19695. The grid caps wMarket at 0.8: the
+   *    backtest uses CLOSING odds (the sharpest price) while upcoming matches use earlier pre-match odds, so the
+   *    backtest overstates the market; a pure market copy would also leave no independent model signal.
+   *  - without odds (n=1037): 0.7/0.3 → 0.21833 · 0.6/0.4 → 0.21826 · 0.5/0.5 → 0.21824 (best).
+   *  - all matches: 0.5/0.2/0.3 (one pair for both cases) 0.20628 · 0.2/0.2/0.6 + 0.7/0.3 0.20416 ·
+   *    these values 0.20338 (Brier 0.5925 → 0.5908).
+   */
+  wDixonColes: 0.05,
+  wElo: 0.15,
+  wMarket: 0.8,
+  /** ensemble weights when there are no odds (see above) */
+  wDixonColesNoMarket: 0.5,
+  wEloNoMarket: 0.5,
+  /**
+   * weight factor of the goals part when it comes from Elo→goals instead of Dixon-Coles (cross-league ties).
+   * Grid (all matches): 0.2 → 0.20338 · 0.5 → 0.20338 · 1 → 0.20340.
+   */
+  eloGoalWeightFactor: 0.2,
+  /**
+   * below this many Elo games (team with fewer), the statistical weights shrink linearly in favour of the market
+   * (with odds only). On the 404 matches with odds and a team with < 10 Elo games: RPS 0.17725 without the boost →
+   * 0.17671 (floor 0.5) → 0.17625 (floor 0).
+   */
+  lowDataGames: 10,
+  /** factor of the statistical weights with 0 Elo games (grows linearly to 1 at lowDataGames): 0 = market only */
+  lowDataFloor: 0,
   /** value bets */
   minEv: 0.05,
   minProb: 0.12,

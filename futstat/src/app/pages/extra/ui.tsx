@@ -195,7 +195,7 @@ export function ConfidenceTag({ level, className, showLabel = true }: { level: V
 /** Formatea un parámetro numérico con los decimales justos (máx. 4). */
 export function fmtParam(v: number | string): string {
   if (typeof v === 'string') return v;
-  if (!Number.isFinite(v)) return '–';
+  if (!Number.isFinite(v)) return '—';
   if (Number.isInteger(v)) return int(v);
   for (let d = 1; d <= 4; d++) {
     if (Math.abs(Math.round(v * 10 ** d) / 10 ** d - v) < 1e-9) return num(v, d);

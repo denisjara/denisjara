@@ -17,12 +17,23 @@ function nf(min: number, max: number, extra: Intl.NumberFormatOptions = {}): Int
   return f;
 }
 
-const DASH = '–';
+/** Marcador de dato ausente. */
+export const DASH = '—';
 const ok = (x: number | undefined | null): x is number => typeof x === 'number' && Number.isFinite(x);
 
 /** Número con `digits` decimales fijos: num(1.456, 2) → "1,46". */
 export function num(x: number | undefined | null, digits = 1): string {
   return ok(x) ? nf(digits, digits).format(x) : DASH;
+}
+
+/** Suma de los valores finitos de `xs` (los ausentes o no numéricos no cuentan; nunca devuelve NaN). */
+export function sumFinite<T>(xs: readonly T[], f: (x: T) => number | undefined | null): number {
+  let s = 0;
+  for (const x of xs) {
+    const v = f(x);
+    if (ok(v)) s += v;
+  }
+  return Number.isFinite(s) ? s : 0;
 }
 
 /** Entero con separador de miles: int(12840) → "12.840". */
@@ -183,7 +194,9 @@ export function timeAgo(d: string | Date | number, now: Date = new Date()): stri
     const m = Math.round(-s / 60);
     if (m < 60) return `en ${m} min`;
     const h = Math.round(m / 60);
-    return h < 24 ? `en ${h} h` : `en ${Math.round(h / 24)} días`;
+    if (h < 24) return `en ${h} h`;
+    const ahead = Math.round(h / 24);
+    return ahead === 1 ? 'en 1 día' : `en ${ahead} días`;
   }
   if (s < 60) return 'hace un momento';
   const m = Math.round(s / 60);
@@ -231,8 +244,8 @@ export function scoreOutcome(home: number, away: number): 'home' | 'draw' | 'awa
 }
 
 /** Quita acentos y pasa a minúsculas para búsquedas. */
-export function normalizeText(s: string): string {
-  return s
+export function normalizeText(s: string | undefined | null): string {
+  return String(s ?? '')
     .normalize('NFD')
     .replace(/[̀-ͯ]/g, '')
     .toLowerCase()
@@ -241,6 +254,19 @@ export function normalizeText(s: string): string {
 
 export function capitalize(s: string): string {
   return s ? s[0].toUpperCase() + s.slice(1) : s;
+}
+
+/** Texto o "—" si falta (nunca "undefined"/"null"/"NaN"). */
+export function text(x: string | number | undefined | null): string {
+  if (typeof x === 'number') return Number.isFinite(x) ? String(x) : DASH;
+  return typeof x === 'string' && x.trim() ? x : DASH;
+}
+
+/** Fecha corta "28 nov" (o "—" si no es válida). */
+export function dayMonth(d: string | Date | number | undefined | null): string {
+  if (d === undefined || d === null) return DASH;
+  const x = toDate(d);
+  return valid(x) ? `${x.getDate()} ${dtf({ month: 'short' }).format(x).replace('.', '')}` : DASH;
 }
 
 /** Plural sencillo: plural(3, 'partido') → "3 partidos" */

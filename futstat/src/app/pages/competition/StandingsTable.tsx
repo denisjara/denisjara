@@ -44,7 +44,7 @@ export function StandingsTable({ group, highlightTeamId }: { group: StandingGrou
         header: 'Pts−xPts',
         title: 'Diferencia entre puntos reales y esperados (positivo: suma más de lo que merece su juego)',
         numeric: true,
-        cell: (r) => (typeof r.xPts === 'number' ? <span className={deltaClass(r.points - r.xPts, 0.5)}>{signed(r.points - r.xPts, 1)}</span> : '–'),
+        cell: (r) => (typeof r.xPts === 'number' ? <span className={deltaClass(r.points - r.xPts, 0.5)}>{signed(r.points - r.xPts, 1)}</span> : '—'),
         sortValue: (r) => (typeof r.xPts === 'number' ? r.points - r.xPts : undefined),
       },
     );
@@ -115,9 +115,9 @@ export function MiniStandings({ group, limit = 8, highlightTeamId }: { group: St
                     <span className={cx('truncate text-ink-1', me ? 'font-bold' : 'font-medium')}>{r.team.short || r.team.name}</span>
                   </Link>
                 </th>
-                <td className="num border-b border-line/70 px-2 py-2 text-right text-ink-2 group-last:border-b-0">{r.played}</td>
+                <td className="num border-b border-line/70 px-2 py-2 text-right text-ink-2 group-last:border-b-0">{int(r.played)}</td>
                 <td className="num border-b border-line/70 px-2 py-2 text-right text-ink-2 group-last:border-b-0">{signed(r.gd, 0)}</td>
-                <td className="num border-b border-line/70 px-2 py-2 text-right font-bold text-ink-1 group-last:border-b-0">{r.points}</td>
+                <td className="num border-b border-line/70 px-2 py-2 text-right font-bold text-ink-1 group-last:border-b-0">{int(r.points)}</td>
                 <td className="hidden border-b border-line/70 py-2 pl-2 pr-3 group-last:border-b-0 sm:table-cell">
                   <FormChips form={r.form} size="xs" />
                 </td>

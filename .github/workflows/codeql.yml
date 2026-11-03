@@ -1,0 +1,68 @@
+# ---------------------------------------------------------------------------
+# CodeQL — análisis estático de seguridad
+#
+# Busca vulnerabilidades en el código JavaScript/TypeScript (app React y
+# pipeline Node de futstat/) y en los propios workflows de GitHub Actions
+# (inyección de scripts, permisos excesivos...). Los resultados aparecen en
+# Security → Code scanning. No publica ni modifica nada.
+# ---------------------------------------------------------------------------
+name: "CodeQL"
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  # Una vez por semana (lunes 04:41 UTC) para detectar problemas con reglas nuevas
+  # aunque el código no cambie.
+  schedule:
+    - cron: '41 4 * * 1'
+
+# Sin permisos por defecto: el job declara solo los que necesita.
+permissions: {}
+
+concurrency:
+  group: codeql-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  analyze:
+    name: Analizar (${{ matrix.language }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      # Subir los resultados a Code scanning.
+      security-events: write
+      # Leer el código del repositorio.
+      contents: read
+      # Nota: si el repositorio pasa a ser privado, CodeQL necesita además `actions: read`.
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [javascript-typescript, actions]
+    steps:
+      - name: Descargar el código
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
+
+      - name: Inicializar CodeQL
+        uses: github/codeql-action/init@1fc58d04a4d4374f921bdac573c3811c240f9c26 # v4.39.2
+        with:
+          languages: ${{ matrix.language }}
+          # JavaScript/TypeScript y Actions se analizan sin compilar nada.
+          build-mode: none
+          # Reglas de seguridad ampliadas además de las predeterminadas.
+          queries: security-extended
+          # No analizar código generado ni datos.
+          config: |
+            paths-ignore:
+              - futstat/dist
+              - futstat/public
+              - futstat/data-store
+              - '**/node_modules'
+
+      - name: Analizar
+        uses: github/codeql-action/analyze@1fc58d04a4d4374f921bdac573c3811c240f9c26 # v4.39.2
+        with:
+          category: "/language:${{ matrix.language }}"

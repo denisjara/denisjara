@@ -130,7 +130,7 @@ export function ValueCard({ item, minEv, started }: { item: ValueItem; minEv: nu
         <Metric label="EV" value={fmtEv(pick.ev)} tone="pos" title="Valor esperado por unidad apostada" />
         <Metric label="Justa" value={fmtOdds(pick.fairOdds)} title="Cuota justa del modelo (1 / probabilidad)" />
         <Metric label="Stake" value={pct(pick.kelly, 1)} title="Stake recomendado (Kelly fraccional) en % de la banca" />
-        <Metric label="Mín." value={minOdds ? fmtOdds(minOdds) : '–'} title={`Cuota mínima para mantener un EV de al menos ${pct(minEv)}`} />
+        <Metric label="Mín." value={minOdds ? fmtOdds(minOdds) : '—'} title={`Cuota mínima para mantener un EV de al menos ${pct(minEv)}`} />
       </div>
       <div className="-mt-1 flex items-center justify-between gap-2 text-2xs text-ink-3">
         <span>

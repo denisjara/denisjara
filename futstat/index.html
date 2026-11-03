@@ -2,6 +2,22 @@
 <html lang="es" data-theme="dark">
   <head>
     <meta charset="UTF-8" />
+    <!--
+      Política de seguridad de contenido (CSP) para DESARROLLO (`npm run dev`). Debe ir antes de cualquier script o estilo.
+      En producción (`npm run build`) el plugin futstat:csp de vite.config.ts la sustituye por una más estricta:
+      sin 'unsafe-inline' en style-src, con Trusted Types y con los sha256 de los <script>/<style> en línea
+      calculados en cada build (no hay que mantener hashes a mano para producción).
+        · sha256-U9yU…: hash del script de tema de más abajo (solo cuenta en desarrollo). Si cambias ese script,
+          recalcúlalo; si no coincide, el navegador lo bloquea en desarrollo y main.tsx aplica el tema igualmente.
+        · sha256-Z2/i…: preámbulo de React Fast Refresh que inyecta el servidor de desarrollo.
+        · style-src 'unsafe-inline': solo en desarrollo (Vite inyecta <style> y su overlay de errores).
+      Tipografías autoalojadas (src/fonts.css): no se contacta con Google Fonts.
+    -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self' 'sha256-U9yUcnM6wvIN7Ak+gYneaXo2XslC1pEhL/bEUq1Bkno=' 'sha256-Z2/iFzh9VMlVkEOar1f/oSHWwQk3ve1qk/C2WdsC4Xk='; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: https://a.espncdn.com https://*.espncdn.com; connect-src 'self' https://site.api.espn.com; object-src 'none'; base-uri 'self'; form-action 'none'; upgrade-insecure-requests"
+    />
+    <meta name="referrer" content="strict-origin-when-cross-origin" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="description" content="FutStat Lab — analítica y predicción de fútbol actualizada a diario: probabilidades, mercados, forma de equipos y jugadores, y apuestas de valor." />
     <meta name="theme-color" content="#080b10" />
@@ -10,12 +26,18 @@
       rel="icon"
       href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23080b10'/%3E%3Cpath d='M9 23V9h12' stroke='%23c6f135' stroke-width='3.2' fill='none' stroke-linecap='square'/%3E%3Cpath d='M9 16h8' stroke='%23c6f135' stroke-width='3.2' stroke-linecap='square'/%3E%3Ccircle cx='23' cy='22' r='3' fill='%23eef2f6'/%3E%3C/svg%3E"
     />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      rel="stylesheet"
-      href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;700;800;900&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap"
-    />
+    <style>
+      /* Pantalla de arranque (dentro de #root; React la sustituye al montar). Sin JS: si el código de la app no
+         llega a cargar (404 tras un despliegue, bloqueador, navegador antiguo), a los 8 s aparece cómo recargar. */
+      .boot { box-sizing: border-box; width: calc(100% - 32px); max-width: 28rem; margin: 15vh auto 0; padding: 24px; text-align: center; font: 14px/1.5 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; color: #aab4c0; background: #10151c; border: 1px solid #242c38; border-radius: 14px; }
+      .boot-title { margin: 0 0 6px; font-size: 20px; font-weight: 700; color: #eef2f6; }
+      .boot p { margin: 0 0 12px; }
+      .boot-slow { visibility: hidden; animation: boot-show 0s linear 8s forwards; }
+      .boot-slow a { display: inline-block; margin-top: 4px; padding: 8px 16px; border-radius: 8px; background: #c6f135; color: #0b0f14; font-weight: 600; text-decoration: none; }
+      [data-theme='light'] .boot { color: #4a5563; background: #ffffff; border-color: #d5dbe3; }
+      [data-theme='light'] .boot-title { color: #0b0f14; }
+      @keyframes boot-show { to { visibility: visible; } }
+    </style>
     <script>
       // Aplica el tema guardado antes del primer pintado (evita parpadeo). Oscuro por defecto.
       (function () {
@@ -30,7 +52,16 @@
     </script>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <div class="boot" role="status">
+        <p class="boot-title">FutStat Lab</p>
+        <p>Cargando análisis…</p>
+        <div class="boot-slow">
+          <p>Está tardando más de lo normal. Puede que haya una versión nueva de la web o que la conexión haya fallado.</p>
+          <a href="./?recarga=1">Recargar la página</a>
+        </div>
+      </div>
+    </div>
     <noscript>FutStat Lab necesita JavaScript para mostrar los análisis.</noscript>
     <script type="module" src="/src/main.tsx"></script>
   </body>

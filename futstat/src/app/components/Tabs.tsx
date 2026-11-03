@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { cx } from './Card';
+import { SafeBlock } from './ErrorBoundary';
 
 export interface TabItem<T extends string = string> {
   id: T;
@@ -166,7 +167,7 @@ export function TabPanel({ idBase, id, active, children, className, keepMounted 
       tabIndex={0}
       className={cx('pt-5 focus-visible:outline-offset-4', className)}
     >
-      {children}
+      <SafeBlock resetKey={id}>{children}</SafeBlock>
     </div>
   );
 }

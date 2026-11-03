@@ -173,7 +173,8 @@ export default function PlayersPage() {
                       ref={searchRef}
                       type="search"
                       value={q}
-                      onChange={(e) => setQ(e.target.value)}
+                      maxLength={60}
+                      onChange={(e) => setQ(e.target.value.slice(0, 60))}
                       placeholder="Jugador o equipo…"
                       className="input h-[34px] pl-8 pr-8"
                       autoComplete="off"

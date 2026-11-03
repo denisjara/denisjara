@@ -4,7 +4,8 @@
 import type { BacktestSummary, ModelFile } from '../../src/types/data';
 import { MODEL, UPCOMING_DAYS } from '../config';
 import { MAX_EV } from '../analytics/value';
-import { ELO_GOAL_WEIGHT_FACTOR } from '../analytics/predict';
+import { ELO_GOAL_WEIGHT_FACTOR, LOW_DATA_GAMES } from '../analytics/predict';
+import { CUP_ONLY_TIER } from '../analytics/ratings';
 import { PRIOR_N as STAT_PRIOR_N, HALF_LIFE_DAYS } from '../analytics/projections';
 import type { BuildContext } from './context';
 
@@ -48,7 +49,8 @@ export function methodologySections(i: MethodologyInput): ModelFile['sections'] 
     body: [
       'Un único rating Elo para todos los equipos de todas las competiciones, actualizado en orden cronológico: los partidos continentales e internacionales conectan la fuerza relativa entre ligas.',
       `Estilo World Football Elo: ΔR = K·G·(W − We), con K = ${MODEL.eloK} (×1,2 en competiciones continentales y ×0,9 en copas), ventaja de campo de ${MODEL.eloHomeAdv} puntos y multiplicador por diferencia de goles G (1 con uno o ninguno, 1,5 con dos y (11 + dif)/8 con tres o más).`,
-      `Los equipos nuevos arrancan en ${MODEL.eloInit} + (tier − 5)·${MODEL.eloTierOffset} según el nivel de su liga doméstica; los recién ascendidos parten algo por debajo de la media de su liga.`,
+      `Los equipos nuevos arrancan en ${MODEL.eloInit} + (tier − 5)·${MODEL.eloTierOffset} según el nivel de su liga doméstica; los recién ascendidos parten algo por debajo de la media de su liga. Los que solo aparecen en copas (categorías no cubiertas, incluso amateurs) arrancan con tier ${d(MODEL.cupOnlyTier, 0)} (${Math.round(MODEL.eloInit + (MODEL.cupOnlyTier - 5) * MODEL.eloTierOffset)} puntos)${Object.keys(CUP_ONLY_TIER).length ? `, y aún más abajo en las copas con rondas de clubes regionales (${Object.entries(CUP_ONLY_TIER).map(([id, t]) => `${ctx.compNames.get(id) ?? id}: ${Math.round(MODEL.eloInit + (t - 5) * MODEL.eloTierOffset)}`).join(', ')})` : ''}.`,
+      'Las selecciones nacionales (Nations League) tienen su propio Elo y su propio ranking: el ranking Elo global se calcula solo entre clubes.',
       `El empate se modela explícitamente: P(empate) = base·exp(−(dif/escala)²), con base = ${d(s.eloBuild.drawParams.drawBase, 3)} y escala = ${Math.round(s.eloBuild.drawParams.drawScale)} ajustados por máxima verosimilitud.`,
     ],
   });
@@ -59,7 +61,7 @@ export function methodologySections(i: MethodologyInput): ModelFile['sections'] 
       'Modelo de Poisson bivariante de goles por liga: λ_local = base·ataque_local·defensa_visitante·ventaja_local y λ_visitante = base·ataque_visitante·defensa_local (ataque y defensa multiplicativos, 1 = media de la liga; defensa > 1 = encaja más).',
       `Corrección de Dixon-Coles para los marcadores bajos (0-0, 1-0, 0-1, 1-1) mediante el parámetro ρ ∈ [−0,2; 0,2]; en las ${dcs.length} ligas ajustadas ρ medio = ${d(rho, 3)} y la ventaja local media multiplica los goles del local por ${d(homeAdv)}.`,
       `Ponderación temporal w = exp(−ξ·días) con ξ = ${MODEL.dcXi} (vida media ≈ ${halfLife} días) sobre una ventana de ${MODEL.dcWindowDays} días, y regularización hacia la media de la liga para equipos con pocos partidos.`,
-      `En copas y competiciones continentales, si ambos equipos comparten liga doméstica se usa su Dixon-Coles; si no, un modelo Elo→goles: supremacía = ${d(s.eloGoal.a, 3)} goles por cada 100 puntos Elo y total = media de goles de sus ligas × estilo de cada equipo (+${d(s.eloGoal.c, 3)}·(dif/100)²), calibrado con ${n0(s.eloGoal.n)} partidos. Esta parte pesa ${d(ELO_GOAL_WEIGHT_FACTOR * MODEL.wDixonColes, 2)} en el ensamble.`,
+      `En copas y competiciones continentales, si ambos equipos comparten liga doméstica se usa su Dixon-Coles; si no, un modelo Elo→goles: supremacía = ${d(s.eloGoal.a, 3)} goles por cada 100 puntos Elo y total = media de goles de sus ligas × estilo de cada equipo (+${d(s.eloGoal.c, 3)}·(dif/100)²), calibrado con ${n0(s.eloGoal.n)} partidos. Esta parte pesa el ${pc(ELO_GOAL_WEIGHT_FACTOR)} del peso de Dixon-Coles en el ensamble.`,
     ],
   });
 
@@ -75,7 +77,8 @@ export function methodologySections(i: MethodologyInput): ModelFile['sections'] 
   sections.push({
     title: 'Ensamble y recalibración de λ',
     body: [
-      `La probabilidad final 1X2 es un pool lineal: Dixon-Coles ${pc(MODEL.wDixonColes)}, Elo ${pc(MODEL.wElo)} y mercado sin margen ${pc(MODEL.wMarket)}. Si falta una fuente (por ejemplo, sin cuotas) los pesos se renormalizan.`,
+      `La probabilidad final 1X2 es un pool lineal. Con cuotas: Dixon-Coles ${pc(MODEL.wDixonColes)}, Elo ${pc(MODEL.wElo)} y mercado sin margen ${pc(MODEL.wMarket)}. Sin cuotas: Dixon-Coles ${pc(MODEL.wDixonColesNoMarket)} y Elo ${pc(MODEL.wEloNoMarket)}. Los dos juegos de pesos se eligen por separado con una rejilla sobre el backtest walk-forward (menor RPS).`,
+      `El peso del mercado está limitado al ${pc(MODEL.wMarket)}: el backtest usa cuotas de cierre, más precisas que las cuotas previas con las que se predicen los partidos próximos, y copiar el mercado no aportaría una opinión propia. Si un equipo tiene menos de ${LOW_DATA_GAMES} partidos en el Elo (recién llegado, equipo de copa) y hay cuotas, el peso de Dixon-Coles y Elo baja de forma lineal a favor del mercado.`,
       'Después se recalibran los goles esperados: se buscan los (λ_local, λ_visitante) cuya matriz de Dixon-Coles reproduce el 1X2 del ensamble y la probabilidad de más de 2,5 goles (mezcla del modelo y de la línea de goles de la casa). Así todos los mercados derivados son coherentes con la probabilidad final.',
       'La confianza (0–1) combina el acuerdo entre fuentes (divergencia de Jensen-Shannon) y el volumen de datos de ambos equipos.',
     ],
@@ -113,7 +116,7 @@ export function methodologySections(i: MethodologyInput): ModelFile['sections'] 
     body: [
       `Se simulan ${n0(MODEL.simIterations)} veces los partidos pendientes con goles de Poisson usando los goles esperados del modelo para cada cruce, partiendo de la clasificación actual (desempates: puntos, diferencia de goles, goles a favor y sorteo).`,
       'Resultado: puntos esperados, posición esperada, distribución completa de posiciones y probabilidad de cada zona (campeón, Champions, descenso, top 8...).',
-      'Cuando la fuente aún no publica el calendario completo (partidos del año siguiente), en las ligas a doble vuelta se añaden los cruces que faltan y en la fase de liga UEFA se completan emparejamientos sintéticos hasta el número de partidos del formato.',
+      'Se usa el calendario real: en las temporadas que terminan el año siguiente (ligas europeas, fase de liga UEFA) también se descargan los partidos de enero a mayo. Solo si la fuente aún no los publica, en las ligas a doble vuelta se añaden los cruces que faltan y en la fase de liga UEFA se completan emparejamientos sintéticos hasta el número de partidos del formato.',
     ],
   });
 
@@ -123,10 +126,19 @@ export function methodologySections(i: MethodologyInput): ModelFile['sections'] 
   sections.push({
     title: 'Backtest walk-forward y métricas',
     body: [
-      'Cada partido terminado de la temporada actual se predice solo con la información disponible antes de jugarse: Elo previo al partido y Dixon-Coles re-ajustado cada semana con los partidos anteriores (más las cuotas de cierre cuando existen).',
+      'Cada partido terminado de la temporada actual se predice solo con la información disponible antes de jugarse: Elo previo al partido, Dixon-Coles re-ajustado cada semana con los partidos anteriores (más las cuotas de cierre cuando existen) y, para cada competición, los parámetros de empate del Elo, el modelo Elo→goles y las medias de goles ajustados solo con partidos anteriores al inicio de su temporada.',
       'Métricas: Brier multiclase (suma de errores cuadráticos de las 3 probabilidades), log-loss, RPS (Ranked Probability Score, la métrica de referencia para 1X2 porque respeta el orden local-empate-visitante) y porcentaje de acierto del resultado más probable. Menor es mejor salvo el acierto.',
       'La calibración agrupa las probabilidades en tramos del 10 %: un modelo bien calibrado acierta el 40 % de las veces cuando dice 40 %. También se evalúan más/menos 2,5 y ambos marcan, y se simula el ROI de apostar 1 unidad a la selección 1X2 de mayor valor contra las cuotas de cierre.',
       btLine,
+    ],
+  });
+
+  sections.push({
+    title: 'Calidad de los datos',
+    body: [
+      'Cada respuesta de ESPN se comprueba antes de usarla (tamaño máximo, tipo JSON, estructura) y cada partido, jugador o fila de clasificación se normaliza por separado: un registro dañado se descarta sin afectar al resto. Los textos se limpian, los logos solo se aceptan desde el CDN de ESPN por https y los números imposibles (marcadores, porcentajes, estadísticas) se descartan.',
+      'El almacén de datos se guarda de forma atómica con copia de seguridad; si un archivo apareciera dañado, se recupera la copia anterior.',
+      'Antes de publicar, todos los JSON se validan contra el contrato de datos y contra umbrales de cordura (número de competiciones con datos, partidos analizados, partidos en portada). Si algo falla no se publica nada y la web sigue mostrando la última versión buena.',
     ],
   });
 

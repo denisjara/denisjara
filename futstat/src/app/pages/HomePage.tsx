@@ -4,9 +4,10 @@ import { Activity, BadgePercent, CalendarClock, Check, Flame, History, Radio, Ta
 import type { HomeFile, MatchSummary, PlayerSeasonRow, ValuePick } from '../../types/data';
 import { useHome, useMeta } from '../lib/data';
 import { pickMarketLabel, pickSelection } from '../lib/picks';
+import { lookup } from '../lib/lookup';
 import { useLiveScores, withLive } from '../lib/live';
 import { groupMatchesByCompetition } from '../lib/competitions';
-import { ev as fmtEv, int, kickoff, longDate, num, odds as fmtOdds, pct, plural, capitalize } from '../lib/format';
+import { ev as fmtEv, int, kickoff, longDate, num, odds as fmtOdds, pct, plural, capitalize, sumFinite } from '../lib/format';
 import {
   Card,
   CompetitionBadge,
@@ -20,6 +21,7 @@ import {
   Meter,
   PageSkeleton,
   ProbBar1X2,
+  SafeBlock,
   Section,
   SegmentedControl,
   Sparkline,
@@ -41,9 +43,9 @@ function FocusMatch({ match: m }: { match: MatchSummary }) {
       <div className="pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full bg-accent/10 blur-2xl" aria-hidden="true" />
       <div className="mb-3 flex items-center justify-between gap-2">
         <span className="eyebrow text-accent-text">Foco del día</span>
-        <span className="flex items-center gap-2 text-2xs text-ink-3">
+        <span className="flex min-w-0 items-center gap-2 text-2xs text-ink-3">
           <CompetitionBadge compId={m.compId} name={m.compName} className="text-2xs" />
-          <span className="num">{kickoff(m.date)}</span>
+          <span className="num shrink-0">{kickoff(m.date)}</span>
         </span>
       </div>
       <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3">
@@ -123,7 +125,7 @@ function DayHero({ home, liveCount }: { home: HomeFile; liveCount: number }) {
             <KpiTile label="Picks de valor" value={int(counts?.valueBets ?? home.topValue.length)} hint="EV ≥ +5% frente a la cuota" icon={<BadgePercent />} accent />
             <KpiTile
               label="Acierto 1X2"
-              value={mh ? pct(mh.accuracy) : '–'}
+              value={mh ? pct(mh.accuracy) : '—'}
               hint={mh ? `RPS ${num(mh.rps, 3)}${mh.marketRps ? ` · mercado ${num(mh.marketRps, 3)}` : ''}` : 'Backtest pendiente'}
               icon={<Target />}
             />
@@ -207,8 +209,8 @@ function HotPlayers({ players }: { players: PlayerSeasonRow[] }) {
       <ul className="divide-y divide-line/70">
         {players.slice(0, 8).map((p, i) => {
           const l5 = p.last5 ?? [];
-          const g5 = l5.reduce((s, x) => s + x.goals, 0);
-          const a5 = l5.reduce((s, x) => s + x.assists, 0);
+          const g5 = sumFinite(l5, (x) => x.goals);
+          const a5 = sumFinite(l5, (x) => x.assists);
           return (
             <li key={`${p.player.id}-${p.compId}`}>
               <Link to={`/t/${p.team.id}`} className="grid grid-cols-[20px_minmax(0,1fr)_auto] items-center gap-3 px-3 py-2.5 transition-colors hover:bg-surface-2 sm:px-4">
@@ -218,11 +220,11 @@ function HotPlayers({ players }: { players: PlayerSeasonRow[] }) {
                   <span className="min-w-0">
                     <span className="block truncate text-[13.5px] font-semibold text-ink-1">{p.player.name}</span>
                     <span className="flex items-center gap-1.5 text-2xs text-ink-3">
-                      <span className="rounded bg-surface-3 px-1 font-mono text-[10px] text-ink-2">{POSITION[p.player.position]}</span>
+                      <span className="rounded bg-surface-3 px-1 font-mono text-[10px] text-ink-2">{lookup(POSITION, p.player.position) ?? '—'}</span>
                       <span className="truncate">{p.team.short || p.team.name}</span>
                       <span aria-hidden="true">·</span>
                       <span className="num shrink-0" title="Goles y asistencias en los últimos 5 partidos">
-                        {g5}G {a5}A
+                        {int(g5)}G {int(a5)}A
                       </span>
                     </span>
                   </span>
@@ -230,8 +232,8 @@ function HotPlayers({ players }: { players: PlayerSeasonRow[] }) {
                 <span className="flex items-center gap-3">
                   <Sparkline values={p.formTrend} width={56} height={22} domain={[4, 10]} ariaLabel={`Notas recientes de ${p.player.name}`} className="hidden sm:block" />
                   <span className="w-[54px]">
-                    <span className="num block text-right text-[14px] font-bold text-ink-1">{Math.round(p.formIndex)}</span>
-                    <Meter value={p.formIndex / 100} height={4} label={`Índice de forma ${Math.round(p.formIndex)} de 100`} />
+                    <span className="num block text-right text-[14px] font-bold text-ink-1">{int(p.formIndex)}</span>
+                    <Meter value={p.formIndex / 100} height={4} label={`Índice de forma ${int(p.formIndex)} de 100`} />
                   </span>
                 </span>
               </Link>
@@ -304,7 +306,9 @@ export default function HomePage() {
 
   return (
     <div className="space-y-10">
-      <DayHero home={home} liveCount={liveCount} />
+      <SafeBlock label="Resumen del día">
+        <DayHero home={home} liveCount={liveCount} />
+      </SafeBlock>
 
       <Section
         id="populares"

@@ -3,6 +3,7 @@
  * mercados por familias de líneas y formateo de etiquetas que llegan del pipeline.
  */
 import type { Market, MatchSummary, Prob1X2 } from '../../../types/data';
+import { lookup } from '../../lib/lookup';
 
 // ---------------------------------------------------------------------------
 // Matriz de marcadores
@@ -239,7 +240,8 @@ function familyTitle(prefix: string, sample: Market, match: Pick<MatchSummary, '
     'fouls-ou': 'Faltas totales · más/menos',
     'offsides-ou': 'Fueras de juego totales · más/menos',
   };
-  if (fixed[prefix]) return fixed[prefix];
+  const known = lookup(fixed, prefix);
+  if (known) return known;
   // genérico: quita el último número del nombre
   return localizeNumbers(sample.name.replace(/\s*[+\-−]?\d+(?:[.,]\d+)?(?!.*\d)/, '').trim());
 }

@@ -1,16 +1,31 @@
-import { lazy } from 'react';
+import { lazy, type ComponentType } from 'react';
 import { Route, Routes } from 'react-router-dom';
 
+/**
+ * Carga perezosa con un reintento: si el chunk de una página falla (red intermitente), se reintenta una vez
+ * antes de dejar que la barrera de error de la ruta ofrezca recargar la página.
+ */
+function lazyPage<T extends ComponentType<object>>(load: () => Promise<{ default: T }>) {
+  return lazy(() =>
+    load().catch(
+      () =>
+        new Promise<{ default: T }>((resolve, reject) => {
+          setTimeout(() => load().then(resolve, reject), 800);
+        }),
+    ),
+  );
+}
+
 // Carga perezosa: cada página es un chunk independiente.
-const HomePage = lazy(() => import('./pages/HomePage'));
-const CalendarPage = lazy(() => import('./pages/CalendarPage'));
-const CompetitionPage = lazy(() => import('./pages/competition/CompetitionPage'));
-const MatchPage = lazy(() => import('./pages/match/MatchPage'));
-const TeamPage = lazy(() => import('./pages/team/TeamPage'));
-const PlayersPage = lazy(() => import('./pages/PlayersPage'));
-const ValuePage = lazy(() => import('./pages/ValuePage'));
-const ModelPage = lazy(() => import('./pages/ModelPage'));
-const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
+const HomePage = lazyPage(() => import('./pages/HomePage'));
+const CalendarPage = lazyPage(() => import('./pages/CalendarPage'));
+const CompetitionPage = lazyPage(() => import('./pages/competition/CompetitionPage'));
+const MatchPage = lazyPage(() => import('./pages/match/MatchPage'));
+const TeamPage = lazyPage(() => import('./pages/team/TeamPage'));
+const PlayersPage = lazyPage(() => import('./pages/PlayersPage'));
+const ValuePage = lazyPage(() => import('./pages/ValuePage'));
+const ModelPage = lazyPage(() => import('./pages/ModelPage'));
+const NotFoundPage = lazyPage(() => import('./pages/NotFoundPage'));
 
 /** Rutas de la app (HashRouter): /#/c/laliga, /#/m/740001 ... */
 export function AppRoutes() {

@@ -1,28 +1,8 @@
-import { Component, useEffect, type ErrorInfo, type ReactNode } from 'react';
+import { useEffect } from 'react';
 import { HashRouter, useLocation } from 'react-router-dom';
 import { AppShell } from './layout/AppShell';
 import { AppRoutes } from './routes';
-import { ErrorState } from './components/States';
-
-/** Captura errores de render de una página sin tumbar la navegación. */
-class PageErrorBoundary extends Component<{ children: ReactNode; resetKey: string }, { error: Error | null }> {
-  state = { error: null as Error | null };
-  static getDerivedStateFromError(error: Error) {
-    return { error };
-  }
-  componentDidCatch(error: Error, info: ErrorInfo) {
-    console.error('Error de página', error, info.componentStack);
-  }
-  componentDidUpdate(prev: { resetKey: string }) {
-    if (prev.resetKey !== this.props.resetKey && this.state.error) this.setState({ error: null });
-  }
-  render() {
-    if (this.state.error) {
-      return <ErrorState title="Algo ha fallado al mostrar esta página" error={this.state.error} onRetry={() => this.setState({ error: null })} />;
-    }
-    return this.props.children;
-  }
-}
+import { AppErrorBoundary, RouteErrorBoundary } from './components/ErrorBoundary';
 
 function Shell() {
   const { pathname } = useLocation();
@@ -31,17 +11,21 @@ function Shell() {
   }, []);
   return (
     <AppShell>
-      <PageErrorBoundary resetKey={pathname}>
+      {/* Error de una página: el armazón (menú, buscador) sigue vivo y el error se limpia al cambiar de ruta. */}
+      <RouteErrorBoundary resetKey={pathname}>
         <AppRoutes />
-      </PageErrorBoundary>
+      </RouteErrorBoundary>
     </AppShell>
   );
 }
 
 export default function App() {
   return (
-    <HashRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-      <Shell />
-    </HashRouter>
+    <AppErrorBoundary>
+      {/* React Router 7: startTransition y rutas splat relativas ya son el comportamiento por defecto. */}
+      <HashRouter>
+        <Shell />
+      </HashRouter>
+    </AppErrorBoundary>
   );
 }

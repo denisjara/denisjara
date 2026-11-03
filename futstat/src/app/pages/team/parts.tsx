@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { Home, Plane } from 'lucide-react';
 import type { CompetitionMeta, FormMatch, LeagueAverages, SplitStat, StandingRow, TeamFile, TeamSeasonStats } from '../../../types/data';
-import { Card, CompetitionBadge, DataTable, FormChips, Meter, OutcomeChip, Sparkline, StatCompareBar, TeamCrest, cx, type Column, type StatFormat } from '../../components';
+import { Card, CompetitionBadge, DataTable, FormChips, Meter, OutcomeChip, Sparkline, StatCompareBar, TeamCrest, cx, formMatchHref, type Column, type StatFormat } from '../../components';
 import { SIDE_COLOR, deltaClass, teamColor, token } from '../../lib/colors';
 import { int, num, pct, shortDate, signed, xg as fmtXg } from '../../lib/format';
 import { noteColor, ordinal } from '../competition/shared';
@@ -69,10 +69,10 @@ export function TeamHeader({ data, primaryMeta, leagueEloRank, children }: TeamH
             <Sparkline values={eloSeries} width={64} height={22} ariaLabel={`Evolución reciente del Elo de ${team.name}`} />
           </div>
         </HeaderKpi>
-        <HeaderKpi label="Ranking Elo global" value={data.globalEloRank ? ordinal(data.globalEloRank) : '–'} hint={leagueEloRank ? `${ordinal(leagueEloRank)} de su liga` : 'Todas las competiciones'} />
+        <HeaderKpi label="Ranking Elo global" value={data.globalEloRank ? ordinal(data.globalEloRank) : '—'} hint={leagueEloRank ? `${ordinal(leagueEloRank)} de su liga` : 'Todas las competiciones'} />
         <HeaderKpi
           label="Posición"
-          value={standing ? ordinal(standing.rank) : '–'}
+          value={standing ? ordinal(standing.rank) : '—'}
           hint={
             standing?.note?.label ? (
               <span className="inline-flex items-center gap-1">
@@ -86,10 +86,10 @@ export function TeamHeader({ data, primaryMeta, leagueEloRank, children }: TeamH
         />
         <HeaderKpi
           label="Puntos"
-          value={standing ? int(standing.points) : '–'}
+          value={standing ? int(standing.points) : '—'}
           hint={standing && typeof standing.xPts === 'number' ? `xPts ${num(standing.xPts, 1)} (${signed(standing.points - standing.xPts, 1)})` : undefined}
         />
-        <HeaderKpi label="Forma" className="col-span-2 sm:col-span-1" hint={`Índice ${Math.round(form.formIndex)}/100 · ${num(form.ppg5, 2)} pts/p.`}>
+        <HeaderKpi label="Forma" className="col-span-2 sm:col-span-1" hint={`Índice ${int(form.formIndex)}/100 · ${num(form.ppg5, 2)} pts/p.`}>
           <div className="py-1">
             <FormChips form={form.formString} size="sm" />
           </div>
@@ -111,6 +111,15 @@ export function dayMonth(d: string | number): string {
 // ---------------------------------------------------------------------------
 function FormTile({ m }: { m: FormMatch }) {
   const hasStats = m.shots !== undefined || m.corners !== undefined || m.cards !== undefined;
+  const href = formMatchHref(m);
+  const score = (
+    <>
+      <OutcomeChip outcome={m.result} size="sm" />
+      <span className="font-display text-[20px] font-extrabold leading-none text-ink-1">
+        {m.gf}-{m.ga}
+      </span>
+    </>
+  );
   return (
     <li className="flex min-w-0 flex-col gap-1.5 rounded-lg border border-line bg-surface-2/60 p-2.5">
       <div className="flex items-center justify-between gap-1 text-2xs text-ink-3">
@@ -125,12 +134,13 @@ function FormTile({ m }: { m: FormMatch }) {
         <TeamCrest team={m.opponent} size={18} />
         <span className="truncate text-[12.5px] font-semibold text-ink-1">{m.opponent.short || m.opponent.name}</span>
       </Link>
-      <div className="flex items-center gap-2">
-        <OutcomeChip outcome={m.result} size="sm" />
-        <span className="font-display text-[20px] font-extrabold leading-none text-ink-1">
-          {m.gf}-{m.ga}
-        </span>
-      </div>
+      {href ? (
+        <Link to={href} className="flex items-center gap-2 rounded hover:underline" title="Ver el análisis del partido">
+          {score}
+        </Link>
+      ) : (
+        <div className="flex items-center gap-2">{score}</div>
+      )}
       {(m.xg !== undefined || m.xga !== undefined) && (
         <div className="num whitespace-nowrap text-2xs text-ink-2" title="Goles esperados a favor–en contra">
           xG {fmtXg(m.xg)}–{fmtXg(m.xga)}
@@ -140,15 +150,15 @@ function FormTile({ m }: { m: FormMatch }) {
         <dl className="grid grid-cols-3 gap-1 border-t border-line pt-1.5 text-center">
           <div title="Tiros (a puerta)">
             <dt className="text-[9.5px] font-semibold uppercase text-ink-3">Tir</dt>
-            <dd className="num text-[11.5px] text-ink-1">{m.shots ?? '–'}</dd>
+            <dd className="num text-[11.5px] text-ink-1">{m.shots ?? '—'}</dd>
           </div>
           <div title="Córners a favor">
             <dt className="text-[9.5px] font-semibold uppercase text-ink-3">Cór</dt>
-            <dd className="num text-[11.5px] text-ink-1">{m.corners ?? '–'}</dd>
+            <dd className="num text-[11.5px] text-ink-1">{m.corners ?? '—'}</dd>
           </div>
           <div title="Tarjetas recibidas">
             <dt className="text-[9.5px] font-semibold uppercase text-ink-3">Tar</dt>
-            <dd className="num text-[11.5px] text-ink-1">{m.cards ?? '–'}</dd>
+            <dd className="num text-[11.5px] text-ink-1">{m.cards ?? '—'}</dd>
           </div>
         </dl>
       )}
@@ -175,7 +185,7 @@ export function FormBlock({ data }: { data: TeamFile }) {
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4 lg:grid-cols-[repeat(4,minmax(0,1fr))_minmax(0,1.6fr)]">
         <FormStat label="Pts/partido (5)" value={num(form.ppg5, 2)} hint={`Últimos 10: ${num(form.ppg10, 2)}`} />
         <FormStat label="Goles (5)" value={`${num(form.gf5, 1)}–${num(form.ga5, 1)}`} hint="A favor–en contra por partido" />
-        <FormStat label="Índice de forma" value={`${Math.round(form.formIndex)}`} hint="De 0 a 100" />
+        <FormStat label="Índice de forma" value={`${int(form.formIndex)}`} hint="De 0 a 100" />
         <div className="min-w-0">
           <div className="text-[10px] font-semibold uppercase tracking-wider text-ink-3">Últimos 5</div>
           <div className="mt-1.5">
@@ -265,7 +275,7 @@ export function HomeAwayBars({ stats, la }: { stats: TeamSeasonStats; la?: Leagu
 export function SplitTable({ stats, la, leagueName }: { stats: TeamSeasonStats; la?: LeagueAverages; leagueName?: string }) {
   const rows = splitRows(stats, la);
   const fmt = (r: SplitRow, v: number | undefined) =>
-    typeof v !== 'number' ? '–' : `${r.format === 'dec2' ? num(v, 2) : num(v, 1)}${r.suffix ?? ''}`;
+    typeof v !== 'number' ? '—' : `${r.format === 'dec2' ? num(v, 2) : num(v, 1)}${r.suffix ?? ''}`;
   const cols: Column<SplitRow>[] = [
     { key: 'label', header: 'Métrica', sticky: true, cell: (r) => <span className="font-medium text-ink-1">{r.label}</span>, className: 'min-w-[140px]' },
     { key: 'all', header: 'Total', numeric: true, cell: (r) => <span className="font-semibold text-ink-1">{fmt(r, r.s.all)}</span> },
@@ -375,14 +385,24 @@ export function SeasonMatchesTable({ matches, metaById }: { matches: FormMatch[]
     {
       key: 'res',
       header: 'Resultado',
-      cell: (m) => (
-        <span className="inline-flex items-center gap-2 whitespace-nowrap">
-          <OutcomeChip outcome={m.result} size="xs" />
-          <span className="num font-semibold text-ink-1">
-            {m.gf}-{m.ga}
-          </span>
-        </span>
-      ),
+      cell: (m) => {
+        const href = formMatchHref(m);
+        const inner = (
+          <>
+            <OutcomeChip outcome={m.result} size="xs" />
+            <span className="num font-semibold text-ink-1">
+              {m.gf}-{m.ga}
+            </span>
+          </>
+        );
+        return href ? (
+          <Link to={href} className="inline-flex items-center gap-2 whitespace-nowrap hover:underline" title="Ver el análisis del partido">
+            {inner}
+          </Link>
+        ) : (
+          <span className="inline-flex items-center gap-2 whitespace-nowrap">{inner}</span>
+        );
+      },
       sortValue: (m) => m.gf - m.ga,
     },
     { key: 'xg', header: 'xG', title: 'Goles esperados a favor (modelo)', numeric: true, cell: (m) => fmtXg(m.xg), sortValue: (m) => m.xg },
@@ -394,11 +414,11 @@ export function SeasonMatchesTable({ matches, metaById }: { matches: FormMatch[]
       numeric: true,
       cell: (m) =>
         m.shots === undefined ? (
-          '–'
+          '—'
         ) : (
           <span>
             {m.shots}
-            <span className="text-ink-3"> ({m.shotsOnTarget ?? '–'})</span>
+            <span className="text-ink-3"> ({m.shotsOnTarget ?? '—'})</span>
           </span>
         ),
       sortValue: (m) => m.shots,
@@ -410,20 +430,30 @@ export function SeasonMatchesTable({ matches, metaById }: { matches: FormMatch[]
       numeric: true,
       cell: (m) =>
         m.corners === undefined ? (
-          '–'
+          '—'
         ) : (
           <span>
             {m.corners}
-            <span className="text-ink-3"> / {m.cornersAgainst ?? '–'}</span>
+            <span className="text-ink-3"> / {m.cornersAgainst ?? '—'}</span>
           </span>
         ),
       sortValue: (m) => m.corners,
     },
-    { key: 'cards', header: 'Tarj.', title: 'Tarjetas recibidas', numeric: true, cell: (m) => m.cards ?? '–', sortValue: (m) => m.cards },
-    { key: 'fouls', header: 'Faltas', title: 'Faltas cometidas', numeric: true, cell: (m) => m.fouls ?? '–', sortValue: (m) => m.fouls },
-    { key: 'poss', header: 'Pos.', title: 'Posesión', numeric: true, cell: (m) => (typeof m.possession === 'number' ? `${num(m.possession, 0)}%` : '–'), sortValue: (m) => m.possession },
+    { key: 'cards', header: 'Tarj.', title: 'Tarjetas recibidas', numeric: true, cell: (m) => m.cards ?? '—', sortValue: (m) => m.cards },
+    { key: 'fouls', header: 'Faltas', title: 'Faltas cometidas', numeric: true, cell: (m) => m.fouls ?? '—', sortValue: (m) => m.fouls },
+    { key: 'poss', header: 'Pos.', title: 'Posesión', numeric: true, cell: (m) => (typeof m.possession === 'number' ? `${num(m.possession, 0)}%` : '—'), sortValue: (m) => m.possession },
   ];
-  return <DataTable columns={cols} rows={matches} rowKey={(m) => m.matchId} caption="Todos los partidos de la temporada" initialSort={{ key: 'date', dir: 'desc' }} dense />;
+  return (
+    <DataTable
+      columns={cols}
+      rows={matches}
+      rowKey={(m, i) => `${m.matchId}-${i}`}
+      rowHref={formMatchHref}
+      caption="Todos los partidos de la temporada (los que tienen análisis publicado se pueden abrir)"
+      initialSort={{ key: 'date', dir: 'desc' }}
+      dense
+    />
+  );
 }
 
 /** Resumen de la temporada (PJ, V-E-D, goles vs xG). */

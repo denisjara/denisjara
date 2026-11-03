@@ -46,7 +46,7 @@ export function TeamsTab({ data }: { data: CompetitionFile }) {
       }),
       n('cards', 'Tarj.', 'Tarjetas recibidas por partido (amarillas + rojas)', (t) => v(t.cards, split), (x) => num(x, 2)),
       n('fouls', 'Faltas', 'Faltas cometidas por partido', (t) => v(t.fouls, split)),
-      n('poss', 'Pos.', 'Posesión media', (t) => v(t.possession, split), (x) => (typeof x === 'number' ? `${num(x, 0)}%` : '–')),
+      n('poss', 'Pos.', 'Posesión media', (t) => v(t.possession, split), (x) => (typeof x === 'number' ? `${num(x, 0)}%` : '—')),
       n('o25', '+2,5', 'Partidos con más de 2,5 goles (toda la temporada)', (t) => t.over25Pct, (x) => pct(x)),
       n('btts', 'Ambos', 'Partidos en que marcan ambos equipos (toda la temporada)', (t) => t.bttsPct, (x) => pct(x)),
       n('cs', 'P. cero', 'Partidos con portería a cero (toda la temporada)', (t) => t.cleanSheetPct, (x) => pct(x)),

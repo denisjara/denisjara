@@ -9,6 +9,22 @@
 # Requisito único: Settings → Pages → Build and deployment → Source: "GitHub Actions".
 # Nota: los cron de GitHub solo se ejecutan en la rama por defecto (main) y
 # pueden retrasarse unos minutos en horas de mucha carga.
+#
+# Reglas de seguridad de este workflow (mantenerlas al editarlo):
+#   - Cada action está fijada a un SHA de commit completo (el comentario indica
+#     la versión). Dependabot (.github/dependabot.yml) propone las subidas.
+#   - Permisos mínimos por job: nada por defecto; "build" solo lee el repo y
+#     "deploy" solo puede publicar en Pages.
+#   - Nunca interpolar contextos ${{ ... }} no confiables (títulos, ramas,
+#     mensajes de commit, entradas de usuario...) dentro de `run:`. Si hace falta
+#     un valor, pasarlo por `env:` y leerlo como variable de shell entre comillas.
+#   - Si ESPN cae, se compila con el almacén de la ejecución anterior. La web
+#     muestra la antigüedad REAL de los datos (meta.dataUpdatedAt, la última
+#     descarga correcta) y la validación rechaza publicar si esa descarga tiene
+#     más de 72 h: entonces el job falla en rojo y la web conserva la última
+#     versión buena (con su indicador de frescura en ámbar).
+#   - Si algo falla, no se despliega nada y la web sigue mostrando la última
+#     versión buena.
 # ---------------------------------------------------------------------------
 name: "FutStat Lab — actualización diaria"
 
@@ -30,11 +46,8 @@ on:
       - 'futstat/**'
       - '.github/workflows/futstat-daily.yml'
 
-# Permisos mínimos: leer el repo y publicar en Pages (OIDC para deploy-pages).
-permissions:
-  contents: read
-  pages: write
-  id-token: write
+# Sin permisos por defecto: cada job declara solo los que necesita.
+permissions: {}
 
 # Una sola publicación a la vez. No se cancela la que está en curso para no
 # dejar a medias una descarga larga ni un despliegue.
@@ -47,87 +60,180 @@ jobs:
     name: Datos, modelos y compilación
     runs-on: ubuntu-latest
     timeout-minutes: 60
+    # Solo lectura del repositorio (la caché de Actions no necesita permisos del token).
+    permissions:
+      contents: read
     defaults:
       run:
         # Todos los comandos `run` se ejecutan dentro del proyecto.
         working-directory: futstat
     steps:
-      # 1. Código fuente del repositorio.
+      # 1. Código fuente del repositorio. Sin guardar el token en .git/config:
+      #    ningún paso posterior (ni scripts de dependencias npm) puede reutilizarlo.
       - name: Descargar el código
-        uses: actions/checkout@v4
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
 
       # 2. Node 22 con caché de npm basada en el lockfile del proyecto.
       - name: Preparar Node.js 22
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
         with:
           node-version: 22
           cache: npm
           cache-dependency-path: futstat/package-lock.json
 
-      # 3. Instalación reproducible de dependencias (respeta package-lock.json).
+      # 3. Instalación reproducible de dependencias (exactamente las de package-lock.json).
+      #    La auditoría se hace al final, justo antes de publicar (pasos 14-15): así un fallo
+      #    del servicio de auditoría de npm no impide descargar y guardar los datos del día.
       - name: Instalar dependencias
-        run: npm ci
+        timeout-minutes: 10
+        run: npm ci --no-audit --no-fund
 
       # 4. Recupera el almacén incremental de datos (data-store/) de la ejecución
       #    anterior. Así solo se descargan partidos y resúmenes nuevos, se conserva
       #    el histórico de cuotas (movimiento de líneas) y la pasada es mucho más rápida.
-      #    La clave es única por ejecución; restore-keys toma la más reciente.
+      #    La clave es única por ejecución E INTENTO (un "Re-run" también guarda lo que
+      #    descarga); restore-keys toma la más reciente.
       - name: Restaurar caché del almacén de datos
         id: restore-store
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25 # v5.1.0
         with:
           path: futstat/data-store
-          key: futstat-store-${{ github.run_id }}
+          key: futstat-store-${{ github.run_id }}-${{ github.run_attempt }}
           restore-keys: |
             futstat-store-
 
-      # 5. Descarga/actualiza todas las competiciones desde la API pública de ESPN.
-      #    El script ya tolera fallos parciales (una liga caída no detiene el resto)
-      #    y solo devuelve error si fallan TODAS las competiciones.
+      # 5. Resumen del almacén restaurado (partidos, jugadores y filas por competición)
+      #    para detectar en el paso 8 una descarga que lo vacíe o lo recorte.
+      - name: Resumir el almacén restaurado
+        timeout-minutes: 5
+        run: npx tsx scripts/check-store.ts snapshot "$RUNNER_TEMP/store-before.json"
+
+      # 6. Descarga/actualiza todas las competiciones desde la API pública de ESPN.
+      #    El script ya tolera fallos parciales (una liga caída no detiene el resto;
+      #    si solo falla el endpoint de resúmenes, se aplazan los resúmenes y el resto
+      #    se actualiza) y respeta un presupuesto de 30 min.
+      #    continue-on-error: si ESPN no responde (o el script falla), se sigue con el
+      #    almacén restaurado; el paso 7 lo avisa y la validación (paso 11) rechaza
+      #    publicar datos de más de 72 h.
       - name: Descargar datos de ESPN
         id: fetch
+        timeout-minutes: 35
+        continue-on-error: true
         run: npm run data:fetch
-        continue-on-error: false
 
-      # 6. Guarda el almacén en caché justo después de la descarga (aunque falle un
+      # 7. Aviso visible en el resumen de la ejecución cuando la descarga falló
+      #    (si ESPN no responde nada, el propio script ya emite su aviso y sale con 0).
+      - name: Avisar si la descarga falló
+        if: steps.fetch.outcome == 'failure'
+        run: echo "::warning title=Descarga de ESPN fallida::La descarga terminó con error. Se compila con el almacén de la ejecución anterior; la web muestra la fecha real de los datos y la validación rechaza publicar datos de más de 72 h."
+
+      # 8. Puerta de calidad del almacén antes de guardarlo en caché o usarlo:
+      #    validación profunda de cada archivo (scripts/check-store.ts) y comparación
+      #    con el resumen del paso 5: si una competición desaparece o pierde más del 25 %
+      #    de partidos, jugadores o filas de clasificación, el job se detiene, NO se
+      #    guarda en caché (la próxima ejecución parte del último almacén bueno) y no
+      #    se publica nada.
+      - name: Comprobar integridad del almacén
+        id: store-check
+        if: always() && steps.fetch.outcome != 'skipped'
+        timeout-minutes: 5
+        run: npx tsx scripts/check-store.ts check --baseline="$RUNNER_TEMP/store-before.json"
+
+      # 9. Guarda el almacén en caché justo después de comprobarlo (aunque falle un
       #    paso posterior, lo descargado no se pierde para la próxima ejecución).
-      #    Se omite si la descarga ni siquiera llegó a ejecutarse o si esta misma
-      #    clave ya existe (re-ejecución de un mismo run).
+      #    Solo si el almacén pasó la comprobación.
       - name: Guardar caché del almacén de datos
-        if: always() && steps.fetch.outcome != 'skipped' && steps.restore-store.outputs.cache-hit != 'true'
-        uses: actions/cache/save@v4
+        if: always() && steps.store-check.outcome == 'success' && steps.restore-store.outputs.cache-hit != 'true'
+        uses: actions/cache/save@caa296126883cff596d87d8935842f9db880ef25 # v5.1.0
         with:
           path: futstat/data-store
-          key: futstat-store-${{ github.run_id }}
+          key: futstat-store-${{ github.run_id }}-${{ github.run_attempt }}
 
-      # 7. Ajusta los modelos y genera los JSON publicados en public/data/
-      #    (Elo, Dixon-Coles, ensamble con mercado, mercados, córners/tarjetas/tiros,
-      #    jugadores, simulación Monte Carlo, backtest, apuestas de valor).
+      # 9b. Copia de seguridad semanal del almacén como artefacto (90 días). La caché de
+      #     Actions se expulsa tras 7 días sin uso; el histórico de cuotas y los resúmenes
+      #     antiguos no se pueden volver a descargar. Restaurar: descargar el artefacto
+      #     "futstat-data-store-…" de la ejecución y copiarlo en futstat/data-store/
+      #     (ver README, "Copia de seguridad del almacén").
+      - name: Decidir copia semanal del almacén
+        id: weekly
+        if: always() && steps.store-check.outcome == 'success'
+        run: |
+          if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ] || { [ "$GITHUB_EVENT_NAME" = "schedule" ] && [ "$(date -u +%u)" = "1" ] && [ "$(date -u +%H)" -lt 9 ]; }; then
+            echo "backup=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "backup=false" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Guardar copia semanal del almacén (artefacto)
+        if: always() && steps.weekly.outputs.backup == 'true'
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: futstat-data-store-${{ github.run_id }}
+          path: futstat/data-store/*.json
+          retention-days: 90
+          if-no-files-found: ignore
+
+      # 10. Ajusta los modelos y genera los JSON publicados en public/data/
+      #     (Elo, Dixon-Coles, ensamble con mercado, mercados, córners/tarjetas/tiros,
+      #     jugadores, simulación Monte Carlo, backtest, apuestas de valor).
       - name: Calcular modelos y generar JSON
+        timeout-minutes: 20
         run: npm run data:build
 
-      # 8. Comprueba que los JSON generados cumplen el contrato de datos
-      #    (src/types/data.ts) antes de publicar nada.
+      # 11. Comprueba que los JSON generados cumplen el contrato de datos
+      #     (src/types/data.ts) y los umbrales de cordura (entre ellos: la última
+      #     descarga correcta de ESPN no puede tener más de 72 h) antes de publicar nada.
       - name: Validar datos generados
+        timeout-minutes: 5
         run: npm run data:validate
 
-      # 9. Tests unitarios (modelos estadísticos, normalización de ESPN, etc.).
+      # 12. Tests unitarios (modelos estadísticos, normalización de ESPN, etc.).
       - name: Ejecutar tests
+        timeout-minutes: 10
         run: npm test
 
-      # 10. Typecheck + compilación de la app con Vite → futstat/dist
+      # 13. Typecheck + compilación de la app con Vite → futstat/dist
       #     (incluye public/data/ recién generado).
       - name: Compilar la web
+        timeout-minutes: 10
         run: npm run build
 
-      # 11. Configura GitHub Pages para este repositorio.
-      - name: Configurar GitHub Pages
-        uses: actions/configure-pages@v5
+      # 14. Bloqueante: si alguna dependencia que acaba en la web publicada tiene una
+      #     vulnerabilidad conocida de gravedad alta o crítica, no se publica nada.
+      #     Va al final: los datos ya se han descargado y guardado en caché.
+      #     Si el servicio de auditoría de npm no responde (error de red, no una
+      #     vulnerabilidad), se avisa y se publica: el lockfile no cambia entre
+      #     pasadas programadas y cada PR se audita en ci.yml.
+      - name: Auditar dependencias de producción (bloqueante)
+        timeout-minutes: 5
+        run: |
+          set +e
+          npm audit --omit=dev --audit-level=high --json > "$RUNNER_TEMP/audit.json"
+          code=$?
+          set -e
+          if [ "$code" -eq 0 ]; then
+            echo "Sin vulnerabilidades altas o críticas en dependencias de producción."
+            exit 0
+          fi
+          if node -e 'const r = JSON.parse(require("fs").readFileSync(process.argv[1], "utf8")); process.exit(r && r.error && !r.vulnerabilities ? 0 : 1)' "$RUNNER_TEMP/audit.json"; then
+            echo "::warning title=npm audit no disponible::No se pudo consultar la base de avisos de npm (error de red o del servicio). Se publica igualmente; la próxima pasada lo vuelve a comprobar."
+            exit 0
+          fi
+          npm audit --omit=dev --audit-level=high || true
+          exit "$code"
 
-      # 12. Empaqueta la web compilada como artefacto de Pages.
+      # 15. Informativo: auditoría completa (incluidas las herramientas de desarrollo).
+      #     Un fallo aquí se ve en el resumen de la ejecución pero no detiene la publicación.
+      - name: Auditar todas las dependencias (informativo)
+        timeout-minutes: 5
+        continue-on-error: true
+        run: npm audit --audit-level=critical
+
+      # 16. Empaqueta la web compilada como artefacto de Pages.
       #     (`path` es relativo a la raíz del repo: working-directory no aplica a `uses`).
       - name: Subir artefacto de Pages
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
         with:
           path: futstat/dist
 
@@ -138,11 +244,23 @@ jobs:
     # otra rama sirve para comprobar que todo compila, sin desplegar).
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # Lo mínimo para desplegar en Pages: crear el despliegue y el token OIDC
+    # que demuestra que viene de este workflow.
+    permissions:
+      pages: write
+      id-token: write
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
+      # Comprueba que Pages está activado con origen "GitHub Actions".
+      - name: Configurar GitHub Pages
+        timeout-minutes: 5
+        uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
+
       # Despliega el artefacto subido en el job anterior.
       - name: Desplegar
         id: deployment
-        uses: actions/deploy-pages@v4
+        timeout-minutes: 10
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1

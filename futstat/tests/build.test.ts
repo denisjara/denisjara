@@ -23,10 +23,29 @@ import type {
 import { mulberry32, samplePoisson } from '../src/lib/models';
 import type { CompetitionConfig } from '../pipeline/config';
 import type { CompetitionStore, MatchRecord, PlayerLine } from '../pipeline/types';
-import { runBuild, type BuildReport } from '../pipeline/build';
+import { PublishRejectedError, runBuild, stagingDirFor, type BuildReport } from '../pipeline/build';
 import { remainingFixtures } from '../pipeline/publish/simulation';
-import { cleanJson, localDay, newCleanStats, nextDay } from '../pipeline/publish/util';
-import { validateDataDir } from '../scripts/validate-data';
+import {
+  LockedError,
+  UnsafeOutputError,
+  acquireLock,
+  assertSafeOutputDir,
+  cleanJson,
+  foreignContent,
+  localDay,
+  lockPathFor,
+  newCleanStats,
+  nextDay,
+  previousDirFor,
+  recoverInterruptedSwap,
+  sanitizePublishedString,
+  swapDir,
+} from '../pipeline/publish/util';
+import { ROOT_DIR } from '../pipeline/config';
+import { DEFAULT_SANITY, validateDataDir } from '../scripts/validate-data';
+
+/** El mundo sintético es pequeño (4 competiciones): se valida el contrato sin los umbrales de cordura de producción. */
+const NO_SANITY = { sanity: false } as const;
 import { SYN_CONFIGS, TEAMS_A, TEAMS_B, TEAMS_LOW, scheduled, syntheticWorld } from './analytics/synthetic';
 
 const DAY = 86_400_000;
@@ -134,6 +153,8 @@ function testStores(): CompetitionStore[] {
   add('copa', scheduled('copa', iso(3 * DAY), TEAMS_LOW[0].ref, A[5], { id: 'up-c0' }));
   add('copa', { ...scheduled('copa', iso(5 * DAY), TEAMS_LOW[1].ref, A[6], { id: 'cancel-c1' }), status: 'cancelled' });
   for (const s of stores) s.matches.sort((a, b) => Date.parse(a.date) - Date.parse(b.date));
+  // color de equipo (lo publica el índice de meta.json)
+  for (const s of stores) for (const m of s.matches) for (const side of ['home', 'away'] as const) if (m[side].id === A[0].id) m[side] = { ...m[side], color: 'c8102e' };
   // líneas de jugador en los partidos terminados de la temporada actual de la liga A y la continental
   for (const id of ['liga-a', 'euro']) {
     const s = byId.get(id)!;
@@ -152,8 +173,10 @@ beforeAll(() => {
   tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'futstat-build-'));
   outDir = path.join(tmp, 'data');
   fs.mkdirSync(outDir, { recursive: true });
+  // salida anterior de FutStat con un archivo que ya no se genera: se sustituye entera
+  fs.writeFileSync(path.join(outDir, 'meta.json'), '{}');
   fs.writeFileSync(path.join(outDir, 'stale.json'), '{}');
-  report = runBuild({ stores: testStores(), configs: CONFIGS, now: NOW, outDir, fast: true, log: () => {} });
+  report = runBuild({ stores: testStores(), configs: CONFIGS, now: NOW, outDir, fast: true, log: () => {}, validate: NO_SANITY });
 });
 
 afterAll(() => {
@@ -162,7 +185,7 @@ afterAll(() => {
 
 describe('runBuild (mundo sintético)', () => {
   it('produce un conjunto de datos que pasa la validación del contrato', () => {
-    const v = validateDataDir(outDir);
+    const v = validateDataDir(outDir, NO_SANITY);
     expect(v.errors).toEqual([]);
     expect(v.ok).toBe(true);
     expect(v.files).toBe(report.files);
@@ -171,7 +194,8 @@ describe('runBuild (mundo sintético)', () => {
 
   it('sustituye el directorio de salida (borra archivos antiguos) y no deja el temporal', () => {
     expect(fs.existsSync(path.join(outDir, 'stale.json'))).toBe(false);
-    expect(fs.existsSync(`${outDir}.__tmp__`)).toBe(false);
+    expect(fs.existsSync(stagingDirFor(outDir))).toBe(false);
+    expect(fs.existsSync(previousDirFor(outDir))).toBe(false);
     for (const f of ['meta.json', 'home.json', 'players.json', 'value.json', 'model.json']) expect(fs.existsSync(path.join(outDir, f))).toBe(true);
   });
 
@@ -317,12 +341,217 @@ describe('runBuild (mundo sintético)', () => {
 
   it('--only publica solo las competiciones pedidas', () => {
     const dir = path.join(tmp, 'only');
-    const r = runBuild({ stores: testStores(), configs: CONFIGS, now: NOW, outDir: dir, fast: true, only: ['liga-b'], log: () => {} });
+    const r = runBuild({ stores: testStores(), configs: CONFIGS, now: NOW, outDir: dir, fast: true, only: ['liga-b'], log: () => {}, validate: NO_SANITY });
     expect(r.competitions).toBe(1);
     expect(fs.readdirSync(path.join(dir, 'competitions'))).toEqual(['liga-b.json']);
     const meta = readJson<MetaFile>(dir, 'meta.json');
     expect(meta.competitions.map((c) => c.id)).toEqual(['liga-b']);
     expect(fs.readdirSync(path.join(dir, 'matches'))).toEqual(['up-b01.json']);
+  });
+});
+
+describe('puerta de calidad del build', () => {
+  it('si la validación falla: error, salida anterior intacta y sin directorios temporales', () => {
+    const dir = path.join(tmp, 'gate');
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(path.join(dir, 'meta.json'), '{"version":"anterior"}');
+    // umbral imposible ⇒ los datos (válidos según el contrato) se consideran degenerados
+    let err: unknown;
+    try {
+      runBuild({ stores: testStores(), configs: CONFIGS, now: NOW, outDir: dir, fast: true, log: () => {}, validate: { sanity: { minMatchesAnalyzed: 1e9 } } });
+    } catch (e) {
+      err = e;
+    }
+    expect(err).toBeInstanceOf(PublishRejectedError);
+    expect((err as PublishRejectedError).validation.errors.join('\n')).toMatch(/cordura: meta\.counts\.matchesAnalyzed/);
+    expect(fs.readdirSync(dir)).toEqual(['meta.json']);
+    expect(fs.readFileSync(path.join(dir, 'meta.json'), 'utf8')).toBe('{"version":"anterior"}');
+    expect(fs.existsSync(stagingDirFor(dir))).toBe(false);
+    expect(fs.existsSync(previousDirFor(dir))).toBe(false);
+  });
+
+  it('un error durante el build tampoco toca la salida anterior', () => {
+    const dir = path.join(tmp, 'gate-crash');
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(path.join(dir, 'meta.json'), '{}');
+    fs.writeFileSync(path.join(dir, 'home.json'), 'x');
+    const stores = testStores();
+    // partido con un id que no puede ser nombre de archivo: se descarta, el resto se publica
+    const bad = stores.find((s) => s.compId === 'liga-a')!;
+    bad.matches.push({ ...bad.matches[bad.matches.length - 1], id: '../../etc/passwd' });
+    const r = runBuild({ stores, configs: CONFIGS, now: NOW, outDir: dir, fast: true, log: () => {}, validate: NO_SANITY });
+    expect(r.matchFiles).toBeGreaterThan(0);
+    expect(fs.existsSync(path.join(dir, 'home.json'))).toBe(true);
+    expect(fs.readFileSync(path.join(dir, 'home.json'), 'utf8')).not.toBe('x');
+    expect(fs.readdirSync(path.join(dir, 'matches')).every((f) => /^[A-Za-z0-9_-]+\.json$/.test(f))).toBe(true);
+  });
+
+  it('nunca borra contenido ajeno: --out a una carpeta con documentos, al proyecto o con un .tmp ajeno (PIPE-05)', () => {
+    const victim = path.join(tmp, 'precious');
+    fs.mkdirSync(path.join(victim, 'sub'), { recursive: true });
+    fs.writeFileSync(path.join(victim, 'tesis.docx'), 'mi tesis');
+    fs.writeFileSync(path.join(victim, 'sub', 'foto.jpg'), 'foto');
+    const run = (outDir: string) => runBuild({ stores: testStores(), configs: CONFIGS, now: NOW, outDir, fast: true, log: () => {}, validate: NO_SANITY });
+    expect(() => run(victim)).toThrow(UnsafeOutputError);
+    expect(fs.readFileSync(path.join(victim, 'tesis.docx'), 'utf8')).toBe('mi tesis');
+    expect(fs.existsSync(path.join(victim, 'sub', 'foto.jpg'))).toBe(true);
+    // solo .json pero sin meta.json: tampoco (no parece una salida de FutStat)
+    const jsons = path.join(tmp, 'configs');
+    fs.mkdirSync(jsons, { recursive: true });
+    fs.writeFileSync(path.join(jsons, 'settings.json'), '{}');
+    expect(() => run(jsons)).toThrow(UnsafeOutputError);
+    expect(fs.existsSync(path.join(jsons, 'settings.json'))).toBe(true);
+    // el proyecto, una carpeta que lo contiene, la carpeta personal o la raíz
+    for (const d of [ROOT_DIR, path.dirname(ROOT_DIR), os.homedir(), path.parse(ROOT_DIR).root]) expect(() => assertSafeOutputDir(d, ROOT_DIR)).toThrow(UnsafeOutputError);
+    // salida válida pero con un <salida>.tmp ajeno al lado
+    const out = path.join(tmp, 'withtmp');
+    fs.mkdirSync(stagingDirFor(out), { recursive: true });
+    fs.writeFileSync(path.join(stagingDirFor(out), 'otro.txt'), 'no tocar');
+    expect(() => run(out)).toThrow(UnsafeOutputError);
+    expect(fs.readFileSync(path.join(stagingDirFor(out), 'otro.txt'), 'utf8')).toBe('no tocar');
+    expect(foreignContent(path.join(tmp, 'no-existe'))).toBeUndefined();
+  });
+
+  it('cerrojo: un segundo proceso no puede publicar en la misma salida a la vez; un cerrojo huérfano se sustituye (PIPE-12)', () => {
+    const res = path.join(tmp, 'locked');
+    const release = acquireLock('test', res, 'La salida de prueba');
+    try {
+      expect(() => acquireLock('test', res, 'La salida de prueba')).toThrow(LockedError);
+    } finally {
+      release();
+    }
+    const again = acquireLock('test', res, 'La salida de prueba');
+    again();
+    // cerrojo de un proceso que ya no existe
+    fs.writeFileSync(lockPathFor('test', res), JSON.stringify({ pid: 2 ** 22 + 12345, host: os.hostname(), startedAt: new Date().toISOString() }));
+    const third = acquireLock('test', res, 'La salida de prueba');
+    third();
+    expect(fs.existsSync(lockPathFor('test', res))).toBe(false);
+  });
+
+  it('swapDir sustituye con renombrados y recoverInterruptedSwap repara un cambio a medias', () => {
+    const base = path.join(tmp, 'swap');
+    const target = path.join(base, 'data');
+    const staging = stagingDirFor(target);
+    fs.mkdirSync(target, { recursive: true });
+    fs.writeFileSync(path.join(target, 'a.json'), 'viejo');
+    fs.mkdirSync(staging, { recursive: true });
+    fs.writeFileSync(path.join(staging, 'a.json'), 'nuevo');
+    swapDir(staging, target);
+    expect(fs.readFileSync(path.join(target, 'a.json'), 'utf8')).toBe('nuevo');
+    expect(fs.existsSync(staging)).toBe(false);
+    expect(fs.existsSync(previousDirFor(target))).toBe(false);
+    // proceso matado entre los dos renombrados: solo queda data.prev
+    fs.renameSync(target, previousDirFor(target));
+    recoverInterruptedSwap(target);
+    expect(fs.readFileSync(path.join(target, 'a.json'), 'utf8')).toBe('nuevo');
+    expect(fs.existsSync(previousDirFor(target))).toBe(false);
+  });
+});
+
+describe('validateDataDir: cordura y seguridad', () => {
+  it('los umbrales de producción rechazan un conjunto de datos demasiado pequeño', () => {
+    const v = validateDataDir(outDir);
+    expect(v.ok).toBe(false);
+    expect(v.errors.join('\n')).toMatch(/cordura: solo 4 competiciones con datos \(mínimo 15\)/);
+    expect(v.errors.join('\n')).toMatch(/cordura: meta\.counts\.matchesAnalyzed/);
+    expect(v.sanity.competitionsWithData).toBe(4);
+    // con umbrales a medida pasa
+    expect(validateDataDir(outDir, { sanity: { minCompetitionsWithData: 4, minMatchesAnalyzed: 100 } }).errors).toEqual([]);
+    expect(DEFAULT_SANITY.minCompetitionsWithData).toBe(15);
+  });
+
+  it('rechaza portada sin partidos, textos con <script>/javascript:, logos no permitidos y archivos inesperados', () => {
+    const dir = path.join(tmp, 'unsafe');
+    fs.cpSync(outDir, dir, { recursive: true });
+    const home = readJson<HomeFile>(dir, 'home.json');
+    home.popular = [];
+    home.today = [];
+    home.tomorrow = [];
+    home.recent = [];
+    fs.writeFileSync(path.join(dir, 'home.json'), JSON.stringify(home));
+    const meta = readJson<MetaFile>(dir, 'meta.json');
+    meta.counts.upcomingMatches = 0;
+    meta.teams[0].name = 'Equipo <script>alert(1)</script>';
+    meta.teams[1].logo = 'http://a.espncdn.com/i/teamlogos/soccer/500/1.png';
+    meta.teams[2].logo = 'https://evil.example.com/x.png';
+    meta.competitions[0].name = 'javascript:alert(1)';
+    fs.writeFileSync(path.join(dir, 'meta.json'), JSON.stringify(meta));
+    fs.writeFileSync(path.join(dir, 'index.html'), '<html></html>');
+    const v = validateDataDir(dir, { sanity: { minCompetitionsWithData: 1, minMatchesAnalyzed: 1 } });
+    const all = v.errors.join('\n');
+    expect(all).toMatch(/home\.json no tiene ningún partido/);
+    expect(all).toMatch(/teams\[0\]\.name: texto potencialmente peligroso/);
+    expect(all).toMatch(/teams\[1\]\.logo: "http:\/\/a\.espncdn/);
+    expect(all).toMatch(/teams\[2\]\.logo: "https:\/\/evil/);
+    expect(all).toMatch(/competitions\[0\]\.name: texto potencialmente peligroso/);
+    expect(all).toMatch(/archivo inesperado en la salida: index\.html/);
+  });
+
+  it('frescura (R4-01/PIPE-10): rechaza publicar si la última descarga correcta de ESPN tiene más de 72 h', () => {
+    const dir = path.join(tmp, 'stale');
+    fs.cpSync(outDir, dir, { recursive: true });
+    const meta = readJson<MetaFile>(dir, 'meta.json');
+    const lax = { minCompetitionsWithData: 1, minMatchesAnalyzed: 1 };
+    meta.dataUpdatedAt = new Date(Date.parse(meta.generatedAt) - 10 * DAY).toISOString();
+    fs.writeFileSync(path.join(dir, 'meta.json'), JSON.stringify(meta));
+    expect(validateDataDir(dir, { sanity: lax }).errors.join('\n')).toMatch(/última descarga correcta de ESPN es de hace 240 h/);
+    // --allow-stale
+    expect(validateDataDir(dir, { sanity: { ...lax, maxDataAgeHours: Infinity } }).errors.join('\n')).not.toMatch(/descarga correcta/);
+    meta.dataUpdatedAt = new Date(Date.parse(meta.generatedAt) - 3_600_000).toISOString();
+    fs.writeFileSync(path.join(dir, 'meta.json'), JSON.stringify(meta));
+    expect(validateDataDir(dir, { sanity: lax }).errors.join('\n')).not.toMatch(/descarga correcta/);
+  });
+
+  it('estados incoherentes con la fecha (PIPE-09): "en juego" de hace días o "terminado" en el futuro', () => {
+    const dir = path.join(tmp, 'incoherent');
+    fs.cpSync(outDir, dir, { recursive: true });
+    const home = readJson<HomeFile>(dir, 'home.json');
+    const gen = Date.parse(home.generatedAt);
+    const m = home.popular[0] ?? home.today[0] ?? home.recent[0];
+    home.recent = [
+      { ...m, id: m.id, status: 'live', statusDetail: "67'", date: new Date(gen - 5 * DAY).toISOString(), score: { home: 1, away: 0 } },
+      { ...m, id: m.id, status: 'finished', date: new Date(gen + 3 * DAY).toISOString(), score: { home: 3, away: 0 } },
+    ];
+    fs.writeFileSync(path.join(dir, 'home.json'), JSON.stringify(home));
+    const all = validateDataDir(dir, { sanity: { minCompetitionsWithData: 1, minMatchesAnalyzed: 1 } }).errors.join('\n');
+    expect(all).toMatch(/partido "en juego" con fecha .* incoherente/);
+    expect(all).toMatch(/partido "terminado" con fecha .* incoherente/);
+  });
+
+  it('medias de liga coherentes (PIPE-14): local+empate+visitante suma 1 cuando hay partidos', () => {
+    const dir = path.join(tmp, 'league-avg');
+    fs.cpSync(outDir, dir, { recursive: true });
+    const rel = 'competitions/liga-a.json';
+    const c = JSON.parse(fs.readFileSync(path.join(dir, rel), 'utf8'));
+    c.leagueAverages = { ...c.leagueAverages, homeWinPct: 0, drawPct: 0, awayWinPct: 0 };
+    fs.writeFileSync(path.join(dir, rel), JSON.stringify(c));
+    expect(validateDataDir(dir, NO_SANITY).errors.join('\n')).toMatch(/goles por partido > 0 con local\/empate\/visitante a 0/);
+  });
+
+  it('campos nuevos del contrato: nextMatchDate, color en el índice, hasDetail en la forma y ajustes de valor', () => {
+    const meta = readJson<MetaFile>(outDir, 'meta.json');
+    const a = meta.competitions.find((c) => c.id === 'liga-a')!;
+    // el próximo programado (up-a01, mañana); el que está en juego no cuenta
+    expect(Date.parse(a.nextMatchDate!)).toBe(NOW.getTime() + DAY);
+    expect(meta.competitions.find((c) => c.id === 'copa')!.nextMatchDate).toBeDefined();
+    const withColor = meta.teams.filter((t) => t.color);
+    expect(withColor.length).toBeGreaterThan(0);
+    for (const t of withColor) expect(t.color).toMatch(/^[0-9a-f]{6}$/i);
+    const value = readJson<ValueFile>(outDir, 'value.json');
+    expect(value.kellyCap).toBe(0.05);
+    expect(value.minProb).toBe(0.12);
+    expect(value.maxOdds).toBe(8);
+    const detailIds = new Set(fs.readdirSync(path.join(outDir, 'matches')).map((f) => f.replace('.json', '')));
+    let flagged = 0;
+    for (const f of fs.readdirSync(path.join(outDir, 'teams'))) {
+      const team = readJson<TeamFile>(outDir, `teams/${f}`);
+      for (const m of [...team.matches, ...team.form.last]) {
+        expect(!!m.hasDetail).toBe(detailIds.has(m.matchId));
+        if (m.hasDetail) flagged++;
+      }
+    }
+    expect(flagged).toBeGreaterThan(0);
   });
 });
 
@@ -336,7 +565,7 @@ describe('validateDataDir', () => {
     f.markets[0].selections[0].fairOdds = null;
     fs.writeFileSync(path.join(dir, rel), JSON.stringify(f));
     fs.rmSync(path.join(dir, 'matches/up-b01.json'));
-    const v = validateDataDir(dir);
+    const v = validateDataDir(dir, NO_SANITY);
     expect(v.ok).toBe(false);
     const all = v.errors.join('\n');
     expect(all).toMatch(/up-a01\.json: \$\.match\.prediction\.p\.home: 1\.4 > 1/);
@@ -352,7 +581,7 @@ describe('validateDataDir', () => {
     const c = readJson<CompetitionFile>(dir, 'competitions/copa.json');
     c.upcoming[0].compId = 'inexistente';
     fs.writeFileSync(path.join(dir, 'competitions/copa.json'), JSON.stringify(c));
-    const v = validateDataDir(dir);
+    const v = validateDataDir(dir, NO_SANITY);
     expect(v.errors).toContain('value.json: archivo ausente');
     expect(v.errors.join('\n')).toMatch(/compId desconocido "inexistente"/);
   });
@@ -419,6 +648,27 @@ describe('remainingFixtures', () => {
 });
 
 describe('utilidades', () => {
+  it('sanitizePublishedString: URLs solo https en espncdn y textos sin <script>/javascript:', () => {
+    expect(sanitizePublishedString('http://a.espncdn.com/i/x.png')).toBe('https://a.espncdn.com/i/x.png');
+    expect(sanitizePublishedString('https://a.espncdn.com/i/x.png')).toBe('https://a.espncdn.com/i/x.png');
+    expect(sanitizePublishedString('https://evil.example.com/x.png')).toBeUndefined();
+    expect(sanitizePublishedString('javascript://alert(1)')).toBeUndefined();
+    expect(sanitizePublishedString('Equipo <script>x</script>')).not.toMatch(/<\s*script/i);
+    expect(sanitizePublishedString('javascript:alert(1)')).not.toMatch(/javascript\s*:/i);
+    expect(sanitizePublishedString('defensa > 1 = encaja más')).toBe('defensa > 1 = encaja más');
+    expect(sanitizePublishedString('a\u0000b\u202Ec')).toBe('abc');
+    // anidamientos que una sola pasada dejaba pasar (PIPE-08)
+    for (const t of ['<<script>alert(1)</script>', '<< script>', 'javajavascript:script:alert(1)', 'vbvbscript:script:x', '<<<script<script>>']) {
+      expect(sanitizePublishedString(t)).not.toMatch(/<\s*script|(?:java|vb)script\s*:/i);
+    }
+    // un string no permitido dentro de un array se sustituye por '' (no por 0: rompería string[])
+    expect(cleanJson({ a: ['ok', 'https://evil.example/x', 3] })).toEqual({ a: ['ok', '', 3] });
+    const stats = newCleanStats();
+    const out = cleanJson({ logo: 'https://evil.example.com/x.png', name: 'ok' }, 4, stats);
+    expect(out).toEqual({ name: 'ok' });
+    expect(stats.droppedKeys).toBe(1);
+  });
+
   it('cleanJson redondea, elimina claves no finitas y pone 0 en arrays', () => {
     const stats = newCleanStats();
     const out = cleanJson({ a: 1.23456789, b: NaN, c: [1, Infinity, 0.5], d: { e: undefined, f: null, g: 2 } }, 4, stats);

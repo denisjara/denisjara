@@ -1,5 +1,6 @@
 import { ShieldAlert } from 'lucide-react';
 import { cx } from './Card';
+import { ExternalLink } from './ExternalLink';
 
 /**
  * Aviso de juego responsable. Obligatorio en páginas con cuotas, picks de valor o stakes
@@ -27,9 +28,9 @@ export function Disclaimer({ compact, className }: { compact?: boolean; classNam
           FutStat Lab publica probabilidades calculadas con modelos estadísticos a partir de datos públicos. No son consejos de apuesta
           ni garantizan resultados: el fútbol tiene una gran varianza y las cuotas cambian. Si apuestas, hazlo solo si eres mayor de edad,
           con dinero que puedas permitirte perder y fijando límites. Ayuda y autoexclusión en{' '}
-          <a className="link" href="https://www.jugarbien.es" target="_blank" rel="noopener noreferrer">
+          <ExternalLink className="link" href="https://www.jugarbien.es">
             jugarbien.es
-          </a>
+          </ExternalLink>
           .
         </p>
       </div>

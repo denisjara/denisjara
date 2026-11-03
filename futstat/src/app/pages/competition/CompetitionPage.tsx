@@ -2,10 +2,11 @@ import { useEffect, useMemo, type ReactNode } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { BarChart3, CalendarDays, Dices, FlaskConical, Gauge, LayoutDashboard, ListOrdered, Trophy, Users } from 'lucide-react';
 import type { CompetitionFile, MatchSummary } from '../../../types/data';
-import { CompetitionHeader, Disclaimer, cx, EmptyState, ErrorState, PageSkeleton, ProbBar1X2, TabPanel, Tabs, useUrlTab, type TabItem } from '../../components';
-import { DataError, useCompetition } from '../../lib/data';
+import { CompetitionHeader, Disclaimer, cx, EmptyState, ErrorState, PageSkeleton, ProbBar1X2, SafeBlock, TabPanel, Tabs, useUrlTab, type TabItem } from '../../components';
+import { DataError, useCompetition, useCompetitionMeta } from '../../lib/data';
 import { useLiveScores, withLive } from '../../lib/live';
 import { num, pct, PICK_LABEL, plural, timeAgo } from '../../lib/format';
+import { nextMatchLabel } from '../../lib/competitions';
 import { SIDE_COLOR } from '../../lib/colors';
 import { OverviewTab } from './tabs/OverviewTab';
 import { MatchesTab } from './tabs/MatchesTab';
@@ -97,7 +98,16 @@ function LeagueKpis({ data }: { data: CompetitionFile }) {
 
 export default function CompetitionPage() {
   const { compId } = useParams();
-  const { data, error, loading, reload } = useCompetition(compId);
+  const { data: rawData, error, loading, reload } = useCompetition(compId);
+  // meta.json puede traer nextMatchDate aunque el archivo de la competición no lo tenga (o sea de una pasada anterior)
+  const indexMeta = useCompetitionMeta(compId);
+  const data = useMemo<CompetitionFile | undefined>(
+    () =>
+      rawData && !rawData.meta.nextMatchDate && indexMeta?.nextMatchDate
+        ? { ...rawData, meta: { ...rawData.meta, nextMatchDate: indexMeta.nextMatchDate } }
+        : rawData,
+    [rawData, indexMeta],
+  );
   const tabIds = useMemo(() => availableTabs(data), [data]);
   const [tab, setTab] = useUrlTab<TabId>(tabIds, 'resumen');
 
@@ -150,7 +160,8 @@ export default function CompetitionPage() {
     round,
     meta.finishedCount ? `${plural(meta.finishedCount, 'partido jugado', 'partidos jugados')}` : null,
     meta.upcomingCount ? `${plural(meta.upcomingCount, 'próximo', 'próximos')} en 14 días` : null,
-    `Actualizado ${timeAgo(data.generatedAt)}`,
+    nextMatchLabel(meta) ? `Próximo partido: ${nextMatchLabel(meta)}` : null,
+    `Actualizado ${timeAgo(data.meta.dataUpdatedAt ?? data.generatedAt)}`,
   ]
     .filter(Boolean)
     .join(' · ');
@@ -173,10 +184,16 @@ export default function CompetitionPage() {
 
   return (
     <div className="space-y-6">
-      <CompetitionHeader meta={meta} subtitle={subtitle}>
-        {hasLeagueData && <LeagueKpis data={data} />}
-        <Tabs idBase="comp" value={tab} onChange={setTab} tabs={tabs} ariaLabel={`Secciones de ${meta.name}`} />
-      </CompetitionHeader>
+      <SafeBlock label="Cabecera de la competición">
+        <CompetitionHeader meta={meta} subtitle={subtitle}>
+          {hasLeagueData && (
+            <SafeBlock label="Medias de la competición">
+              <LeagueKpis data={data} />
+            </SafeBlock>
+          )}
+          <Tabs idBase="comp" value={tab} onChange={setTab} tabs={tabs} ariaLabel={`Secciones de ${meta.name}`} />
+        </CompetitionHeader>
+      </SafeBlock>
 
       <TabPanel idBase="comp" id="resumen" active={tab}>
         <OverviewTab data={data} live={live} liveScores={scores} goTo={goTo} />

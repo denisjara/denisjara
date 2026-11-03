@@ -1,0 +1,62 @@
+# Dependabot: propone cada semana subidas de dependencias como pull requests.
+# Nada se instala solo: cada PR pasa por CI (.github/workflows/ci.yml: auditoría,
+# typecheck, tests del pipeline y del validador, compilación de la web) y se
+# revisa antes de fusionar. Las alertas de seguridad de GitHub siguen llegando
+# aparte, en cuanto se publica una vulnerabilidad.
+version: 2
+updates:
+  # Dependencias npm del proyecto FutStat Lab (package.json / package-lock.json).
+  - package-ecosystem: npm
+    directory: /futstat
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: Europe/Madrid
+    # Las versiones están fijadas exactas (sin ^): Dependabot sube la versión exacta.
+    versioning-strategy: increase
+    # Cadena de suministro: no proponer versiones recién publicadas (las versiones
+    # comprometidas suelen detectarse y retirarse en pocos días).
+    cooldown:
+      default-days: 7
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "deps"
+      prefix-development: "deps-dev"
+    groups:
+      # Un solo PR semanal con todas las subidas menores y de parche.
+      npm-menores-y-parches:
+        update-types:
+          - minor
+          - patch
+    ignore:
+      # El proyecto se mantiene en React 18 y Tailwind 3 (migrar es una tarea aparte).
+      - dependency-name: react
+        update-types: ["version-update:semver-major"]
+      - dependency-name: react-dom
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "@types/react"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "@types/react-dom"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: tailwindcss
+        update-types: ["version-update:semver-major"]
+
+  # Actions usadas en .github/workflows (fijadas a SHA; Dependabot actualiza el
+  # SHA y el comentario de versión).
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: Europe/Madrid
+    cooldown:
+      default-days: 7
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "ci"
+    groups:
+      github-actions:
+        patterns:
+          - "*"

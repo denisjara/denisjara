@@ -14,7 +14,7 @@ export type { MatchCardProps } from './MatchCard';
 export { MatchRow, Mini1X2, HitMark } from './MatchRow';
 export type { MatchRowProps } from './MatchRow';
 export { MatchGroup } from './MatchGroup';
-export { StatusPill, CompetitionBadge, matchHref } from './MatchStatus';
+export { StatusPill, CompetitionBadge, matchHref, formMatchHref } from './MatchStatus';
 export { CompetitionHeader } from './CompetitionHeader';
 export { Tabs, TabPanel, useUrlTab } from './Tabs';
 export type { TabItem } from './Tabs';
@@ -32,5 +32,8 @@ export { ProbabilityBadge, Meter, ConfidenceMeter, confidenceLabel } from './Pro
 export { OddsButton, ValuePickChip } from './OddsButton';
 export { KpiTile } from './KpiTile';
 export { Skeleton, SkeletonCard, PageSkeleton, EmptyState, ErrorState } from './States';
+export { AppErrorBoundary, RouteErrorBoundary, SafeBlock, BlockError } from './ErrorBoundary';
+export type { SafeBlockProps } from './ErrorBoundary';
+export { ExternalLink } from './ExternalLink';
 export { Tooltip, InfoTip } from './Tooltip';
 export { Disclaimer } from './Disclaimer';

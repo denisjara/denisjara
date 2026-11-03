@@ -66,12 +66,12 @@ export function RatingsTab({ data }: { data: CompetitionFile }) {
       numeric: true,
       cell: (r) => {
         const d = eloDelta(r);
-        return d === undefined ? '–' : <span className={deltaClass(d, 0.5)}>{signed(d, 0)}</span>;
+        return d === undefined ? '—' : <span className={deltaClass(d, 0.5)}>{signed(d, 0)}</span>;
       },
       sortValue: (r) => eloDelta(r),
     },
   ];
-  if (hasGlobal) cols.push({ key: 'global', header: 'Global', title: 'Posición en el ranking Elo global (todas las competiciones)', numeric: true, cell: (r) => (r.globalEloRank ? `${r.globalEloRank}.º` : '–'), sortValue: (r) => r.globalEloRank, firstDir: 'asc', hideBelow: 'sm' });
+  if (hasGlobal) cols.push({ key: 'global', header: 'Global', title: 'Posición en el ranking Elo global (todas las competiciones)', numeric: true, cell: (r) => (r.globalEloRank ? `${r.globalEloRank}.º` : '—'), sortValue: (r) => r.globalEloRank, firstDir: 'asc', hideBelow: 'sm' });
   if (hasDC) {
     cols.push(
       { key: 'att', header: 'Ataque', title: 'Multiplicador de ataque Dixon-Coles (1 = media; más alto, mejor)', numeric: true, cell: (r) => num(r.attack, 2), sortValue: (r) => r.attack },

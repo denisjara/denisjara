@@ -1,14 +1,41 @@
 import { useId, useState, type ReactNode } from 'react';
 import { Ban, Calculator, CircleCheck, CircleMinus, ShieldAlert, TrendingDown } from 'lucide-react';
-import { Card, SegmentedControl, cx } from '../../components';
+import { Card, ExternalLink, SegmentedControl, cx } from '../../components';
 import { deltaClass } from '../../lib/colors';
 import { ev as fmtEv, int, num, odds as fmtOdds, pct, signed } from '../../lib/format';
 import { kelly as kellyStake } from '../../../lib/models/kelly';
 import type { ValueItem } from './ValueCard';
 import { pickSelection } from '../../lib/picks';
 
-/** Tope de stake por pick usado por el pipeline (MODEL.kellyCap en pipeline/config.ts). */
+/**
+ * Valores por defecto de los filtros de valor (MODEL en pipeline/config.ts). Se usan solo si value.json
+ * no publica kellyCap / minProb / maxOdds.
+ */
 export const KELLY_CAP = 0.05;
+export const MIN_PROB = 0.12;
+export const MAX_ODDS = 8;
+
+/** Ajustes de las apuestas de valor publicados en value.json (con valores por defecto). */
+export interface ValueSettings {
+  minEv: number;
+  kellyFraction: number;
+  kellyCap: number;
+  minProb: number;
+  maxOdds: number;
+}
+
+const okNum = (x: unknown, lo: number, hi: number): x is number => typeof x === 'number' && Number.isFinite(x) && x >= lo && x <= hi;
+
+/** Lee los ajustes de value.json con valores por defecto si faltan o no son razonables. */
+export function valueSettings(v: Partial<Record<keyof ValueSettings, unknown>> | undefined): ValueSettings {
+  return {
+    minEv: okNum(v?.minEv, 0, 1) ? v.minEv : 0.05,
+    kellyFraction: okNum(v?.kellyFraction, 0.01, 1) ? v.kellyFraction : 0.25,
+    kellyCap: okNum(v?.kellyCap, 0.001, 1) ? v.kellyCap : KELLY_CAP,
+    minProb: okNum(v?.minProb, 0, 1) ? v.minProb : MIN_PROB,
+    maxOdds: okNum(v?.maxOdds, 1, 1000) ? v.maxOdds : MAX_ODDS,
+  };
+}
 
 // ---------------------------------------------------------------------------
 // Aviso destacado de juego responsable
@@ -48,9 +75,9 @@ export function ResponsibleBanner({ className }: { className?: string }) {
           </ul>
           <p className="mt-3 text-[12px] text-ink-3">
             FutStat Lab no es una casa de apuestas ni acepta apuestas. Ayuda y autoexclusión en{' '}
-            <a className="link" href="https://www.jugarbien.es" target="_blank" rel="noopener noreferrer">
+            <ExternalLink className="link" href="https://www.jugarbien.es">
               jugarbien.es
-            </a>
+            </ExternalLink>
             .
           </p>
         </div>
@@ -75,13 +102,14 @@ function Concept({ n, title, formula, children }: { n: number; title: string; fo
   );
 }
 
-export function ValueConcepts({ example, kellyFraction, minEv }: { example?: ValueItem; kellyFraction: number; minEv: number }) {
+export function ValueConcepts({ example, settings }: { example?: ValueItem; settings: ValueSettings }) {
+  const { kellyFraction, minEv, kellyCap, minProb, maxOdds } = settings;
   const p = example?.pick.prob ?? 0.45;
   const o = example?.pick.odds ?? 2.5;
   const evv = p * o - 1;
   const implied = 1 / o;
   const full = Math.max(0, (p * o - 1) / (o - 1));
-  const stake = Math.min(KELLY_CAP, full * kellyFraction);
+  const stake = Math.min(kellyCap, full * kellyFraction);
   const ex = example ? (
     <>
       {example.match.home.short || example.match.home.name} – {example.match.away.short || example.match.away.name}, «{pickSelection(example.pick)}»
@@ -107,7 +135,9 @@ export function ValueConcepts({ example, kellyFraction, minEv }: { example?: Val
           </span>
           .
         </p>
-        <p className="text-[12px] text-ink-3">Solo publicamos picks con EV ≥ {pct(minEv)}, probabilidad ≥ 12% y cuota ≤ 8.</p>
+        <p className="text-[12px] text-ink-3">
+          Solo publicamos picks con EV ≥ {pct(minEv)}, probabilidad ≥ {pct(minProb)} y cuota ≤ {num(maxOdds, Number.isInteger(maxOdds) ? 0 : 2)}.
+        </p>
       </Concept>
       <Concept n={3} title="Ventaja (edge)" formula={<>edge = p − 1 / cuota</>}>
         <p>
@@ -118,7 +148,7 @@ export function ValueConcepts({ example, kellyFraction, minEv }: { example?: Val
       <Concept n={4} title={`Kelly ${fracLabel}`} formula={<>f = (p × cuota − 1) / (cuota − 1)</>}>
         <p>
           Kelly completo da la fracción de banca que maximiza el crecimiento a largo plazo ({pct(full, 1)} en el ejemplo), pero es muy agresivo si el modelo se
-          equivoca. Usamos <strong className="text-ink-1">Kelly {fracLabel}</strong> con tope del {pct(KELLY_CAP)}:{' '}
+          equivoca. Usamos <strong className="text-ink-1">Kelly {fracLabel}</strong> con tope del {pct(kellyCap)}:{' '}
           <span className="num text-ink-1">{pct(stake, 1)} de la banca</span>.
         </p>
         <p className="text-[12px] text-ink-3">Si sigues varios picks a la vez, reduce los stakes en proporción.</p>
@@ -142,7 +172,7 @@ function NumberField({ id, label, value, onChange, suffix, hint }: { id: string;
         {label}
       </label>
       <span className="relative mt-1.5 block">
-        <input id={id} type="text" inputMode="decimal" autoComplete="off" value={value} onChange={(e) => onChange(e.target.value)} className="input num h-[38px] pr-8 text-[14px]" aria-describedby={hint ? `${id}-hint` : undefined} />
+        <input id={id} type="text" inputMode="decimal" autoComplete="off" maxLength={12} value={value} onChange={(e) => onChange(e.target.value.replace(/[^0-9.,\s]/g, '').slice(0, 12))} className="input num h-[38px] pr-8 text-[14px]" aria-describedby={hint ? `${id}-hint` : undefined} />
         {suffix && <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[12px] text-ink-3">{suffix}</span>}
       </span>
       {hint && (
@@ -163,7 +193,8 @@ function Out({ label, value, emphasis, tone }: { label: string; value: string; e
   );
 }
 
-export function ValueCalculator({ example, kellyFraction, minEv }: { example?: ValueItem; kellyFraction: number; minEv: number }) {
+export function ValueCalculator({ example, settings }: { example?: ValueItem; settings: ValueSettings }) {
+  const { kellyFraction, minEv, kellyCap } = settings;
   const uid = useId();
   const [probS, setProbS] = useState(() => num((example?.pick.prob ?? 0.45) * 100, 1));
   const [oddsS, setOddsS] = useState(() => num(example?.pick.odds ?? 2.4, 2));
@@ -178,8 +209,8 @@ export function ValueCalculator({ example, kellyFraction, minEv }: { example?: V
   const valid = p > 0 && p < 1 && o > 1;
   const evv = valid ? p * o - 1 : NaN;
   const full = valid ? Math.max(0, (p * o - 1) / (o - 1)) : NaN;
-  const stake = valid ? kellyStake(p, o, Number(frac), KELLY_CAP) : NaN;
-  const capped = valid && full * Number(frac) > KELLY_CAP;
+  const stake = valid ? kellyStake(p, o, Number(frac), kellyCap) : NaN;
+  const capped = valid && full * Number(frac) > kellyCap;
   const minOdds = valid ? (1 + minEv) / p : NaN;
 
   let verdict: { icon: ReactNode; text: string; cls: string };
@@ -223,17 +254,17 @@ export function ValueCalculator({ example, kellyFraction, minEv }: { example?: V
       </div>
       <div className="min-w-0 rounded-lg border border-line bg-surface-2/60 p-3 sm:p-4" aria-live="polite">
         <dl>
-          <Out label="Prob. implícita en la cuota" value={valid ? pct(1 / o, 1) : '–'} />
-          <Out label="Cuota justa del modelo" value={valid ? fmtOdds(1 / p) : '–'} />
-          <Out label="Ventaja (edge)" value={valid ? `${signed((p - 1 / o) * 100, 1)} pp` : '–'} tone={valid ? deltaClass(p - 1 / o) : undefined} />
-          <Out label="Valor esperado" value={valid ? fmtEv(evv) : '–'} emphasis tone={valid ? deltaClass(evv) : undefined} />
-          <Out label="Kelly completo" value={valid ? pct(full, 1) : '–'} />
+          <Out label="Prob. implícita en la cuota" value={valid ? pct(1 / o, 1) : '—'} />
+          <Out label="Cuota justa del modelo" value={valid ? fmtOdds(1 / p) : '—'} />
+          <Out label="Ventaja (edge)" value={valid ? `${signed((p - 1 / o) * 100, 1)} pp` : '—'} tone={valid ? deltaClass(p - 1 / o) : undefined} />
+          <Out label="Valor esperado" value={valid ? fmtEv(evv) : '—'} emphasis tone={valid ? deltaClass(evv) : undefined} />
+          <Out label="Kelly completo" value={valid ? pct(full, 1) : '—'} />
           <Out
             label={`Stake sugerido${capped ? ' (tope)' : ''}`}
-            value={valid ? `${pct(stake, 1)}${bank > 0 ? ` · ${int(bank * stake)} €` : ''}` : '–'}
+            value={valid ? `${pct(stake, 1)}${bank > 0 ? ` · ${int(bank * stake)} €` : ''}` : '—'}
             emphasis
           />
-          <Out label={`Cuota mínima para EV ≥ ${pct(minEv)}`} value={valid ? fmtOdds(minOdds) : '–'} />
+          <Out label={`Cuota mínima para EV ≥ ${pct(minEv)}`} value={valid ? fmtOdds(minOdds) : '—'} />
         </dl>
         <p className={cx('mt-3 flex items-start gap-2 text-[12.5px] font-medium', verdict.cls)}>
           <span className="mt-px shrink-0" aria-hidden="true">

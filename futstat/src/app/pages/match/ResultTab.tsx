@@ -97,7 +97,7 @@ function PredictionPanel({ file, match }: TabProps) {
     rows.push({
       key: 'cs',
       label: 'Marcador exacto',
-      model: likely ? `${likely}${match.prediction ? ` · ${pct(match.prediction.likelyScoreProb, 1)}` : ''}` : '–',
+      model: likely ? `${likely}${match.prediction ? ` · ${pct(match.prediction.likelyScoreProb, 1)}` : ''}` : '—',
       modelHint: pReal !== undefined ? `Al ${s.home}-${s.away} le daba ${pct(pReal, 1)}` : undefined,
       actual: `${s.home}-${s.away}`,
       verdict: likely === `${s.home}-${s.away}` ? 'hit' : 'miss',

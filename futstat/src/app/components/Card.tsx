@@ -1,6 +1,7 @@
 import type { ElementType, ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronRight } from 'lucide-react';
+import { SafeBlock } from './ErrorBoundary';
 
 export function cx(...parts: (string | false | null | undefined)[]): string {
   return parts.filter(Boolean).join(' ');
@@ -45,7 +46,7 @@ export interface SectionProps {
   children?: ReactNode;
 }
 
-/** Bloque de página con cabecera (h2) estilo rótulo de retransmisión. */
+/** Bloque de página con cabecera (h2) estilo rótulo de retransmisión. Su contenido va dentro de una barrera de error. */
 export function Section({ title, eyebrow, description, icon, moreTo, moreLabel = 'Ver todo', action, id, className, children }: SectionProps) {
   const headingId = id ? `${id}-title` : undefined;
   return (
@@ -69,7 +70,8 @@ export function Section({ title, eyebrow, description, icon, moreTo, moreLabel =
           )}
         </div>
       </div>
-      {children}
+      {/* Cada sección está aislada: si su contenido falla, el resto de la página sigue. */}
+      <SafeBlock>{children}</SafeBlock>
     </section>
   );
 }

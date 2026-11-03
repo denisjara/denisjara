@@ -14,6 +14,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { COMPETITION_BY_ID, MODEL } from '../pipeline/config';
+import { findValueBets } from '../pipeline/analytics/value';
 import {
   Elo,
   blend,
@@ -26,7 +27,6 @@ import {
   eloProbs,
   fitDixonColes,
   fitLambdas,
-  kelly,
   mostLikelyScore,
   mulberry32,
   nbPmfArray,
@@ -710,6 +710,9 @@ function teamMatchesIn(c: string | null, t: TeamDef, statuses: MatchStatus[] = [
   return MATCHES.filter((m) => (c === null || m.compId === c) && statuses.includes(m.status) && (m.home.id === t.id || m.away.id === t.id));
 }
 
+/** Partidos con análisis completo publicado (matches/<id>.json). Se rellena más abajo, antes de escribir archivos. */
+const DETAIL = new Set<string>();
+
 function formMatch(m: MatchRec, t: TeamDef): FormMatch {
   const isHome = m.home.id === t.id;
   const gf = isHome ? m.hg! : m.ag!;
@@ -734,6 +737,7 @@ function formMatch(m: MatchRec, t: TeamDef): FormMatch {
     possession: s.possession,
     xg: r(isHome ? m.lamH : m.lamA, 2),
     xga: r(isHome ? m.lamA : m.lamH, 2),
+    hasDetail: DETAIL.has(m.id),
   };
 }
 
@@ -925,10 +929,6 @@ function statsFor(t: TeamDef, c: string): TeamSeasonStats {
   return SEASON.get(t.primaryComp)?.get(t.id) ?? s ?? seasonStats(t.primaryComp, t);
 }
 
-function confidenceLevel(ev: number, conf: number): ValuePick['confidence'] {
-  return ev >= 0.1 && conf >= 0.6 ? 'alta' : ev >= 0.06 && conf >= 0.45 ? 'media' : 'baja';
-}
-
 function projection(key: StatProjection['key'], label: string, home: number, away: number, disp: number, maxK: number, lines: number[], leagueAvg?: number): StatProjection {
   const dh = nbPmfArray(home, disp, maxK);
   const da = nbPmfArray(away, disp, maxK);
@@ -1044,34 +1044,10 @@ function predict(m: MatchRec): Pred {
   const nData = Math.min(teamMatchesIn(null, m.home).length, teamMatchesIn(null, m.away).length);
   const conf = r(clampN(0.25 + 0.4 * agreement + 0.2 * Math.min(1, nData / 12) + (marketP ? 0.12 : 0), 0.15, 0.95), 3);
 
-  // apuestas de valor: 1X2 y O/U 2.5 con cuota de mercado
-  const valueBets: ValuePick[] = [];
-  const consider = (marketId: string, market: string, selection: string, prob: number, o: number | undefined) => {
-    if (!o) return;
-    const ev = prob * o - 1;
-    if (ev >= MODEL.minEv && prob >= MODEL.minProb && o <= MODEL.maxOdds) {
-      valueBets.push({
-        marketId,
-        market,
-        selection,
-        prob: r(prob, 4),
-        odds: o,
-        fairOdds: r(1 / prob, 3),
-        ev: r(ev, 4),
-        kelly: r(kelly(prob, o, MODEL.kellyFraction, MODEL.kellyCap), 4),
-        edge: r(prob - 1 / o, 4),
-        confidence: confidenceLevel(ev, conf),
-      });
-    }
-  };
-  if (odds) {
-    consider('1x2', 'Resultado final', `${m.home.short} (1)`, ensR.home, odds.home);
-    consider('1x2', 'Resultado final', 'Empate (X)', ensR.draw, odds.draw);
-    consider('1x2', 'Resultado final', `${m.away.short} (2)`, ensR.away, odds.away);
-    consider('ou25', 'Total de goles 2,5', 'Más de 2,5', quick.over25, odds.over);
-    consider('ou25', 'Total de goles 2,5', 'Menos de 2,5', 1 - quick.over25, odds.under);
-  }
-  valueBets.sort((a, b) => b.ev - a.ev);
+  // Apuestas de valor: exactamente las selecciones de `markets` con cuota de la casa y EV positivo que pasan los
+  // filtros del pipeline (EV ≥ minEv, p ≥ minProb, cuota ≤ maxOdds, EV ≤ MAX_EV), con la misma función que producción.
+  // Así prob/cuota/EV del pick coinciden al decimal con la selección que se ve en la pestaña Mercados.
+  const valueBets: ValuePick[] = odds ? findValueBets(goalMarkets, conf) : [];
 
   const corners = proj.find((p) => p.key === 'corners')!;
   const cards = proj.find((p) => p.key === 'cards')!;
@@ -1125,7 +1101,6 @@ function outcomeOver(mat: number[][]): number {
 // ---------------------------------------------------------------------------
 // MatchSummary
 // ---------------------------------------------------------------------------
-const DETAIL = new Set<string>();
 const FORM_ALL = (t: TeamDef, beforeMs = Infinity) =>
   MATCHES.filter((m) => m.status === 'finished' && m.ms < beforeMs && (m.home.id === t.id || m.away.id === t.id))
     .sort((a, b) => b.ms - a.ms)
@@ -1561,6 +1536,10 @@ for (const c of COMP_IDS) {
     hasSimulation: !!sim,
     simulationColumns: sim?.columns,
     upcomingCount: upcoming.length,
+    nextMatchDate: (() => {
+      const next = ms.filter((m) => m.status === 'scheduled' && m.ms > NOW_MS).sort((a, b) => a.ms - b.ms)[0];
+      return next ? iso(next.ms) : undefined;
+    })(),
     finishedCount: fin.length,
     color: { laliga: 'ff4b44', premier: '3d195b', seriea: '008fd7', brasileirao: '00a859', saudi: '0b8a3e', champions: '1d3fbb', copadelrey: 'c8102e' }[c],
   };
@@ -1744,7 +1723,15 @@ for (const m of MATCHES) {
   for (const pick of p.valueBets) allBets.push({ match: S(m), pick });
 }
 allBets.sort((a, b) => b.pick.ev - a.pick.ev);
-write('value.json', { generatedAt: GENERATED_AT, bets: allBets, minEv: MODEL.minEv, kellyFraction: MODEL.kellyFraction } satisfies ValueFile);
+write('value.json', {
+  generatedAt: GENERATED_AT,
+  bets: allBets,
+  minEv: MODEL.minEv,
+  kellyFraction: MODEL.kellyFraction,
+  kellyCap: MODEL.kellyCap,
+  minProb: MODEL.minProb,
+  maxOdds: MODEL.maxOdds,
+} satisfies ValueFile);
 
 // --- Modelo
 const allBt = Object.values(BT).flat();
@@ -1854,7 +1841,7 @@ write('home.json', homeFile);
 // --- Meta (al final: cuenta todo)
 const metaTeams = [...TEAMS.values()]
   .sort((a, b) => a.name.localeCompare(b.name, 'es'))
-  .map((t) => ({ id: t.id, name: t.name, abbr: t.abbr, compId: t.primaryComp }));
+  .map((t) => ({ id: t.id, name: t.name, abbr: t.abbr, color: t.color, compId: t.primaryComp }));
 const metaFile: MetaFile = {
   generatedAt: GENERATED_AT,
   version: '1.0.0-mock',

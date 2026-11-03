@@ -1,12 +1,17 @@
 /**
  * Validación en tiempo de ejecución de los JSON publicados (public/data/) contra el contrato src/types/data.ts.
+ * Es la PUERTA DE CALIDAD antes de publicar: el build (pipeline/build.ts) la ejecuta como librería sobre el
+ * directorio temporal y solo sustituye public/data si pasa; CI la vuelve a ejecutar como CLI.
  *
- *   npx tsx scripts/validate-data.ts [dir]        (npm run data:validate)
+ *   npx tsx scripts/validate-data.ts [dir] [--no-sanity]       (npm run data:validate)
  *
  * Comprueba: campos requeridos y tipos, ausencia de null/NaN/Infinity (el contrato omite los opcionales; JSON
  * convierte NaN en null), probabilidades en [0,1], 1X2 que suman ≈ 1, matrices de marcadores y distribuciones
  * ≈ 1, cuotas > 1, coherencia EV/Kelly, referencias (hasDetail ⇒ existe matches/<id>.json, compId válido,
- * fichas de equipo del índice, competiciones del meta) y columnas de simulación.
+ * fichas de equipo del índice, competiciones del meta), columnas de simulación, nombres de archivo seguros,
+ * logos solo https en *.espncdn.com y ningún texto con `<script` ni `javascript:`.
+ * Umbrales de cordura (desactivables con --no-sanity): suficientes competiciones con datos, partidos analizados,
+ * algún partido próximo o reciente en la portada y tamaño total razonable — para no publicar datos degenerados.
  * Sale con código 1 si hay errores.
  */
 import fs from 'node:fs';
@@ -27,6 +32,8 @@ interface Ctx {
   compRefs: { id: string; at: string }[];
   /** suma de la última matriz de marcadores validada (para comprobarla con los λ) */
   matrixSum?: number;
+  /** partidos "en juego" y "terminados" publicados (coherencia de estado con la fecha, al final) */
+  statusRefs?: { status: 'live' | 'finished'; date: string; at: string }[];
 }
 
 type Check = (v: unknown, at: string, c: Ctx) => void;
@@ -106,9 +113,19 @@ const anyOf =
     fail(c, at, `valor no válido ${JSON.stringify(v).slice(0, 60)}`);
   };
 
-/** Ninguna clave con null (NaN/Infinity se serializan como null). */
+/** Patrones que nunca deben aparecer en un texto publicado (defensa en profundidad frente a inyección). */
+const DANGEROUS_TEXT = /<\s*script|(?:java|vb)script\s*:|data\s*:\s*text\/html/i;
+/** Caracteres de control (salvo tabulador/saltos de línea) y de control bidi. */
+const CONTROL_CHARS = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F\u202A-\u202E\u2066-\u2069]/;
+
+/** Ninguna clave con null (NaN/Infinity se serializan como null) y ningún texto peligroso. */
 function noNulls(v: unknown, at: string, c: Ctx): void {
   if (v === null) return fail(c, at, 'null/NaN/Infinity no permitido');
+  if (typeof v === 'string') {
+    if (DANGEROUS_TEXT.test(v)) fail(c, at, `texto potencialmente peligroso (<script / javascript:): ${JSON.stringify(v.slice(0, 60))}`);
+    else if (CONTROL_CHARS.test(v)) fail(c, at, 'texto con caracteres de control');
+    return;
+  }
   if (Array.isArray(v)) v.forEach((x, i) => noNulls(x, `${at}[${i}]`, c));
   else if (isObj(v)) for (const [k, x] of Object.entries(v)) noNulls(x, `${at}.${k}`, c);
 }
@@ -123,6 +140,10 @@ const iso = str({ iso: true });
 const nonNeg = num({ min: 0 });
 const count = num({ min: 0, int: true });
 const hex = str({ pattern: /^#?[0-9a-fA-F]{3,8}$/ });
+/** Logos: solo https y en el CDN de ESPN (la web los carga como <img>; la CSP solo permite ese origen). */
+const logoUrl = str({ pattern: /^https:\/\/([a-z0-9-]+\.)*espncdn\.com\/[^\s"'<>]*$/i });
+/** Ids que acaban en nombres de archivo (equipos, partidos): tokens seguros, sin rutas. */
+const safeId = str({ nonEmpty: true, pattern: /^[A-Za-z0-9_-]{1,40}$/ });
 const outcome = str({ oneOf: ['W', 'D', 'L'] });
 const formStr = str({ pattern: /^[WDL]*$/ });
 
@@ -134,11 +155,11 @@ const prob1x2: Check = obj({ home: prob, draw: prob, away: prob }, {}, (v, at, c
 });
 
 const teamRef = obj(
-  { id: str({ nonEmpty: true }), name: str({ nonEmpty: true }), short: str(), abbr: str() },
-  { logo: str(), color: hex },
+  { id: safeId, name: str({ nonEmpty: true }), short: str(), abbr: str() },
+  { logo: logoUrl, color: hex },
 );
 
-const playerRef = obj({ id: str({ nonEmpty: true }), name: str(), short: str(), position: str({ oneOf: ['G', 'D', 'M', 'F', '?'] }), teamId: str() });
+const playerRef = obj({ id: str({ nonEmpty: true }), name: str({ nonEmpty: true }), short: str(), position: str({ oneOf: ['G', 'D', 'M', 'F', '?'] }), teamId: str() });
 
 const oddsSnapshot = obj(
   { provider: str() },
@@ -206,7 +227,7 @@ const STATUSES = ['scheduled', 'live', 'finished', 'postponed', 'cancelled'] as 
 
 const matchSummary: Check = obj(
   {
-    id: str({ nonEmpty: true }),
+    id: safeId,
     compId: str({ nonEmpty: true }),
     compName: str({ nonEmpty: true }),
     date: iso,
@@ -232,6 +253,9 @@ const matchSummary: Check = obj(
     c.compRefs.push({ id: String(v.compId), at: `${at}.compId` });
     if (v.predictionHit !== undefined && v.status !== 'finished') fail(c, at, 'predictionHit en un partido no terminado');
     if (v.status === 'finished' && v.score === undefined) fail(c, at, 'partido terminado sin marcador');
+    if ((v.status === 'live' || v.status === 'finished') && typeof v.date === 'string') {
+      (c.statusRefs ??= []).push({ status: v.status, date: v.date, at: `${c.file}: ${at}` });
+    }
   },
 );
 
@@ -284,8 +308,22 @@ const statProjection = obj(
 
 const formMatch = obj(
   { matchId: str(), date: iso, compId: str(), opponent: teamRef, isHome: bool, gf: count, ga: count, result: outcome },
-  { shots: nonNeg, shotsOnTarget: nonNeg, corners: nonNeg, cornersAgainst: nonNeg, cards: nonNeg, fouls: nonNeg, possession: num({ min: 0, max: 100 }), xg: nonNeg, xga: nonNeg },
-  (v, at, c) => c.compRefs.push({ id: String(v.compId), at: `${at}.compId` }),
+  {
+    shots: nonNeg,
+    shotsOnTarget: nonNeg,
+    corners: nonNeg,
+    cornersAgainst: nonNeg,
+    cards: nonNeg,
+    fouls: nonNeg,
+    possession: num({ min: 0, max: 100 }),
+    xg: nonNeg,
+    xga: nonNeg,
+    hasDetail: bool,
+  },
+  (v, at, c) => {
+    c.compRefs.push({ id: String(v.compId), at: `${at}.compId` });
+    if (v.hasDetail === true) c.detailRefs.push({ id: String(v.matchId), at });
+  },
 );
 
 const teamFormBlock = obj({
@@ -523,7 +561,8 @@ const playerSeasonRow = obj(
   (v, at, c) => c.compRefs.push({ id: String(v.compId), at: `${at}.compId` }),
 );
 
-const leagueAverages = obj({
+const leagueAverages = obj(
+  {
   goalsPerMatch: nonNeg,
   homeGoals: nonNeg,
   awayGoals: nonNeg,
@@ -537,7 +576,17 @@ const leagueAverages = obj({
   shotsPerMatch: nonNeg,
   shotsOnTargetPerMatch: nonNeg,
   foulsPerMatch: nonNeg,
-});
+  },
+  {},
+  (v, at, c) => {
+    // 1X2 de la liga: suma 1 cuando hay partidos; todo a 0 solo si aún no hay ninguno (sin goles ni partidos)
+    const sum = Number(v.homeWinPct) + Number(v.drawPct) + Number(v.awayWinPct);
+    if (!Number.isFinite(sum)) return;
+    if (sum === 0) {
+      if (Number(v.goalsPerMatch) > 0) fail(c, at, 'goles por partido > 0 con local/empate/visitante a 0');
+    } else if (Math.abs(sum - 1) > 0.02) fail(c, at, `homeWinPct + drawPct + awayWinPct = ${sum.toFixed(3)} (debe ser 1)`);
+  },
+);
 
 const scoreSet = obj({ brier: num({ min: 0, max: 2 }), logLoss: nonNeg, rps: num({ min: 0, max: 1 }), accuracy: prob });
 const binaryScore = obj({ brier: num({ min: 0, max: 1 }), accuracy: prob, n: count });
@@ -577,7 +626,7 @@ const competitionMeta = obj(
     upcomingCount: count,
     finishedCount: count,
   },
-  { logo: str(), logoDark: str(), seasonLabel: str(), simulationColumns: arr(str()), color: str() },
+  { logo: logoUrl, logoDark: logoUrl, seasonLabel: str(), simulationColumns: arr(str()), color: hex, nextMatchDate: str({ iso: true, nonEmpty: true }), dataUpdatedAt: iso },
   (v, at, c) => {
     if (v.hasSimulation === true && !Array.isArray(v.simulationColumns)) fail(c, at, 'hasSimulation sin simulationColumns');
   },
@@ -669,14 +718,22 @@ const teamFile = obj(
   },
 );
 
-const metaFile = obj({
-  generatedAt: iso,
-  version: str({ nonEmpty: true }),
-  dataSource: str({ nonEmpty: true }),
-  competitions: arr(competitionMeta, { min: 1 }),
-  counts: obj({ matchesAnalyzed: count, upcomingMatches: count, teams: count, players: count, valueBets: count }),
-  teams: arr(obj({ id: str({ nonEmpty: true }), name: str({ nonEmpty: true }), abbr: str(), compId: str({ nonEmpty: true }) }, { logo: str() })),
-});
+const metaFile = obj(
+  {
+    generatedAt: iso,
+    version: str({ nonEmpty: true }),
+    dataSource: str({ nonEmpty: true }),
+    competitions: arr(competitionMeta, { min: 1 }),
+    counts: obj({ matchesAnalyzed: count, upcomingMatches: count, teams: count, players: count, valueBets: count }),
+    teams: arr(obj({ id: safeId, name: str({ nonEmpty: true }), abbr: str(), compId: str({ nonEmpty: true }) }, { logo: logoUrl, color: hex })),
+  },
+  { dataUpdatedAt: iso },
+  (v, at, c) => {
+    if (typeof v.dataUpdatedAt === 'string' && typeof v.generatedAt === 'string' && Date.parse(v.dataUpdatedAt) > Date.parse(v.generatedAt) + 60_000) {
+      fail(c, `${at}.dataUpdatedAt`, 'posterior a generatedAt');
+    }
+  },
+);
 
 const homeFile = obj(
   {
@@ -694,13 +751,17 @@ const homeFile = obj(
 
 const playersFile = obj({ generatedAt: iso, players: arr(playerSeasonRow, { max: 600 }) });
 
-const valueFile = obj({ generatedAt: iso, bets: arr(valueEntry), minEv: num(), kellyFraction: num({ min: 0, max: 1 }) }, {}, (v, at, c) => {
+const valueFile = obj(
+  { generatedAt: iso, bets: arr(valueEntry), minEv: num(), kellyFraction: num({ min: 0, max: 1 }) },
+  { kellyCap: num({ min: 0, max: 1 }), minProb: prob, maxOdds: odds },
+  (v, at, c) => {
   const bets = v.bets as { pick: { ev: number } }[];
   for (let i = 1; i < bets.length; i++) if (bets[i].pick.ev > bets[i - 1].pick.ev + 1e-9) {
     fail(c, `${at}.bets`, 'no está ordenado por EV');
     break;
   }
-});
+  },
+);
 
 const modelFile = obj({
   generatedAt: iso,
@@ -719,6 +780,76 @@ export interface ValidationResult {
   errors: string[];
   files: number;
   bytes: number;
+  /** resumen de los indicadores de cordura (siempre calculado, aunque no se exijan) */
+  sanity: { competitionsWithData: number; matchesAnalyzed: number; homeMatches: number; upcomingMatches: number };
+}
+
+/** Umbrales de cordura: por debajo de ellos los datos se consideran degenerados y NO se publican. */
+export interface SanityThresholds {
+  /** competiciones con datos (partidos terminados o próximos, resultados o clasificación) */
+  minCompetitionsWithData: number;
+  /** meta.counts.matchesAnalyzed mínimo */
+  minMatchesAnalyzed: number;
+  /** la portada debe tener al menos un partido (populares, hoy, mañana o recientes) o haber partidos próximos */
+  requireHomeMatches: boolean;
+  /** tamaño total máximo de los JSON (GitHub Pages admite 1 GB por sitio) */
+  maxTotalBytes: number;
+  /**
+   * antigüedad máxima (horas) de la última descarga correcta de ESPN (meta.dataUpdatedAt) respecto al build. Si ESPN
+   * lleva días caído no se publican datos viejos como nuevos: la web conserva la versión anterior (su indicador de
+   * frescura se vuelve ámbar) y el workflow falla en rojo. Infinity = sin límite (--allow-stale).
+   */
+  maxDataAgeHours: number;
+}
+
+/** Umbrales de producción (28 competiciones configuradas; ~14.000 partidos analizados en noviembre de 2026). */
+export const DEFAULT_SANITY: SanityThresholds = {
+  minCompetitionsWithData: 15,
+  minMatchesAnalyzed: 2000,
+  requireHomeMatches: true,
+  maxTotalBytes: 300 * 1024 * 1024,
+  maxDataAgeHours: 72,
+};
+
+/** Un partido "en juego" más de esto después del saque es una foto vieja (la pasada que debía cerrarlo falló). */
+const STALE_LIVE_HOURS = 12;
+
+export interface ValidateOptions {
+  /** umbrales de cordura; false = solo contrato (tests con mundos sintéticos pequeños, --no-sanity) */
+  sanity?: Partial<SanityThresholds> | false;
+  /**
+   * salida parcial (build con --only): los compId de partidos de otras competiciones (forma, H2H, jugadores) pueden
+   * no estar publicados, así que no se exige que existan en meta.json
+   */
+  partial?: boolean;
+}
+
+const ROOT_FILES = new Set(['meta.json', 'home.json', 'players.json', 'value.json', 'model.json']);
+const SUB_DIRS = new Set(['competitions', 'matches', 'teams']);
+const SAFE_FILE = /^[A-Za-z0-9_-]{1,40}\.json$/;
+
+/** Estructura del directorio: solo los archivos raíz y JSON con nombre seguro en competitions/, matches/ y teams/. */
+function checkLayout(dir: string, errors: string[]): void {
+  let entries: fs.Dirent[];
+  try {
+    entries = fs.readdirSync(dir, { withFileTypes: true });
+  } catch (e) {
+    errors.push(`${dir}: no se puede leer el directorio (${(e as Error).message})`);
+    return;
+  }
+  const unexpected: string[] = [];
+  for (const e of entries) {
+    if (e.isSymbolicLink()) unexpected.push(`${e.name} (enlace simbólico)`);
+    else if (e.isDirectory()) {
+      if (!SUB_DIRS.has(e.name)) unexpected.push(`${e.name}/`);
+      else
+        for (const f of fs.readdirSync(path.join(dir, e.name), { withFileTypes: true })) {
+          if (!f.isFile() || !SAFE_FILE.test(f.name)) unexpected.push(`${e.name}/${f.name}`);
+        }
+    } else if (!ROOT_FILES.has(e.name)) unexpected.push(e.name);
+  }
+  for (const u of unexpected.slice(0, 20)) errors.push(`archivo inesperado en la salida: ${u}`);
+  if (unexpected.length > 20) errors.push(`… y ${unexpected.length - 20} archivos inesperados más`);
 }
 
 function readJson(dir: string, rel: string, c: Ctx): unknown {
@@ -745,11 +876,16 @@ function listJson(dir: string, sub: string): string[] {
     .map((f) => `${sub}/${f}`);
 }
 
-/** Valida todos los JSON de `dir` (por defecto public/data). */
-export function validateDataDir(dir: string = OUTPUT_DIR): ValidationResult {
+/** Valida todos los JSON de `dir` (por defecto public/data) contra el contrato y, salvo `sanity: false`, la cordura. */
+export function validateDataDir(dir: string = OUTPUT_DIR, opts: ValidateOptions = {}): ValidationResult {
   const c: Ctx = { file: '', errors: [], detailRefs: [], compRefs: [] };
   let files = 0;
   let bytes = 0;
+  if (!fs.existsSync(dir)) {
+    c.errors.push(`${dir}: el directorio no existe`);
+    return { ok: false, errors: c.errors, files, bytes, sanity: { competitionsWithData: 0, matchesAnalyzed: 0, homeMatches: 0, upcomingMatches: 0 } };
+  }
+  checkLayout(dir, c.errors);
   const check = (rel: string, schema: Check): unknown => {
     c.file = rel;
     const v = readJson(dir, rel, c);
@@ -761,17 +897,47 @@ export function validateDataDir(dir: string = OUTPUT_DIR): ValidationResult {
     return v;
   };
 
-  const meta = check('meta.json', metaFile) as { competitions?: { id: string }[]; teams?: { id: string; compId: string }[] } | undefined;
+  const meta = check('meta.json', metaFile) as
+    | {
+        generatedAt?: string;
+        dataUpdatedAt?: string;
+        competitions?: { id: string }[];
+        teams?: { id: string; compId: string }[];
+        counts?: { matchesAnalyzed?: number; upcomingMatches?: number };
+      }
+    | undefined;
   const compIds = new Set((meta?.competitions ?? []).map((x) => x.id));
-  check('home.json', homeFile);
+  const home = check('home.json', homeFile) as Record<string, unknown[] | undefined> | undefined;
   check('players.json', playersFile);
   check('value.json', valueFile);
   check('model.json', modelFile);
 
   const compFiles = listJson(dir, 'competitions');
   for (const id of compIds) if (!compFiles.includes(`competitions/${id}.json`)) c.errors.push(`meta.json: falta competitions/${id}.json`);
+  let competitionsWithData = 0;
   for (const rel of compFiles) {
-    const v = check(rel, competitionFile) as { meta?: { id: string } } | undefined;
+    const v = check(rel, competitionFile) as
+      | {
+          meta?: { id: string; finishedCount?: number; upcomingCount?: number; nextMatchDate?: string };
+          results?: unknown[];
+          upcoming?: unknown[];
+          ratings?: unknown[];
+          standings?: { rows?: unknown[] }[];
+        }
+      | undefined;
+    // "con datos": partidos de la temporada (jugados, próximos o programados más adelante), clasificación o equipos.
+    // Incluye el parón de verano (calendario nuevo publicado, aún sin partidos en 14 días).
+    if (
+      v &&
+      ((v.meta?.finishedCount ?? 0) > 0 ||
+        (v.meta?.upcomingCount ?? 0) > 0 ||
+        !!v.meta?.nextMatchDate ||
+        (v.results?.length ?? 0) > 0 ||
+        (v.upcoming?.length ?? 0) > 0 ||
+        (v.ratings?.length ?? 0) > 0 ||
+        (v.standings ?? []).some((g) => (g?.rows?.length ?? 0) > 0))
+    )
+      competitionsWithData++;
     const id = path.basename(rel, '.json');
     if (v?.meta && v.meta.id !== id) c.errors.push(`${rel}: meta.id "${v.meta.id}" no coincide con el nombre del archivo`);
     if (!compIds.has(id)) c.errors.push(`${rel}: competición ausente en meta.json`);
@@ -801,10 +967,54 @@ export function validateDataDir(dir: string = OUTPUT_DIR): ValidationResult {
   for (const [id, at] of [...missingDetail].slice(0, 30)) c.errors.push(`hasDetail=true sin matches/${id}.json (${at})`);
   if (missingDetail.size > 30) c.errors.push(`… y ${missingDetail.size - 30} referencias hasDetail más sin archivo`);
   const badComp = new Map<string, string>();
-  for (const r of c.compRefs) if (!compIds.has(r.id) && !badComp.has(r.id)) badComp.set(r.id, r.at);
+  if (!opts.partial) for (const r of c.compRefs) if (!compIds.has(r.id) && !badComp.has(r.id)) badComp.set(r.id, r.at);
   for (const [id, at] of badComp) c.errors.push(`compId desconocido "${id}" (${at})`);
 
-  return { ok: c.errors.length === 0, errors: c.errors, files, bytes };
+  // umbrales de cordura (datos degenerados: ESPN devolvió casi nada, almacén vacío o recortado, build roto...)
+  const homeMatches = ['popular', 'today', 'tomorrow', 'recent'].reduce((n, k) => n + (Array.isArray(home?.[k]) ? home![k]!.length : 0), 0);
+  const sanity = {
+    competitionsWithData,
+    matchesAnalyzed: meta?.counts?.matchesAnalyzed ?? 0,
+    homeMatches,
+    upcomingMatches: meta?.counts?.upcomingMatches ?? 0,
+  };
+  if (opts.sanity !== false) {
+    const t: SanityThresholds = { ...DEFAULT_SANITY, ...(opts.sanity ?? {}) };
+    if (sanity.competitionsWithData < t.minCompetitionsWithData) {
+      c.errors.push(`cordura: solo ${sanity.competitionsWithData} competiciones con datos (mínimo ${t.minCompetitionsWithData}): ¿falló la descarga o el almacén está incompleto?`);
+    }
+    if (sanity.matchesAnalyzed < t.minMatchesAnalyzed) {
+      c.errors.push(`cordura: meta.counts.matchesAnalyzed = ${sanity.matchesAnalyzed} (mínimo ${t.minMatchesAnalyzed}): demasiado pocos partidos para publicar modelos fiables`);
+    }
+    if (t.requireHomeMatches && sanity.homeMatches === 0 && sanity.upcomingMatches === 0) {
+      c.errors.push('cordura: home.json no tiene ningún partido próximo ni reciente y no hay partidos próximos en ninguna competición: datos degenerados o desactualizados');
+    }
+    if (bytes > t.maxTotalBytes) {
+      c.errors.push(`cordura: los JSON ocupan ${(bytes / 1048576).toFixed(1)} MB (máximo ${(t.maxTotalBytes / 1048576).toFixed(0)} MB)`);
+    }
+    // frescura real: la última descarga correcta de ESPN no puede ser de hace días
+    const built = Date.parse(meta?.generatedAt ?? '');
+    const dataAt = Date.parse(meta?.dataUpdatedAt ?? '');
+    if (Number.isFinite(built) && Number.isFinite(dataAt) && Number.isFinite(t.maxDataAgeHours)) {
+      const ageH = (built - dataAt) / 3_600_000;
+      if (ageH > t.maxDataAgeHours) {
+        c.errors.push(
+          `cordura: la última descarga correcta de ESPN es de hace ${ageH.toFixed(0)} h (meta.dataUpdatedAt ${meta?.dataUpdatedAt}; máximo ${t.maxDataAgeHours} h): no se publican datos viejos como nuevos (usa --allow-stale para forzarlo)`,
+        );
+      }
+    }
+    // estados incoherentes con la fecha del build: "en juego" de hace horas o "terminado" en el futuro
+    if (Number.isFinite(built)) {
+      const bad = (c.statusRefs ?? []).filter((r) => {
+        const d = Date.parse(r.date);
+        return r.status === 'live' ? d < built - STALE_LIVE_HOURS * 3_600_000 : d > built + 3_600_000;
+      });
+      for (const r of bad.slice(0, 10)) c.errors.push(`cordura: ${r.at}: partido "${r.status === 'live' ? 'en juego' : 'terminado'}" con fecha ${r.date} incoherente con generatedAt`);
+      if (bad.length > 10) c.errors.push(`cordura: … y ${bad.length - 10} partidos más con estado incoherente con la fecha`);
+    }
+  }
+
+  return { ok: c.errors.length === 0, errors: c.errors, files, bytes, sanity };
 }
 
 // ---------------------------------------------------------------------------
@@ -812,18 +1022,29 @@ export function validateDataDir(dir: string = OUTPUT_DIR): ValidationResult {
 // ---------------------------------------------------------------------------
 
 function main(args: string[]): number {
+  const unknown = args.filter((a) => a.startsWith('--') && a !== '--no-sanity' && a !== '--allow-stale');
+  if (unknown.length) {
+    console.error(`Argumentos desconocidos: ${unknown.join(' ')} (uso: validate-data.ts [dir] [--no-sanity] [--allow-stale])`);
+    return 2;
+  }
   const dir = path.resolve(args.find((a) => !a.startsWith('--')) ?? OUTPUT_DIR);
   const t0 = performance.now();
-  const r = validateDataDir(dir);
+  const r = validateDataDir(dir, {
+    sanity: args.includes('--no-sanity') ? false : args.includes('--allow-stale') ? { maxDataAgeHours: Infinity } : undefined,
+  });
   const secs = ((performance.now() - t0) / 1000).toFixed(1);
   const mb = (r.bytes / 1024 / 1024).toFixed(2);
+  const s = r.sanity;
+  const sanityLine = `${s.competitionsWithData} competiciones con datos, ${s.matchesAnalyzed} partidos analizados, ${s.homeMatches} partidos en portada, ${s.upcomingMatches} próximos`;
   if (r.ok) {
     console.log(`✓ Datos válidos: ${r.files} archivos (${mb} MB) en ${path.relative(process.cwd(), dir) || dir} · ${secs} s`);
+    console.log(`  ${sanityLine}`);
     return 0;
   }
-  console.error(`✗ ${r.errors.length} errores en ${r.files} archivos (${mb} MB):`);
+  console.error(`✗ ${r.errors.length} errores en ${r.files} archivos (${mb} MB) — NO publicar estos datos:`);
   for (const e of r.errors.slice(0, 200)) console.error(`  - ${e}`);
   if (r.errors.length > 200) console.error(`  … ${r.errors.length - 200} errores más`);
+  console.error(`  (${sanityLine})`);
   return 1;
 }
 

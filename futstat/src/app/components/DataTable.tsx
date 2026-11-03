@@ -3,6 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowDown, ArrowUp, ArrowUpDown } from 'lucide-react';
 import { cx } from './Card';
 
+/** Celda sin `cell` propio: números finitos y texto tal cual; lo demás (NaN, Infinity, objetos, funciones…) → "—". */
+function plainCell(v: unknown): ReactNode {
+  if (typeof v === 'number') return Number.isFinite(v) ? v : '—';
+  return typeof v === 'string' ? v : '—';
+}
+
 export interface Column<R> {
   /** id único de la columna (también clave de orden) */
   key: string;
@@ -165,18 +171,26 @@ export function DataTable<R>({
           )}
           {sorted.map((r, i) => {
             const href = rowHref?.(r);
-            const go = () => (href ? navigate(href) : onRowClick?.(r));
+            // Fila clicable solo si tiene destino (rowHref puede devolver undefined para filas sin enlace).
+            const rowClickable = clickable && (!!href || !!onRowClick);
+            const go = (e: { target: EventTarget | null }) => {
+              // Un enlace o botón dentro de la fila tiene prioridad (evita navegar dos veces).
+              const t = e.target as HTMLElement | null;
+              if (t?.closest?.('a,button,input,select,textarea,label')) return;
+              if (href) navigate(href);
+              else onRowClick?.(r);
+            };
             return (
               <tr
                 key={rowKey(r, i)}
-                onClick={clickable ? go : undefined}
-                onKeyDown={clickable ? (e) => e.key === 'Enter' && go() : undefined}
-                tabIndex={clickable ? 0 : undefined}
-                className={cx('group', clickable && 'cursor-pointer', rowClassName?.(r, i))}
+                onClick={rowClickable ? go : undefined}
+                onKeyDown={rowClickable ? (e) => e.key === 'Enter' && go(e) : undefined}
+                tabIndex={rowClickable ? 0 : undefined}
+                className={cx('group', rowClickable && 'cursor-pointer', rowClassName?.(r, i))}
               >
                 {columns.map((c) => {
                   const align = c.align ?? (c.numeric ? 'right' : 'left');
-                  const content = c.cell ? c.cell(r, i) : ((r as Record<string, unknown>)[c.key] as ReactNode);
+                  const content = c.cell ? c.cell(r, i) : plainCell((r as Record<string, unknown>)[c.key]);
                   return (
                     <td
                       key={c.key}

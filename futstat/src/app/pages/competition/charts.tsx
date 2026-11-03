@@ -8,18 +8,7 @@ import { cx } from '../../components';
 import { token } from '../../lib/colors';
 import { useElementWidth } from '../../lib/hooks';
 import { int, num, pct } from '../../lib/format';
-
-function niceTicks(lo: number, hi: number, count = 4): number[] {
-  if (!(hi > lo)) return [lo];
-  const raw = (hi - lo) / count;
-  const mag = 10 ** Math.floor(Math.log10(raw));
-  const norm = raw / mag;
-  const step = (norm < 1.5 ? 1 : norm < 3 ? 2 : norm < 7 ? 5 : 10) * mag;
-  const start = Math.ceil(lo / step) * step;
-  const out: number[] = [];
-  for (let v = start; v <= hi + step * 1e-6; v += step) out.push(Number(v.toFixed(10)));
-  return out;
-}
+import { niceTicks } from '../../lib/ticks';
 
 const GRID = token('line');
 const AXIS_TEXT = 'fill-ink-3 font-mono text-[10.5px]';

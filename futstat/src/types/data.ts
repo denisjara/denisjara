@@ -61,6 +61,11 @@ export interface CompetitionMeta {
   finishedCount: number; // finished matches this season in our dataset
   /** Primary accent color (hex, without #) — optional cosmetic hint */
   color?: string;
+  /**
+   * ISO instant of the last SUCCESSFUL download of this competition from ESPN (not the build time: when ESPN is down
+   * the build still runs with the stored data, and this date shows how old that data really is).
+   */
+  dataUpdatedAt?: string;
 }
 
 export interface TeamRef {
@@ -632,7 +637,13 @@ export interface TeamFile {
 // ---------------------------------------------------------------------------
 
 export interface MetaFile {
+  /** build time of the JSON files */
   generatedAt: string;
+  /**
+   * ISO instant of the most recent successful download from ESPN across competitions. The UI freshness indicator uses
+   * it (falls back to generatedAt): a build made while ESPN was down must not look "updated a few minutes ago".
+   */
+  dataUpdatedAt?: string;
   version: string;
   dataSource: string; // "ESPN (API pública)"
   competitions: CompetitionMeta[];

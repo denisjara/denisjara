@@ -2,6 +2,7 @@ import { useState, type ReactNode } from 'react';
 import type { CompetitionMeta } from '../../types/data';
 import { KIND_LABEL } from '../lib/competitions';
 import { useTheme } from '../lib/theme';
+import { safeHexColor, safeImageUrl } from '../lib/safeUrl';
 import { cx } from './Card';
 
 export interface CompetitionHeaderProps {
@@ -25,8 +26,9 @@ export function CompetitionHeader({ meta, subtitle, stats, actions, children, cl
   const [theme] = useTheme();
   // ESPN publica una variante "-dark" (logos claros) para fondos oscuros; si falla se usa la normal y, después, la bandera.
   const [failed, setFailed] = useState<string[]>([]);
-  const logo = (theme === 'dark' ? [meta.logoDark, meta.logo] : [meta.logo]).find((u): u is string => !!u && !failed.includes(u));
-  const accent = meta.color && /^[0-9a-fA-F]{6}$/.test(meta.color) ? `#${meta.color}` : undefined;
+  // Solo logos https de ESPN (safeImageUrl); cualquier otra URL se ignora.
+  const logo = (theme === 'dark' ? [meta.logoDark, meta.logo] : [meta.logo]).map(safeImageUrl).find((u): u is string => !!u && !failed.includes(u));
+  const accent = safeHexColor(meta.color);
   return (
     <header className={cx('relative overflow-hidden rounded-card border border-line bg-surface-1/80', className)}>
       <div className="pitch-lines pointer-events-none absolute inset-0 opacity-[0.05]" aria-hidden="true" />
@@ -40,7 +42,7 @@ export function CompetitionHeader({ meta, subtitle, stats, actions, children, cl
           {logo ? (
             <img src={logo} alt="" className="h-11 w-11 object-contain sm:h-12 sm:w-12" onError={() => setFailed((f) => [...f, logo])} />
           ) : (
-            <span className="text-[34px] leading-none" aria-hidden="true">{meta.flag}</span>
+            <span className="max-w-[2em] shrink-0 overflow-hidden whitespace-nowrap text-[34px] leading-none" aria-hidden="true">{meta.flag}</span>
           )}
         </div>
         <div className="min-w-0 flex-1">

@@ -67,6 +67,16 @@ export interface MatchRecord {
   oddsHistory?: OddsSnapshot[];
   /** true once the per-match summary (player lines, extended stats, closing odds) has been fetched & merged */
   summaryFetched?: boolean;
+  /** empty / 404 summary answers so far (each in a different run); reset when a summary with content arrives */
+  summaryAttempts?: number;
+  /** ISO: do not retry an empty summary before this instant (growing wait between attempts) */
+  summaryRetryAt?: string;
+  /**
+   * consecutive runs in which ESPN reported this FINISHED match (with a score) as not played (scheduled, postponed…).
+   * The downgrade is only accepted after several runs in a row (store.ts mergeOne): a one-off glitch must not wipe
+   * the score, stats, events and summary of a match.
+   */
+  downgradeSeen?: number;
 }
 
 export interface PlayerLine {
@@ -101,7 +111,10 @@ export interface PlayerLine {
 export interface CompetitionStore {
   compId: string;
   slug: string;
+  /** last time the file was written */
   updatedAt: string;
+  /** last successful scoreboard download WITH events (data freshness published as dataUpdatedAt) */
+  fetchedAt?: string;
   /** league info from the latest scoreboard response */
   league?: { name?: string; logo?: string; logoDark?: string; seasonYear?: number; seasonLabel?: string; seasonStart?: string; seasonEnd?: string };
   matches: MatchRecord[];

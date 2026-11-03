@@ -1,6 +1,7 @@
+import { Link } from 'react-router-dom';
 import { Activity, Flame, History, TrendingUp } from 'lucide-react';
 import type { FormMatch, MatchFile, MatchSummary, TeamFormBlock } from '../../../types/data';
-import { CompetitionBadge, DataTable, EmptyState, FormChips, LineChart, Meter, OutcomeChip, Sparkline, TeamCrest, cx, type Column } from '../../components';
+import { CompetitionBadge, DataTable, EmptyState, FormChips, LineChart, Meter, OutcomeChip, Sparkline, TeamCrest, cx, formMatchHref, type Column } from '../../components';
 import { SIDE_COLOR } from '../../lib/colors';
 import { int, num, shortDate, signed, xg } from '../../lib/format';
 import { Panel, Stat, TeamTag } from './parts';
@@ -36,12 +37,12 @@ function SummaryCard({ block, side }: { block: TeamFormBlock; side: 'home' | 'aw
       eyebrow={side === 'home' ? 'Local' : 'Visitante'}
       action={
         <div className="text-right">
-          <div className="font-display text-[34px] font-extrabold leading-none text-ink-1">{Math.round(block.formIndex)}</div>
+          <div className="font-display text-[34px] font-extrabold leading-none text-ink-1">{int(block.formIndex)}</div>
           <div className="text-2xs text-ink-3">Índice de forma · {formLabel(block.formIndex)}</div>
         </div>
       }
     >
-      <Meter value={block.formIndex / 100} height={6} color={SIDE_COLOR[side]} label={`Índice de forma ${Math.round(block.formIndex)} de 100`} />
+      <Meter value={block.formIndex / 100} height={6} color={SIDE_COLOR[side]} label={`Índice de forma ${int(block.formIndex)} de 100`} />
       <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
         <div>
           <div className="eyebrow mb-1">Últimos {Math.min(10, chrono10.length || 5)}</div>
@@ -69,7 +70,7 @@ function SummaryCard({ block, side }: { block: TeamFormBlock; side: 'home' | 'aw
           <div className="eyebrow mb-1">{side === 'home' ? 'Como local' : 'Como visitante'} esta temporada</div>
           <div className="flex flex-wrap gap-x-4 gap-y-1 text-[13px] text-ink-2">
             <span>
-              <span className="num font-semibold text-ink-1">{split.played}</span> PJ
+              <span className="num font-semibold text-ink-1">{int(split.played)}</span> PJ
             </span>
             <span>
               <span className="num font-semibold text-ink-1">{num(split.ppg, 2)}</span> pts/p
@@ -139,14 +140,24 @@ function lastColumns(): Column<FormMatch>[] {
       title: 'Resultado',
       align: 'center',
       sortValue: (r) => (r.result === 'W' ? 3 : r.result === 'D' ? 1 : 0),
-      cell: (r) => (
-        <span className="inline-flex items-center gap-2">
-          <OutcomeChip outcome={r.result} size="sm" />
-          <span className="num font-semibold text-ink-1">
-            {r.gf}-{r.ga}
-          </span>
-        </span>
-      ),
+      cell: (r) => {
+        const href = formMatchHref(r);
+        const inner = (
+          <>
+            <OutcomeChip outcome={r.result} size="sm" />
+            <span className="num font-semibold text-ink-1">
+              {r.gf}-{r.ga}
+            </span>
+          </>
+        );
+        return href ? (
+          <Link to={href} className="inline-flex items-center gap-2 hover:underline" title="Ver el análisis del partido">
+            {inner}
+          </Link>
+        ) : (
+          <span className="inline-flex items-center gap-2">{inner}</span>
+        );
+      },
       className: 'whitespace-nowrap',
     },
     {
@@ -168,18 +179,18 @@ function lastColumns(): Column<FormMatch>[] {
       title: 'Goles esperados a favor – en contra (modelo)',
       numeric: true,
       sortValue: (r) => r.xg,
-      cell: (r) => (r.xg === undefined ? '–' : `${xg(r.xg)}–${xg(r.xga)}`),
+      cell: (r) => (r.xg === undefined ? '—' : `${xg(r.xg)}–${xg(r.xga)}`),
     },
-    { key: 'shots', header: 'Tiros', title: 'Tiros (a puerta)', numeric: true, sortValue: (r) => r.shots, cell: (r) => (r.shots === undefined ? '–' : `${r.shots} (${r.shotsOnTarget ?? '–'})`) },
+    { key: 'shots', header: 'Tiros', title: 'Tiros (a puerta)', numeric: true, sortValue: (r) => r.shots, cell: (r) => (r.shots === undefined ? '—' : `${r.shots} (${r.shotsOnTarget ?? '—'})`) },
     {
       key: 'corners',
       header: 'Córn.',
       title: 'Córners a favor – en contra',
       numeric: true,
       sortValue: (r) => r.corners,
-      cell: (r) => (r.corners === undefined ? '–' : `${r.corners}–${r.cornersAgainst ?? '–'}`),
+      cell: (r) => (r.corners === undefined ? '—' : `${r.corners}–${r.cornersAgainst ?? '—'}`),
     },
-    { key: 'cards', header: 'Tarj.', title: 'Tarjetas recibidas', numeric: true, sortValue: (r) => r.cards, cell: (r) => r.cards ?? '–' },
+    { key: 'cards', header: 'Tarj.', title: 'Tarjetas recibidas', numeric: true, sortValue: (r) => r.cards, cell: (r) => r.cards ?? '—' },
     {
       key: 'poss',
       header: 'Pos.',
@@ -187,7 +198,7 @@ function lastColumns(): Column<FormMatch>[] {
       numeric: true,
       hideBelow: 'md',
       sortValue: (r) => asShare(r.possession),
-      cell: (r) => (r.possession === undefined ? '–' : `${Math.round((asShare(r.possession) ?? 0) * 100)}%`),
+      cell: (r) => (r.possession === undefined ? '—' : `${Math.round((asShare(r.possession) ?? 0) * 100)}%`),
     },
   ];
 }
@@ -205,7 +216,8 @@ function LastTable({ block, side }: { block: TeamFormBlock; side: 'home' | 'away
           caption={`Últimos ${rows.length} partidos de ${block.team.name}`}
           columns={lastColumns()}
           rows={rows}
-          rowKey={(r) => r.matchId}
+          rowKey={(r, i) => `${r.matchId}-${i}`}
+          rowHref={formMatchHref}
           initialSort={{ key: 'date', dir: 'desc' }}
           dense
         />

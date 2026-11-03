@@ -80,14 +80,14 @@ export function PlayersTable({ players, showTeam = true, caption, maxHeight = 64
     { key: 'form', header: 'Forma', title: 'Índice de forma (0-100) y notas de los últimos 5 partidos', cell: (r) => <PlayerForm player={r} />, sortValue: (r) => r.formIndex, firstDir: 'desc', className: 'whitespace-nowrap' },
     { key: 'apps', header: 'PJ', title: 'Partidos jugados (titular)', numeric: true, cell: (r) => (
       <span>
-        {r.apps}
-        <span className="ml-1 text-ink-3">({r.starts})</span>
+        {int(r.apps)}
+        <span className="ml-1 text-ink-3">({int(r.starts)})</span>
       </span>
     ), sortValue: (r) => r.apps },
     { key: 'minutes', header: 'Min', title: 'Minutos jugados', numeric: true, cell: (r) => int(r.minutes), sortValue: (r) => r.minutes },
     p90
       ? { key: 'g90', header: 'Gol/90', title: 'Goles por 90 minutos', numeric: true, cell: (r) => num(r.per90.goals, 2), sortValue: (r) => r.per90.goals }
-      : { key: 'goals', header: 'Goles', title: 'Goles', numeric: true, cell: (r) => <span className="font-semibold text-ink-1">{r.goals}</span>, sortValue: (r) => r.goals },
+      : { key: 'goals', header: 'Goles', title: 'Goles', numeric: true, cell: (r) => <span className="font-semibold text-ink-1">{int(r.goals)}</span>, sortValue: (r) => r.goals },
     p90
       ? { key: 'a90', header: 'Asi/90', title: 'Asistencias por 90 minutos', numeric: true, cell: (r) => num(r.per90.assists, 2), sortValue: (r) => r.per90.assists }
       : { key: 'assists', header: 'Asist.', title: 'Asistencias', numeric: true, sortValue: (r) => r.assists },
@@ -96,7 +96,7 @@ export function PlayersTable({ players, showTeam = true, caption, maxHeight = 64
       : { key: 'shots', header: 'Tiros', title: 'Tiros totales', numeric: true, sortValue: (r) => r.shots },
     p90
       ? { key: 'sot90', header: 'TaP/90', title: 'Tiros a puerta por 90 minutos', numeric: true, cell: (r) => num(r.per90.shotsOnTarget, 2), sortValue: (r) => r.per90.shotsOnTarget }
-      : { key: 'sot', header: 'TaP', title: 'Tiros a puerta', numeric: true, cell: (r) => r.shotsOnTarget, sortValue: (r) => r.shotsOnTarget },
+      : { key: 'sot', header: 'TaP', title: 'Tiros a puerta', numeric: true, cell: (r) => int(r.shotsOnTarget), sortValue: (r) => r.shotsOnTarget },
     ...(p90
       ? ([
           { key: 'c90', header: 'Tarj/90', title: 'Tarjetas (amarillas + rojas) por 90 minutos', numeric: true, cell: (r) => num(r.per90.cards, 2), sortValue: (r) => r.per90.cards },
@@ -121,8 +121,8 @@ export function PlayersTable({ players, showTeam = true, caption, maxHeight = 64
       ? { key: 'f90', header: 'Faltas/90', title: 'Faltas cometidas por 90 minutos', numeric: true, cell: (r) => num(r.per90.foulsCommitted, 2), sortValue: (r) => r.per90.foulsCommitted }
       : { key: 'fouls', header: 'Faltas', title: 'Faltas cometidas (recibidas)', numeric: true, cell: (r) => (
           <span>
-            {r.foulsCommitted}
-            <span className="ml-1 text-ink-3">({r.foulsSuffered})</span>
+            {int(r.foulsCommitted)}
+            <span className="ml-1 text-ink-3">({int(r.foulsSuffered)})</span>
           </span>
         ), sortValue: (r) => r.foulsCommitted },
   ];

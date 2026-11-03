@@ -85,7 +85,7 @@ export function H2HTab({ file, match }: TabProps) {
           <KpiTile label="Goles por partido" value={num(h.avgGoals, 2)} hint={gH !== undefined && gA !== undefined ? `${num(gH, 1)} – ${num(gA, 1)} por equipo` : undefined} />
           <KpiTile label="Ambos marcan" value={pct(h.bttsPct)} />
           <KpiTile label="Más de 2,5 goles" value={pct(h.over25Pct)} />
-          <KpiTile label="Partidos" value={String(total || list.length)} hint={list[0] ? `Último: ${list[0].score ? `${list[0].home.short} ${list[0].score.home}-${list[0].score.away} ${list[0].away.short}` : '–'}` : undefined} />
+          <KpiTile label="Partidos" value={String(total || list.length)} hint={list[0] ? `Último: ${list[0].score ? `${list[0].home.short} ${list[0].score.home}-${list[0].score.away} ${list[0].away.short}` : '—'}` : undefined} />
         </div>
       </Panel>
       <Panel title="Enfrentamientos" icon={<Swords />} flush>

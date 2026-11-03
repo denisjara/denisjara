@@ -5,6 +5,7 @@
  * Estas utilidades agrupan por familia (para filtros) y dan una etiqueta neutra (para subtítulos).
  */
 import type { ValuePick } from '../../types/data';
+import { lookup } from './lookup';
 
 export interface MarketFamily {
   /** clave estable para agrupar/filtrar */
@@ -22,13 +23,14 @@ const FIXED: Record<string, string> = {
 
 /** Familia de un marketId: 1X2, Más/Menos N (una por línea), Hándicap asiático (todas las líneas juntas)... */
 export function marketFamily(pick: Pick<ValuePick, 'marketId' | 'market'>): MarketFamily {
-  const id = pick.marketId;
-  if (FIXED[id]) return { key: id, label: FIXED[id] };
+  const id = typeof pick.marketId === 'string' ? pick.marketId : '';
+  const fixed = lookup(FIXED, id);
+  if (fixed) return { key: id, label: fixed };
   if (id === 'ou25') return { key: 'ou-2.5', label: 'Más/Menos 2,5' }; // forma corta del contrato
   const ou = /^ou-(\d+(?:\.\d+)?)$/.exec(id);
   if (ou) return { key: `ou-${ou[1]}`, label: `Más/Menos ${ou[1].replace('.', ',')}` };
   if (/^ah(-|$)/.test(id)) return { key: 'ah', label: 'Hándicap asiático' };
-  return { key: id, label: pick.market };
+  return { key: id || 'otro', label: typeof pick.market === 'string' && pick.market ? pick.market : 'Mercado' };
 }
 
 /** Decimales con coma (las etiquetas del pipeline usan punto: "Más de 2.5", "Austin FC +0.5"). */

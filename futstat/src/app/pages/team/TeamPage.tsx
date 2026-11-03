@@ -12,6 +12,7 @@ import {
   LineChart,
   MatchCard,
   PageSkeleton,
+  SafeBlock,
   Section,
   TabPanel,
   Tabs,
@@ -105,9 +106,11 @@ export default function TeamPage() {
 
   return (
     <div className="space-y-6">
-      <TeamHeader data={data} primaryMeta={primaryMeta} leagueEloRank={rating?.eloRank}>
-        <Tabs idBase="team" value={tab} onChange={setTab} tabs={tabs} ariaLabel={`Secciones de ${team.name}`} />
-      </TeamHeader>
+      <SafeBlock label="Cabecera del equipo">
+        <TeamHeader data={data} primaryMeta={primaryMeta} leagueEloRank={rating?.eloRank}>
+          <Tabs idBase="team" value={tab} onChange={setTab} tabs={tabs} ariaLabel={`Secciones de ${team.name}`} />
+        </TeamHeader>
+      </SafeBlock>
 
       <TabPanel idBase="team" id="resumen" active={tab}>
         <div className="space-y-10">

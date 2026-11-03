@@ -4,13 +4,21 @@ import path from 'node:path';
 import { afterAll, describe, expect, it } from 'vitest';
 import {
   MAX_ODDS_HISTORY,
+  backupPath,
+  cleanStaleTmp,
   emptyStore,
   inferUnknownPositions,
+  lastLoadSource,
+  loadAllStores,
   loadStore,
+  DOWNGRADE_CONFIRMATIONS,
   mergeMatches,
   oddsChanged,
   prunePlayerLines,
+  readStoreFile,
   saveStore,
+  storeDirBytes,
+  storePath,
   upsertPlayerLines,
 } from '../../pipeline/store';
 import type { MatchRecord, PlayerLine } from '../../pipeline/types';
@@ -152,12 +160,39 @@ describe('mergeMatches · summary-derived fields', () => {
     expect(m.oddsHistory).toHaveLength(1);
   });
 
-  it('a postponed match drops score/stats and the summary flag', () => {
-    const [m] = mergeMatches([summarised], [rec({ date: summarised.date, status: 'postponed', statusDetail: 'Aplazado' })], { now: NOW });
+  it('a finished match reported as postponed is only downgraded after several runs in a row (PIPE-06)', () => {
+    const glitch = () => [rec({ date: summarised.date, status: 'postponed', statusDetail: 'Aplazado' })];
+    let ms = [summarised];
+    for (let run = 1; run < DOWNGRADE_CONFIRMATIONS; run++) {
+      ms = mergeMatches(ms, glitch(), { now: NOW });
+      // one-off glitch: score, stats, events and summary flag survive
+      expect(ms[0].status).toBe('finished');
+      expect(ms[0].score).toEqual(summarised.score);
+      expect(ms[0].stats).toEqual(summarised.stats);
+      expect(ms[0].summaryFetched).toBe(true);
+      expect(ms[0].downgradeSeen).toBe(run);
+    }
+    // confirmed: accepted
+    const [m] = mergeMatches(ms, glitch(), { now: NOW });
     expect(m.status).toBe('postponed');
     expect(m.score).toBeUndefined();
     expect(m.stats).toBeUndefined();
     expect(m.summaryFetched).toBeUndefined();
+    expect(m.downgradeSeen).toBeUndefined();
+  });
+
+  it('finished → scheduled glitch → finished again keeps the summary data (PIPE-06)', () => {
+    const once = mergeMatches([summarised], [rec({ date: summarised.date, status: 'scheduled' })], { now: NOW });
+    const [m] = mergeMatches(once, [rec({ date: summarised.date, status: 'finished', score: summarised.score })], { now: NOW });
+    expect(m.summaryFetched).toBe(true);
+    expect(m.stats).toEqual(summarised.stats);
+    expect(m.events).toEqual(summarised.events);
+    expect(m.downgradeSeen).toBeUndefined();
+  });
+
+  it('drops records whose date cannot be parsed (they would never age out)', () => {
+    const ms = mergeMatches([rec({ id: 'bad', date: 'not-a-date' })], [rec({ id: 'ok' })], { now: new Date('2035-01-01T00:00:00Z'), maxAgeDays: 100000 });
+    expect(ms.map((m) => m.id)).toEqual(['ok']);
   });
 
   it('drops matches older than 900 days and keeps the result sorted', () => {
@@ -221,5 +256,143 @@ describe('loadStore / saveStore', () => {
     expect(back.slug).toBe('eng.1');
     expect(Date.parse(back.updatedAt)).toBeGreaterThan(0);
     expect(fs.readdirSync(dir).filter((f) => f.endsWith('.tmp'))).toEqual([]);
+  });
+});
+
+describe('almacén: copia de seguridad y recuperación', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'futstat-store-bak-'));
+  afterAll(() => fs.rmSync(dir, { recursive: true, force: true }));
+  const quiet = { warn: () => {} };
+
+  function storeWith(n: number) {
+    const s = emptyStore('laliga');
+    s.matches = Array.from({ length: n }, (_, i) => rec({ id: String(100 + i) }));
+    return s;
+  }
+
+  it('al sobrescribir guarda el store anterior como <compId>.json.bak', () => {
+    saveStore(storeWith(1), dir);
+    expect(fs.existsSync(backupPath('laliga', dir))).toBe(false); // no había versión anterior
+    saveStore(storeWith(2), dir);
+    const bak = JSON.parse(fs.readFileSync(backupPath('laliga', dir), 'utf8'));
+    expect(bak.matches).toHaveLength(1);
+    expect(loadStore('laliga', dir, quiet).matches).toHaveLength(2);
+    expect(fs.readdirSync(dir).filter((f) => f.endsWith('.tmp'))).toEqual([]);
+  });
+
+  it('store corrupto (JSON truncado) → se recupera del .bak con aviso, sin lanzar', () => {
+    saveStore(storeWith(3), dir); // .bak = 2 partidos
+    fs.writeFileSync(storePath('laliga', dir), '{"compId":"laliga","matches":[{"id":');
+    const warns: string[] = [];
+    const s = loadStore('laliga', dir, { warn: (m) => warns.push(m) });
+    expect(s.matches).toHaveLength(2);
+    expect(lastLoadSource('laliga', dir)).toBe('backup');
+    expect(warns.join('\n')).toMatch(/dañado.*copia de seguridad/);
+    // el siguiente guardado NO pisa la copia buena con el archivo corrupto
+    saveStore(s, dir);
+    expect(JSON.parse(fs.readFileSync(backupPath('laliga', dir), 'utf8')).matches).toHaveLength(2);
+    expect(loadStore('laliga', dir, quiet).matches).toHaveLength(2);
+  });
+
+  it('forma inesperada (array, compId ajeno, matches no array) → .bak; ambos dañados → store vacío', () => {
+    for (const bad of ['[]', '{"compId":"premier","matches":[]}', '{"compId":"laliga","matches":{}}', 'null', '']) {
+      fs.writeFileSync(storePath('laliga', dir), bad);
+      expect(loadStore('laliga', dir, quiet).matches).toHaveLength(2);
+    }
+    fs.writeFileSync(backupPath('laliga', dir), '{roto');
+    const warns: string[] = [];
+    const s = loadStore('laliga', dir, { warn: (m) => warns.push(m) });
+    expect(s).toMatchObject({ compId: 'laliga', matches: [], players: [], standings: [] });
+    expect(lastLoadSource('laliga', dir)).toBe('empty');
+    expect(warns.join('\n')).toMatch(/almacén vacío/);
+  });
+
+  it('descarta registros mal formados al cargar y solo falta el principal → usa el .bak', () => {
+    const s = storeWith(2);
+    (s.matches as unknown[]).push(null, { id: 5 }, { id: 'x', date: '2026-01-01', status: 'finished', home: { id: '1' }, away: {} });
+    (s.players as unknown[]).push(line(), { matchId: 1 });
+    fs.writeFileSync(storePath('premier', dir), JSON.stringify({ ...s, compId: 'premier' }));
+    const back = loadStore('premier', dir, quiet);
+    expect(back.matches).toHaveLength(2);
+    expect(back.players).toHaveLength(1);
+    // proceso interrumpido: solo queda la copia
+    fs.renameSync(storePath('premier', dir), backupPath('premier', dir));
+    expect(loadStore('premier', dir, quiet).matches).toHaveLength(2);
+    expect(loadAllStores(dir, quiet).map((x) => x.compId)).toEqual(expect.arrayContaining(['premier']));
+  });
+
+  it('storeDirBytes suma el tamaño de los archivos del almacén', () => {
+    const total = fs.readdirSync(dir).reduce((n, f) => n + fs.statSync(path.join(dir, f)).size, 0);
+    expect(storeDirBytes(dir)).toBe(total);
+    expect(storeDirBytes(path.join(dir, 'no-existe'))).toBe(0);
+  });
+});
+
+
+describe('validación profunda al cargar el almacén (PIPE-04)', () => {
+  const base = path.join(os.tmpdir(), `futstat-deep-${process.pid}`);
+  afterAll(() => fs.rmSync(base, { recursive: true, force: true }));
+  const team = (id: string) => ({ id, name: `Equipo ${id}`, short: id, abbr: id });
+  const ok = (id: string, extra: Record<string, unknown> = {}) => ({
+    id, compId: 'premier', season: 2026, currentSeason: true, date: '2026-10-01T18:00:00Z', status: 'finished',
+    home: team('1'), away: team('2'), score: { home: 1, away: 0 }, ...extra,
+  });
+  const line = (extra: Record<string, unknown> = {}) => ({
+    matchId: 'm1', compId: 'premier', date: '2026-10-01T18:00:00Z', teamId: '1', opponentId: '2', isHome: true, playerId: 'p1',
+    name: 'Jugador', short: 'J.', position: 'F', starter: true, minutes: 90, goals: 1, assists: 0, shots: 2, shotsOnTarget: 1,
+    yellow: 0, red: 0, foulsCommitted: 1, foulsSuffered: 0, offsides: 0, ownGoals: 0, ...extra,
+  });
+
+  it('descarta registros con nombre numérico, fecha o estado imposibles y marcadores absurdos; corrige campos opcionales', () => {
+    fs.mkdirSync(base, { recursive: true });
+    const file = path.join(base, 'premier.json');
+    const raw = {
+      compId: 'premier', slug: 'eng.1', updatedAt: '2026-11-03T10:00:00Z',
+      matches: [
+        ok('good'),
+        ok('num-name', { home: { id: '1', name: 12345 } }),
+        ok('bad-date', { date: 'not-a-date' }),
+        ok('bad-status', { status: 'exploded' }),
+        ok('huge-score', { score: { home: 1e9, away: -3 } }),
+        ok('stats-null', { stats: { home: null, away: 'x' }, events: 'boom', oddsHistory: { length: 3 } }),
+        ok('bad-odds', { odds: { provider: 'DK', home: 1.01, draw: 2, away: 2 } }),
+      ],
+      players: [line(), line({ playerId: 'p2', goals: '71' }), line({ playerId: 'p3', goals: -100 }), line({ playerId: 'p4', name: { x: 1 } }), line({ playerId: 'p5', ownGoals: undefined })],
+      standings: [{ name: 'Premier', rows: [{ rank: 1, team: null, played: 1 }] }],
+    };
+    fs.writeFileSync(file, JSON.stringify(raw));
+    const r = readStoreFile(file, 'premier')!;
+    expect(r.store.matches.map((m) => m.id).sort()).toEqual(['bad-odds', 'good', 'stats-null']);
+    const sn = r.store.matches.find((m) => m.id === 'stats-null')!;
+    expect(sn.stats).toBeUndefined();
+    expect(sn.events).toBeUndefined();
+    expect(sn.oddsHistory).toBeUndefined();
+    // trío 1X2 con margen imposible (0,99): fuera; sin otros precios, sin cuotas
+    expect(r.store.matches.find((m) => m.id === 'bad-odds')!.odds).toBeUndefined();
+    expect(r.store.players.map((p) => p.playerId).sort()).toEqual(['p1', 'p5']);
+    expect(r.store.players.find((p) => p.playerId === 'p5')!.ownGoals).toBe(0);
+    expect(r.store.standings).toEqual([]);
+    expect(r.dropped).toBeGreaterThan(0);
+  });
+
+  it('el almacén real de un esquema anterior se carga sin perder nada (campos opcionales ausentes)', () => {
+    const file = path.join(base, 'laliga.json');
+    fs.writeFileSync(file, JSON.stringify({ compId: 'laliga', matches: [ok('a', { compId: 'laliga' })], players: [line()], standings: [] }));
+    const r = readStoreFile(file, 'laliga')!;
+    expect(r.dropped).toBe(0);
+    expect(r.store.matches).toHaveLength(1);
+    expect(r.store.players).toHaveLength(1);
+  });
+
+  it('borra los temporales huérfanos de un guardado interrumpido, no los recientes (PIPE-11)', () => {
+    fs.mkdirSync(base, { recursive: true });
+    const old = path.join(base, 'premier.json.99999.tmp');
+    const fresh = path.join(base, 'laliga.json.88888.tmp');
+    fs.writeFileSync(old, 'x');
+    fs.writeFileSync(fresh, 'y');
+    const past = new Date(Date.now() - 2 * 3_600_000);
+    fs.utimesSync(old, past, past);
+    expect(cleanStaleTmp(base)).toEqual(['premier.json.99999.tmp']);
+    expect(fs.existsSync(fresh)).toBe(true);
   });
 });

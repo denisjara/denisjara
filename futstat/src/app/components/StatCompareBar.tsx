@@ -5,7 +5,7 @@ import { cx } from './Card';
 export type StatFormat = 'int' | 'dec1' | 'dec2' | 'pct';
 
 export function formatStat(v: number | undefined, f: StatFormat = 'dec1'): string {
-  if (v === undefined || !Number.isFinite(v)) return '–';
+  if (v === undefined || !Number.isFinite(v)) return '—';
   if (f === 'int') return int(v);
   if (f === 'dec2') return num(v, 2);
   if (f === 'pct') return pct(v);

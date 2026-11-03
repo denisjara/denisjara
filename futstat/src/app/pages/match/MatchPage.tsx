@@ -2,8 +2,8 @@ import { useEffect, useMemo } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { Activity, BarChart3, Brain, CalendarClock, ClipboardCheck, FileQuestion, History, Store, Swords, Users } from 'lucide-react';
 import type { MatchSummary } from '../../../types/data';
-import { Disclaimer, EmptyState, ErrorState, Skeleton, SkeletonCard, TabPanel, Tabs, useUrlTab, type TabItem } from '../../components';
-import { DataError, useMatch } from '../../lib/data';
+import { Disclaimer, EmptyState, ErrorState, SafeBlock, Skeleton, SkeletonCard, TabPanel, Tabs, useUrlTab, type TabItem } from '../../components';
+import { DataError, isValidNumericId, useMatch } from '../../lib/data';
 import { applyLive, useLiveScores } from '../../lib/live';
 import { timeAgo } from '../../lib/format';
 import { MatchHeader } from './MatchHeader';
@@ -66,7 +66,7 @@ function NoAnalysis({ matchId }: { matchId?: string }) {
         title="Partido sin análisis"
         description={
           <>
-            Todavía no hemos publicado el análisis de este partido{matchId ? ` (ID ${matchId})` : ''}. Los análisis completos se generan cada día para los
+            Todavía no hemos publicado el análisis de este partido{matchId && isValidNumericId(matchId) ? ` (ID ${matchId})` : ''}. Los análisis completos se generan cada día para los
             partidos de los próximos días y los jugados recientemente.
           </>
         }
@@ -127,7 +127,9 @@ export default function MatchPage() {
 
   return (
     <div className="space-y-6">
-      <MatchHeader file={file} match={match} />
+      <SafeBlock label="Marcador y probabilidades">
+        <MatchHeader file={file} match={match} />
+      </SafeBlock>
 
       <div key={match.id}>
         <Tabs idBase="match" value={tab} onChange={setTab} tabs={tabs} ariaLabel="Secciones del análisis del partido" />

@@ -1,7 +1,12 @@
 /**
  * Contexto compartido del build: índices de partidos/equipos/jugadores, modelos ajustados a la fecha actual
  * (Elo global, Dixon-Coles por liga, Elo→goles), modelos Dixon-Coles walk-forward y predicciones "pre-partido"
- * de los partidos ya jugados de la temporada actual (sin fuga de información en Elo ni en Dixon-Coles).
+ * de los partidos ya jugados de la temporada actual.
+ *
+ * Sin fuga de información en el backtest: Elo pre-partido, Dixon-Coles re-ajustado cada semana con partidos
+ * anteriores y, por competición, parámetros de empate del Elo, coeficientes Elo→goles y medias de goles ajustados
+ * SOLO con partidos anteriores al inicio de la temporada evaluada (ctx.preSeason). Lo único que usa información
+ * posterior es la asignación de liga doméstica de cada equipo (homeLeague), que solo decide qué modelo se usa.
  */
 import type {
   LeagueAverages,
@@ -12,10 +17,18 @@ import type {
   TeamRef,
   TeamSeasonStats,
 } from '../../src/types/data';
-import type { DCModel } from '../../src/lib/models';
+import { fitEloDrawParams, type DCModel } from '../../src/lib/models';
 import { MODEL, RESULTS_DAYS, UPCOMING_DAYS, type CompetitionConfig } from '../config';
 import type { CompetitionStore, MatchRecord, PlayerLine } from '../types';
-import { buildModelSuite, type ModelSuite } from '../analytics/ratings';
+import {
+  buildModelSuite,
+  fitEloGoalModel,
+  isNationalTeamComp,
+  leagueAverageGoals,
+  type EloDrawParams,
+  type EloGoalCoeffs,
+  type ModelSuite,
+} from '../analytics/ratings';
 import { contextFor, predictProbsOnly, type PredictContext, type PredictionResult, type ProbsOnlyResult } from '../analytics/predict';
 import { walkForwardDC } from '../analytics/backtest';
 import { eloPercentile } from '../analytics/popularity';
@@ -55,6 +68,20 @@ export interface FullPrediction {
   projections: StatProjection[];
 }
 
+/** Parámetros ajustados solo con partidos anteriores al inicio de una temporada (backtest sin fuga). */
+export interface PreSeasonParams {
+  /** instante de corte (ms): inicio de la temporada evaluada */
+  cutoff: number;
+  drawParams: EloDrawParams;
+  eloGoal: EloGoalCoeffs;
+  leagueAvgGoals: Map<string, number>;
+  /** partidos terminados anteriores al corte usados en el ajuste */
+  samples: number;
+}
+
+/** Partidos mínimos anteriores al corte para ajustar parámetros propios (si no, se usan los actuales). */
+export const PRESEASON_MIN_SAMPLES = 300;
+
 export interface BuildContext {
   now: number;
   refDate: string;
@@ -79,8 +106,15 @@ export interface BuildContext {
   /** líneas de jugador de partidos de la temporada actual de su competición */
   currentLines: PlayerLine[];
   compNames: Map<string, string>;
+  /** ranking Elo: clubes entre clubes (1..N) y selecciones nacionales entre selecciones (1..M) */
   globalEloRank: Map<string, number>;
+  /** equipos que solo juegan competiciones de selecciones */
+  nationalTeams: Set<string>;
+  /** tamaño de cada ranking (posición por defecto de un equipo sin partidos = tamaño + 1) */
+  rankPool: { clubs: number; national: number };
   eloP90: number;
+  /** competición → parámetros ajustados antes del inicio de su temporada actual (backtest sin fuga) */
+  preSeason: Map<string, PreSeasonParams>;
   /** liga → (id de partido → modelo DC walk-forward) */
   wfModels: Map<string, Map<string, DCModel>>;
   /** liga → modelos walk-forward en orden cronológico (fecha del primer partido que lo usó) */
@@ -123,6 +157,38 @@ export function isFinishedRecord(m: MatchRecord): m is MatchRecord & { score: No
   return m.status === 'finished' && !!m.score && Number.isFinite(m.score.home) && Number.isFinite(m.score.away);
 }
 
+/** A match still "live" this long after kickoff is a stale snapshot (the run that would have finished it failed). */
+export const STALE_LIVE_MS = 4 * 3_600_000;
+/** Tolerance for a "finished" match whose kickoff is (slightly) in the future (time zones, rescheduling). */
+export const FUTURE_FINISHED_TOLERANCE_MS = 3_600_000;
+
+/**
+ * Status coherent with the reference time: a "live" match from hours/days ago is published as pending (no score,
+ * no live clock) instead of "En juego 67'" for days, and a "finished" match in the future (impossible) as scheduled
+ * without score/stats/events, so it never enters the models. Returns the same object when nothing changes.
+ */
+export function coherentStatus(m: MatchRecord, now: number): MatchRecord {
+  const t = Date.parse(m.date);
+  const staleLive = m.status === 'live' && t < now - STALE_LIVE_MS;
+  const futureFinished = m.status === 'finished' && t > now + FUTURE_FINISHED_TOLERANCE_MS;
+  if (!staleLive && !futureFinished) return m;
+  const out: MatchRecord = { ...m, status: 'scheduled' };
+  delete out.statusDetail;
+  delete out.score;
+  delete out.stats;
+  delete out.events;
+  delete out.summaryFetched;
+  return out;
+}
+
+/** Last successful download of a competition (fetchedAt; older stores: updatedAt), never after `now`. */
+export function storeDataUpdatedAt(store: CompetitionStore | undefined, now: number): string | undefined {
+  const iso = store?.fetchedAt ?? store?.updatedAt;
+  const t = iso ? Date.parse(iso) : NaN;
+  if (!Number.isFinite(t) || t <= 0) return undefined;
+  return new Date(Math.min(t, now)).toISOString();
+}
+
 // ---------------------------------------------------------------------------
 // Construcción
 // ---------------------------------------------------------------------------
@@ -138,13 +204,28 @@ function betterRef(a: TeamRef | undefined, b: TeamRef): TeamRef {
   return sc(b) >= sc(a) ? { ...a, ...b } : { ...b, ...a };
 }
 
+/** Ids aptos para nombres de archivo publicados (ESPN usa números; cualquier otra cosa se descarta). */
+const SAFE_ID = /^[A-Za-z0-9_-]{1,32}$/;
+const safeId = (x: unknown): x is string => typeof x === 'string' && SAFE_ID.test(x);
+
 export function createContext(opts: BuildOptions): BuildContext {
   const log = opts.log ?? (() => {});
   const now = opts.now.getTime();
   const refDate = opts.now.toISOString();
   const configById = new Map(opts.configs.map((c) => [c.id, c]));
   const stores = new Map<string, CompetitionStore>();
-  for (const s of opts.stores) if (configById.has(s.compId)) stores.set(s.compId, s);
+  // estados incoherentes con la fecha de referencia (en juego de hace días, terminado en el futuro): ver coherentStatus
+  let incoherent = 0;
+  for (const s of opts.stores) {
+    if (!configById.has(s.compId)) continue;
+    const matches = s.matches.map((m) => {
+      const c = coherentStatus(m, now);
+      if (c !== m) incoherent++;
+      return c;
+    });
+    stores.set(s.compId, { ...s, matches });
+  }
+  if (incoherent) log(`  aviso: ${incoherent} partidos con estado incoherente con la fecha (en juego de hace horas o terminados en el futuro) se publican como pendientes`);
   const only = opts.only?.length ? new Set(opts.only) : undefined;
   const publish = opts.configs.filter((c) => stores.has(c.id) && (!only || only.has(c.id)));
 
@@ -154,7 +235,7 @@ export function createContext(opts: BuildOptions): BuildContext {
   for (const s of stores.values()) {
     const seen = new Map<string, MatchRecord>();
     for (const m of s.matches) {
-      if (!m?.id || !m.home?.id || !m.away?.id) continue;
+      if (!m || !safeId(m.id) || !safeId(m.home?.id) || !safeId(m.away?.id) || !Number.isFinite(Date.parse(m.date))) continue;
       const prev = seen.get(m.id);
       seen.set(m.id, prev ? richer(prev, m) : m);
     }
@@ -175,7 +256,7 @@ export function createContext(opts: BuildOptions): BuildContext {
     teamRefs.set(m.away.id, betterRef(teamRefs.get(m.away.id), m.away));
   }
   for (const s of stores.values()) {
-    for (const g of s.standings ?? []) for (const r of g.rows ?? []) if (r?.team?.id && !teamRefs.has(r.team.id)) teamRefs.set(r.team.id, r.team);
+    for (const g of s.standings ?? []) for (const r of g.rows ?? []) if (safeId(r?.team?.id) && !teamRefs.has(r.team.id)) teamRefs.set(r.team.id, r.team);
   }
 
   // ---- jugadores
@@ -183,7 +264,7 @@ export function createContext(opts: BuildOptions): BuildContext {
   const allLines: PlayerLine[] = [];
   for (const s of stores.values()) {
     for (const l of s.players ?? []) {
-      if (!l?.playerId || !l.matchId || !l.teamId) continue;
+      if (!l || !safeId(l.playerId) || !safeId(l.matchId) || !safeId(l.teamId)) continue;
       const k = `${l.matchId}:${l.playerId}`;
       if (lineSeen.has(k)) continue;
       lineSeen.add(k);
@@ -203,11 +284,18 @@ export function createContext(opts: BuildOptions): BuildContext {
   // ---- modelos a fecha actual
   const suite = buildModelSuite([...stores.values()], opts.configs, refDate);
   const ratings = suite.eloBuild.elo.ratings();
+  // selecciones: equipos que solo aparecen en competiciones de selecciones (fuera del ranking de clubes)
+  const nationalComps = new Set(opts.configs.filter((c) => isNationalTeamComp(c)).map((c) => c.id));
+  const nationalTeams = new Set<string>();
+  for (const [team, list] of matchesByTeam) if (list.length && list.every((m) => nationalComps.has(m.compId))) nationalTeams.add(team);
   const ranked = Object.entries(ratings)
     .filter(([team]) => (suite.eloBuild.gamesByTeam.get(team) ?? 0) > 0)
     .sort((a, b) => b[1] - a[1]);
+  const clubs = ranked.filter(([team]) => !nationalTeams.has(team));
+  const nationals = ranked.filter(([team]) => nationalTeams.has(team));
   const globalEloRank = new Map<string, number>();
-  ranked.forEach(([team], i) => globalEloRank.set(team, i + 1));
+  clubs.forEach(([team], i) => globalEloRank.set(team, i + 1));
+  nationals.forEach(([team], i) => globalEloRank.set(team, i + 1));
 
   const upcomingIds = new Set<string>();
   const liveIds = new Set<string>();
@@ -240,7 +328,10 @@ export function createContext(opts: BuildOptions): BuildContext {
     currentLines,
     compNames: new Map(opts.configs.map((c) => [c.id, c.name])),
     globalEloRank,
-    eloP90: eloPercentile(ranked.map(([, r]) => r), 0.9),
+    nationalTeams,
+    rankPool: { clubs: clubs.length, national: nationals.length },
+    eloP90: eloPercentile(clubs.map(([, r]) => r), 0.9),
+    preSeason: new Map(),
     wfModels: new Map(),
     wfTimeline: new Map(),
     wf: new Map(),
@@ -305,7 +396,31 @@ export function wfContext(ctx: BuildContext, m: MatchRecord): PredictContext {
     const mod = wfModelAt(ctx, lg, t);
     if (mod) dc.set(lg, mod);
   }
+  const pre = m.currentSeason ? ctx.preSeason.get(comp.id) : undefined;
+  if (pre && t >= pre.cutoff) {
+    return { ...base, dcModels: dc, drawParams: pre.drawParams, eloGoal: pre.eloGoal, leagueAvgGoals: pre.leagueAvgGoals };
+  }
   return { ...base, dcModels: dc };
+}
+
+/**
+ * Parámetros "de pretemporada" a un instante de corte: empates del Elo (fitEloDrawParams), medias de goles por
+ * competición y modelo Elo→goles (con los Dixon-Coles walk-forward vigentes en el corte), usando solo partidos
+ * anteriores al corte. undefined si hay menos de PRESEASON_MIN_SAMPLES partidos.
+ */
+export function preSeasonParams(ctx: BuildContext, cutoff: number): PreSeasonParams | undefined {
+  const samples = ctx.suite.eloBuild.samples.filter((s) => Date.parse(s.date) < cutoff);
+  if (samples.length < PRESEASON_MIN_SAMPLES) return undefined;
+  const calib = samples.filter((s) => s.calibrated);
+  const drawParams = fitEloDrawParams((calib.length >= 200 ? calib : samples).map((s) => ({ diff: s.diff, outcome: s.outcome })));
+  const leagueAvgGoals = leagueAverageGoals([...ctx.stores.values()], new Date(cutoff).toISOString());
+  const dcAt = new Map<string, DCModel>();
+  for (const lg of ctx.wfTimeline.keys()) {
+    const mod = wfModelAt(ctx, lg, cutoff);
+    if (mod) dcAt.set(lg, mod);
+  }
+  const eloGoal = fitEloGoalModel(samples, ctx.suite.eloBuild.homeLeague, leagueAvgGoals, dcAt);
+  return { cutoff, drawParams, eloGoal, leagueAvgGoals, samples: samples.length };
 }
 
 /**
@@ -337,6 +452,18 @@ export function computeWalkForward(ctx: BuildContext): { refits: number; predict
       refits += timeline.length;
       ctx.wfTimeline.set(comp.id, timeline);
     }
+  }
+  // parámetros sin fuga por competición: corte = primer partido terminado de su temporada actual (por día)
+  const byCutoff = new Map<number, PreSeasonParams | undefined>();
+  for (const [compId, list] of ctx.matchesByComp) {
+    if (!ctx.configById.has(compId)) continue;
+    let first = Infinity;
+    for (const m of list) if (m.currentSeason && isFinishedRecord(m)) first = Math.min(first, Date.parse(m.date));
+    if (!Number.isFinite(first)) continue;
+    const day = Math.floor(first / DAY_MS) * DAY_MS;
+    if (!byCutoff.has(day)) byCutoff.set(day, preSeasonParams(ctx, day));
+    const p = byCutoff.get(day);
+    if (p) ctx.preSeason.set(compId, p);
   }
   let n = 0;
   for (const [compId, list] of ctx.matchesByComp) {
@@ -375,7 +502,7 @@ export function competitionTeams(ctx: BuildContext, compId: string): string[] {
     set.add(m.home.id);
     set.add(m.away.id);
   }
-  for (const g of ctx.stores.get(compId)?.standings ?? []) for (const r of g.rows ?? []) if (r?.team?.id) set.add(r.team.id);
+  for (const g of ctx.stores.get(compId)?.standings ?? []) for (const r of g.rows ?? []) if (safeId(r?.team?.id)) set.add(r.team.id);
   return [...set];
 }
 

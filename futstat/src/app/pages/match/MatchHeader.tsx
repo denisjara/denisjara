@@ -214,7 +214,7 @@ export function MatchHeader({ file, match }: MatchHeaderProps) {
           <span className="num font-semibold">{xg(la)}</span>
         </Fact>
         <Fact label="Marcador probable" className="border-l border-line/70 sm:border-l-0">
-          <span className="num font-semibold">{pred?.likelyScore ?? '–'}</span>
+          <span className="num font-semibold">{pred?.likelyScore ?? '—'}</span>
           {pred && <span className="num ml-1.5 text-[12px] text-ink-3">{pct(pred.likelyScoreProb, 1)}</span>}
         </Fact>
         <Fact
@@ -236,7 +236,7 @@ export function MatchHeader({ file, match }: MatchHeaderProps) {
               <span className="num text-[12px] text-ink-3">{num(confidence * 100, 0)}/100</span>
             </span>
           ) : (
-            '–'
+            '—'
           )}
         </Fact>
       </dl>

@@ -4,14 +4,19 @@
  *  1. λ por Dixon-Coles de la liga del partido (o de la liga doméstica común de ambos equipos).
  *  2. Probabilidades Elo (eloProbs con drawParams calibrados).
  *  3. Mercado sin margen (Shin) si hay cuotas 1X2 completas.
- *  4. Ensamble lineal con pesos MODEL (renormalizados si falta una fuente). Sin DC, la parte de goles
- *     usa el modelo Elo→goles con peso reducido (ELO_GOAL_WEIGHT_FACTOR).
+ *  4. Ensamble lineal. Con cuotas: wDixonColes/wElo/wMarket; sin cuotas: wDixonColesNoMarket/wEloNoMarket
+ *     (pesos calibrados por separado en el backtest). Sin DC, la parte de goles usa el modelo Elo→goles con peso
+ *     reducido (ELO_GOAL_WEIGHT_FACTOR). Si algún equipo tiene menos de LOW_DATA_GAMES partidos en el Elo y hay
+ *     cuotas, el peso de las fuentes estadísticas se reduce (factor lowDataFactor) en favor del mercado.
  *  5. λ finales con fitLambdas hacia el objetivo ensamblado (1X2 + P(más de 2.5) mezcla DC/mercado; si la casa
  *     ofrece otra línea x.5 se traduce a P(más de 2.5) con un total Poisson equivalente).
  *  6. Matriz final con rho (DC o −0.05), mercados de goles, mercados de estadísticas, apuestas de valor.
  *
- * Decisiones calibradas con un backtest walk-forward sobre datos reales (mar–oct 2026, cuotas de cierre):
- *  - Elo→goles con peso 0.2·wDixonColes: con más peso empeoraba el RPS en cruces entre ligas (0.183 → 0.181).
+ * Decisiones calibradas con un backtest walk-forward sobre datos reales (temporadas actuales, cuotas de cierre;
+ * números en el comentario de MODEL en pipeline/config.ts):
+ *  - Pesos con y sin cuotas elegidos por rejilla (menor RPS); el mercado se limita al 80 % porque el backtest usa
+ *    cuotas de cierre y las predicciones de partidos próximos usan cuotas previas.
+ *  - Elo→goles con peso eloGoalWeightFactor·wDixonColes (0.2): con más peso no mejora el RPS en cruces entre ligas.
  *  - Apuestas de valor solo con modelo Dixon-Coles y EV <= MAX_EV: los picks de cruces entre ligas perdían ~35%
  *    y los de EV > 20% ~28% frente a cuotas de cierre; con estas reglas el ROI ≈ −5% (≈ margen de la casa).
  */
@@ -43,7 +48,7 @@ import {
   type DCModel,
   type Elo,
 } from '../../src/lib/models';
-import { COMPETITION_BY_ID, MODEL, type CompetitionConfig } from '../config';
+import { COMPETITION_BY_ID, MODEL, isPlausibleMargin, overroundOf, type CompetitionConfig } from '../config';
 import type { MatchRecord } from '../types';
 import {
   eloGoalBaseTotal,
@@ -60,7 +65,56 @@ import { findValueBets } from './value';
 /** rho por defecto cuando no hay modelo Dixon-Coles. */
 export const DEFAULT_RHO = -0.05;
 /** Factor de peso de la parte "goles" cuando se usa Elo→goles en lugar de Dixon-Coles. */
-export const ELO_GOAL_WEIGHT_FACTOR = 0.2;
+export const ELO_GOAL_WEIGHT_FACTOR = MODEL.eloGoalWeightFactor;
+/** Partidos Elo por debajo de los cuales un equipo se considera "con pocos datos" (equipos de copa, recién llegados). */
+export const LOW_DATA_GAMES = MODEL.lowDataGames;
+
+/** Pesos del ensamble (por defecto los de MODEL; el backtest de calibración los sustituye). */
+export interface EnsembleWeights {
+  dixonColes: number;
+  elo: number;
+  market: number;
+  dixonColesNoMarket: number;
+  eloNoMarket: number;
+  /** factor de la parte de goles cuando sale de Elo→goles en lugar de Dixon-Coles */
+  eloGoalFactor: number;
+  /** partidos Elo mínimos del equipo con menos datos para usar los pesos completos */
+  lowDataGames: number;
+  /** factor (0..1) de los pesos estadísticos con 0 partidos Elo y cuotas disponibles (sube linealmente hasta 1) */
+  lowDataFloor: number;
+}
+
+export function defaultWeights(): EnsembleWeights {
+  return {
+    dixonColes: MODEL.wDixonColes,
+    elo: MODEL.wElo,
+    market: MODEL.wMarket,
+    dixonColesNoMarket: MODEL.wDixonColesNoMarket,
+    eloNoMarket: MODEL.wEloNoMarket,
+    eloGoalFactor: MODEL.eloGoalWeightFactor,
+    lowDataGames: MODEL.lowDataGames,
+    lowDataFloor: MODEL.lowDataFloor,
+  };
+}
+
+/**
+ * Pesos efectivos de un partido: (goles, Elo, mercado) sin renormalizar.
+ * `minGames` = partidos Elo previos del equipo con menos historial.
+ */
+export function ensembleWeights(
+  w: EnsembleWeights,
+  o: { hasMarket: boolean; goalKind: 'dc' | 'elo-goals'; minGames: number },
+): { goal: number; elo: number; market: number } {
+  const dc = o.hasMarket ? w.dixonColes : w.dixonColesNoMarket;
+  let goal = o.goalKind === 'dc' ? dc : dc * w.eloGoalFactor;
+  let elo = o.hasMarket ? w.elo : w.eloNoMarket;
+  if (o.hasMarket && w.lowDataGames > 0 && o.minGames < w.lowDataGames) {
+    const f = w.lowDataFloor + (1 - w.lowDataFloor) * Math.max(0, o.minGames) / w.lowDataGames;
+    goal *= f;
+    elo *= f;
+  }
+  return { goal, elo, market: o.hasMarket ? w.market : 0 };
+}
 /** Tamaño de la matriz interna (0..10). */
 const FULL_GOALS = 10;
 /** Divergencia Jensen-Shannon (nats) a partir de la cual el acuerdo entre fuentes se considera nulo (≈ percentil 98 real). */
@@ -78,6 +132,8 @@ export interface PredictContext {
   preMatch?: Map<string, { home: number; away: number }>;
   /** configuraciones por id (tiers para equipos nuevos y nombres de ligas). Default: COMPETITION_BY_ID */
   configs?: Map<string, CompetitionConfig>;
+  /** pesos del ensamble (por defecto los de MODEL) */
+  weights?: EnsembleWeights;
 }
 
 export interface PredictOptions {
@@ -103,6 +159,8 @@ export interface ProbsOnlyResult {
   lambdaHome: number;
   lambdaAway: number;
   sources: { elo: Prob1X2; dc?: Prob1X2; eloGoals?: Prob1X2; market?: Prob1X2; marketOver25?: number };
+  /** partidos Elo previos del equipo con menos historial */
+  minEloGames: number;
 }
 
 /** Contexto de predicción para una competición a partir de un ModelSuite. */
@@ -149,6 +207,7 @@ interface Core {
   weights: { dixonColes: number; elo: number; market: number };
   ensemble: Prob1X2;
   over25Target: number;
+  minEloGames: number;
   rho: number;
   lambdaHome: number;
   lambdaAway: number;
@@ -221,6 +280,8 @@ function goalSource(match: MatchRecord, ctx: PredictContext, diff: number, neutr
 
 function marketFrom(odds: OddsSnapshot | undefined): Core['market'] {
   if (!odds || !validOdds(odds.home) || !validOdds(odds.draw) || !validOdds(odds.away)) return undefined;
+  // a trio with an impossible overround is a feed error: never let it into the ensemble (weight 0.8)
+  if (!isPlausibleMargin(overroundOf(odds.home, odds.draw, odds.away))) return undefined;
   const d = devigDetailed([odds.home, odds.draw, odds.away], 'shin');
   if (!d.probs.every((p) => p > 0 && Number.isFinite(p))) return undefined;
   const out: NonNullable<Core['market']> = {
@@ -229,7 +290,7 @@ function marketFrom(odds: OddsSnapshot | undefined): Core['market'] {
     method: d.method,
   };
   const line = odds.totalLine;
-  if (line !== undefined && isHalfLine(line) && line > 0 && line < 8 && validOdds(odds.over) && validOdds(odds.under)) {
+  if (line !== undefined && isHalfLine(line) && line > 0 && line < 8 && validOdds(odds.over) && validOdds(odds.under) && isPlausibleMargin(overroundOf(odds.over, odds.under))) {
     const ou = devigDetailed([odds.over, odds.under], 'shin');
     const pOver = ou.probs[0];
     if (pOver > 0 && pOver < 1) out.over25 = Math.abs(line - 2.5) < 1e-9 ? pOver : over25FromLine(line, pOver);
@@ -268,6 +329,15 @@ export function over25FromLine(line: number, pOver: number): number {
   return poissonTail(3, 0.5 * (lo + hi));
 }
 
+/** Partidos Elo de un equipo anteriores a un instante (los partidos futuros cuentan todos). */
+export function eloGamesBefore(elo: Elo, team: string, t: number): number {
+  const h = elo.history(team);
+  if (!Number.isFinite(t)) return h.length;
+  let n = 0;
+  for (const e of h) if (Date.parse(e.date) < t) n++;
+  return n;
+}
+
 function core(match: MatchRecord, ctx: PredictContext): Core {
   const homeId = match.home.id;
   const awayId = match.away.id;
@@ -277,10 +347,13 @@ function core(match: MatchRecord, ctx: PredictContext): Core {
   const eloP = eloProbs(diff, ctx.drawParams);
   const goal = goalSource(match, ctx, diff, neutral);
   const market = marketFrom(match.odds);
+  const t = Date.parse(match.date);
+  const minEloGames = Math.min(eloGamesBefore(ctx.elo, homeId, t), eloGamesBefore(ctx.elo, awayId, t));
 
-  const wGoal = goal.kind === 'dc' ? MODEL.wDixonColes : MODEL.wDixonColes * ELO_GOAL_WEIGHT_FACTOR;
-  const wElo = MODEL.wElo;
-  const wMkt = market ? MODEL.wMarket : 0;
+  const ew = ensembleWeights(ctx.weights ?? defaultWeights(), { hasMarket: !!market, goalKind: goal.kind, minGames: minEloGames });
+  const wGoal = ew.goal;
+  const wElo = ew.elo;
+  const wMkt = ew.market;
   const sw = wGoal + wElo + wMkt;
   const ensemble = blend([
     { probs: goal.probs, weight: wGoal },
@@ -295,7 +368,7 @@ function core(match: MatchRecord, ctx: PredictContext): Core {
 
   // objetivo de Más de 2.5: mezcla modelo de goles / mercado
   const over25Target =
-    market?.over25 !== undefined ? (wGoal * goal.over25 + MODEL.wMarket * market.over25) / (wGoal + MODEL.wMarket) : goal.over25;
+    market?.over25 !== undefined && wGoal + wMkt > 0 ? (wGoal * goal.over25 + wMkt * market.over25) / (wGoal + wMkt) : goal.over25;
 
   const rho = goal.rho;
   const fitted = fitLambdas({ ...ensemble, over25: over25Target }, rho, { lambdaHome: goal.lambdaHome, lambdaAway: goal.lambdaAway });
@@ -313,6 +386,7 @@ function core(match: MatchRecord, ctx: PredictContext): Core {
     weights,
     ensemble,
     over25Target,
+    minEloGames,
     rho,
     lambdaHome: fitted.lambdaHome,
     lambdaAway: fitted.lambdaAway,
@@ -626,5 +700,6 @@ export function predictProbsOnly(match: MatchRecord, ctx: PredictContext): Probs
     lambdaHome: c.lambdaHome,
     lambdaAway: c.lambdaAway,
     sources,
+    minEloGames: c.minEloGames,
   };
 }

@@ -7,7 +7,7 @@ import { Link } from 'react-router-dom';
 import { Check, History, Users, X } from 'lucide-react';
 import type { MatchSummary, PlayerRef, PlayerSeasonRow, StandingRow, TeamRef } from '../../../types/data';
 import { Card, EmptyState, MatchRow, Meter, Sparkline, TeamCrest, cx } from '../../components';
-import { pct } from '../../lib/format';
+import { int, pct, sumFinite } from '../../lib/format';
 
 export const POSITION_SHORT: Record<PlayerRef['position'], string> = { G: 'POR', D: 'DEF', M: 'MED', F: 'DEL', '?': '—' };
 export const POSITION_LONG: Record<PlayerRef['position'], string> = {
@@ -111,7 +111,7 @@ export function TeamLink({ team, size = 20, className, bold }: { team: TeamRef; 
 export function PlayerForm({ player }: { player: PlayerSeasonRow }) {
   return (
     <span className="inline-flex items-center gap-2">
-      <span className="num w-6 text-right font-semibold text-ink-1">{Math.round(player.formIndex)}</span>
+      <span className="num w-6 text-right font-semibold text-ink-1">{int(player.formIndex)}</span>
       <Sparkline
         values={player.formTrend ?? []}
         width={52}
@@ -188,8 +188,8 @@ export function HotPlayersList({ players, limit = 6, showTeam = true }: { player
       <ol className="divide-y divide-line/70">
         {top.map((p, i) => {
           const l5 = p.last5 ?? [];
-          const g5 = l5.reduce((s, x) => s + x.goals, 0);
-          const a5 = l5.reduce((s, x) => s + x.assists, 0);
+          const g5 = sumFinite(l5, (x) => x.goals);
+          const a5 = sumFinite(l5, (x) => x.assists);
           return (
             <li key={`${p.player.id}-${p.compId}`} className="grid grid-cols-[20px_minmax(0,1fr)_auto] items-center gap-3 px-3 py-2.5 sm:px-4">
               <span className="num text-[11px] font-semibold text-ink-3">{i + 1}</span>
@@ -206,7 +206,7 @@ export function HotPlayersList({ players, limit = 6, showTeam = true }: { player
                     )}
                     {showTeam && <span aria-hidden="true">·</span>}
                     <span className="num shrink-0" title="Goles y asistencias en los últimos 5 partidos">
-                      {g5} G · {a5} A <span className="hidden sm:inline">(últ. 5)</span>
+                      {int(g5)} G · {int(a5)} A <span className="hidden sm:inline">(últ. 5)</span>
                     </span>
                   </span>
                 </span>
@@ -214,8 +214,8 @@ export function HotPlayersList({ players, limit = 6, showTeam = true }: { player
               <span className="flex items-center gap-3">
                 <Sparkline values={p.formTrend ?? []} width={56} height={22} domain={[3, 10]} ariaLabel={`Notas recientes de ${p.player.name}`} className="hidden sm:block" />
                 <span className="w-[54px]">
-                  <span className="num block text-right text-[14px] font-bold text-ink-1">{Math.round(p.formIndex)}</span>
-                  <Meter value={p.formIndex / 100} height={4} label={`Índice de forma ${Math.round(p.formIndex)} de 100`} />
+                  <span className="num block text-right text-[14px] font-bold text-ink-1">{int(p.formIndex)}</span>
+                  <Meter value={p.formIndex / 100} height={4} label={`Índice de forma ${int(p.formIndex)} de 100`} />
                 </span>
               </span>
             </li>
@@ -234,5 +234,5 @@ export function avg(xs: number[]): number {
 
 /** Ordinal español corto: 1 → "1.º" */
 export function ordinal(n: number | undefined): string {
-  return typeof n === 'number' && Number.isFinite(n) ? `${Math.round(n)}.º` : '–';
+  return typeof n === 'number' && Number.isFinite(n) ? `${Math.round(n)}.º` : '—';
 }

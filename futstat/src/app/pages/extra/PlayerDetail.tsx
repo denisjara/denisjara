@@ -80,7 +80,7 @@ export function PlayerDetail({ row, peers }: { row: PlayerSeasonRow; peers: Peer
           <Stat label="G + A /90" value={num(ga90, 2)} sub="goles + asist." />
           <Stat label="Goles" value={int(row.goals)} sub={`${num(row.per90?.goals, 2)} por 90`} />
           <Stat label="Asistencias" value={int(row.assists)} sub={`${num(row.per90?.assists, 2)} por 90`} />
-          <Stat label="Precisión" value={accuracy !== undefined ? pct(accuracy) : '–'} sub={`${int(row.shotsOnTarget)} de ${int(row.shots)} a puerta`} />
+          <Stat label="Precisión" value={accuracy !== undefined ? pct(accuracy) : '—'} sub={`${int(row.shotsOnTarget)} de ${int(row.shots)} a puerta`} />
           <Stat label="Tarjetas" value={`${int(row.yellow)} · ${int(row.red)}`} sub="amar. · rojas" />
           <Stat label="Faltas" value={`${int(row.foulsCommitted)} · ${int(row.foulsSuffered)}`} sub="comet. · recib." />
           {typeof row.saves === 'number' ? <Stat label="Paradas" value={int(row.saves)} /> : <Stat label="Fuera de juego" value={int(row.offsides)} sub="temporada" />}
@@ -130,12 +130,12 @@ export function PlayerDetail({ row, peers }: { row: PlayerSeasonRow; peers: Peer
                       <th scope="row" className="max-w-[140px] truncate border-b border-line/70 px-2.5 py-2 text-left font-medium text-ink-1">
                         {g.opponent}
                       </th>
-                      <td className="num border-b border-line/70 px-2 py-2 text-right">{dnp ? '–' : `${g.minutes}'`}</td>
-                      <td className={cx('num border-b border-line/70 px-2 py-2 text-right', g.goals > 0 && 'font-semibold text-ink-1')}>{dnp ? '–' : g.goals}</td>
-                      <td className={cx('num border-b border-line/70 px-2 py-2 text-right', g.assists > 0 && 'font-semibold text-ink-1')}>{dnp ? '–' : g.assists}</td>
+                      <td className="num border-b border-line/70 px-2 py-2 text-right">{dnp ? '—' : `${g.minutes}'`}</td>
+                      <td className={cx('num border-b border-line/70 px-2 py-2 text-right', g.goals > 0 && 'font-semibold text-ink-1')}>{dnp ? '—' : g.goals}</td>
+                      <td className={cx('num border-b border-line/70 px-2 py-2 text-right', g.assists > 0 && 'font-semibold text-ink-1')}>{dnp ? '—' : g.assists}</td>
                       <td className="num whitespace-nowrap border-b border-line/70 px-2 py-2 text-right">
                         {dnp ? (
-                          '–'
+                          '—'
                         ) : (
                           <>
                             {g.shots}
@@ -145,7 +145,7 @@ export function PlayerDetail({ row, peers }: { row: PlayerSeasonRow; peers: Peer
                       </td>
                       <td className="num border-b border-line/70 px-2 py-2 text-right">
                         {dnp ? (
-                          '–'
+                          '—'
                         ) : g.cards > 0 ? (
                           <span className="inline-flex items-center gap-1">
                             <span className="h-3 w-2 rounded-[1px] bg-warn" aria-hidden="true" />

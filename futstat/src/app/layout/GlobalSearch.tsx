@@ -7,6 +7,7 @@ import { useDismiss, useHotkey } from '../lib/hooks';
 import { KIND_LABEL } from '../lib/competitions';
 import { TeamCrest } from '../components/TeamCrest';
 import { cx } from '../components/Card';
+import { teamColor } from '../lib/colors';
 
 interface Result {
   kind: 'comp' | 'team';
@@ -17,6 +18,8 @@ interface Result {
   flag?: string;
   logo?: string;
   abbr?: string;
+  /** color identitario del equipo (hex sin #), para el escudo de reserva */
+  color?: string;
 }
 
 export interface GlobalSearchProps {
@@ -29,6 +32,8 @@ export interface GlobalSearchProps {
 }
 
 const MAX = 8;
+/** Longitud máxima de la búsqueda (entrada del usuario acotada). */
+const MAX_QUERY = 60;
 
 /**
  * Buscador global (combobox ARIA): equipos (meta.teams) y competiciones (meta.competitions).
@@ -62,7 +67,7 @@ export function GlobalSearch({ hotkey, autoFocus, onNavigate, className }: Globa
 
   const results = useMemo<Result[]>(() => {
     if (!meta) return [];
-    const nq = normalizeText(q);
+    const nq = normalizeText(q.slice(0, MAX_QUERY));
     const comps = meta.competitions
       .filter((c) => !nq || normalizeText(`${c.name} ${c.shortName} ${c.country}`).includes(nq))
       .sort((a, b) => b.tier - a.tier)
@@ -77,7 +82,7 @@ export function GlobalSearch({ hotkey, autoFocus, onNavigate, className }: Globa
       })
       .filter((x) => x.score < 9)
       .sort((a, b) => a.score - b.score || a.t.name.localeCompare(b.t.name, 'es'))
-      .map<Result>(({ t }) => ({ kind: 'team', id: t.id, label: t.name, sub: compName.get(t.compId) ?? t.abbr, href: `/t/${t.id}`, logo: t.logo, abbr: t.abbr }));
+      .map<Result>(({ t }) => ({ kind: 'team', id: t.id, label: t.name, sub: compName.get(t.compId) ?? t.abbr, href: `/t/${t.id}`, logo: t.logo, abbr: t.abbr, color: t.color }));
     return [...teams.slice(0, MAX - Math.min(3, comps.length)), ...comps.slice(0, 3)].slice(0, MAX);
   }, [meta, q, compName]);
 
@@ -135,10 +140,11 @@ export function GlobalSearch({ hotkey, autoFocus, onNavigate, className }: Globa
           aria-activedescendant={showList ? optId(active) : undefined}
           autoComplete="off"
           spellCheck={false}
+          maxLength={MAX_QUERY}
           value={q}
           placeholder="Buscar equipo o competición…"
           onChange={(e) => {
-            setQ(e.target.value);
+            setQ(e.target.value.slice(0, MAX_QUERY));
             setOpen(true);
           }}
           onFocus={() => setOpen(true)}
@@ -185,9 +191,18 @@ export function GlobalSearch({ hotkey, autoFocus, onNavigate, className }: Globa
             className={cx('flex cursor-pointer items-center gap-3 rounded-lg px-2 py-2', i === active ? 'bg-surface-3' : '')}
           >
             {r.kind === 'team' ? (
-              <TeamCrest team={{ name: r.label, abbr: r.abbr, logo: r.logo }} size={24} />
+              <span className="relative inline-flex shrink-0">
+                <TeamCrest team={{ name: r.label, abbr: r.abbr, logo: r.logo, color: r.color }} size={24} />
+                {r.color && (
+                  <span
+                    className="absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full ring-2 ring-surface-2"
+                    style={{ background: teamColor({ name: r.label, color: r.color }) }}
+                    aria-hidden="true"
+                  />
+                )}
+              </span>
             ) : (
-              <span className="flex h-6 w-6 items-center justify-center text-[16px]" aria-hidden="true">{r.flag ?? <Trophy className="h-4 w-4" />}</span>
+              <span className="flex h-6 w-6 shrink-0 items-center justify-center overflow-hidden whitespace-nowrap text-[16px]" aria-hidden="true">{r.flag ?? <Trophy className="h-4 w-4" />}</span>
             )}
             <span className="min-w-0 flex-1">
               <span className="block truncate text-[13px] font-medium text-ink-1">{r.label}</span>

@@ -40,7 +40,7 @@ export function SegmentedControl<T extends string>({ options, value, onChange, a
     refs.current[options.indexOf(opt)]?.focus();
   };
   return (
-    <div role="radiogroup" aria-label={ariaLabel} className={cx('inline-flex rounded-lg border border-line bg-surface-2 p-0.5', full && 'flex w-full', className)}>
+    <div role="radiogroup" aria-label={ariaLabel} className={cx('inline-flex max-w-full rounded-lg border border-line bg-surface-2 p-0.5', full && 'flex w-full', className)}>
       {options.map((o, i) => {
         const active = o.value === value;
         return (
@@ -61,7 +61,14 @@ export function SegmentedControl<T extends string>({ options, value, onChange, a
               active ? 'bg-surface-3 text-ink-1 shadow-[inset_0_-2px_0_0_rgb(var(--c-accent-text))]' : 'text-ink-2 hover:text-ink-1',
             )}
           >
-            {o.label}
+            {/* texto de las opciones acotado: un nombre de equipo anómalo no puede ensanchar la página */}
+            {typeof o.label === 'string' ? (
+              <span className="max-w-[6rem] truncate sm:max-w-[11rem]" title={o.label}>
+                {o.label}
+              </span>
+            ) : (
+              o.label
+            )}
             {typeof o.count === 'number' && (
               <span className={cx('num rounded px-1 text-2xs', active ? 'bg-bg/60 text-ink-1' : 'bg-surface-3 text-ink-3')}>{o.count}</span>
             )}

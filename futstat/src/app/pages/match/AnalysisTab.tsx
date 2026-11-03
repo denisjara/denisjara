@@ -7,6 +7,7 @@ import { useMediaQuery } from '../../lib/hooks';
 import { ev as fmtEv, fairOddsFromProb, int, num, odds as fmtOdds, pct, signed, signedPct, xg } from '../../lib/format';
 import { noteColor } from '../competition/shared';
 import { pickMarketLabel } from '../../lib/picks';
+import { lookup } from '../../lib/lookup';
 import { DistColumns, SplitBar } from './charts';
 import { Panel, Stat, TeamTag } from './parts';
 import { foldTail, fmtLine, localizeNumbers, matrixStats, topScores, totalGoalsDist, validMatrix } from './utils';
@@ -121,7 +122,7 @@ function SourcesPanel({ file, match }: TabProps) {
     {
       id: 'market',
       name: 'Mercado',
-      detail: m.market ? `Sin margen (${METHOD_LABEL[m.market.method] ?? m.market.method}) · margen ${pct(m.market.margin, 1)}` : 'Sin cuotas disponibles',
+      detail: m.market ? `Sin margen${lookup(METHOD_LABEL, m.market.method) ? ` (${lookup(METHOD_LABEL, m.market.method)})` : ''} · margen ${pct(m.market.margin, 1)}` : 'Sin cuotas disponibles',
       weight: m.weights?.market,
       probs: m.market?.probs,
     },
@@ -133,7 +134,11 @@ function SourcesPanel({ file, match }: TabProps) {
       description="El pronóstico final combina tres fuentes independientes. El peso de cada una depende de los datos disponibles."
       info="Dixon-Coles estima ataque y defensa de cada equipo con ponderación temporal; Elo mide la fuerza global con todos los partidos; el mercado es la cuota de la casa sin su margen."
     >
-      <ProbBar1X2 p={m.ensemble} market={m.market?.probs} size="lg" legend labels={{ home: match.home.short, draw: 'Empate', away: match.away.short }} />
+      {m.ensemble ? (
+        <ProbBar1X2 p={m.ensemble} market={m.market?.probs} size="lg" legend labels={{ home: match.home.short, draw: 'Empate', away: match.away.short }} />
+      ) : (
+        <EmptyState icon={<Scale />} title="Probabilidades no disponibles" description="El pronóstico final de este partido no está disponible ahora mismo." />
+      )}
       <div className="relative mt-4 overflow-x-auto">
         <table className="w-full border-separate border-spacing-0 text-[13px]">
           <caption className="sr-only">Probabilidades de cada fuente del modelo y su peso en el ensamble</caption>
@@ -163,12 +168,12 @@ function SourcesPanel({ file, match }: TabProps) {
                   {r.probs && <ProbBar1X2 p={r.probs} size="sm" className="mt-1.5 max-w-[220px]" />}
                 </th>
                 <td className="num border-b border-line/70 px-2 py-2.5 text-right align-top text-ink-2">
-                  {r.final ? '—' : r.weight !== undefined ? pct(r.weight) : '–'}
+                  {r.final ? '—' : r.weight !== undefined ? pct(r.weight) : '—'}
                   {!r.final && r.weight !== undefined && <Meter value={r.weight} height={3} className="ml-auto mt-1.5 !w-10" color="rgb(var(--c-ink-3))" />}
                 </td>
                 {(['home', 'draw', 'away'] as const).map((s, i) => (
                   <td key={s} className={cx('num border-b border-line/70 py-2.5 text-right align-top', i === 2 ? 'pl-2' : 'px-2', r.final ? 'font-semibold text-ink-1' : 'text-ink-1')}>
-                    {r.probs ? pct(r.probs[s]) : '–'}
+                    {r.probs ? pct(r.probs[s]) : '—'}
                   </td>
                 ))}
               </tr>
@@ -176,7 +181,7 @@ function SourcesPanel({ file, match }: TabProps) {
           </tbody>
         </table>
       </div>
-      <OddsStrip probs={m.ensemble} odds={match.odds} />
+      {m.ensemble && <OddsStrip probs={m.ensemble} odds={match.odds} />}
     </Panel>
   );
 }
@@ -554,16 +559,16 @@ function TablePanel({ file, match }: TabProps) {
                       {r.note?.label && <span className="sr-only">({r.note.label})</span>}
                     </span>
                   </th>
-                  <td className="num border-b border-line/70 px-2 py-2 text-right text-ink-2">{r.played}</td>
+                  <td className="num border-b border-line/70 px-2 py-2 text-right text-ink-2">{int(r.played)}</td>
                   <td className="num hidden border-b border-line/70 px-2 py-2 text-right text-ink-2 sm:table-cell">
-                    {r.won}-{r.drawn}-{r.lost}
+                    {int(r.won)}-{int(r.drawn)}-{int(r.lost)}
                   </td>
                   <td className="num border-b border-line/70 px-2 py-2 text-right text-ink-2">{signed(r.gd, 0)}</td>
                   {hasXpts && <td className="num hidden border-b border-line/70 px-2 py-2 text-right text-ink-2 md:table-cell">{num(r.xPts, 1)}</td>}
                   <td className="hidden border-b border-line/70 px-2 py-2 md:table-cell">
                     <FormChips form={r.form} size="xs" />
                   </td>
-                  <td className="num border-b border-line/70 py-2 pl-2 pr-4 text-right text-[14px] font-bold text-ink-1">{r.points}</td>
+                  <td className="num border-b border-line/70 py-2 pl-2 pr-4 text-right text-[14px] font-bold text-ink-1">{int(r.points)}</td>
                 </tr>
               );
             })}
@@ -572,7 +577,7 @@ function TablePanel({ file, match }: TabProps) {
       </div>
       <p className="px-4 py-2.5 text-2xs text-ink-3">
         {total} equipos{ranks.length === 2 ? ` · ${Math.abs(ranks[0] - ranks[1])} puestos de diferencia` : ''}
-        {homeRow && awayRow ? ` · ${Math.abs(homeRow.points - awayRow.points)} puntos de diferencia` : ''}
+        {homeRow && awayRow && Number.isFinite(homeRow.points - awayRow.points) ? ` · ${Math.abs(homeRow.points - awayRow.points)} puntos de diferencia` : ''}
       </p>
     </Panel>
   );

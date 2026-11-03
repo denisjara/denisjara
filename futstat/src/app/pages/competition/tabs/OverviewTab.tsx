@@ -4,6 +4,7 @@ import type { CompetitionFile, MatchSummary } from '../../../../types/data';
 import { Card, EmptyState, MatchCard, Section } from '../../../components';
 import type { LiveScore } from '../../../lib/live';
 import { MiniStandings } from '../StandingsTable';
+import { nextMatchLabel } from '../../../lib/competitions';
 import { HotPlayersList, ResultsCard } from '../shared';
 
 export interface OverviewTabProps {
@@ -20,6 +21,12 @@ function MoreButton({ onClick, children }: { onClick: () => void; children: stri
       <ChevronRight className="h-4 w-4" aria-hidden="true" />
     </button>
   );
+}
+
+/** Texto del estado vacío de próximos partidos (con la fecha del siguiente si se conoce). */
+export function noUpcomingText(data: CompetitionFile): string {
+  const next = nextMatchLabel(data.meta);
+  return next ? `No hay partidos en los próximos 14 días. Próximo partido: ${next}.` : 'No hay partidos programados en los próximos 14 días.';
 }
 
 /** Pestaña Resumen: en juego, próximos destacados, claves, mini clasificación, resultados y jugadores en forma. */
@@ -62,7 +69,7 @@ export function OverviewTab({ data, live, liveScores, goTo }: OverviewTabProps) 
             ))}
           </div>
         ) : (
-          <EmptyState icon={<CalendarClock />} title="Sin partidos próximos" description="No hay partidos programados en los próximos 14 días." />
+          <EmptyState icon={<CalendarClock />} title="Sin partidos próximos" description={noUpcomingText(data)} />
         )}
       </Section>
 

@@ -21,9 +21,13 @@ export interface ProbBar1X2Props {
   className?: string;
 }
 
-function norm(p: Prob1X2): Prob1X2 {
-  const s = p.home + p.draw + p.away;
-  return s > 0 ? { home: p.home / s, draw: p.draw / s, away: p.away / s } : { home: 1 / 3, draw: 1 / 3, away: 1 / 3 };
+const nn = (x: unknown) => (typeof x === 'number' && Number.isFinite(x) && x > 0 ? x : 0);
+function norm(p: Prob1X2 | undefined): Prob1X2 {
+  const h = nn(p?.home);
+  const d = nn(p?.draw);
+  const a = nn(p?.away);
+  const s = h + d + a;
+  return s > 0 ? { home: h / s, draw: d / s, away: a / s } : { home: 1 / 3, draw: 1 / 3, away: 1 / 3 };
 }
 
 /**

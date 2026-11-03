@@ -57,14 +57,14 @@ export function MatchCard({ match: base, live, hideCompetition, hotThreshold = 8
   return (
     <article
       className={cx(
-        'card card-hover group relative flex flex-col gap-3 p-4 animate-fade-up',
+        'card card-hover group relative flex min-w-0 flex-col gap-3 p-4 animate-fade-up',
         isLive && 'border-live/40',
         className,
       )}
       style={delay ? { animationDelay: `${delay}ms` } : undefined}
     >
       {isLive && <div className="pointer-events-none absolute inset-x-4 top-0 h-[2px] rounded-b bg-live" aria-hidden="true" />}
-      <header className="flex items-center justify-between gap-2">
+      <header className="flex min-w-0 items-center justify-between gap-2">
         <div className="flex min-w-0 items-center gap-2">
           {!hideCompetition && <CompetitionBadge compId={m.compId} name={m.compName} />}
           {m.round && <span className="truncate text-2xs text-ink-3">{hideCompetition ? m.round : `· ${m.round}`}</span>}

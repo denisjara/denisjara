@@ -43,7 +43,10 @@ export function ThemeToggle({ className }: { className?: string }) {
   );
 }
 
-/** Indicador de última actualización de datos (meta.generatedAt). */
+/**
+ * Indicador de última actualización de datos: la última descarga correcta de ESPN (meta.dataUpdatedAt) y, en datos
+ * antiguos sin ese campo, la hora del build (meta.generatedAt). Verde < 30 h; ámbar si los datos son más viejos.
+ */
 export function UpdatedIndicator({ className, compact }: { className?: string; compact?: boolean }) {
   const { data, error } = useMeta();
   const now = useNow(60_000);
@@ -55,12 +58,13 @@ export function UpdatedIndicator({ className, compact }: { className?: string; c
     );
   }
   if (!data) return <span className={cx('skeleton h-4 w-32', className)} aria-hidden="true" />;
-  const h = hoursSince(data.generatedAt, now);
+  const at = data.dataUpdatedAt ?? data.generatedAt;
+  const h = hoursSince(at, now);
   const fresh = h < 30;
   return (
     <span
       className={cx('inline-flex items-center gap-2 text-[12px] text-ink-2', className)}
-      title={`Datos generados el ${dateTime(data.generatedAt)} · Fuente: ${data.dataSource} · v${data.version}`}
+      title={`Datos descargados de ESPN el ${dateTime(at)} · web generada el ${dateTime(data.generatedAt)} · Fuente: ${data.dataSource} · v${data.version}`}
     >
       <span className="relative flex h-2 w-2" aria-hidden="true">
         {fresh && <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-pos opacity-50 motion-reduce:hidden" />}
@@ -68,8 +72,8 @@ export function UpdatedIndicator({ className, compact }: { className?: string; c
       </span>
       <span>
         {compact ? '' : fresh ? 'Actualizado ' : 'Datos de '}
-        <time dateTime={data.generatedAt} className="font-medium text-ink-1">
-          {timeAgo(data.generatedAt, now)}
+        <time dateTime={at} className="font-medium text-ink-1">
+          {timeAgo(at, now)}
         </time>
       </span>
     </span>

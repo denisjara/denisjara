@@ -5,6 +5,7 @@ import { useMeta } from '../lib/data';
 import { useDismiss, useHotkey } from '../lib/hooks';
 import { cx } from '../components/Card';
 import { PageSkeleton } from '../components/States';
+import { SafeBlock } from '../components/ErrorBoundary';
 import { Disclaimer } from '../components/Disclaimer';
 import { Logo, ThemeToggle, UpdatedIndicator } from './Brand';
 import { GlobalSearch } from './GlobalSearch';
@@ -50,7 +51,9 @@ function MobileDrawer({ open, onClose }: { open: boolean; onClose: () => void })
           </button>
         </div>
         <nav aria-label="Navegación principal" className="flex-1 overflow-y-auto px-2 py-4">
-          <SidebarNav onNavigate={onClose} />
+          <SafeBlock label="Menú">
+            <SidebarNav onNavigate={onClose} />
+          </SafeBlock>
         </nav>
         <div className="border-t border-line px-4 py-3">
           <UpdatedIndicator />
@@ -71,7 +74,9 @@ function MobileSearch({ open, onClose }: { open: boolean; onClose: () => void })
   return (
     <div className="fixed inset-0 z-[60] bg-bg/95 backdrop-blur-sm lg:hidden" role="dialog" aria-modal="true" aria-label="Buscar">
       <div className="flex items-center gap-2 border-b border-line px-3 py-3">
-        <GlobalSearch autoFocus onNavigate={onClose} />
+        <SafeBlock label="Buscador">
+          <GlobalSearch autoFocus onNavigate={onClose} />
+        </SafeBlock>
         <button type="button" onClick={onClose} className="btn-ghost shrink-0">
           Cerrar
         </button>
@@ -121,7 +126,9 @@ export function AppShell({ children }: { children: ReactNode }) {
           <Logo />
         </div>
         <nav aria-label="Navegación principal" className="flex-1 overflow-y-auto px-2.5 py-4">
-          <SidebarNav />
+          <SafeBlock label="Menú">
+            <SidebarNav />
+          </SafeBlock>
         </nav>
         <div className="border-t border-line px-5 py-3 text-2xs text-ink-3">
           Datos: {meta?.dataSource ?? 'ESPN (API pública)'}
@@ -131,7 +138,9 @@ export function AppShell({ children }: { children: ReactNode }) {
       <div className="lg:pl-[var(--sidebar-w)]">
         {/* Barra superior (escritorio) */}
         <header className="sticky top-0 z-30 hidden h-[var(--header-h)] items-center gap-4 border-b border-line bg-bg/80 px-6 backdrop-blur-md lg:flex">
-          <GlobalSearch hotkey className="max-w-[440px]" />
+          <SafeBlock label="Buscador" className="max-w-[440px] flex-1 py-1.5">
+            <GlobalSearch hotkey className="max-w-[440px]" />
+          </SafeBlock>
           <div className="ml-auto flex items-center gap-4">
             <UpdatedIndicator />
             <ThemeToggle />
@@ -169,7 +178,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           </div>
           <Suspense fallback={<PageSkeleton />}>{children}</Suspense>
           <footer className="mt-12 flex flex-col gap-3 border-t border-line pt-5 text-[12px] text-ink-3 sm:flex-row sm:items-center sm:justify-between">
-            <span>
+            <span className="min-w-0 [overflow-wrap:anywhere]">
               <span className="font-display text-[14px] font-extrabold uppercase tracking-wide text-ink-2">FutStat Lab</span> · Analítica y
               predicción de fútbol · Datos de {meta?.dataSource ?? 'ESPN'}, actualizados a diario.
             </span>

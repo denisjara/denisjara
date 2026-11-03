@@ -1,6 +1,7 @@
 import { useMemo, useState, type KeyboardEvent, type PointerEvent } from 'react';
 import { useElementWidth } from '../lib/hooks';
-import { num, shortDate } from '../lib/format';
+import { dayMonth, num, shortDate } from '../lib/format';
+import { niceTicks } from '../lib/ticks';
 import { cx } from './Card';
 
 export interface LinePoint {
@@ -36,17 +37,65 @@ export interface LineChartProps {
 
 export const SERIES_COLORS = ['rgb(var(--c-accent-text))', 'rgb(var(--c-home))', 'rgb(var(--c-away))', 'rgb(var(--c-ink-2))'];
 
-function niceTicks(lo: number, hi: number, count = 4): number[] {
-  if (!(hi > lo)) return [lo];
-  const raw = (hi - lo) / count;
-  const mag = 10 ** Math.floor(Math.log10(raw));
-  const norm = raw / mag;
-  const step = (norm < 1.5 ? 1 : norm < 3 ? 2 : norm < 7 ? 5 : 10) * mag;
-  const start = Math.ceil(lo / step) * step;
-  const out: number[] = [];
-  for (let v = start; v <= hi + step * 1e-6; v += step) out.push(Number(v.toFixed(10)));
-  return out;
+// ---------------------------------------------------------------------------
+// Eje X temporal: marcas en fechas "redondas" (días, semanas, meses), no en índices de datos
+// ---------------------------------------------------------------------------
+const DAY_MS = 86_400_000;
+type TimeStep = { unit: 'day' | 'month'; n: number };
+const TIME_STEPS: TimeStep[] = [
+  { unit: 'day', n: 1 },
+  { unit: 'day', n: 2 },
+  { unit: 'day', n: 3 },
+  { unit: 'day', n: 7 },
+  { unit: 'day', n: 14 },
+  { unit: 'month', n: 1 },
+  { unit: 'month', n: 2 },
+  { unit: 'month', n: 3 },
+  { unit: 'month', n: 6 },
+  { unit: 'month', n: 12 },
+];
+const stepMs = (s: TimeStep) => (s.unit === 'day' ? s.n * DAY_MS : s.n * 30.44 * DAY_MS);
+const MONTHS = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sept', 'oct', 'nov', 'dic'];
+
+/** Marcas temporales entre lo y hi (epoch ms) con como mucho `maxTicks`, alineadas a días/lunes/meses. */
+export function timeTicks(lo: number, hi: number, maxTicks: number): { ticks: number[]; step: TimeStep } {
+  const span = Math.max(0, hi - lo);
+  const step = TIME_STEPS.find((s) => span / stepMs(s) <= Math.max(1, maxTicks)) ?? TIME_STEPS[TIME_STEPS.length - 1];
+  const ticks: number[] = [];
+  const d = new Date(lo);
+  // Fecha fuera del rango representable (Invalid Date): getDay()/getMonth() darían NaN y los bucles no acabarían.
+  if (!Number.isFinite(d.getTime()) || !Number.isFinite(hi)) return { ticks, step };
+  d.setHours(0, 0, 0, 0);
+  if (step.unit === 'day') {
+    if (d.getTime() < lo) d.setDate(d.getDate() + 1);
+    if (step.n >= 7) for (let g = 0; g < 7 && d.getDay() !== 1; g++) d.setDate(d.getDate() + 1); // semanas: lunes
+    for (let guard = 0; d.getTime() <= hi && guard < 400; guard++) {
+      ticks.push(d.getTime());
+      d.setDate(d.getDate() + step.n);
+    }
+  } else {
+    d.setDate(1);
+    if (d.getTime() < lo) d.setMonth(d.getMonth() + 1);
+    for (let g = 0; g < 12 && d.getMonth() % step.n !== 0; g++) d.setMonth(d.getMonth() + 1);
+    for (let guard = 0; d.getTime() <= hi && guard < 400; guard++) {
+      ticks.push(d.getTime());
+      d.setMonth(d.getMonth() + step.n);
+    }
+  }
+  return { ticks, step };
 }
+
+/** Etiqueta de una marca temporal según el paso: "4 nov" (días/semanas) o "nov" / "jul 2025" (meses). */
+function timeTickLabel(t: number, step: TimeStep, multiYear: boolean): string {
+  const d = new Date(t);
+  if (step.unit === 'day') return dayMonth(d);
+  const m = MONTHS[d.getMonth()];
+  // año completo para que "jul 2025" no se lea como "25 de julio"
+  return multiYear || step.n >= 12 ? `${m} ${d.getFullYear()}` : m;
+}
+
+/** Ancho aproximado (px) de una etiqueta del eje a 10,5 px. */
+const labelWidth = (s: string) => s.length * 6.2 + 6;
 
 /**
  * Gráfico de líneas SVG propio: líneas de 2px, rejilla hairline, cruz que se ajusta al X más
@@ -76,10 +125,16 @@ export function LineChart({ series, height = 180, yFormat = (v) => num(v, 0), xF
 
   let [ylo, yhi] = yDomain ?? [Math.min(...allY), Math.max(...allY)];
   if (!yDomain) {
-    const padY = (yhi - ylo) * 0.12 || Math.abs(yhi) * 0.05 || 1;
+    // Rango prácticamente nulo (serie constante o diferencias por debajo de la precisión de coma flotante,
+    // p. ej. 1500 y 1500.0000000000002): se trata como constante y se rellena en proporción al valor.
+    const span = yhi - ylo;
+    const flat = !(span > Math.max(Math.abs(ylo), Math.abs(yhi)) * 1e-9);
+    const padY = flat ? Math.abs(yhi) * 0.05 || 1 : span * 0.12;
     ylo -= padY;
     yhi += padY;
   }
+  // Valores desbordados (±1e308…) no se pueden escalar: mejor un aviso que un SVG con coordenadas NaN.
+  if (!Number.isFinite(ylo) || !Number.isFinite(yhi) || !(yhi > ylo)) return <div className={cx('text-[12px] text-ink-3', className)}>Sin datos suficientes</div>;
   const ticks = niceTicks(ylo, yhi, 4);
   const yLabelW = Math.max(28, ...ticks.map((t) => yFormat(t).length * 7 + 8));
   const m = { l: yLabelW, r: 12, t: 8, b: 24 };
@@ -91,8 +146,28 @@ export function LineChart({ series, height = 180, yFormat = (v) => num(v, 0), xF
   const sx = (x: number) => m.l + (xhi === xlo ? iw / 2 : ((x - xlo) / (xhi - xlo)) * iw);
   const sy = (y: number) => m.t + (1 - (y - ylo) / (yhi - ylo || 1)) * height;
 
-  const xTickCount = Math.max(2, Math.min(6, Math.floor(iw / 90)));
-  const xTicks = xs.length <= xTickCount ? xs : Array.from({ length: xTickCount }, (_, i) => xs[Math.round((i * (xs.length - 1)) / (xTickCount - 1))]);
+  // Marcas del eje X. Fechas: por TIEMPO (días/semanas/meses redondos), así la separación refleja el calendario.
+  // Números: valores de los datos repartidos. En ambos casos se descartan las etiquetas que se solaparían.
+  const xTickCount = Math.max(2, Math.min(10, Math.floor(iw / (isDate ? 64 : 72))));
+  let rawTicks: { x: number; label: string }[];
+  if (isDate) {
+    const { ticks, step } = timeTicks(xlo, xhi, xTickCount);
+    const multiYear = new Date(xlo).getFullYear() !== new Date(xhi).getFullYear();
+    rawTicks = (ticks.length ? ticks : [xlo]).map((t) => ({ x: t, label: timeTickLabel(t, step, multiYear) }));
+  } else {
+    const picked = xs.length <= xTickCount ? xs : Array.from({ length: xTickCount }, (_, i) => xs[Math.round((i * (xs.length - 1)) / (xTickCount - 1))]);
+    rawTicks = [...new Set(picked)].map((x) => ({ x, label: fmtX(x) }));
+  }
+  const xTicks: { x: number; label: string; cx: number }[] = [];
+  let prevRight = -Infinity;
+  for (const t of rawTicks) {
+    const w = labelWidth(t.label);
+    // centro de la etiqueta, desplazado lo justo para no salirse del área del gráfico
+    const cxl = Math.min(Math.max(sx(t.x), m.l + w / 2 - 4), W - m.r - w / 2 + 4);
+    if (cxl - w / 2 < prevRight + 8) continue;
+    xTicks.push({ ...t, cx: cxl });
+    prevRight = cxl + w / 2;
+  }
 
   const nearestIndex = (px: number) => {
     let best = 0;
@@ -169,16 +244,13 @@ export function LineChart({ series, height = 180, yFormat = (v) => num(v, 0), xF
               </text>
             </g>
           ))}
-          {xTicks.map((x, i) => (
-            <text
-              key={`${x}-${i}`}
-              x={sx(x)}
-              y={H - 6}
-              textAnchor={i === 0 ? 'start' : i === xTicks.length - 1 ? 'end' : 'middle'}
-              className="fill-ink-3 text-[10.5px]"
-            >
-              {fmtX(x)}
-            </text>
+          {xTicks.map((t, i) => (
+            <g key={`${t.x}-${i}`}>
+              {isDate && <line x1={sx(t.x)} x2={sx(t.x)} y1={m.t + height} y2={m.t + height + 4} stroke="rgb(var(--c-line-strong))" strokeWidth={1} />}
+              <text x={t.cx} y={H - 6} textAnchor="middle" className="fill-ink-3 text-[10.5px]">
+                {t.label}
+              </text>
+            </g>
           ))}
           {prepared.map((s) => {
             if (!s.pts.length) return null;

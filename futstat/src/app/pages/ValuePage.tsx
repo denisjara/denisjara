@@ -8,7 +8,7 @@ import { byTier } from '../lib/competitions';
 import { ev as fmtEv, int, kickoff, odds as fmtOdds, pct, plural, signed } from '../lib/format';
 import { marketFamily, pickMarketLabel, pickSelection } from '../lib/picks';
 import { ProbVsImplied, ValueCard, minOddsFor, startedLabel, type ValueItem } from './extra/ValueCard';
-import { ResponsibleBanner, ValueCalculator, ValueConcepts } from './extra/ValueExplainer';
+import { ResponsibleBanner, ValueCalculator, ValueConcepts, valueSettings } from './extra/ValueExplainer';
 import { ConfidenceTag, FilterField, SelectInput, ToggleSwitch, useUrlParam, type SelectOption } from './extra/ui';
 
 const PAGE = 24;
@@ -55,8 +55,9 @@ export default function ValuePage() {
   const pageSize = desktop ? PAGE : PAGE_MOBILE;
 
   const bets = useMemo<ValueItem[]>(() => (data?.bets ?? []).filter((b) => b && b.match && b.pick), [data]);
-  const baseMinEv = data?.minEv ?? 0.05;
-  const kellyFraction = data?.kellyFraction ?? 0.25;
+  const settings = useMemo(() => valueSettings(data), [data]);
+  const baseMinEv = settings.minEv;
+  const kellyFraction = settings.kellyFraction;
 
   const evSteps = useMemo(() => [baseMinEv, ...[0.1, 0.15, 0.25].filter((x) => x > baseMinEv + 1e-9)], [baseMinEv]);
   const minEv = minEvKey === 'base' ? baseMinEv : Number(minEvKey);
@@ -209,7 +210,7 @@ export default function ValuePage() {
       <PageHeader
         eyebrow="Valor esperado · actualizado a diario"
         title="Apuestas de valor"
-        description={`Selecciones en las que la probabilidad del modelo supera la implícita en la cuota con un valor esperado de al menos ${pct(baseMinEv)}. Stake orientativo con Kelly ${kellyFraction === 0.25 ? '¼' : pct(kellyFraction)}.`}
+        description={`Selecciones en las que la probabilidad del modelo supera la implícita en la cuota con un valor esperado de al menos ${pct(baseMinEv)}. Stake orientativo con Kelly ${kellyFraction === 0.25 ? '¼' : pct(kellyFraction)} (máximo ${pct(settings.kellyCap)} de la banca por pick).`}
       >
         <div className="flex flex-wrap gap-x-6 gap-y-2 text-[12.5px] text-ink-2">
           <span>
@@ -220,9 +221,13 @@ export default function ValuePage() {
               <strong className="num font-semibold text-ink-1">{int(startedCount)}</strong> ya empezados
             </span>
           )}
-          <a href="#como-funciona" className="link text-[12.5px]">
+          <button
+            type="button"
+            className="link text-[12.5px]"
+            onClick={() => document.getElementById('como-funciona')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+          >
             ¿Qué es el EV y el stake Kelly?
-          </a>
+          </button>
         </div>
       </PageHeader>
 
@@ -310,11 +315,11 @@ export default function ValuePage() {
 
           <div className="grid grid-cols-2 gap-3 lg:grid-cols-4" aria-live="polite">
             <KpiTile label="Picks" value={int(stats?.n ?? 0)} hint={stats ? `En ${plural(stats.matches, 'partido')}${compLabel}` : 'Ninguno con estos filtros'} icon={<Zap />} />
-            <KpiTile label="EV medio" value={stats ? fmtEv(stats.ev) : '–'} hint={stats ? `Mediana ${fmtEv(stats.evMedian)}` : undefined} icon={<Percent />} accent />
-            <KpiTile label="Cuota media" value={stats ? fmtOdds(stats.odds) : '–'} hint={stats ? `Prob. media del modelo ${pct(stats.prob)}` : undefined} icon={<Coins />} />
+            <KpiTile label="EV medio" value={stats ? fmtEv(stats.ev) : '—'} hint={stats ? `Mediana ${fmtEv(stats.evMedian)}` : undefined} icon={<Percent />} accent />
+            <KpiTile label="Cuota media" value={stats ? fmtOdds(stats.odds) : '—'} hint={stats ? `Prob. media del modelo ${pct(stats.prob)}` : undefined} icon={<Coins />} />
             <KpiTile
               label="Stake medio"
-              value={stats ? pct(stats.kelly, 1) : '–'}
+              value={stats ? pct(stats.kelly, 1) : '—'}
               hint={stats ? `de la banca · ${plural(stats.alta, 'pick', 'picks')} de confianza alta` : undefined}
               icon={<Gauge />}
             />
@@ -373,8 +378,8 @@ export default function ValuePage() {
         description={`Un pick tiene valor cuando la cuota paga más de lo que el riesgo merece según el modelo. Ejemplo calculado con ${example ? 'el primer pick de la lista' : 'valores ilustrativos'}.`}
       >
         <div className="space-y-4">
-          <ValueConcepts example={example} kellyFraction={kellyFraction} minEv={baseMinEv} />
-          <ValueCalculator key={globalBest ? keyOf(globalBest) : 'none'} example={globalBest} kellyFraction={kellyFraction} minEv={baseMinEv} />
+          <ValueConcepts example={example} settings={settings} />
+          <ValueCalculator key={globalBest ? keyOf(globalBest) : 'none'} example={globalBest} settings={settings} />
         </div>
       </Section>
 

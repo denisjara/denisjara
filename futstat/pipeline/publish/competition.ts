@@ -21,6 +21,7 @@ import {
   currentElo,
   currentFinished,
   isFinishedRecord,
+  storeDataUpdatedAt,
   teamRef,
   type BuildContext,
 } from './context';
@@ -121,6 +122,22 @@ function ratingsFor(ctx: BuildContext, comp: CompetitionConfig, teamIds: string[
   return rows;
 }
 
+/** Fecha ISO del próximo partido programado de la competición (aunque esté fuera de la ventana de 14 días). */
+export function nextMatchDate(ctx: BuildContext, compId: string): string | undefined {
+  let best: number | undefined;
+  let iso: string | undefined;
+  for (const m of ctx.matchesByComp.get(compId) ?? []) {
+    if (m.status !== 'scheduled') continue;
+    const t = Date.parse(m.date);
+    if (!Number.isFinite(t) || t < ctx.now) continue;
+    if (best === undefined || t < best) {
+      best = t;
+      iso = m.date;
+    }
+  }
+  return iso;
+}
+
 /** Jugadores de la competición (temporada actual), ordenados por índice de forma. */
 export function competitionPlayers(ctx: BuildContext, compId: string): PlayerSeasonRow[] {
   const lines = ctx.currentLines.filter((l) => l.compId === compId);
@@ -166,6 +183,10 @@ export function buildCompetition(ctx: BuildContext, comp: CompetitionConfig): Co
   if (league?.logoDark) meta.logoDark = league.logoDark;
   if (league?.seasonLabel) meta.seasonLabel = league.seasonLabel;
   if (meta.hasSimulation) meta.simulationColumns = (comp.simulationZones ?? []).map((z) => z.label);
+  const next = nextMatchDate(ctx, comp.id);
+  if (next) meta.nextMatchDate = next;
+  const dataAt = storeDataUpdatedAt(store, ctx.now);
+  if (dataAt) meta.dataUpdatedAt = dataAt;
 
   const file: CompetitionFile = {
     generatedAt: ctx.refDate,

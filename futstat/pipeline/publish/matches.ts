@@ -19,7 +19,8 @@ import type {
   TeamSeasonStats,
 } from '../../src/types/data';
 import { argmax3, mean, round } from '../../src/lib/models';
-import type { CompetitionConfig } from '../config';
+import { isPlausibleMargin, overroundOf, type CompetitionConfig } from '../config';
+import { hasAnyPrice, stripImplausibleOdds } from '../oddsGuard';
 import type { MatchRecord, PlayerLine, TeamMatchStats } from '../types';
 import { predictMatch, type PredictionResult } from '../analytics/predict';
 import { projectMatchStats } from '../analytics/projections';
@@ -101,19 +102,18 @@ const PRICE_KEYS: (keyof OddsSnapshot)[] = [
 export function cleanOdds(o: OddsSnapshot | undefined): OddsSnapshot | undefined {
   if (!o) return undefined;
   const out: OddsSnapshot = { provider: o.provider || 'Casa de apuestas' };
-  let prices = 0;
   for (const k of PRICE_KEYS) {
     const v = o[k];
-    if (typeof v === 'number' && Number.isFinite(v) && v > 1) {
-      (out as unknown as Record<string, number>)[k] = round(v, 3);
-      prices++;
-    }
+    if (typeof v === 'number' && Number.isFinite(v) && v > 1) (out as unknown as Record<string, number>)[k] = round(v, 3);
   }
-  if (prices === 0) return undefined;
-  if (typeof o.totalLine === 'number' && Number.isFinite(o.totalLine)) out.totalLine = o.totalLine;
+  // Feed errors (impossible overround): the 1X2 trio / O-U pair is dropped, so one bad external price never makes the
+  // validator reject the whole publication (store.ts already applies this on load: defence in depth).
+  stripImplausibleOdds(out);
+  if (!hasAnyPrice(out)) return undefined;
+  if (typeof o.totalLine === 'number' && Number.isFinite(o.totalLine) && (out.over !== undefined || out.under !== undefined)) out.totalLine = o.totalLine;
   if (typeof o.spreadLine === 'number' && Number.isFinite(o.spreadLine)) out.spreadLine = o.spreadLine;
-  if (out.home && out.draw && out.away) out.margin = round(1 / out.home + 1 / out.draw + 1 / out.away - 1, 4);
-  else if (typeof o.margin === 'number' && Number.isFinite(o.margin)) out.margin = round(o.margin, 4);
+  if (out.home && out.draw && out.away) out.margin = round(overroundOf(out.home, out.draw, out.away)!, 4);
+  else if (isPlausibleMargin(o.margin)) out.margin = round(o.margin, 4);
   if (o.capturedAt) out.capturedAt = o.capturedAt;
   return out;
 }
@@ -411,12 +411,14 @@ export function buildMatchFile(ctx: BuildContext, m: MatchRecord): MatchFile {
     before: m.date,
     team: m.home,
     currentElo: result.model.elo.home,
+    detailIds: ctx.detailIds,
   });
   const formAway = buildFormBlock(m.away.id, awayMatches, elo.history(m.away.id), 'away', ctx.xg, {
     preElo,
     before: m.date,
     team: m.away,
     currentElo: result.model.elo.away,
+    detailIds: ctx.detailIds,
   });
   const h2h = buildH2H(homeMatches, m.home.id, m.away.id, ctx.compNames, { before: m.date, excludeId: m.id, limit: 10 });
   h2h.matches = h2h.matches.map((s) => withDetailFlag(ctx, s));

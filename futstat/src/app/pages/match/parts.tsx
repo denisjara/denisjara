@@ -1,7 +1,7 @@
 /** Piezas de presentación compartidas por las pestañas del análisis de partido. */
 import type { ReactNode } from 'react';
 import type { TeamRef } from '../../../types/data';
-import { Card, InfoTip, TeamCrest, cx } from '../../components';
+import { Card, InfoTip, SafeBlock, TeamCrest, cx } from '../../components';
 
 export interface PanelProps {
   title: ReactNode;
@@ -40,7 +40,10 @@ export function Panel({ title, icon, eyebrow, description, info, action, classNa
         </div>
         {action && <div className="flex min-w-0 max-w-full flex-wrap items-center gap-2">{action}</div>}
       </div>
-      <div className={cx('min-w-0 flex-1', flush ? 'pt-3' : 'p-4 pt-3', bodyClassName)}>{children}</div>
+      {/* Cada panel está aislado: si su contenido falla, el resto de la pestaña sigue visible. */}
+      <div className={cx('min-w-0 flex-1', flush ? 'pt-3' : 'p-4 pt-3', bodyClassName)}>
+        <SafeBlock>{children}</SafeBlock>
+      </div>
     </Card>
   );
 }
@@ -48,7 +51,7 @@ export function Panel({ title, icon, eyebrow, description, info, action, classNa
 /** Escudo + nombre corto con la marca de color del lado (local/visitante). */
 export function TeamTag({ team, side, size = 18, full, className }: { team: TeamRef; side: 'home' | 'away'; size?: number; full?: boolean; className?: string }) {
   return (
-    <span className={cx('inline-flex min-w-0 items-center gap-1.5', className)}>
+    <span className={cx('inline-flex min-w-0 max-w-full items-center gap-1.5', className)}>
       <span className={cx('h-2 w-2 shrink-0 rounded-full', side === 'home' ? 'bg-home' : 'bg-away')} aria-hidden="true" />
       <TeamCrest team={team} size={size} />
       <span className="truncate font-medium text-ink-1" title={team.name}>

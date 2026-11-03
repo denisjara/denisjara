@@ -32,9 +32,12 @@ export interface FormBlockOptions {
   team?: TeamRef;
   /** Elo actual (por defecto el último valor de eloHistory) */
   currentElo?: number;
+  /** ids de partidos con ficha publicada (marca FormMatch.hasDetail) */
+  detailIds?: Set<string>;
 }
 
-export function toFormMatch(v: TeamView): FormMatch {
+/** FormMatch de un partido; `hasDetail` solo se incluye (true) cuando existe public/data/matches/<id>.json. */
+export function toFormMatch(v: TeamView, detailIds?: Set<string>): FormMatch {
   const fm: FormMatch = {
     matchId: v.match.id,
     date: v.match.date,
@@ -55,6 +58,7 @@ export function toFormMatch(v: TeamView): FormMatch {
   if (v.own?.possession !== undefined) fm.possession = v.own.possession;
   if (v.xg !== undefined) fm.xg = round(v.xg, 2);
   if (v.xga !== undefined) fm.xga = round(v.xga, 2);
+  if (detailIds?.has(v.match.id)) fm.hasDetail = true;
   return fm;
 }
 
@@ -145,7 +149,10 @@ export function buildFormBlock(
   const venueViews = views.filter((v) => !v.match.neutral && v.isHome === (venue === 'home')).slice(-10);
   return {
     team: views.length ? views[views.length - 1].team : opts.team ?? fallbackTeam(teamId),
-    last: last10.slice().reverse().map(toFormMatch),
+    last: last10
+      .slice()
+      .reverse()
+      .map((v) => toFormMatch(v, opts.detailIds)),
     formString: last5.map((v) => v.result).join(''),
     ppg5: round(mean(last5.map((v) => v.pts)), 2),
     ppg10: round(mean(last10.map((v) => v.pts)), 2),
