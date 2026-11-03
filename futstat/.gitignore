@@ -1,0 +1,9 @@
+node_modules/
+dist/
+.cache/
+public/mock-data/
+*.log
+.DS_Store
+# Datos generados por el pipeline (se regeneran a diario en GitHub Actions)
+public/data/
+data-store/
