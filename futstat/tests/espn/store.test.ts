@@ -5,6 +5,7 @@ import { afterAll, describe, expect, it } from 'vitest';
 import {
   MAX_ODDS_HISTORY,
   emptyStore,
+  inferUnknownPositions,
   loadStore,
   mergeMatches,
   oddsChanged,
@@ -175,6 +176,19 @@ describe('player lines', () => {
     expect(out).toHaveLength(3);
     expect(out.find((p) => p.matchId === '100' && p.playerId === 'p1')?.goals).toBe(2);
     expect(out.at(-1)?.matchId).toBe('200');
+  });
+
+  it('infers the position of substitutes from their other appearances', () => {
+    const lines = [
+      line({ matchId: '1', playerId: 'x', position: 'D' }),
+      line({ matchId: '2', playerId: 'x', position: 'D' }),
+      line({ matchId: '3', playerId: 'x', position: 'M' }),
+      line({ matchId: '4', playerId: 'x', position: '?', starter: false }),
+      line({ matchId: '4', playerId: 'y', position: '?', starter: false }),
+    ];
+    expect(inferUnknownPositions(lines)).toBe(1);
+    expect(lines[3].position).toBe('D');
+    expect(lines[4].position).toBe('?');
   });
 
   it('prune lines of removed or old matches', () => {

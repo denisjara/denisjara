@@ -99,7 +99,10 @@ describe('distribuciones discretas', () => {
 
   it('overUnderFromDist: push solo en líneas enteras', () => {
     const d = [0.1, 0.2, 0.3, 0.4];
-    expect(overUnderFromDist(d, 1.5)).toEqual({ over: 0.7, under: 0.30000000000000004, push: 0 });
+    const h = overUnderFromDist(d, 1.5);
+    expect(h.over).toBeCloseTo(0.7, 12);
+    expect(h.under).toBeCloseTo(0.3, 12);
+    expect(h.push).toBe(0);
     const r = overUnderFromDist(d, 2);
     expect(r.push).toBeCloseTo(0.3, 12);
     expect(r.over).toBeCloseTo(0.4, 12);
