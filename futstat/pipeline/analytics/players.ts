@@ -82,6 +82,51 @@ export function teamGamesFromLines(lines: PlayerLine[]): Map<string, TeamGame[]>
   return out;
 }
 
+// ---------------------------------------------------------------------------
+// Normalización por posición
+// ---------------------------------------------------------------------------
+
+/**
+ * Media y desviación de la nota de partido por posición (partidos con >= 45'). Valores medidos sobre ~61.000
+ * actuaciones reales (nov 2026). Sin normalizar, los porteros (que juegan siempre 90' y suman paradas) y los
+ * delanteros copaban el ranking de forma frente a defensas y centrocampistas.
+ */
+export const DEFAULT_POSITION_NORMS: Record<string, { mean: number; sd: number }> = {
+  G: { mean: 6.52, sd: 0.82 },
+  D: { mean: 6.12, sd: 0.45 },
+  M: { mean: 6.42, sd: 0.72 },
+  F: { mean: 6.87, sd: 0.98 },
+  '?': { mean: 6.4, sd: 0.75 },
+};
+const NORM_MEAN = 6.4;
+const NORM_SD = 0.75;
+const NORM_MIN_SAMPLE = 400;
+
+/** Normas por posición calculadas de las líneas dadas (con respaldo en DEFAULT_POSITION_NORMS si hay poca muestra). */
+export function positionNorms(lines: PlayerLine[]): Record<string, { mean: number; sd: number }> {
+  const acc: Record<string, number[]> = {};
+  for (const l of lines) {
+    if (!(l.minutes >= 45)) continue;
+    const r = matchRating(l);
+    if (r > 0) (acc[l.position] ??= []).push(r);
+  }
+  const out: Record<string, { mean: number; sd: number }> = { ...DEFAULT_POSITION_NORMS };
+  for (const [pos, xs] of Object.entries(acc)) {
+    if (xs.length < NORM_MIN_SAMPLE) continue;
+    const m = xs.reduce((a, b) => a + b, 0) / xs.length;
+    const sd = Math.sqrt(xs.reduce((a, b) => a + (b - m) ** 2, 0) / xs.length);
+    if (Number.isFinite(m) && sd > 0.05) out[pos] = { mean: m, sd };
+  }
+  return out;
+}
+
+/** Lleva una nota a una escala común (media 6.4, desv. 0.75) según la posición. 0 (no jugó) se mantiene en 0. */
+export function normalizeRating(rating: number, position: string, norms: Record<string, { mean: number; sd: number }> = DEFAULT_POSITION_NORMS): number {
+  if (!(rating > 0)) return 0;
+  const n = Object.prototype.hasOwnProperty.call(norms, position) ? norms[position] : norms['?'] ?? DEFAULT_POSITION_NORMS['?'];
+  return clamp(NORM_MEAN + ((rating - n.mean) / n.sd) * NORM_SD, 3, 10);
+}
+
 /** EWMA de las notas en los últimos partidos del equipo (0 si no jugó) + bonus de minutos → 0..100. */
 export function playerFormIndex(ratings: number[], minutes: number[]): number {
   if (ratings.length === 0) return 0;
@@ -184,6 +229,7 @@ function aggregate(lines: PlayerLine[]): Map<string, Aggregate> {
 export function buildPlayerSeasonRows(lines: PlayerLine[], teams: Map<string, TeamRef>, compId: string): PlayerSeasonRow[] {
   const games = teamGamesFromLines(lines);
   const agg = aggregate(lines);
+  const norms = positionNorms(lines);
   const rows: PlayerSeasonRow[] = [];
   for (const a of agg.values()) {
     const teamId = a.ref.teamId;
@@ -220,7 +266,10 @@ export function buildPlayerSeasonRows(lines: PlayerLine[], teams: Map<string, Te
         cards: round(per90(cards, a.minutes), 3),
         foulsCommitted: round(per90(a.foulsCommitted, a.minutes), 3),
       },
-      formIndex: playerFormIndex(ratings, mins),
+      formIndex: playerFormIndex(
+        ratings.map((r) => normalizeRating(r, a.ref.position, norms)),
+        mins,
+      ),
       formTrend: ratings,
       last5: last5Games
         .slice()
@@ -353,7 +402,10 @@ export function buildPlayerProps(input: PlayerPropsInput): PlayerProp[] {
       goals: a.goals,
       assists: a.assists,
       expMinutes: Math.round(expMin),
-      formIndex: playerFormIndex(ratings, mins),
+      formIndex: playerFormIndex(
+        ratings.map((r) => normalizeRating(r, a.ref.position)),
+        mins,
+      ),
       pGoal: round(pAtLeast1(lGoal), 4),
       pAssist: round(pAtLeast1(lAssist), 4),
       pGoalOrAssist: round(pAtLeast1(lGoal + lAssist), 4),

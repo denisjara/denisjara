@@ -33,6 +33,9 @@ import {
 
 const POSITION: Record<string, string> = { G: 'POR', D: 'DEF', M: 'MED', F: 'DEL', '?': '—' };
 
+/** Partidos que realmente se juegan (excluye aplazados y cancelados), igual que los titulares del pipeline. */
+const isPlayable = (m: MatchSummary) => m.status !== 'postponed' && m.status !== 'cancelled';
+
 // ---------------------------------------------------------------------------
 // Cabecera del día: titulares + KPIs
 // ---------------------------------------------------------------------------
@@ -102,7 +105,7 @@ function DayHero({ home, liveCount }: { home: HomeFile; liveCount: number }) {
             La jornada <span className="text-accent-text">en datos</span>
           </h1>
           <p className="mt-2 max-w-xl text-[14px] text-ink-2">
-            {plural(home.today.length, 'partido')} hoy y {plural(home.tomorrow.length, 'partido')} mañana, analizados con un ensamble Dixon-Coles + Elo + mercado.
+            {plural(home.today.filter(isPlayable).length, 'partido')} hoy y {plural(home.tomorrow.filter(isPlayable).length, 'partido')} mañana, analizados con un ensamble Dixon-Coles + Elo + mercado.
           </p>
           {home.highlights.length > 0 && (
             <div className="mt-5">
