@@ -1,3 +1,20 @@
+## FutStat Lab — analítica y predicción de fútbol
+
+[![Actualización diaria](https://github.com/denisjara/denisjara/actions/workflows/futstat-daily.yml/badge.svg)](https://github.com/denisjara/denisjara/actions/workflows/futstat-daily.yml)
+
+Dashboard de fútbol que se actualiza solo tres veces al día: partidos populares, una sección por cada liga
+y competición, análisis de cada partido con mercados al estilo de una casa de apuestas, estado de forma de
+jugadores, goles, tarjetas, tiros, córners y apuestas de valor. Las probabilidades salen de modelos
+estadísticos propios (Elo, Dixon-Coles, mercado sin margen, ensamble, binomial negativa y Monte Carlo)
+validados con un backtest público.
+
+- **Web:** https://denisjara.github.io/denisjara/
+- **Proyecto y documentación:** [futstat/](https://github.com/denisjara/denisjara/tree/main/futstat) · [README de FutStat Lab](https://github.com/denisjara/denisjara/blob/main/futstat/README.md)
+
+<sub>Herramienta informativa para mayores de 18 años. Ninguna predicción garantiza resultados.</sub>
+
+---
+
 ## Hi there 👋
 
 <!--

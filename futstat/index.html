@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="es" data-theme="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="description" content="FutStat Lab — analítica y predicción de fútbol actualizada a diario: probabilidades, mercados, forma de equipos y jugadores, y apuestas de valor." />
+    <meta name="theme-color" content="#080b10" />
+    <title>FutStat Lab</title>
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23080b10'/%3E%3Cpath d='M9 23V9h12' stroke='%23c6f135' stroke-width='3.2' fill='none' stroke-linecap='square'/%3E%3Cpath d='M9 16h8' stroke='%23c6f135' stroke-width='3.2' stroke-linecap='square'/%3E%3Ccircle cx='23' cy='22' r='3' fill='%23eef2f6'/%3E%3C/svg%3E"
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;700;800;900&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap"
+    />
+    <script>
+      // Aplica el tema guardado antes del primer pintado (evita parpadeo). Oscuro por defecto.
+      (function () {
+        var t = 'dark';
+        try {
+          var s = window.localStorage.getItem('futstat-theme');
+          if (s === 'light' || s === 'dark') t = s;
+        } catch (e) {}
+        document.documentElement.setAttribute('data-theme', t);
+        document.documentElement.style.colorScheme = t;
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <noscript>FutStat Lab necesita JavaScript para mostrar los análisis.</noscript>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

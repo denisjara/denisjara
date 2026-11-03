@@ -1,0 +1,148 @@
+# ---------------------------------------------------------------------------
+# FutStat Lab — actualización diaria
+#
+# Descarga los datos públicos de ESPN, recalcula todos los modelos (Elo,
+# Dixon-Coles, mercados, proyecciones, jugadores, simulaciones y backtest),
+# compila la web y la publica en GitHub Pages:
+#   https://denisjara.github.io/denisjara/
+#
+# Requisito único: Settings → Pages → Build and deployment → Source: "GitHub Actions".
+# Nota: los cron de GitHub solo se ejecutan en la rama por defecto (main) y
+# pueden retrasarse unos minutos en horas de mucha carga.
+# ---------------------------------------------------------------------------
+name: "FutStat Lab — actualización diaria"
+
+on:
+  # Tres pasadas al día (horas en UTC): madrugada, mediodía y tarde, para
+  # recoger resultados nuevos, alineaciones/cuotas y partidos del día.
+  # 05:17 / 12:17 / 18:17 UTC = 06:17 / 13:17 / 19:17 en Madrid (horario de invierno).
+  # El minuto 17 evita la congestión de las ejecuciones programadas en punto.
+  schedule:
+    - cron: '17 5 * * *'
+    - cron: '17 12 * * *'
+    - cron: '17 18 * * *'
+  # Ejecución manual desde la pestaña Actions ("Run workflow").
+  workflow_dispatch:
+  # Redespliegue automático cuando cambia el código del proyecto o este workflow.
+  push:
+    branches: [main]
+    paths:
+      - 'futstat/**'
+      - '.github/workflows/futstat-daily.yml'
+
+# Permisos mínimos: leer el repo y publicar en Pages (OIDC para deploy-pages).
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Una sola publicación a la vez. No se cancela la que está en curso para no
+# dejar a medias una descarga larga ni un despliegue.
+concurrency:
+  group: futstat-pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Datos, modelos y compilación
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    defaults:
+      run:
+        # Todos los comandos `run` se ejecutan dentro del proyecto.
+        working-directory: futstat
+    steps:
+      # 1. Código fuente del repositorio.
+      - name: Descargar el código
+        uses: actions/checkout@v4
+
+      # 2. Node 22 con caché de npm basada en el lockfile del proyecto.
+      - name: Preparar Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: futstat/package-lock.json
+
+      # 3. Instalación reproducible de dependencias (respeta package-lock.json).
+      - name: Instalar dependencias
+        run: npm ci
+
+      # 4. Recupera el almacén incremental de datos (data-store/) de la ejecución
+      #    anterior. Así solo se descargan partidos y resúmenes nuevos, se conserva
+      #    el histórico de cuotas (movimiento de líneas) y la pasada es mucho más rápida.
+      #    La clave es única por ejecución; restore-keys toma la más reciente.
+      - name: Restaurar caché del almacén de datos
+        id: restore-store
+        uses: actions/cache/restore@v4
+        with:
+          path: futstat/data-store
+          key: futstat-store-${{ github.run_id }}
+          restore-keys: |
+            futstat-store-
+
+      # 5. Descarga/actualiza todas las competiciones desde la API pública de ESPN.
+      #    El script ya tolera fallos parciales (una liga caída no detiene el resto)
+      #    y solo devuelve error si fallan TODAS las competiciones.
+      - name: Descargar datos de ESPN
+        id: fetch
+        run: npm run data:fetch
+        continue-on-error: false
+
+      # 6. Guarda el almacén en caché justo después de la descarga (aunque falle un
+      #    paso posterior, lo descargado no se pierde para la próxima ejecución).
+      #    Se omite si la descarga ni siquiera llegó a ejecutarse o si esta misma
+      #    clave ya existe (re-ejecución de un mismo run).
+      - name: Guardar caché del almacén de datos
+        if: always() && steps.fetch.outcome != 'skipped' && steps.restore-store.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: futstat/data-store
+          key: futstat-store-${{ github.run_id }}
+
+      # 7. Ajusta los modelos y genera los JSON publicados en public/data/
+      #    (Elo, Dixon-Coles, ensamble con mercado, mercados, córners/tarjetas/tiros,
+      #    jugadores, simulación Monte Carlo, backtest, apuestas de valor).
+      - name: Calcular modelos y generar JSON
+        run: npm run data:build
+
+      # 8. Comprueba que los JSON generados cumplen el contrato de datos
+      #    (src/types/data.ts) antes de publicar nada.
+      - name: Validar datos generados
+        run: npm run data:validate
+
+      # 9. Tests unitarios (modelos estadísticos, normalización de ESPN, etc.).
+      - name: Ejecutar tests
+        run: npm test
+
+      # 10. Typecheck + compilación de la app con Vite → futstat/dist
+      #     (incluye public/data/ recién generado).
+      - name: Compilar la web
+        run: npm run build
+
+      # 11. Configura GitHub Pages para este repositorio.
+      - name: Configurar GitHub Pages
+        uses: actions/configure-pages@v5
+
+      # 12. Empaqueta la web compilada como artefacto de Pages.
+      #     (`path` es relativo a la raíz del repo: working-directory no aplica a `uses`).
+      - name: Subir artefacto de Pages
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: futstat/dist
+
+  deploy:
+    name: Publicar en GitHub Pages
+    needs: build
+    # Solo se publica desde main, la rama por defecto (una ejecución manual en
+    # otra rama sirve para comprobar que todo compila, sin desplegar).
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      # Despliega el artefacto subido en el job anterior.
+      - name: Desplegar
+        id: deployment
+        uses: actions/deploy-pages@v4

@@ -1,0 +1,284 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ==========================================================================
+   FutStat Lab — tokens de diseño ("Estadio de noche")
+   Cada color es una tripleta "R G B" para poder usar opacidad en Tailwind.
+   Ver src/app/DESIGN.md antes de añadir o cambiar un token.
+   ========================================================================== */
+:root {
+  color-scheme: dark;
+  /* superficies */
+  --c-bg: 8 11 16; /* #080b10 noche */
+  --c-surface-1: 16 21 28; /* #10151c tarjetas */
+  --c-surface-2: 22 28 37; /* #161c25 elevado / cabeceras */
+  --c-surface-3: 30 37 48; /* #1e2530 hover / pistas */
+  --c-line: 36 44 56; /* #242c38 hairline */
+  --c-line-strong: 50 60 75; /* #323c4b */
+  /* tinta */
+  --c-ink-1: 238 242 246; /* texto principal */
+  --c-ink-2: 170 180 192; /* secundario */
+  --c-ink-3: 135 146 160; /* atenuado (AA sobre surface-1/2) */
+  /* acento "foco de estadio" — usar con moderación */
+  --c-accent: 198 241 53; /* #c6f135 */
+  --c-on-accent: 11 15 20;
+  --c-accent-text: 198 241 53;
+  /* semánticos 1X2 (esquema divergente: frío · neutro · cálido) */
+  --c-home: 59 140 240; /* #3b8cf0 Local */
+  --c-on-home: 11 15 20;
+  --c-draw: 154 164 178; /* #9aa4b2 Empate */
+  --c-on-draw: 11 15 20;
+  --c-away: 228 103 42; /* #e4672a Visitante */
+  --c-on-away: 11 15 20;
+  /* resultados V/E/D */
+  --c-win: 34 168 102; /* #22a866 */
+  --c-on-win: 11 15 20;
+  --c-loss: 229 72 77; /* #e5484d */
+  --c-on-loss: 11 15 20;
+  /* estado / deltas */
+  --c-pos: 60 207 126;
+  --c-neg: 240 98 102;
+  --c-warn: 250 178 25;
+  --c-live: 255 77 79;
+  /* secuencial (heatmaps): un solo tono, transparencia → intensidad */
+  --c-seq: 198 241 53;
+  --c-on-seq: 11 15 20;
+
+  --pitch-stroke: rgba(238, 242, 246, 0.05);
+  --grid-stroke: rgba(238, 242, 246, 0.028);
+  --glow-a: rgba(198, 241, 53, 0.07);
+  --glow-b: rgba(96, 150, 255, 0.07);
+  --grain-opacity: 0.05;
+  --header-h: 60px;
+  --sidebar-w: 256px;
+  --bottom-nav-h: 64px;
+}
+
+:root[data-theme='light'] {
+  color-scheme: light;
+  --c-bg: 241 242 238;
+  --c-surface-1: 255 255 255;
+  --c-surface-2: 247 248 245;
+  --c-surface-3: 236 238 233;
+  --c-line: 224 227 221;
+  --c-line-strong: 205 210 202;
+  --c-ink-1: 13 17 23;
+  --c-ink-2: 72 81 92;
+  --c-ink-3: 98 107 118;
+  --c-accent: 190 236 40;
+  --c-on-accent: 11 15 20;
+  --c-accent-text: 74 122 0;
+  --c-home: 34 104 201; /* #2268c9 */
+  --c-on-home: 255 255 255;
+  --c-draw: 154 163 174; /* #9aa3ae */
+  --c-on-draw: 11 15 20;
+  --c-away: 194 78 24; /* #c24e18 */
+  --c-on-away: 255 255 255;
+  --c-win: 19 132 74;
+  --c-on-win: 255 255 255;
+  --c-loss: 201 51 56;
+  --c-on-loss: 255 255 255;
+  --c-pos: 19 132 74;
+  --c-neg: 201 51 56;
+  --c-warn: 176 112 0;
+  --c-live: 214 40 40;
+  --c-seq: 79 122 0;
+  --c-on-seq: 255 255 255;
+
+  --pitch-stroke: rgba(13, 17, 23, 0.06);
+  --grid-stroke: rgba(13, 17, 23, 0.035);
+  --glow-a: rgba(160, 210, 20, 0.12);
+  --glow-b: rgba(34, 104, 201, 0.06);
+  --grain-opacity: 0.035;
+}
+
+/* ==========================================================================
+   Base
+   ========================================================================== */
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-rendering: optimizeLegibility;
+  }
+  body {
+    @apply bg-bg font-sans text-[14px] leading-[1.45] text-ink-1 antialiased;
+    min-height: 100dvh;
+    background-color: rgb(var(--c-bg));
+    background-image:
+      radial-gradient(70rem 34rem at 12% -12%, var(--glow-a), transparent 62%),
+      radial-gradient(60rem 30rem at 92% -18%, var(--glow-b), transparent 60%);
+    background-repeat: no-repeat;
+    background-attachment: fixed;
+  }
+  /* Atmósfera: marcas de campo + rejilla tenue (detrás de todo, no interactiva) */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background-image:
+      linear-gradient(var(--grid-stroke) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid-stroke) 1px, transparent 1px);
+    background-size: 44px 44px;
+    -webkit-mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.9), rgba(0, 0, 0, 0) 70%);
+    mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.9), rgba(0, 0, 0, 0) 70%);
+  }
+  /* Grano de película */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    opacity: var(--grain-opacity);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.5 0 0 0 0 0.5 0 0 0 0 0.5 0 0 0 1 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+  #root {
+    position: relative;
+    z-index: 1;
+    isolation: isolate;
+  }
+  h1,
+  h2,
+  h3,
+  h4 {
+    text-wrap: balance;
+  }
+  ::selection {
+    background: rgb(var(--c-accent) / 0.35);
+    color: rgb(var(--c-ink-1));
+  }
+  :focus-visible {
+    outline: 2px solid rgb(var(--c-accent));
+    outline-offset: 2px;
+    border-radius: 6px;
+  }
+  :root[data-theme='light'] :focus-visible {
+    outline-color: rgb(var(--c-accent-text));
+  }
+  /* scrollbars discretas */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: rgb(var(--c-line-strong)) transparent;
+  }
+  *::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  *::-webkit-scrollbar-thumb {
+    background: rgb(var(--c-line-strong));
+    border-radius: 8px;
+  }
+  *::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  [hidden] {
+    display: none !important;
+  }
+}
+
+/* ==========================================================================
+   Componentes CSS reutilizables (ver DESIGN.md)
+   ========================================================================== */
+@layer components {
+  /* Marcas de campo (decorativo) para cabeceras de página */
+  .pitch-lines {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 600 260' fill='none' stroke='white' stroke-width='1.5'%3E%3Crect x='1' y='1' width='598' height='258'/%3E%3Cline x1='300' y1='1' x2='300' y2='259'/%3E%3Ccircle cx='300' cy='130' r='46'/%3E%3Crect x='1' y='62' width='88' height='136'/%3E%3Crect x='511' y='62' width='88' height='136'/%3E%3Crect x='1' y='100' width='30' height='60'/%3E%3Crect x='569' y='100' width='30' height='60'/%3E%3Cpath d='M89 104a40 40 0 0 1 0 52M511 104a40 40 0 0 0 0 52'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-size: cover;
+    background-position: center;
+  }
+  .card {
+    @apply rounded-card border border-line bg-surface-1/90 shadow-card;
+    backdrop-filter: saturate(1.1);
+  }
+  .card-hover {
+    @apply transition-colors duration-150 hover:border-line-strong hover:bg-surface-2/90;
+  }
+  .eyebrow {
+    @apply text-2xs font-semibold uppercase tracking-[0.12em] text-ink-3;
+  }
+  .display {
+    @apply font-display font-extrabold uppercase leading-[0.95] tracking-[0.01em];
+  }
+  .num {
+    @apply font-mono tabular-nums;
+  }
+  .chip {
+    @apply inline-flex items-center gap-1 rounded-md border border-line bg-surface-2 px-1.5 py-0.5 text-2xs font-medium text-ink-2;
+  }
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg border border-line bg-surface-2 px-3 py-2 text-[13px] font-medium text-ink-1 transition-colors hover:border-line-strong hover:bg-surface-3 disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  .btn-ghost {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-2.5 py-1.5 text-[13px] font-medium text-ink-2 transition-colors hover:bg-surface-3 hover:text-ink-1;
+  }
+  .btn-accent {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg bg-accent px-3 py-2 text-[13px] font-semibold text-accent-ink transition-[filter] hover:brightness-95;
+  }
+  .link {
+    @apply font-medium text-ink-1 underline decoration-line-strong underline-offset-4 transition-colors hover:decoration-accent;
+  }
+  .input {
+    @apply w-full rounded-lg border border-line bg-surface-2 px-3 py-2 text-[13px] text-ink-1 placeholder:text-ink-3 focus:border-line-strong focus:outline-none;
+  }
+  /* enlace "estirado": toda la tarjeta es clicable sin anidar interactivos */
+  .stretched-link::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    border-radius: inherit;
+  }
+  .scrollbar-none {
+    scrollbar-width: none;
+  }
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
+  }
+  .skeleton {
+    background-color: rgb(var(--c-surface-3));
+    background-image: linear-gradient(
+      90deg,
+      rgb(var(--c-surface-3)) 0px,
+      rgb(var(--c-line-strong) / 0.55) 120px,
+      rgb(var(--c-surface-3)) 240px
+    );
+    background-size: 800px 100%;
+    @apply animate-shimmer rounded-md;
+  }
+}
+
+@layer utilities {
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+  .text-balance {
+    text-wrap: balance;
+  }
+  .mask-fade-x {
+    -webkit-mask-image: linear-gradient(to right, transparent, black 16px, black calc(100% - 16px), transparent);
+    mask-image: linear-gradient(to right, transparent, black 16px, black calc(100% - 16px), transparent);
+  }
+}
+
+/* Movimiento reducido: sin animaciones ni transiciones decorativas */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Alto contraste forzado: los segmentos de barra mantienen borde visible */
+@media (forced-colors: active) {
+  .forced-border {
+    border: 1px solid CanvasText;
+  }
+}

@@ -13,6 +13,7 @@
     "data:fetch": "tsx pipeline/fetch.ts",
     "data:build": "tsx pipeline/build.ts",
     "data:update": "tsx pipeline/fetch.ts && tsx pipeline/build.ts",
+    "data:validate": "tsx scripts/validate-data.ts",
     "data:mock": "tsx scripts/mock-data.ts"
   },
   "dependencies": {

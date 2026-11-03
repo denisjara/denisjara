@@ -164,11 +164,16 @@ function cleanHex(c: string | undefined): string | undefined {
   return /^[0-9a-fA-F]{6}$/.test(h) ? h.toLowerCase() : undefined;
 }
 
+/** ESPN mezcla `http://` y `https://` en sus logos: se normalizan a https (evita contenido mixto). */
+export function httpsUrl(u: string | undefined): string | undefined {
+  return u ? u.replace(/^http:\/\//i, 'https://') : u;
+}
+
 function pickLogo(t: RawTeam): string | undefined {
-  if (t.logo) return t.logo;
+  if (t.logo) return httpsUrl(t.logo);
   const logos = t.logos ?? [];
   const def = logos.find((l) => l.rel?.includes('default')) ?? logos[0];
-  return def?.href;
+  return httpsUrl(def?.href);
 }
 
 export function teamRef(t: RawTeam | undefined): TeamRef {
@@ -445,8 +450,8 @@ export function leagueInfo(raw: unknown): CompetitionStore['league'] {
   if (sm) seasonLabel = sm[2] ? `${sm[1]}-${sm[2].slice(-2)}` : sm[1];
   return compact({
     name: lg.name,
-    logo: logo?.href,
-    logoDark: logoDark?.href,
+    logo: httpsUrl(logo?.href),
+    logoDark: httpsUrl(logoDark?.href),
     seasonYear: lg.season?.year,
     seasonLabel,
     seasonStart: lg.season?.startDate ? isoDate(lg.season.startDate) : undefined,
