@@ -118,10 +118,13 @@ export const MODEL = {
   eloInit: 1500,
   /** initial Elo offset by competition tier when a team is first seen: init + (tier-5)*tierOffset */
   eloTierOffset: 30,
-  /** ensemble weights (re-normalised when a source is missing) */
-  wDixonColes: 0.5,
+  /** ensemble weights when bookmaker odds exist (backtest: closing market is the strongest single source) */
+  wDixonColes: 0.2,
   wElo: 0.2,
-  wMarket: 0.3,
+  wMarket: 0.6,
+  /** ensemble weights when there are no odds */
+  wDixonColesNoMarket: 0.7,
+  wEloNoMarket: 0.3,
   /** value bets */
   minEv: 0.05,
   minProb: 0.12,

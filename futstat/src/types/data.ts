@@ -56,6 +56,8 @@ export interface CompetitionMeta {
   /** labels of simulated outcome columns (e.g. ["Campeón","Top 4","Descenso"]) */
   simulationColumns?: string[];
   upcomingCount: number; // scheduled matches in the next 14 days
+  /** ISO date of the next scheduled match (may be beyond the 14-day window) */
+  nextMatchDate?: string;
   finishedCount: number; // finished matches this season in our dataset
   /** Primary accent color (hex, without #) — optional cosmetic hint */
   color?: string;
@@ -147,7 +149,7 @@ export interface QuickPrediction {
 }
 
 export interface ValuePick {
-  marketId: string; // "1x2" | "ou25" | "btts" | "ah" ...
+  marketId: string; // Market.id of the source market: "1x2", "ou-2.5", "btts", "ah-home--0.5", "corners-ou-9.5" ...
   market: string; // "Resultado final"
   selection: string; // "Local", "Más de 2.5", ...
   prob: number; // model probability
@@ -194,7 +196,9 @@ export interface MarketSelection {
   prob: number;
   fairOdds: number; // 1 / prob (capped at 1000)
   marketOdds?: number; // bookmaker decimal odds when available
-  ev?: number; // prob*marketOdds - 1
+  /** expected value per unit staked. For Asian lines with push/half outcomes this is the exact EV
+   * (not prob*marketOdds-1, since `prob` there is the effective probability 1/fairOdds). */
+  ev?: number;
   /** extra hint, e.g. line for handicap "(-0.5)" */
   note?: string;
 }
@@ -251,10 +255,13 @@ export interface FormMatch {
   cornersAgainst?: number;
   cards?: number; // yellow + red received
   fouls?: number;
+  /** possession on a 0..100 scale */
   possession?: number;
   /** model λ (xG proxy) for this team in that match, when available */
   xg?: number;
   xga?: number;
+  /** true when public/data/matches/<matchId>.json exists */
+  hasDetail?: boolean;
 }
 
 export interface TeamFormBlock {
@@ -286,7 +293,7 @@ export interface ComparisonRow {
   /** which direction is better for the team: 'high' | 'low' */
   better: 'high' | 'low';
   leagueAvg?: number;
-  /** formatting hint */
+  /** formatting hint. 'pct' values are shares in [0,1] (e.g. possession 0.55) */
   format?: 'int' | 'dec1' | 'dec2' | 'pct';
 }
 
@@ -365,6 +372,7 @@ export interface TeamMatchStatsPublic {
   yellow?: number;
   red?: number;
   offsides?: number;
+  /** possession on a 0..100 scale */
   possession?: number;
   saves?: number;
   passes?: number;
@@ -433,6 +441,7 @@ export interface TeamSeasonStats {
   cards: SplitStat; // yellow + red received
   cardsAgainst: SplitStat; // cards received by opponents
   fouls: SplitStat;
+  /** possession on a 0..100 scale */
   possession: SplitStat;
   /** shares 0..1 */
   over15Pct: number;
@@ -635,7 +644,7 @@ export interface MetaFile {
     valueBets: number;
   };
   /** team search index */
-  teams: { id: string; name: string; abbr: string; logo?: string; compId: string }[];
+  teams: { id: string; name: string; abbr: string; logo?: string; color?: string; compId: string }[];
 }
 
 export interface HomeFile {
@@ -670,6 +679,10 @@ export interface ValueFile {
   /** settings used */
   minEv: number;
   kellyFraction: number;
+  /** maximum stake fraction per bet */
+  kellyCap?: number;
+  minProb?: number;
+  maxOdds?: number;
 }
 
 export interface ModelFile {
