@@ -23,3 +23,21 @@ describe('versión portátil', () => {
     expect(csp).toContain("trusted-types 'none'");
   });
 });
+
+describe('versión portátil: datos comprimidos y escudos', () => {
+  it('decodePacked recupera exactamente el JSON comprimido con gzip + base64', async () => {
+    const { gzipSync } = await import('node:zlib');
+    const { decodePacked } = await import('../../src/app/lib/packed');
+    const value = { generatedAt: '2026-11-05T00:00:00Z', equipos: ['Colo-Colo', 'Atlético de Madrid', 'Ñublense'], n: 13810 };
+    const b64 = gzipSync(Buffer.from(JSON.stringify(value), 'utf8')).toString('base64');
+    await expect(decodePacked(b64)).resolves.toEqual(value);
+    await expect(decodePacked(Buffer.from('no es gzip').toString('base64'))).rejects.toBeTruthy();
+  });
+
+  it('una data: URI que no viene del bloque de escudos incrustado se rechaza', async () => {
+    const { safeImageUrl } = await import('../../src/app/lib/safeUrl');
+    expect(safeImageUrl('data:image/png;base64,iVBORw0KGgo=')).toBeUndefined();
+    expect(safeImageUrl('data:image/svg+xml;base64,PHN2Zz48L3N2Zz4=')).toBeUndefined();
+    expect(safeImageUrl('https://a.espncdn.com/i/teamlogos/soccer/500/83.png')).toBe('https://a.espncdn.com/i/teamlogos/soccer/500/83.png');
+  });
+});

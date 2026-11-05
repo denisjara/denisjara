@@ -28,6 +28,7 @@ import type {
   ValueFile,
 } from '../../types/data';
 import { normalizeDataFile } from './sanitize';
+import { decodePacked } from './packed';
 
 /** Directorio de datos configurado ("data" en producción, "mock-data" en desarrollo de UI). */
 export const DATA_DIR: string = (() => {
@@ -199,14 +200,20 @@ async function readJson(res: Response, url: string, path: string): Promise<unkno
 // Datos incrustados (versión portátil de un solo archivo, `npm run build:standalone`)
 // ---------------------------------------------------------------------------
 /**
- * En la versión portátil los JSON van dentro del propio HTML en <script id="futstat-data" type="application/json">
- * ({ "home.json": {...}, "competitions/laliga.json": {...}, ... }). Así el archivo se abre con doble clic (file://),
- * sin servidor ni red. Si el bloque existe, NUNCA se hacen peticiones de datos: lo que no está incrustado es «no
- * encontrado». Los datos pasan por la misma validación/normalización que los descargados.
+ * En la versión portátil todos los JSON van dentro del propio HTML, en <script id="futstat-data"
+ * type="application/json">: { "format": "futstat-gz64-v1", "files": { "home.json": "<gzip en base64>", ... } }
+ * (o, sin comprimir, { "home.json": {...}, ... }). Así el archivo se abre con doble clic (file://), sin servidor ni
+ * red. Si el bloque existe NUNCA se hacen peticiones de datos: lo que no está incluido es «no encontrado». Cada archivo
+ * se descomprime solo cuando se visita y pasa por la misma validación que los descargados.
  */
-let embedded: Record<string, unknown> | null | undefined;
+export const PACKED_FORMAT = 'futstat-gz64-v1';
+interface EmbeddedBundle {
+  packed: boolean;
+  files: Record<string, unknown>;
+}
+let embedded: EmbeddedBundle | null | undefined;
 
-export function embeddedData(): Record<string, unknown> | null {
+export function embeddedData(): EmbeddedBundle | null {
   if (embedded !== undefined) return embedded;
   embedded = null;
   try {
@@ -215,13 +222,58 @@ export function embeddedData(): Record<string, unknown> | null {
     if (text) {
       const parsed: unknown = JSON.parse(text);
       if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
-        embedded = Object.assign(Object.create(null) as Record<string, unknown>, parsed);
+        const obj = parsed as Record<string, unknown>;
+        const packed = obj.format === PACKED_FORMAT && !!obj.files && typeof obj.files === 'object' && !Array.isArray(obj.files);
+        const files = Object.assign(Object.create(null) as Record<string, unknown>, packed ? (obj.files as object) : obj);
+        embedded = { packed, files };
       }
     }
   } catch {
     embedded = null;
   }
   return embedded;
+}
+
+/** Solo para tests: olvida el bloque de datos leído del documento. */
+export function resetEmbeddedDataForTests(): void {
+  embedded = undefined;
+}
+
+function fetchEmbedded<T>(bundle: EmbeddedBundle, path: string): Promise<T> {
+  if (!Object.prototype.hasOwnProperty.call(bundle.files, path)) return Promise.reject(notFoundError(path));
+  const running = inflight.get(path);
+  if (running) return running as Promise<T>;
+  const p = (async () => {
+    let raw = bundle.files[path];
+    if (bundle.packed) {
+      if (typeof raw !== 'string') throw new DataError('Los datos incluidos en el archivo están dañados.', path, 'invalid');
+      try {
+        raw = await decodePacked(raw);
+      } catch (e) {
+        const old = e instanceof Error && e.message.includes('DecompressionStream');
+        throw new DataError(
+          old
+            ? 'Tu navegador es demasiado antiguo para abrir este archivo. Actualízalo (Safari 16.4+, Chrome o Edge recientes).'
+            : 'Los datos incluidos en el archivo están dañados.',
+          path,
+          'invalid',
+        );
+      }
+    }
+    try {
+      const value = normalizeDataFile(path, raw);
+      cacheSet(path, value);
+      return value as T;
+    } catch {
+      throw new DataError('Los datos incluidos en el archivo no tienen el formato esperado.', path, 'invalid');
+    }
+  })();
+  inflight.set(path, p);
+  const clear = () => {
+    if (inflight.get(path) === p) inflight.delete(path);
+  };
+  p.then(clear, clear);
+  return p;
 }
 
 const retryable = (e: unknown) =>
@@ -239,16 +291,7 @@ export function fetchJson<T>(path: string, opts: { force?: boolean } = {}): Prom
     if (cached !== undefined) return Promise.resolve(cached as T);
   }
   const bundle = embeddedData();
-  if (bundle) {
-    if (!Object.prototype.hasOwnProperty.call(bundle, path)) return Promise.reject(notFoundError(path));
-    try {
-      const value = normalizeDataFile(path, bundle[path]);
-      cacheSet(path, value);
-      return Promise.resolve(value as T);
-    } catch {
-      return Promise.reject(new DataError('Los datos incluidos en el archivo no tienen el formato esperado.', path, 'invalid'));
-    }
-  }
+  if (bundle) return fetchEmbedded<T>(bundle, path);
   const running = inflight.get(path);
   if (running) return running as Promise<T>;
   const url = dataUrl(path);

@@ -53,13 +53,14 @@ resultados en vivo sin esperar a la siguiente actualización.
 
 ### Versión portátil (un solo archivo)
 
-Además de la web, cada actualización genera **`FutStat-Lab.html`**: un único archivo con la app, las
-tipografías y los datos del día. Se descarga desde la web publicada
-(`https://denisjara.github.io/denisjara/FutStat-Lab.html`) y se abre con **doble clic** en cualquier
-navegador (Safari, Chrome…), sin instalar nada, sin servidor y sin conexión (con internet además muestra
-escudos y marcador en vivo). Incluye todas las competiciones, la portada, jugadores, valor y modelo, y una
-selección de fichas de partido y de equipo para no superar ~14 MB. Para generarlo en local:
-`npm run build:standalone` → `standalone/FutStat-Lab.html`.
+Además de la web, cada actualización genera **`FutStat-Lab.html`**: un único archivo (~15 MB) con la app,
+las tipografías, **todos** los datos del día (las ~900 fichas de competiciones, partidos, equipos y
+jugadores, comprimidas dentro del propio HTML) y los **escudos** de los equipos. Se descarga desde la web
+publicada (`https://denisjara.github.io/denisjara/FutStat-Lab.html`) y se abre con **doble clic** en
+cualquier navegador moderno (Safari 16.4+, Chrome, Edge, Firefox), sin instalar nada, sin servidor y sin
+conexión; con internet además funciona el marcador en vivo. Hay una copia de ejemplo en
+[`descargas/FutStat-Lab.html`](descargas/FutStat-Lab.html) (en GitHub: botón «Download raw file»).
+Para generarlo en local: `npm run build:standalone` → `standalone/FutStat-Lab.html`.
 
 ---
 

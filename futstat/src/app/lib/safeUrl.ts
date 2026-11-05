@@ -42,13 +42,57 @@ export function isAllowedImageHost(hostname: string): boolean {
  * sin puerto explícito y con host de ESPN.
  */
 export function safeImageUrl(raw: unknown): string | undefined {
+  // Versión portátil: solo se aceptan data: URIs que vienen del bloque de escudos incrustado (nunca de los datos).
+  if (typeof raw === 'string' && raw.startsWith('data:')) return embeddedLogos().values.has(raw) ? raw : undefined;
   const url = parseUrl(raw);
   if (!url) return undefined;
   if (!isAllowedImageHost(url.hostname)) return undefined;
   if (url.port && url.port !== '443') return undefined;
   if (url.protocol === 'http:') url.protocol = 'https:';
   if (url.protocol !== 'https:') return undefined;
-  return url.href;
+  return embeddedLogos().byUrl.get(url.href) ?? url.href;
+}
+
+// ---------------------------------------------------------------------------
+// Escudos incrustados (versión portátil de un solo archivo)
+// ---------------------------------------------------------------------------
+/** Imagen incrustada válida: PNG/WebP/JPEG en base64 y de tamaño razonable. */
+const EMBEDDED_IMAGE = /^data:image\/(?:png|webp|jpeg);base64,[A-Za-z0-9+/]+={0,2}$/;
+const MAX_EMBEDDED_IMAGE = 200_000;
+
+let logos: { byUrl: Map<string, string>; values: Set<string> } | undefined;
+
+/**
+ * En `FutStat-Lab.html` los escudos van dentro del propio archivo (<script id="futstat-logos" type="application/json">
+ * { "https://a.espncdn.com/...png": "data:image/png;base64,..." }), para verse sin internet y dentro de visores que
+ * bloquean imágenes externas. En la web normal el bloque no existe y se usan las URLs de ESPN.
+ */
+export function embeddedLogos(): { byUrl: Map<string, string>; values: Set<string> } {
+  if (logos) return logos;
+  logos = { byUrl: new Map(), values: new Set() };
+  try {
+    // globalThis.document: este módulo también se usa en tests de Node (sin DOM).
+    const doc = (globalThis as { document?: { getElementById(id: string): { textContent: string | null } | null } }).document;
+    const text = doc?.getElementById('futstat-logos')?.textContent;
+    if (!text) return logos;
+    const parsed: unknown = JSON.parse(text);
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return logos;
+    for (const [key, value] of Object.entries(parsed as Record<string, unknown>)) {
+      if (typeof value !== 'string' || value.length > MAX_EMBEDDED_IMAGE || !EMBEDDED_IMAGE.test(value)) continue;
+      const url = parseUrl(key);
+      if (!url || url.protocol !== 'https:' || !isAllowedImageHost(url.hostname)) continue;
+      logos.byUrl.set(url.href, value);
+      logos.values.add(value);
+    }
+  } catch {
+    /* sin escudos incrustados: se usan las URLs */
+  }
+  return logos;
+}
+
+/** Solo para tests: olvida los escudos leídos del documento. */
+export function resetEmbeddedLogosForTests(): void {
+  logos = undefined;
 }
 
 /** URL externa segura (solo https, sin credenciales) o undefined. */
