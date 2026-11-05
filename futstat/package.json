@@ -17,7 +17,8 @@
     "data:build": "tsx pipeline/build.ts",
     "data:update": "tsx pipeline/fetch.ts && tsx pipeline/build.ts",
     "data:validate": "tsx scripts/validate-data.ts",
-    "data:mock": "tsx scripts/mock-data.ts"
+    "data:mock": "tsx scripts/mock-data.ts",
+    "build:standalone": "tsc -p tsconfig.app.json --noEmit && VITE_STANDALONE=1 vite build && tsx scripts/build-standalone.ts"
   },
   "dependencies": {
     "lucide-react": "0.460.0",

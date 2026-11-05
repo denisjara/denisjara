@@ -195,6 +195,35 @@ async function readJson(res: Response, url: string, path: string): Promise<unkno
   }
 }
 
+// ---------------------------------------------------------------------------
+// Datos incrustados (versión portátil de un solo archivo, `npm run build:standalone`)
+// ---------------------------------------------------------------------------
+/**
+ * En la versión portátil los JSON van dentro del propio HTML en <script id="futstat-data" type="application/json">
+ * ({ "home.json": {...}, "competitions/laliga.json": {...}, ... }). Así el archivo se abre con doble clic (file://),
+ * sin servidor ni red. Si el bloque existe, NUNCA se hacen peticiones de datos: lo que no está incrustado es «no
+ * encontrado». Los datos pasan por la misma validación/normalización que los descargados.
+ */
+let embedded: Record<string, unknown> | null | undefined;
+
+export function embeddedData(): Record<string, unknown> | null {
+  if (embedded !== undefined) return embedded;
+  embedded = null;
+  try {
+    const el = typeof document !== 'undefined' ? document.getElementById('futstat-data') : null;
+    const text = el?.textContent;
+    if (text) {
+      const parsed: unknown = JSON.parse(text);
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+        embedded = Object.assign(Object.create(null) as Record<string, unknown>, parsed);
+      }
+    }
+  } catch {
+    embedded = null;
+  }
+  return embedded;
+}
+
 const retryable = (e: unknown) =>
   e instanceof DataError && (e.kind === 'network' || e.kind === 'timeout' || (e.kind === 'http' && (e.status === 429 || (e.status ?? 0) >= 500)));
 
@@ -208,6 +237,17 @@ export function fetchJson<T>(path: string, opts: { force?: boolean } = {}): Prom
   else {
     const cached = cacheGet(path);
     if (cached !== undefined) return Promise.resolve(cached as T);
+  }
+  const bundle = embeddedData();
+  if (bundle) {
+    if (!Object.prototype.hasOwnProperty.call(bundle, path)) return Promise.reject(notFoundError(path));
+    try {
+      const value = normalizeDataFile(path, bundle[path]);
+      cacheSet(path, value);
+      return Promise.resolve(value as T);
+    } catch {
+      return Promise.reject(new DataError('Los datos incluidos en el archivo no tienen el formato esperado.', path, 'invalid'));
+    }
   }
   const running = inflight.get(path);
   if (running) return running as Promise<T>;

@@ -199,6 +199,16 @@ jobs:
         timeout-minutes: 10
         run: npm run build
 
+      # 13b. Versión portátil: un único HTML con la app y los datos del día, descargable
+      #      desde la web publicada (…/FutStat-Lab.html) y que se abre con doble clic,
+      #      sin servidor. Si falla, la web normal se publica igualmente.
+      - name: Generar versión portátil (un solo archivo)
+        timeout-minutes: 10
+        continue-on-error: true
+        run: |
+          npm run build:standalone
+          cp standalone/FutStat-Lab.html dist/FutStat-Lab.html
+
       # 14. Bloqueante: si alguna dependencia que acaba en la web publicada tiene una
       #     vulnerabilidad conocida de gravedad alta o crítica, no se publica nada.
       #     Va al final: los datos ya se han descargado y guardado en caché.

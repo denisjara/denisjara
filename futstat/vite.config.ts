@@ -54,6 +54,27 @@ function productionCsp(): Plugin {
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
   const dataDir = env.VITE_DATA_DIR || 'data';
+  // Versión portátil (`npm run build:standalone`): todo el JS y el CSS en un único bloque cada uno y las tipografías
+  // como data: URIs, para que scripts/build-standalone.ts lo meta todo, con los datos, en un solo HTML.
+  // Su CSP la calcula ese script sobre el HTML final.
+  const standalone = env.VITE_STANDALONE === '1';
+  if (standalone) {
+    return {
+      base: './',
+      plugins: [react()],
+      publicDir: false,
+      build: {
+        outDir: 'dist-standalone',
+        emptyOutDir: true,
+        sourcemap: false,
+        cssCodeSplit: false,
+        modulePreload: false,
+        assetsInlineLimit: 100_000_000,
+        chunkSizeWarningLimit: 5_000,
+        rollupOptions: { output: { inlineDynamicImports: true } },
+      },
+    };
+  }
   return {
     base: './',
     plugins: [react(), dropMockData(dataDir), productionCsp()],

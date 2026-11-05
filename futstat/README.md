@@ -51,6 +51,16 @@ GitHub Pages. No hay servidor ni base de datos: todo es estático, rápido y gra
 Durante los partidos, la propia web consulta el marcador del día de ESPN cada 60 segundos para mostrar
 resultados en vivo sin esperar a la siguiente actualización.
 
+### Versión portátil (un solo archivo)
+
+Además de la web, cada actualización genera **`FutStat-Lab.html`**: un único archivo con la app, las
+tipografías y los datos del día. Se descarga desde la web publicada
+(`https://denisjara.github.io/denisjara/FutStat-Lab.html`) y se abre con **doble clic** en cualquier
+navegador (Safari, Chrome…), sin instalar nada, sin servidor y sin conexión (con internet además muestra
+escudos y marcador en vivo). Incluye todas las competiciones, la portada, jugadores, valor y modelo, y una
+selección de fichas de partido y de equipo para no superar ~14 MB. Para generarlo en local:
+`npm run build:standalone` → `standalone/FutStat-Lab.html`.
+
 ---
 
 ## Secciones de la app

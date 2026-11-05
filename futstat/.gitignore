@@ -13,3 +13,6 @@ public/*.prev/
 # Variables de entorno locales (el proyecto no necesita secretos, pero por si acaso)
 .env
 .env.*
+# Versión portátil de un solo archivo (se genera con npm run build:standalone)
+dist-standalone/
+standalone/
