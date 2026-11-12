@@ -41,3 +41,23 @@ describe('versión portátil: datos comprimidos y escudos', () => {
     expect(safeImageUrl('https://a.espncdn.com/i/teamlogos/soccer/500/83.png')).toBe('https://a.espncdn.com/i/teamlogos/soccer/500/83.png');
   });
 });
+
+describe('versión portátil: auto-actualización', () => {
+  it('solo acepta como web de origen una URL https (o localhost) sin credenciales ni parámetros', async () => {
+    const { validRemoteBase } = await import('../../src/app/lib/packed');
+    expect(validRemoteBase('https://denisjara.github.io/denisjara/data/')).toBe('https://denisjara.github.io/denisjara/data/');
+    expect(validRemoteBase('https://denisjara.github.io/denisjara/data')).toBe('https://denisjara.github.io/denisjara/data/');
+    expect(validRemoteBase('http://127.0.0.1:4310/data/')).toBe('http://127.0.0.1:4310/data/');
+    expect(validRemoteBase('http://evil.example/data/')).toBeUndefined();
+    expect(validRemoteBase('javascript:alert(1)')).toBeUndefined();
+    expect(validRemoteBase('https://user:pw@denisjara.github.io/data/')).toBeUndefined();
+    expect(validRemoteBase('https://denisjara.github.io/data/?x=1')).toBeUndefined();
+    expect(validRemoteBase(42)).toBeUndefined();
+  });
+
+  it('la CSP de la versión portátil permite conectar solo con ESPN y con la web de origen', async () => {
+    const { standaloneCsp } = await import('../../scripts/build-standalone');
+    const csp = standaloneCsp('<script type="module">x()</script>', 'https://denisjara.github.io/denisjara/data/');
+    expect(csp).toMatch(/connect-src https:\/\/site\.api\.espn\.com https:\/\/denisjara\.github\.io(;|$)/);
+  });
+});

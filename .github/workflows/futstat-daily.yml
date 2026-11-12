@@ -1,5 +1,5 @@
 # ---------------------------------------------------------------------------
-# FutStat Lab — actualización diaria
+# FutStat Lab — actualización automática (cada 3 horas)
 #
 # Descarga los datos públicos de ESPN, recalcula todos los modelos (Elo,
 # Dixon-Coles, mercados, proyecciones, jugadores, simulaciones y backtest),
@@ -26,17 +26,15 @@
 #   - Si algo falla, no se despliega nada y la web sigue mostrando la última
 #     versión buena.
 # ---------------------------------------------------------------------------
-name: "FutStat Lab — actualización diaria"
+name: "FutStat Lab — actualización automática"
 
 on:
-  # Tres pasadas al día (horas en UTC): madrugada, mediodía y tarde, para
-  # recoger resultados nuevos, alineaciones/cuotas y partidos del día.
-  # 05:17 / 12:17 / 18:17 UTC = 06:17 / 13:17 / 19:17 en Madrid (horario de invierno).
-  # El minuto 17 evita la congestión de las ejecuciones programadas en punto.
+  # Cada 3 horas (en UTC: 00:17, 03:17, 06:17 … 21:17), para recoger resultados
+  # nuevos, cuotas que se mueven y partidos del día. El minuto 17 evita la
+  # congestión de las ejecuciones programadas en punto. Con la caché del almacén
+  # cada pasada tarda pocos minutos (solo descarga lo nuevo).
   schedule:
-    - cron: '17 5 * * *'
-    - cron: '17 12 * * *'
-    - cron: '17 18 * * *'
+    - cron: '17 */3 * * *'
   # Ejecución manual desde la pestaña Actions ("Run workflow").
   workflow_dispatch:
   # Redespliegue automático cuando cambia el código del proyecto o este workflow.
@@ -151,7 +149,8 @@ jobs:
           path: futstat/data-store
           key: futstat-store-${{ github.run_id }}-${{ github.run_attempt }}
 
-      # 9b. Copia de seguridad semanal del almacén como artefacto (90 días). La caché de
+      # 9b. Copia de seguridad semanal del almacén como artefacto (90 días): solo la pasada
+      #     de las 00:17 UTC de los lunes y las ejecuciones manuales. La caché de
       #     Actions se expulsa tras 7 días sin uso; el histórico de cuotas y los resúmenes
       #     antiguos no se pueden volver a descargar. Restaurar: descargar el artefacto
       #     "futstat-data-store-…" de la ejecución y copiarlo en futstat/data-store/
@@ -160,7 +159,7 @@ jobs:
         id: weekly
         if: always() && steps.store-check.outcome == 'success'
         run: |
-          if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ] || { [ "$GITHUB_EVENT_NAME" = "schedule" ] && [ "$(date -u +%u)" = "1" ] && [ "$(date -u +%H)" -lt 9 ]; }; then
+          if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ] || { [ "$GITHUB_EVENT_NAME" = "schedule" ] && [ "$(date -u +%u)" = "1" ] && [ "$(date -u +%H)" -lt 3 ]; }; then
             echo "backup=true" >> "$GITHUB_OUTPUT"
           else
             echo "backup=false" >> "$GITHUB_OUTPUT"
@@ -205,6 +204,9 @@ jobs:
       - name: Generar versión portátil (un solo archivo)
         timeout-minutes: 10
         continue-on-error: true
+        env:
+          # Web de la que el archivo descargado se actualiza solo cuando hay internet.
+          STANDALONE_REMOTE_URL: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/data/
         run: |
           npm run build:standalone
           cp standalone/FutStat-Lab.html dist/FutStat-Lab.html

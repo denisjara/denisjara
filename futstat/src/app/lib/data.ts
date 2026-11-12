@@ -28,7 +28,7 @@ import type {
   ValueFile,
 } from '../../types/data';
 import { normalizeDataFile } from './sanitize';
-import { decodePacked } from './packed';
+import { decodePacked, validRemoteBase } from './packed';
 
 /** Directorio de datos configurado ("data" en producción, "mock-data" en desarrollo de UI). */
 export const DATA_DIR: string = (() => {
@@ -210,7 +210,10 @@ export const PACKED_FORMAT = 'futstat-gz64-v1';
 interface EmbeddedBundle {
   packed: boolean;
   files: Record<string, unknown>;
+  /** web publicada de la que el archivo se actualiza solo cuando hay internet (…/data/) */
+  remote?: string;
 }
+
 let embedded: EmbeddedBundle | null | undefined;
 
 export function embeddedData(): EmbeddedBundle | null {
@@ -225,7 +228,7 @@ export function embeddedData(): EmbeddedBundle | null {
         const obj = parsed as Record<string, unknown>;
         const packed = obj.format === PACKED_FORMAT && !!obj.files && typeof obj.files === 'object' && !Array.isArray(obj.files);
         const files = Object.assign(Object.create(null) as Record<string, unknown>, packed ? (obj.files as object) : obj);
-        embedded = { packed, files };
+        embedded = { packed, files, remote: packed ? validRemoteBase(obj.remote) : undefined };
       }
     }
   } catch {
@@ -237,9 +240,75 @@ export function embeddedData(): EmbeddedBundle | null {
 /** Solo para tests: olvida el bloque de datos leído del documento. */
 export function resetEmbeddedDataForTests(): void {
   embedded = undefined;
+  remoteBase = undefined;
+}
+
+// --- Auto-actualización de la versión portátil -------------------------------------------------
+/** Tiempo máximo esperando a la web publicada antes de usar los datos incluidos en el archivo. */
+const REMOTE_PROBE_MS = 5_000;
+let remoteBase: Promise<string | null> | undefined;
+
+const generatedAtOf = (v: unknown): number => {
+  const t = v && typeof v === 'object' ? Date.parse(String((v as { generatedAt?: unknown }).generatedAt ?? '')) : NaN;
+  return Number.isFinite(t) ? t : 0;
+};
+
+/**
+ * Una sola vez por apertura: si hay internet y la web publicada tiene datos MÁS NUEVOS que los incluidos en el
+ * archivo, el resto de la sesión lee de la web (validado igual). Si no hay conexión, la web no responde a tiempo o
+ * el visor bloquea la petición, se usan los datos del archivo.
+ */
+function resolveRemote(bundle: EmbeddedBundle): Promise<string | null> {
+  const base = bundle.remote;
+  if (!base) return Promise.resolve(null);
+  remoteBase ??= (async () => {
+    try {
+      if (typeof navigator !== 'undefined' && navigator.onLine === false) return null;
+      const url = `${base}meta.json`;
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), REMOTE_PROBE_MS);
+      let res: Response;
+      try {
+        res = await fetch(url, { headers: { Accept: 'application/json' }, signal: ctrl.signal, credentials: 'omit', cache: 'no-cache' });
+      } finally {
+        clearTimeout(timer);
+      }
+      const remoteMeta = await readJson(res, url, 'meta.json');
+      const local = await fetchFromBundle<unknown>(bundle, 'meta.json').catch(() => null);
+      if (generatedAtOf(remoteMeta) <= generatedAtOf(local)) return null;
+      cacheSet('meta.json', remoteMeta);
+      return base;
+    } catch {
+      return null;
+    }
+  })();
+  return remoteBase;
+}
+
+/** Archivo desde la web publicada; si falla, la copia incluida en el archivo (si la hay). */
+async function fetchFromRemote<T>(bundle: EmbeddedBundle, base: string, path: string): Promise<T> {
+  const url = `${base}${path}`;
+  try {
+    const res = await fetchOnce(url, false);
+    const value = await readJson(res, url, path);
+    cacheSet(path, value);
+    return value as T;
+  } catch (e) {
+    if (Object.prototype.hasOwnProperty.call(bundle.files, path)) return fetchFromBundle<T>(bundle, path);
+    throw e;
+  }
 }
 
 function fetchEmbedded<T>(bundle: EmbeddedBundle, path: string): Promise<T> {
+  if (!bundle.remote) return fetchFromBundle<T>(bundle, path);
+  return resolveRemote(bundle).then((base) => {
+    if (!base) return fetchFromBundle<T>(bundle, path);
+    const cached = cacheGet(path);
+    return cached !== undefined ? (cached as T) : fetchFromRemote<T>(bundle, base, path);
+  });
+}
+
+function fetchFromBundle<T>(bundle: EmbeddedBundle, path: string): Promise<T> {
   if (!Object.prototype.hasOwnProperty.call(bundle.files, path)) return Promise.reject(notFoundError(path));
   const running = inflight.get(path);
   if (running) return running as Promise<T>;

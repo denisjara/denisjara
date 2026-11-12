@@ -34,6 +34,11 @@ const LOGO_SIZE = 64;
 const LOGO_MAX_BYTES = 60_000;
 const LOGO_CONCURRENCY = 8;
 const PACKED_FORMAT = 'futstat-gz64-v1';
+/**
+ * Web publicada de la que el archivo descargado se actualiza solo cuando hay internet (GitHub Pages del repo).
+ * En CI se deriva del repositorio; en local, de esta variable o del valor por defecto.
+ */
+export const REMOTE_DATA_URL = (process.env.STANDALONE_REMOTE_URL ?? 'https://denisjara.github.io/denisjara/data/').trim();
 
 type Json = Record<string, unknown>;
 const sha256 = (s: string) => `'sha256-${createHash('sha256').update(s, 'utf8').digest('base64')}'`;
@@ -188,7 +193,7 @@ export function embedJson(v: unknown): string {
 const inlineScript = (code: string) => code.replace(/<\/(script)/gi, '<\\/$1');
 const inlineStyle = (css: string) => css.replace(/<\/(style)/gi, '<\\/$1');
 
-export function standaloneCsp(html: string): string {
+export function standaloneCsp(html: string, remote: string = REMOTE_DATA_URL): string {
   const code = html.replace(/<!--[\s\S]*?-->/g, '');
   const scripts = [...code.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/gi)]
     .filter((m) => !/\bsrc\s*=/.test(m[1]) && !/type\s*=\s*["']application\/json["']/i.test(m[1]))
@@ -200,7 +205,7 @@ export function standaloneCsp(html: string): string {
     ['style-src', ...styles.map(sha256)].join(' '),
     'font-src data:',
     'img-src data: https://a.espncdn.com https://*.espncdn.com',
-    'connect-src https://site.api.espn.com',
+    ['connect-src https://site.api.espn.com', ...(remote ? [new URL(remote).origin] : [])].join(' '),
     "object-src 'none'",
     "base-uri 'none'",
     "form-action 'none'",
@@ -232,7 +237,7 @@ function inlineApp(): { html: string; app: string; marker: string } {
 
 function assemble(base: { html: string; app: string; marker: string }, data: Record<string, string>, logos: Record<string, string>): string {
   const payload =
-    `<script id="futstat-data" type="application/json">${embedJson({ format: PACKED_FORMAT, files: data })}</script>\n` +
+    `<script id="futstat-data" type="application/json">${embedJson({ format: PACKED_FORMAT, remote: REMOTE_DATA_URL || undefined, files: data })}</script>\n` +
     `<script id="futstat-logos" type="application/json">${embedJson(logos)}</script>\n` +
     `<script type="module">${inlineScript(base.app)}</script>`;
   let html = base.html.replace(base.marker, () => payload);
@@ -243,6 +248,9 @@ function assemble(base: { html: string; app: string; marker: string }, data: Rec
 }
 
 async function main() {
+  if (REMOTE_DATA_URL && !/^(https:\/\/|http:\/\/(127\.0\.0\.1|localhost)[:/])[^\s"']+\/$/.test(REMOTE_DATA_URL)) {
+    throw new Error(`STANDALONE_REMOTE_URL no válida: ${REMOTE_DATA_URL} (https y terminada en /)`);
+  }
   const base = inlineApp();
   const { files, rawBytes, texts } = packData();
   const withoutLogos = Buffer.byteLength(assemble(base, files, {}));
@@ -260,6 +268,7 @@ async function main() {
   console.log(`✓ ${path.relative(ROOT_DIR, OUT_FILE)} · ${mb(size)}`);
   console.log(`  datos: ${Object.keys(files).length} archivos (${mb(rawBytes)} → comprimidos en el HTML)`);
   console.log(`  escudos: ${Object.keys(logos).length} de ${urls.length} incluidos · no disponibles en ESPN: ${missing} · fuera por tamaño: ${overBudget}`);
+  console.log(`  se actualiza solo (con internet) desde: ${REMOTE_DATA_URL || '— (desactivado)'}`);
 }
 
 const invokedDirectly = !!process.argv[1] && /build-standalone\.[cm]?[jt]s$/.test(process.argv[1]);

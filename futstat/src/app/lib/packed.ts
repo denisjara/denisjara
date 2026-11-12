@@ -15,3 +15,16 @@ export async function decodePacked(b64: string): Promise<unknown> {
   const text = await new Response(stream).text();
   return JSON.parse(text) as unknown;
 }
+
+/** Solo https (o localhost para pruebas) y terminada en '/'. */
+export function validRemoteBase(raw: unknown): string | undefined {
+  if (typeof raw !== 'string' || raw.length > 300) return undefined;
+  try {
+    const u = new URL(raw);
+    const local = u.protocol === 'http:' && (u.hostname === '127.0.0.1' || u.hostname === 'localhost');
+    if ((u.protocol !== 'https:' && !local) || u.username || u.password || u.search || u.hash) return undefined;
+    return u.href.endsWith('/') ? u.href : `${u.href}/`;
+  } catch {
+    return undefined;
+  }
+}

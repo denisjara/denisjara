@@ -2,7 +2,7 @@
 
 [![Actualización diaria](https://github.com/denisjara/denisjara/actions/workflows/futstat-daily.yml/badge.svg)](https://github.com/denisjara/denisjara/actions/workflows/futstat-daily.yml)
 
-**Dashboard de analítica y predicción de fútbol que se actualiza solo, tres veces al día.**
+**Dashboard de analítica y predicción de fútbol que se actualiza solo, cada 3 horas.**
 
 Web publicada: **https://denisjara.github.io/denisjara/**
 
@@ -45,7 +45,7 @@ FutStat Lab tiene dos piezas:
    como un dashboard deportivo: partidos populares, una sección por liga y por competición, análisis
    completo de cada partido, jugadores, apuestas de valor y la metodología con su backtest.
 
-Un workflow de GitHub Actions ejecuta el pipeline **tres veces al día**, compila la web y la despliega en
+Un workflow de GitHub Actions ejecuta el pipeline **cada 3 horas**, compila la web y la despliega en
 GitHub Pages. No hay servidor ni base de datos: todo es estático, rápido y gratuito de alojar.
 
 Durante los partidos, la propia web consulta el marcador del día de ESPN cada 60 segundos para mostrar
@@ -58,7 +58,9 @@ las tipografías, **todos** los datos del día (las ~900 fichas de competiciones
 jugadores, comprimidas dentro del propio HTML) y los **escudos** de los equipos. Se descarga desde la web
 publicada (`https://denisjara.github.io/denisjara/FutStat-Lab.html`) y se abre con **doble clic** en
 cualquier navegador moderno (Safari 16.4+, Chrome, Edge, Firefox), sin instalar nada, sin servidor y sin
-conexión; con internet además funciona el marcador en vivo. Hay una copia de ejemplo en
+conexión; con internet además funciona el marcador en vivo. **Se actualiza solo:** cada vez que lo abres
+con internet comprueba si la web publicada tiene datos más nuevos y, si los tiene, los usa (sin descargar
+nada de nuevo); sin conexión usa los datos que lleva dentro. Hay una copia en
 [`descargas/FutStat-Lab.html`](descargas/FutStat-Lab.html) (en GitHub: botón «Download raw file»).
 Para generarlo en local: `npm run build:standalone` → `standalone/FutStat-Lab.html`.
 
@@ -269,7 +271,7 @@ cambios) y cuotas de DraftKings.
 - La API de ESPN **no es oficial ni está documentada**: puede cambiar o fallar sin aviso. El pipeline
   tolera caídas parciales (una competición que falla no detiene las demás), descarta los registros que no
   entiende y reutiliza el almacén de la ejecución anterior (ver [Seguridad y robustez](#seguridad-y-robustez)).
-- Los datos se recalculan **tres veces al día**; solo los marcadores en vivo se refrescan en tiempo real
+- Los datos se recalculan **cada 3 horas**; solo los marcadores en vivo se refrescan en tiempo real
   desde el navegador.
 
 ---
@@ -277,18 +279,18 @@ cambios) y cuotas de DraftKings.
 ## Actualización automática
 
 El workflow [`.github/workflows/futstat-daily.yml`](../.github/workflows/futstat-daily.yml)
-("FutStat Lab — actualización diaria") hace todo el trabajo:
+("FutStat Lab — actualización automática (cada 3 horas)") hace todo el trabajo:
 
 ```
-cron 05:17 / 12:17 / 18:17 UTC ─┐
+cron cada 3 h (xx:17 UTC) ─────┐
 ejecución manual ───────────────┼─▶ npm ci ─▶ restaurar data-store (caché) ─▶ data:fetch (ESPN)
 push a main (futstat/**) ───────┘      ─▶ comprobar (sin recortes) y guardar data-store ─▶ data:build (modelos + JSON)
                                        ─▶ data:validate ─▶ npm test ─▶ npm run build ─▶ npm audit ─▶ GitHub Pages
 pull request a main ───────────────▶ ci.yml: npm ci ─▶ npm audit ─▶ typecheck ─▶ tests ─▶ build (datos de prueba)
 ```
 
-- **Horario:** 05:17, 12:17 y 18:17 UTC (06:17, 13:17 y 19:17 en Madrid en horario de invierno; una hora
-  más en verano).
+- **Horario:** cada 3 horas, a las 00:17, 03:17, 06:17, 09:17, 12:17, 15:17, 18:17 y 21:17 UTC (una hora más
+  en Madrid en invierno, dos en verano). GitHub puede retrasar unos minutos las ejecuciones programadas.
 - **Almacén incremental:** `data-store/` se conserva entre ejecuciones con la caché de GitHub Actions, así
   que cada pasada solo descarga lo nuevo y mantiene el histórico de cuotas. La **primera ejecución** parte
   de cero y tarda bastante más (descarga hasta 180 días de resúmenes).
@@ -301,7 +303,7 @@ pull request a main ───────────────▶ ci.yml: npm
   la web conserva la última versión buena. Una vulnerabilidad alta o crítica en una dependencia de producción
   (`npm audit`, al final del job para no impedir la descarga de datos) también bloquea la publicación. Más detalles en
   [`.github/SECURITY.md`](../.github/SECURITY.md).
-- **Copia de seguridad del almacén:** los lunes (pasada de las 05:17 UTC) y en cada ejecución manual se sube
+- **Copia de seguridad del almacén:** los lunes (pasada de las 00:17 UTC) y en cada ejecución manual se sube
   `data-store/` como artefacto `futstat-data-store-<id>` (90 días). Para usarlo: descárgalo desde la ejecución en la
   pestaña Actions y copia los `*.json` en `futstat/data-store/` (en local). Si la caché de CI se perdiera, la siguiente
   ejecución vuelve a descargar los últimos 180 días; el histórico de cuotas previas y los resúmenes más antiguos solo
@@ -312,7 +314,7 @@ pull request a main ───────────────▶ ci.yml: npm
 1. En GitHub: **Settings → Pages → Build and deployment → Source: GitHub Actions**.
 2. Asegúrate de que el workflow está en la rama por defecto (`main`): **los cron solo se ejecutan en la
    rama por defecto**.
-3. Lanza la primera ejecución a mano: **Actions → "FutStat Lab — actualización diaria" → Run workflow**
+3. Lanza la primera ejecución a mano: **Actions → "FutStat Lab — actualización automática" → Run workflow**
    (o `gh workflow run futstat-daily.yml`).
 4. Al terminar, la web queda en **https://denisjara.github.io/denisjara/**.
 
@@ -399,7 +401,7 @@ npx vitest run tests/espn       # solo la normalización de ESPN y el almacén
 
 ## Seguridad y robustez
 
-Objetivo: que la web **nunca se quede en blanco ni se rompa** por datos malos, que la actualización diaria **nunca
+Objetivo: que la web **nunca se quede en blanco ni se rompa** por datos malos, que la actualización automática **nunca
 publique datos rotos ni dañe los datos guardados**, y que usar o desarrollar el proyecto no ponga en riesgo tu equipo.
 
 ### La web
@@ -484,7 +486,7 @@ publique datos rotos ni dañe los datos guardados**, y que usar o desarrollar el
 ## Estructura del proyecto
 
 ```
-.github/workflows/futstat-daily.yml   Actualización 3 veces al día y despliegue en GitHub Pages
+.github/workflows/futstat-daily.yml   Actualización cada 3 horas y despliegue en GitHub Pages
 .github/workflows/ci.yml              Comprobaciones de cada pull request (auditoría, typecheck, tests, build)
 futstat/
 ├── ARCHITECTURE.md        Contrato entre módulos, fuente de datos y reglas de desarrollo

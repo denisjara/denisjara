@@ -2,7 +2,7 @@
 
 [![Actualización diaria](https://github.com/denisjara/denisjara/actions/workflows/futstat-daily.yml/badge.svg)](https://github.com/denisjara/denisjara/actions/workflows/futstat-daily.yml)
 
-Dashboard de fútbol que se actualiza solo tres veces al día: partidos populares, una sección por cada liga
+Dashboard de fútbol que se actualiza solo cada 3 horas: partidos populares, una sección por cada liga
 y competición, análisis de cada partido con mercados al estilo de una casa de apuestas, estado de forma de
 jugadores, goles, tarjetas, tiros, córners y apuestas de valor. Las probabilidades salen de modelos
 estadísticos propios (Elo, Dixon-Coles, mercado sin margen, ensamble, binomial negativa y Monte Carlo)
