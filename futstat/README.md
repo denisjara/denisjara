@@ -290,7 +290,8 @@ pull request a main ───────────────▶ ci.yml: npm
 ```
 
 - **Horario:** cada 3 horas, a las 00:17, 03:17, 06:17, 09:17, 12:17, 15:17, 18:17 y 21:17 UTC (una hora más
-  en Madrid en invierno, dos en verano). GitHub puede retrasar unos minutos las ejecuciones programadas.
+  en Madrid en invierno, dos en verano). GitHub puede retrasar o descartar ejecuciones programadas en horas de mucha carga, por eso hay un segundo
+  intento a los :47 de cada franja.
 - **Almacén incremental:** `data-store/` se conserva entre ejecuciones con la caché de GitHub Actions, así
   que cada pasada solo descarga lo nuevo y mantiene el histórico de cuotas. La **primera ejecución** parte
   de cero y tarda bastante más (descarga hasta 180 días de resúmenes).

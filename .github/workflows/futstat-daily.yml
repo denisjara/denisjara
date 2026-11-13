@@ -33,8 +33,13 @@ on:
   # nuevos, cuotas que se mueven y partidos del día. El minuto 17 evita la
   # congestión de las ejecuciones programadas en punto. Con la caché del almacén
   # cada pasada tarda pocos minutos (solo descarga lo nuevo).
+  # GitHub puede retrasar o descartar ejecuciones programadas cuando hay mucha carga
+  # (en los primeros días se saltó 3 de 5). El segundo cron (:47) es un reintento
+  # dentro de la misma franja de 3 horas: si ambos se ejecutan, solo se refrescan
+  # los datos dos veces (la concurrencia del workflow evita que se solapen).
   schedule:
     - cron: '17 */3 * * *'
+    - cron: '47 */3 * * *'
   # Ejecución manual desde la pestaña Actions ("Run workflow").
   workflow_dispatch:
   # Redespliegue automático cuando cambia el código del proyecto o este workflow.
