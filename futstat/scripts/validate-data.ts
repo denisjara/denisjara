@@ -20,6 +20,9 @@ import { pathToFileURL } from 'node:url';
 import { MODEL, OUTPUT_DIR } from '../pipeline/config';
 import { poissonCdf } from '../src/lib/models';
 
+/** Goles máximos de la matriz completa del modelo (scoreMatrix por defecto 0..10), antes de recortarla para publicar. */
+const MODEL_MATRIX_GOALS = 10;
+
 // ---------------------------------------------------------------------------
 // Mini-esquema
 // ---------------------------------------------------------------------------
@@ -406,12 +409,15 @@ const modelBreakdown = obj(
     market: obj({ probs: prob1x2, margin: num({ min: -0.05, max: 0.5 }), method: str() }),
   },
   (v, at, c) => {
-    // matriz truncada (0..maxGoals): falta la cola de goleadas ⇒ suma ≈ P(X <= n)·P(Y <= n) con X, Y ~ Poisson(λ)
+    // matriz truncada (0..maxGoals): falta la cola de goleadas ⇒ suma ≈ P(X <= n)·P(Y <= n) con X, Y ~ Poisson(λ).
+    // El modelo normaliza la matriz completa sobre 0..MODEL_MATRIX_GOALS (no hasta el infinito), así que hay que dividir
+    // por esa masa: con λ altos (p. ej. 5.5 goles esperados en un partido muy desigual) la diferencia supera 0.02.
     const n = Array.isArray(v.scoreMatrix) ? v.scoreMatrix.length - 1 : -1;
     const s = c.matrixSum;
     c.matrixSum = undefined;
     if (s === undefined || n < 0 || typeof v.lambdaHome !== 'number' || typeof v.lambdaAway !== 'number') return;
-    const expected = poissonCdf(n, v.lambdaHome) * poissonCdf(n, v.lambdaAway);
+    const full = poissonCdf(MODEL_MATRIX_GOALS, v.lambdaHome) * poissonCdf(MODEL_MATRIX_GOALS, v.lambdaAway);
+    const expected = (poissonCdf(n, v.lambdaHome) * poissonCdf(n, v.lambdaAway)) / (full > 0 ? full : 1);
     if (Math.abs(s - expected) > 0.02) fail(c, `${at}.scoreMatrix`, `la matriz suma ${s.toFixed(4)} (esperado ≈ ${expected.toFixed(4)} con matriz 0..${n})`);
   },
 );
