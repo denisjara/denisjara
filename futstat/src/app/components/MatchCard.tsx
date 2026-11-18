@@ -11,6 +11,7 @@ import { ProbBar1X2 } from './ProbBar1X2';
 import { ConfidenceMeter } from './ProbabilityBadge';
 import { ValuePickChip } from './OddsButton';
 import { CompetitionBadge, StatusPill, matchHref } from './MatchStatus';
+import { SafePickChip } from './Confidence';
 
 export interface MatchCardProps {
   match: MatchSummary;
@@ -42,7 +43,8 @@ function TeamLine({ team, form, score, winner, showScore }: { team: TeamRef; for
 
 /**
  * Tarjeta de partido para la portada: competición, estado/hora, equipos con forma, marcador
- * (en vivo o final), barra 1X2, xG, +2.5, ambos marcan, marcador probable, pick de valor y confianza.
+ * (en vivo o final), barra 1X2, xG, +2.5, ambos marcan, marcador probable, pronóstico de alta confianza (chip discreto,
+ * si lo hay), pick de valor y confianza.
  * Toda la tarjeta enlaza al análisis del partido.
  */
 export function MatchCard({ match: base, live, hideCompetition, hotThreshold = 85, className, delay }: MatchCardProps) {
@@ -121,6 +123,7 @@ export function MatchCard({ match: base, live, hideCompetition, hotThreshold = 8
               </dd>
             </div>
           </dl>
+          {pr.safe && m.status === 'scheduled' && <SafePickChip pick={pr.safe} className="self-start" />}
           <footer className="flex min-h-[28px] items-center justify-between gap-2">
             {pr.pick ? (
               <ValuePickChip pick={pr.pick} className="min-w-0" />

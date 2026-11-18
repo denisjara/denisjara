@@ -1,8 +1,9 @@
 /**
- * Archivos raíz: players.json, value.json, home.json, model.json y meta.json.
+ * Archivos raíz: players.json, value.json, home.json, model.json y meta.json (confidence.json: publish/confidence.ts).
  */
 import type {
   BacktestSummary,
+  ConfidenceFile,
   CompetitionMeta,
   HomeFile,
   MatchSummary,
@@ -120,6 +121,7 @@ export function buildHomeFile(
   bets: { match: MatchSummary; pick: ValuePick }[],
   players: PlayerSeasonRow[],
   backtest: BacktestSummary | undefined,
+  confidence?: { topConfidence: NonNullable<HomeFile['topConfidence']>; headline?: HomeFile['confidenceHeadline'] },
 ): HomeFile {
   const now = ctx.now;
   const ms = publishedMatches(ctx);
@@ -180,6 +182,10 @@ export function buildHomeFile(
     highlights,
   };
   if (modelHeadline) file.modelHeadline = modelHeadline;
+  if (confidence) {
+    file.topConfidence = confidence.topConfidence;
+    if (confidence.headline) file.confidenceHeadline = confidence.headline;
+  }
   return file;
 }
 
@@ -201,10 +207,11 @@ export function buildModelFile(
   per: { compId: string; compName: string; backtest: BacktestSummary }[],
   backtest: BacktestSummary | undefined,
   counts: { competitions: number; teams: number; players: number; valueBets: number },
+  confidence?: ConfidenceFile,
 ): ModelFile {
   return {
     generatedAt: ctx.refDate,
-    sections: methodologySections({ ctx, backtest, ...counts }),
+    sections: methodologySections({ ctx, backtest, ...counts, confidence }),
     backtest: backtest ?? emptyBacktest(),
     perCompetition: per,
     parameters: modelParameters(ctx),

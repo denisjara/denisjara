@@ -25,6 +25,7 @@
  *  public/data/players.json                  -> PlayersFile      (global player form leaderboard)
  *  public/data/value.json                    -> ValueFile        (all value bets across competitions)
  *  public/data/model.json                    -> ModelFile        (methodology + global backtest)
+ *  public/data/confidence.json               -> ConfidenceFile   (high-confidence picks + honest out-of-sample record)
  */
 
 // ---------------------------------------------------------------------------
@@ -149,8 +150,161 @@ export interface QuickPrediction {
   market?: Prob1X2;
   /** best value selection for this match, if any (EV > threshold) */
   pick?: ValuePick;
+  /**
+   * best HIGH-CONFIDENCE pick of an upcoming match, if any (see ConfidencePick). Not related to `confidence` below:
+   * it is a selection whose family has a historical hit rate >= 80 % (low odds, no profit guarantee).
+   */
+  safe?: ConfidencePick;
   /** 0..1 — how sure the model is (agreement between sources × data volume) */
   confidence: number;
+}
+
+// ---------------------------------------------------------------------------
+// High-confidence picks (pipeline/analytics/confidence.ts)
+// ---------------------------------------------------------------------------
+
+export type ConfidenceTier = 'oro' | 'plata';
+/** prediction source: 'mercado' = the ensemble used de-vigged bookmaker odds; 'estadistico' = Dixon-Coles + Elo only */
+export type ConfidenceSource = 'mercado' | 'estadistico';
+export type ConfidenceTheme = 'resultado' | 'goles' | 'corners' | 'tarjetas';
+
+/**
+ * A selection whose market family (and prediction source) has hit >= 80 % in the walk-forward history once the model
+ * probability passes the family threshold. High hit rate ≠ profit: these are low-odds selections.
+ */
+export interface ConfidencePick {
+  /** stable family id: 'dc', 'dnb', 'ah+1.5', 'ou-1.5-over', 'team-score', 'corners-over-6.5', 'cards-over-1.5'... */
+  family: string;
+  /** Market.id with the same scheme as the match files ('dc', 'ou-1.5', 'team-home-ou-0.5', 'cards-ou-1.5'...) */
+  marketId: string;
+  /** market name (Spanish) */
+  market: string;
+  /** selection (Spanish, with team names), e.g. "Más de 1.5 goles", "Betis o empate (1X)" */
+  selection: string;
+  /** model probability (draw no bet: conditional on no draw) */
+  prob: number;
+  /** 1 / prob */
+  fairOdds: number;
+  /** bookmaker decimal odds when available (double chance / draw no bet: synthetic from the 1X2 prices) */
+  marketOdds?: number;
+  /** 'directa' = published price; 'sintetica' = combination of 1X2 prices (realisable) */
+  oddsKind?: 'directa' | 'sintetica';
+  /** 'oro': its band hit >= 85 % in the history used to fit the rules; 'plata': >= 80 % */
+  tier: ConfidenceTier;
+  /** hit rate of its band (oro/plata) of its family in the history used to fit the rule (in-sample for that history) */
+  historicalHitRate: number;
+  /** resolved selections of that band in that history */
+  historicalN: number;
+  /** model-probability threshold of the band (prob >= threshold) */
+  threshold?: number;
+  /** probability recalibrated with the history (Platt) */
+  calibratedProb?: number;
+  source?: ConfidenceSource;
+  /**
+   * OUT-OF-SAMPLE record of its family (holdout, all tiers and sources): hit rate and resolved picks. Absent when the
+   * family has no holdout picks (not validated out of sample yet).
+   */
+  holdoutHitRate?: number;
+  holdoutN?: number;
+  /** settled result (finished matches only): 'void' = stake returned (draw no bet on a draw) */
+  result?: 'hit' | 'miss' | 'void';
+}
+
+/** Hit record of a set of picks. */
+export interface ConfidenceRecord {
+  /** picks published in the period (voids included) */
+  picks: number;
+  /** resolved picks (hit or miss; voids excluded) */
+  n: number;
+  hits: number;
+  /** hits / n (0 when n = 0) */
+  hitRate: number;
+  /** 90 % Wilson interval of hitRate */
+  wilsonLow?: number;
+  wilsonHigh?: number;
+  /** void picks (stake returned) */
+  voids?: number;
+  /** first and last match of the period (ISO) */
+  from: string;
+  to: string;
+  /** matches evaluated in the period */
+  matches?: number;
+}
+
+/** Record of one market family. */
+export interface ConfidenceFamilyRow {
+  family: string;
+  label: string;
+  theme: ConfidenceTheme;
+  /** true if the production rules publish this family (for at least one source) */
+  active: boolean;
+  /** production thresholds per prediction source (empty when not active) */
+  thresholds: { source: ConfidenceSource; threshold: number; goldThreshold?: number }[];
+  /** lowest production threshold (undefined when not active) */
+  threshold?: number;
+  /** out-of-sample (holdout) picks of the family, published with rules fitted WITHOUT the holdout */
+  picks: number;
+  n: number;
+  hits: number;
+  /** hits / n — undefined when n = 0 */
+  hitRate?: number;
+  /** why it is not published / caveat (Spanish) */
+  note?: string;
+}
+
+export interface ConfidenceFile {
+  generatedAt: string;
+  /** upcoming picks (next 14 days), chronological; at most 2 per match, of different themes */
+  picks: { match: MatchSummary; pick: ConfidencePick }[];
+  /**
+   * settled picks of the last 14 days, most recent first: walk-forward reconstruction (prediction with data prior to
+   * each match, closing odds, rules fitted without these matches). `hit` is false for voids (pick.result = 'void').
+   */
+  recent: { match: MatchSummary; pick: ConfidencePick; hit: boolean }[];
+  /** honest out-of-sample record */
+  track: {
+    /** HOLDOUT: matches never used to choose anything (rules fitted on the older calibration window) */
+    holdout: ConfidenceRecord;
+    /** final part of the holdout, seen for the first time with the published figure */
+    virgin?: ConfidenceRecord;
+    /** calibration window (used to fit the rules that are measured on the holdout) */
+    calibration?: { from: string; to: string; matches: number };
+    /** holdout by tier */
+    byTier: ({ tier: ConfidenceTier } & Omit<ConfidenceRecord, 'from' | 'to' | 'matches'>)[];
+    /** holdout by prediction source */
+    bySource?: ({ source: ConfidenceSource } & Omit<ConfidenceRecord, 'from' | 'to' | 'matches'>)[];
+    byFamily: ConfidenceFamilyRow[];
+    coverage: {
+      /** picks per calendar day of the holdout */
+      picksPerDay: number;
+      /** picks per day with matches */
+      picksPerMatchDay?: number;
+      matches?: number;
+      matchesWithPick?: number;
+    };
+    /** mean fair odds of the holdout picks */
+    avgFairOdds: number;
+    /** mean model probability of the holdout picks */
+    avgProb?: number;
+    /** flat 1-unit stake with closing odds, only where a price exists */
+    roi?: { bets: number; roi: number; profit?: number; hitRate?: number; avgOdds?: number; synthetic?: number };
+  };
+  /** production rules (same procedure fitted with ALL the history) */
+  rules: {
+    /** level of the pre-registered ladder (0 = 0.82 target) */
+    level: number;
+    targetRate: number;
+    /** history used */
+    from: string;
+    to: string;
+    matches: number;
+    /** active family|source rules */
+    active: number;
+    maxPerMatch: number;
+    minHitRate: number;
+  };
+  /** short Spanish caveat for the UI */
+  note: string;
 }
 
 export interface ValuePick {
@@ -366,6 +520,11 @@ export interface MatchFile {
   actual?: { home: TeamMatchStatsPublic; away: TeamMatchStatsPublic };
   /** key events (goals, cards) for finished/live matches */
   events?: MatchEventPublic[];
+  /**
+   * high-confidence picks of the match (at most 2). Upcoming: production rules. Finished: walk-forward reconstruction
+   * with `result` (rules fitted without the match).
+   */
+  confidence?: ConfidencePick[];
 }
 
 export interface TeamMatchStatsPublic {
@@ -676,6 +835,19 @@ export interface HomeFile {
   highlights: string[];
   /** quick model accuracy headline across competitions */
   modelHeadline?: { matches: number; accuracy: number; rps: number; marketRps?: number };
+  /** best high-confidence picks of the next 72 h (max 8, one per match, chronological) */
+  topConfidence?: { match: MatchSummary; pick: ConfidencePick }[];
+  /** out-of-sample (holdout) record of the high-confidence picks */
+  confidenceHeadline?: {
+    hitRate: number;
+    /** resolved holdout picks */
+    picks: number;
+    hits: number;
+    from: string;
+    to: string;
+    /** upcoming picks published (next 14 days) */
+    upcoming?: number;
+  };
 }
 
 export interface PlayersFile {

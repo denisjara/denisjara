@@ -15,8 +15,10 @@
  *
  * Fases: índices + modelos actuales (Elo global, Dixon-Coles por liga, Elo→goles, medias de goles) →
  * Dixon-Coles walk-forward y predicciones pre-partido de la temporada actual (xG proxy, backtest, aciertos) →
+ * pronósticos de alta confianza (historial walk-forward, calibración → holdout, reglas de producción) →
  * competiciones (clasificación con forma/xPts/Elo, próximos, resultados, estadísticas, ratings, simulación,
- * jugadores, backtest, insights) → fichas de partido → jugadores → fichas de equipo → valor, portada, modelo, meta.
+ * jugadores, backtest, insights) → fichas de partido → jugadores → fichas de equipo → valor, alta confianza, portada,
+ * modelo, meta.
  *
  * PUERTA DE CALIDAD: todo se escribe en un directorio temporal (`<salida>.tmp`, p. ej. public/data.tmp), se valida
  * con scripts/validate-data.ts (contrato + umbrales de cordura) y SOLO si pasa sustituye a la salida: la versión
@@ -34,6 +36,8 @@ import { computeWalkForward, createContext, type BuildOptions } from './publish/
 import { buildCompetition } from './publish/competition';
 import { buildMatchFile } from './publish/matches';
 import { buildTeamFile, primaryCompetition, teamCompetitions, teamsToPublish } from './publish/teams';
+import { buildConfidenceFile, homeConfidence, prepareConfidence } from './publish/confidence';
+import type { ConfidenceHistoryItem } from './analytics/confidence';
 import {
   aggregateBacktest,
   buildHomeFile,
@@ -61,6 +65,8 @@ import { DEFAULT_SANITY, validateDataDir, type ValidateOptions, type ValidationR
 
 export interface RunBuildOptions extends BuildOptions {
   outDir: string;
+  /** historial walk-forward de alta confianza ya calculado (tests); por defecto lo calcula el motor */
+  confidenceHistory?: ConfidenceHistoryItem[];
   /** validación antes de publicar (por defecto contrato + umbrales de cordura de producción) */
   validate?: ValidateOptions;
 }
@@ -126,6 +132,16 @@ function runBuildLocked(opts: RunBuildOptions, outDir: string, log: (msg: string
 
   const wf = computeWalkForward(ctx);
   timer.lap('Walk-forward y predicciones pre-partido', `${wf.refits} ajustes DC, ${wf.predictions} partidos`);
+
+  // alta confianza: ANTES de construir cualquier MatchSummary (prediction.safe y MatchFile.confidence lo leen del ctx)
+  const confidence = prepareConfidence(ctx, { history: opts.confidenceHistory });
+  const ho = confidence.ev?.holdout;
+  timer.lap(
+    'Alta confianza (walk-forward y holdout)',
+    confidence.ev
+      ? `holdout ${ho!.hits}/${ho!.n} = ${(ho!.n ? (ho!.hitRate * 100).toFixed(1) : '—')} % · ${confidence.ev.rules.rules.length} reglas · ${confidence.upcoming} picks próximos`
+      : (confidence.error ?? 'no disponible'),
+  );
 
   const staging = stagingDirFor(outDir);
   assertSafeOutputDir(outDir, ROOT_DIR); // otra vez: pudo cambiar mientras se ajustaban los modelos
@@ -209,13 +225,15 @@ function runBuildLocked(opts: RunBuildOptions, outDir: string, log: (msg: string
     const bets = collectValueBets(ctx);
     writer.write('value.json', buildValueFile(ctx, bets));
     const backtest = aggregateBacktest(per);
-    writer.write('home.json', buildHomeFile(ctx, bets, players, backtest));
+    const confidenceFile = buildConfidenceFile(ctx, confidence);
+    writer.write('confidence.json', confidenceFile);
+    writer.write('home.json', buildHomeFile(ctx, bets, players, backtest, homeConfidence(ctx, confidence)));
     writer.write(
       'model.json',
-      buildModelFile(ctx, per, backtest, { competitions: metas.length, teams: teamIds.length, players: players.length, valueBets: bets.length }),
+      buildModelFile(ctx, per, backtest, { competitions: metas.length, teams: teamIds.length, players: players.length, valueBets: bets.length }, confidenceFile),
     );
     writer.write('meta.json', buildMetaFile(ctx, metas, teamIndex, { players: players.length, valueBets: bets.length }, packageVersion()));
-    timer.lap('Portada, valor, modelo y meta', `${bets.length} apuestas de valor`);
+    timer.lap('Portada, valor, confianza, modelo y meta', `${bets.length} apuestas de valor, ${confidenceFile.picks.length} picks de alta confianza`);
 
     // ---- puerta de calidad: solo se publica si el conjunto completo pasa la validación
     const validation = validateDataDir(staging, { ...(opts.validate ?? {}), partial: opts.validate?.partial ?? !!opts.only?.length });

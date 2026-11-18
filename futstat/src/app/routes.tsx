@@ -24,6 +24,7 @@ const MatchPage = lazyPage(() => import('./pages/match/MatchPage'));
 const TeamPage = lazyPage(() => import('./pages/team/TeamPage'));
 const PlayersPage = lazyPage(() => import('./pages/PlayersPage'));
 const ValuePage = lazyPage(() => import('./pages/ValuePage'));
+const ConfidencePage = lazyPage(() => import('./pages/ConfidencePage'));
 const ModelPage = lazyPage(() => import('./pages/ModelPage'));
 const NotFoundPage = lazyPage(() => import('./pages/NotFoundPage'));
 
@@ -38,6 +39,7 @@ export function AppRoutes() {
       <Route path="/t/:teamId" element={<TeamPage />} />
       <Route path="/jugadores" element={<PlayersPage />} />
       <Route path="/valor" element={<ValuePage />} />
+      <Route path="/confianza" element={<ConfidencePage />} />
       <Route path="/modelo" element={<ModelPage />} />
       <Route path="*" element={<NotFoundPage />} />
     </Routes>

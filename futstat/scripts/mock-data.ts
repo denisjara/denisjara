@@ -16,6 +16,14 @@ import { fileURLToPath } from 'node:url';
 import { COMPETITION_BY_ID, MODEL } from '../pipeline/config';
 import { findValueBets } from '../pipeline/analytics/value';
 import {
+  CONFIDENCE_FAMILIES,
+  confidenceCandidates,
+  settleCandidate,
+  wilsonInterval,
+  type ConfidenceCandidate,
+  type ConfidenceFamily,
+} from '../pipeline/analytics/confidence';
+import {
   Elo,
   blend,
   bttsProb,
@@ -70,6 +78,8 @@ import type {
   TeamFile,
   TeamFormBlock,
   TeamMatchStatsPublic,
+  ConfidenceFile,
+  ConfidencePick,
   TeamRating,
   TeamRef,
   TeamSeasonStats,
@@ -913,6 +923,97 @@ interface Pred {
   markets: Market[];
   valueBets: ValuePick[];
   lam: { lambdaHome: number; lambdaAway: number; rho: number };
+  /** candidatos de alta confianza (mismo generador que producción) y picks seleccionados con las reglas de prueba */
+  cands: ConfidenceCandidate[];
+  conf: ConfidencePick[];
+}
+
+// ---------------------------------------------------------------------------
+// Alta confianza: candidatos reales (pipeline/analytics/confidence.ts) y reglas de prueba con cifras realistas
+// ---------------------------------------------------------------------------
+interface MockRule {
+  /** umbral y umbral oro (probabilidad del modelo) */
+  th: number;
+  gold: number;
+  /** acierto histórico y n de las franjas oro y plata (dentro de muestra) */
+  oro: [number, number];
+  plata: [number, number];
+  /** fuera de muestra: aciertos y resueltos (sin holdout = familia nueva, sin validar) */
+  hold?: [number, number];
+}
+const MOCK_RULES: Partial<Record<ConfidenceFamily, MockRule>> = {
+  '1x2-fav': { th: 0.77, gold: 0.82, oro: [0.874, 412], plata: [0.812, 160] },
+  dc: { th: 0.82, gold: 0.87, oro: [0.912, 233], plata: [0.842, 128], hold: [161, 180] },
+  dnb: { th: 0.8, gold: 0.85, oro: [0.9, 140], plata: [0.83, 60], hold: [12, 13] },
+  'ah+1.5': { th: 0.8, gold: 0.86, oro: [0.917, 690], plata: [0.851, 277], hold: [765, 864] },
+  'ou-1.5-over': { th: 0.82, gold: 0.87, oro: [0.889, 300], plata: [0.83, 165], hold: [104, 123] },
+  'ou-4.5-under': { th: 0.83, gold: 0.88, oro: [0.9, 420], plata: [0.856, 234], hold: [81, 90] },
+  'team-score': { th: 0.8, gold: 0.85, oro: [0.92, 410], plata: [0.86, 262], hold: [241, 261] },
+  'team-under-2.5': { th: 0.8, gold: 0.85, oro: [0.906, 800], plata: [0.86, 278], hold: [571, 641] },
+  'corners-over-6.5': { th: 0.75, gold: 0.82, oro: [0.89, 520], plata: [0.84, 280], hold: [200, 224] },
+  'cards-over-1.5': { th: 0.76, gold: 0.83, oro: [0.91, 300], plata: [0.85, 156], hold: [234, 262] },
+  'cards-over-2.5': { th: 0.81, gold: 0.88, oro: [0.866, 418], plata: [0.82, 120], hold: [27, 38] },
+  'cards-under-6.5': { th: 0.83, gold: 0.88, oro: [0.88, 300], plata: [0.84, 226], hold: [83, 97] },
+};
+const MOCK_HOLD = (f: string) => {
+  const h = MOCK_RULES[f as ConfidenceFamily]?.hold;
+  return h ? { holdoutHitRate: r(h[0] / h[1], 4), holdoutN: h[1] } : {};
+};
+
+/** Selección como en producción: prob >= umbral, como mucho 2 por partido de temas distintos, por prob. recalibrada. */
+function mockConfidencePicks(cands: ConfidenceCandidate[]): ConfidencePick[] {
+  const eligible = cands
+    .map((c) => {
+      const rule = MOCK_RULES[c.family];
+      if (!rule || c.prob < rule.th) return undefined;
+      const band = c.prob >= rule.gold ? rule.oro : rule.plata;
+      const calibratedProb = r(clampN(band[0] + (c.prob - (c.prob >= rule.gold ? rule.gold : rule.th)) * 0.6, 0.8, 0.97), 4);
+      const pick: ConfidencePick = {
+        family: c.family,
+        marketId: c.marketId,
+        market: c.market,
+        selection: c.selection,
+        prob: r(c.prob, 4),
+        fairOdds: r(1 / c.prob, 3),
+        tier: band[0] >= 0.85 ? 'oro' : 'plata',
+        historicalHitRate: band[0],
+        historicalN: band[1],
+        threshold: c.prob >= rule.gold ? rule.gold : rule.th,
+        calibratedProb,
+        source: c.segment,
+        ...MOCK_HOLD(c.family),
+      };
+      if (c.marketOdds) {
+        pick.marketOdds = r(c.marketOdds, 3);
+        if (c.oddsKind) pick.oddsKind = c.oddsKind;
+      }
+      return { pick, theme: c.theme };
+    })
+    .filter((x): x is { pick: ConfidencePick; theme: ConfidenceCandidate['theme'] } => !!x)
+    .sort((a, b) => b.pick.calibratedProb! - a.pick.calibratedProb! || b.pick.prob - a.pick.prob);
+  const out: ConfidencePick[] = [];
+  const themes = new Set<string>();
+  for (const e of eligible) {
+    if (out.length >= 2 || themes.has(e.theme)) continue;
+    themes.add(e.theme);
+    out.push(e.pick);
+  }
+  return out;
+}
+
+/** Picks de un partido terminado resueltos con su marcador y sus estadísticas (córners, tarjetas). */
+function mockSettled(m: MatchRec, cands: ConfidenceCandidate[]): ConfidencePick[] {
+  if (m.hg === undefined || m.ag === undefined) return [];
+  const st = m.stats;
+  const corners = st && st.home.corners !== undefined && st.away.corners !== undefined ? st.home.corners + st.away.corners : undefined;
+  const cards = st && st.home.yellow !== undefined && st.away.yellow !== undefined ? st.home.yellow + st.away.yellow + (st.home.red ?? 0) + (st.away.red ?? 0) : undefined;
+  const out: ConfidencePick[] = [];
+  for (const pick of mockConfidencePicks(cands)) {
+    const c = cands.find((x) => x.family === pick.family && x.selection === pick.selection)!;
+    const res = settleCandidate(c, { hg: m.hg, ag: m.ag, corners, cards });
+    if (res) out.push({ ...pick, result: res });
+  }
+  return out;
 }
 const PRED = new Map<string, Pred>();
 const SEASON = new Map<string, Map<string, TeamSeasonStats>>();
@@ -1088,7 +1189,17 @@ function predict(m: MatchRec): Pred {
     explanation,
     confidence: conf,
   };
-  const out: Pred = { q, model, markets, valueBets, lam: { ...lam, rho: base.rho } };
+  const cands = confidenceCandidates({
+    homeName: m.home.name,
+    awayName: m.away.name,
+    p: ensR,
+    matrix: mat10,
+    projections: proj,
+    odds,
+  });
+  const safePicks = m.status === 'scheduled' ? mockConfidencePicks(cands) : [];
+  if (safePicks[0]) q.safe = safePicks[0];
+  const out: Pred = { q, model, markets, valueBets, lam: { ...lam, rho: base.rho }, cands, conf: safePicks };
   PRED.set(m.id, out);
   return out;
 }
@@ -1671,6 +1782,8 @@ for (const id of DETAIL) {
     actual: m.stats ? { home: m.stats.home, away: m.stats.away } : undefined,
     events: m.events,
   };
+  const conf = m.status === 'scheduled' ? p.conf : m.status === 'finished' ? mockSettled(m, p.cands) : [];
+  if (conf.length) file.confidence = conf;
   matchFiles.push(file);
   write(`matches/${m.id}.json`, file);
 }
@@ -1802,6 +1915,79 @@ const modelFile: ModelFile = {
 };
 write('model.json', modelFile);
 
+// --- Alta confianza (confidence.json)
+const slimS = (m: MatchRec): MatchSummary => {
+  const x = S(m);
+  const out: MatchSummary = { id: x.id, compId: x.compId, compName: x.compName, date: x.date, status: x.status, home: x.home, away: x.away, hasDetail: x.hasDetail };
+  if (x.round) out.round = x.round;
+  if (x.statusDetail) out.statusDetail = x.statusDetail;
+  if (x.score) out.score = x.score;
+  return out;
+};
+const confPicks: ConfidenceFile['picks'] = [];
+for (const m of MATCHES.filter((x) => x.status === 'scheduled' && x.ms < NOW_MS + 14 * DAY).sort((a, b) => a.ms - b.ms || a.id.localeCompare(b.id))) {
+  for (const pick of predict(m).conf) confPicks.push({ match: slimS(m), pick });
+}
+const confRecent: ConfidenceFile['recent'] = [];
+for (const m of MATCHES.filter((x) => x.status === 'finished' && x.ms > NOW_MS - 14 * DAY && x.pre).sort((a, b) => b.ms - a.ms || a.id.localeCompare(b.id))) {
+  const mat = scoreMatrix(m.lamH, m.lamA, -0.05, 10);
+  const cands = confidenceCandidates({ homeName: m.home.name, awayName: m.away.name, p: m.pre!, matrix: mat, projections: projectionsFor(m), odds: m.odds });
+  for (const pick of mockSettled(m, cands)) confRecent.push({ match: slimS(m), pick, hit: pick.result === 'hit' });
+}
+const holdRows = Object.values(MOCK_RULES).filter((x) => x.hold);
+const holdHits = sum(holdRows.map((x) => x.hold![0]));
+const holdN = sum(holdRows.map((x) => x.hold![1]));
+const rec = (hits: number, n: number, picks = n) => {
+  const [lo, hi] = wilsonInterval(hits, n);
+  return { picks, n, hits, hitRate: r(hits / n, 4), wilsonLow: r(lo, 4), wilsonHigh: r(hi, 4) };
+};
+const confidenceFile: ConfidenceFile = {
+  generatedAt: GENERATED_AT,
+  picks: confPicks,
+  recent: confRecent,
+  track: {
+    holdout: { ...rec(holdHits, holdN, holdN + 4), voids: 4, from: iso(DAY0 - 60 * DAY), to: iso(NOW_MS - DAY), matches: 1596 },
+    virgin: { ...rec(1041, 1186, 1187), voids: 1, from: iso(DAY0 - 21 * DAY), to: iso(NOW_MS - DAY), matches: 633 },
+    calibration: { from: iso(DAY0 - 297 * DAY), to: iso(DAY0 - 61 * DAY), matches: 2371 },
+    byTier: [
+      { tier: 'oro', ...rec(holdHits - 107, holdN - 134, holdN - 130), voids: 4 },
+      { tier: 'plata', ...rec(107, 134) },
+    ],
+    bySource: [
+      { source: 'mercado', ...rec(holdHits - 53, holdN - 59, holdN - 55), voids: 4 },
+      { source: 'estadistico', ...rec(53, 59) },
+    ],
+    byFamily: CONFIDENCE_FAMILIES.map((f) => {
+      const rule = MOCK_RULES[f.id];
+      const h = rule?.hold;
+      const row: ConfidenceFile['track']['byFamily'][number] = {
+        family: f.id,
+        label: f.label,
+        theme: f.theme,
+        active: !!rule,
+        thresholds: rule ? [{ source: 'mercado', threshold: rule.th, goldThreshold: rule.gold }] : [],
+        picks: h ? h[1] : 0,
+        n: h ? h[1] : 0,
+        hits: h ? h[0] : 0,
+      };
+      if (rule) row.threshold = rule.th;
+      if (h) row.hitRate = r(h[0] / h[1], 4);
+      if (!rule) row.note = 'No se publica: en el histórico no llega al 82 % de acierto con muestra suficiente.';
+      else if (!h) row.note = 'Solo entra en las reglas ajustadas con todo el histórico: aún sin picks fuera de muestra.';
+      else if (h[1] >= 20 && h[0] / h[1] < 0.8) row.note = `Fuera de muestra acierta ${((h[0] / h[1]) * 100).toFixed(1).replace('.', ',')} % (${h[0]}/${h[1]}): por debajo del 80 %.`;
+      else if (h[1] < 20) row.note = `Muestra fuera de muestra pequeña (${h[1]}).`;
+      return row;
+    }),
+    coverage: { picksPerDay: 47.4, picksPerMatchDay: 48.2, matches: 1596, matchesWithPick: 1439 },
+    avgFairOdds: 1.12,
+    avgProb: 0.891,
+    roi: { bets: 193, roi: -0.0413, profit: -7.97, hitRate: 0.8953, avgOdds: 1.071, synthetic: 193 },
+  },
+  rules: { level: 0, targetRate: 0.82, from: iso(DAY0 - 297 * DAY), to: iso(NOW_MS - DAY), matches: 3967, active: 21, maxPerMatch: 2, minHitRate: 0.8 },
+  note: 'Alto acierto no es beneficio: son selecciones de cuota baja (cuota justa media 1,12) y las casas cobran margen. Con cuotas de cierre solo se pueden medir 193 picks del holdout (7 %): ROI −4,1 %. No garantiza nada. Juego responsable, solo mayores de 18 años. (Datos simulados.)',
+};
+write('confidence.json', confidenceFile);
+
 // --- Portada
 const inDays = (m: MatchRec, d: number) => m.ms >= DAY0 + d * DAY && m.ms < DAY0 + (d + 1) * DAY;
 const today = MATCHES.filter((m) => inDays(m, 0)).sort((a, b) => a.ms - b.ms);
@@ -1835,6 +2021,24 @@ const homeFile: HomeFile = {
   hotPlayers: hot,
   highlights,
   modelHeadline: { matches: globalBt.matches, accuracy: globalBt.model.accuracy, rps: globalBt.model.rps, marketRps: globalBt.market?.rps },
+  topConfidence: (() => {
+    const seen = new Set<string>();
+    const validated = (p: ConfidencePick) => (p.holdoutN ?? 0) >= 20 && (p.holdoutHitRate ?? 0) >= 0.8;
+    return confPicks
+      .filter((x) => Date.parse(x.match.date) > NOW_MS && Date.parse(x.match.date) <= NOW_MS + 3 * DAY && validated(x.pick))
+      .sort((a, b) => b.pick.calibratedProb! - a.pick.calibratedProb!)
+      .filter((x) => (seen.has(x.match.id) ? false : (seen.add(x.match.id), true)))
+      .slice(0, 8)
+      .sort((a, b) => Date.parse(a.match.date) - Date.parse(b.match.date) || a.match.id.localeCompare(b.match.id));
+  })(),
+  confidenceHeadline: {
+    hitRate: confidenceFile.track.holdout.hitRate,
+    picks: confidenceFile.track.holdout.n,
+    hits: confidenceFile.track.holdout.hits,
+    from: confidenceFile.track.holdout.from,
+    to: confidenceFile.track.holdout.to,
+    upcoming: confPicks.length,
+  },
 };
 write('home.json', homeFile);
 

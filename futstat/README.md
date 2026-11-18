@@ -72,6 +72,7 @@ Para generarlo en local: `npm run build:standalone` → `standalone/FutStat-Lab.
 |---|---|---|
 | **Inicio / Partidos populares** | `/` | Los partidos más relevantes de las próximas 72 h (ranking de popularidad), partidos de hoy y de mañana, resultados recientes con acierto del modelo, mejores apuestas de valor, jugadores en mejor forma y titulares del día. |
 | **Calendario** | `/partidos` | Todos los partidos por día y competición, con probabilidades 1X2, goles esperados, marcador más probable y cuotas cuando existen. |
+| **Alta confianza** | `/confianza` | Pronósticos de alta confianza: entre más de 20 mercados de cada partido, las selecciones cuya familia ha acertado al menos el 80 % fuera de muestra. Cabecera con el acierto real del holdout, qué es y qué no es, picks de los próximos 14 días por día (nivel oro/plata, probabilidad, cuota justa y de mercado), acierto por mercado y resultados recientes con ✓/✗. |
 | **Ligas** | `/c/<liga>` | Una sección propia por cada liga (LaLiga, Premier League, Serie A, Bundesliga…) con pestañas: clasificación (con xPts y Elo), próximos partidos, resultados, estadísticas de equipos (goles, córners, tarjetas, tiros, posesión, over/BTTS, porterías a cero, goles por tramo de minutos), ratings, simulación de temporada, jugadores y backtest de esa liga. |
 | **Competiciones** | `/c/<competición>` | Champions, Europa League, Conference, Libertadores, Sudamericana, Nations League y copas nacionales, con la misma estructura (tabla de fase de liga cuando existe). |
 | **Análisis de partido** | `/m/<id>` | Ficha completa al estilo de una casa de apuestas: más de 20 familias de mercados (1X2, doble oportunidad, empate no apuesta, más/menos goles, ambos marcan, hándicap asiático y europeo, marcador exacto, mitades, descanso/final, goles por equipo, córners, tarjetas, tiros, faltas…) con probabilidad del modelo, cuota justa, cuota de mercado y valor esperado; matriz de marcadores; desglose del modelo (Dixon-Coles, Elo, mercado y ensamble) con explicación en lenguaje natural; forma reciente de ambos equipos; cara a cara; comparativa estadística; proyecciones de córners, tarjetas, tiros, tiros a puerta, faltas y fueras de juego; *props* de jugadores; y, en partidos terminados, estadísticas reales y eventos. |
@@ -230,6 +231,60 @@ esperado** (`EV = p · cuota − 1`).
 - Como el ensamble da un 80 % de peso al mercado cuando hay cuotas, solo aparecen selecciones de valor cuando el
   modelo discrepa mucho de la casa; es normal que algunos días no haya ninguna. En el backtest frente a cuotas de
   cierre, apostar a esas selecciones habría perdido dinero: no son una recomendación.
+
+### 11. Pronósticos de alta confianza
+
+El 1X2 acierta en torno al **52 %** (3.967 partidos de la temporada; el mercado de cierre, 53,8 %): es lo normal en
+fútbol y **no se puede llevar al 80 % para todos los partidos**. Lo que sí se puede es otra cosa: entre las muchas
+selecciones de cada partido, quedarse solo con las que, por encima de cierto umbral de probabilidad, han acertado al
+menos 4 de cada 5 veces **en partidos que no se usaron para elegir ese umbral**. Motor:
+[`pipeline/analytics/confidence.ts`](pipeline/analytics/confidence.ts); publicación:
+[`pipeline/publish/confidence.ts`](pipeline/publish/confidence.ts) → `public/data/confidence.json`.
+
+**Procedimiento (sin fuga de datos):**
+
+- **Candidatos:** hasta 23 familias por partido (gana el favorito, doble oportunidad, empate no apuesta, hándicap +1,5,
+  más/menos goles, ambos marcan, goles por equipo, córners y tarjetas), como mucho una por familia, con probabilidad
+  entre 0,50 y 0,93 (por encima es trivial).
+- **Walk-forward:** cada partido terminado de la temporada se vuelve a predecir solo con datos anteriores a su inicio
+  (Elo previo, Dixon-Coles re-ajustado, parámetros de pretemporada, proyecciones de córners/tarjetas con partidos
+  anteriores y cuotas de cierre). Sin cuotas, resultado y goles exigen al menos 10 partidos previos de cada equipo;
+  córners y tarjetas, 5 con ese dato.
+- **Umbrales por familia y fuente** (con cuotas / sin cuotas): recalibración de Platt; el umbral parte de la
+  probabilidad cuya versión recalibrada llega al 82 % y la cola debe acertar ≥ 82 % con n ≥ 80 y un límite inferior de
+  Wilson (90 %) ≥ 78 %. Nivel **oro** si su franja acierta ≥ 85 % en el histórico; **plata** si ≥ 80 %. Como mucho 2
+  pronósticos por partido, de temas distintos.
+- **Calibración frente a holdout:** las reglas que se miden se ajustan solo con el 60 % más antiguo de los partidos
+  (con una validación interna dentro de esa ventana para elegir la exigencia) y se aplican sin tocar nada al resto.
+- **Producción:** el mismo procedimiento con todo el historial elige los pronósticos de los próximos partidos. Lo
+  validado fuera de muestra es el procedimiento, no esas reglas exactas: cada pronóstico muestra el acierto fuera de
+  muestra de su familia y avisa si no está validada o si queda por debajo del 80 %.
+
+**Cifras reales (build del 15 de noviembre de 2026; se recalculan en cada actualización):**
+
+| Tramo | Partidos | Pronósticos | Acierto (Wilson 90 %) |
+|---|---|---|---|
+| Calibración (22 ene – 15 sept), dentro de muestra, solo referencia | 2.371 | 4.312 | 90,4 % |
+| **Holdout (16 sept – 14 nov), nunca usado para elegir nada** | **1.596** | **2.522 / 2.841** | **88,8 % (87,8–89,7 %)** |
+| Tramo final del holdout (25 oct – 14 nov), visto por primera vez con la cifra publicada | 633 | 1.041 / 1.186 | 87,8 % (86,1–89,3 %) |
+
+Por nivel, fuera de muestra: oro 89,2 % (2.415/2.707) y **plata 79,9 % (107/134), por debajo de su etiqueta del
+80 %** (se publica igualmente, con su acierto real a la vista). Por fuente: con cuotas 88,7 % (2.469/2.782), sin cuotas
+89,8 % (53/59). La familia «más de 2,5 tarjetas» acierta **71,1 % (27/38)** fuera de muestra y se marca con un aviso.
+
+**Advertencias:**
+
+- **Alto acierto no es beneficio.** La cuota justa media es 1,12. Solo 193 de los 2.845 pronósticos del holdout tienen
+  cuota de cierre (todas sintéticas de doble oportunidad / empate no apuesta, calculadas desde el 1X2): apostar 1 unidad
+  a cada uno habría dado un **ROI de −4,1 %**. Para el resto (goles por equipo, hándicap, córners, tarjetas) ESPN no
+  publica precio y la rentabilidad no se puede medir.
+- **Cobertura casi total:** el 90 % de los partidos tiene pronóstico (unos 48 al día con partidos). No es una lista
+  exclusiva de «apuestas seguras»: aproximadamente 1 de cada 9 falla.
+- **Validación limitada:** el holdout cubre unos dos meses y hay pocos pronósticos sin cuotas fuera de muestra (59). Los
+  hiperparámetros globales del modelo se ajustaron con backtests que incluyen ese periodo y la liga doméstica asignada a
+  cada equipo usa información posterior (solo decide qué modelo de goles se usa).
+- «Resultados recientes» es una reconstrucción walk-forward (reglas ajustadas sin esos partidos y cuotas de cierre), no
+  un registro de lo que se publicó en su momento.
 
 ### Parámetros principales
 
@@ -519,13 +574,14 @@ La app solo lee estos ficheros, todos tipados en [`src/types/data.ts`](src/types
 | Fichero | Contenido |
 |---|---|
 | `meta.json` | Competiciones, recuentos e índice de búsqueda de equipos |
-| `home.json` | Partidos populares, hoy, mañana, recientes, mejores apuestas de valor y jugadores en forma |
+| `home.json` | Partidos populares, hoy, mañana, recientes, mejores apuestas de valor, mejores pronósticos de alta confianza (72 h) con su acierto fuera de muestra y jugadores en forma |
 | `competitions/<id>.json` | Clasificación, partidos, estadísticas de equipos, ratings, simulación, jugadores, promedios de liga, backtest |
 | `matches/<id>.json` | Análisis completo de un partido: modelo, mercados, proyecciones, forma, H2H, comparativa, *props*, valor |
 | `teams/<id>.json` | Ficha de equipo |
 | `players.json` | Ranking global de jugadores por forma |
 | `value.json` | Todas las apuestas de valor |
 | `model.json` | Metodología, parámetros y backtest global y por competición |
+| `confidence.json` | Pronósticos de alta confianza de los próximos 14 días, resueltos recientes, acierto fuera de muestra (holdout) por nivel, fuente y familia, cobertura, cuota justa media, ROI con cuotas de cierre y reglas de producción |
 
 Convenciones: probabilidades en [0, 1], cuotas decimales, fechas ISO-8601 en UTC y textos en español.
 

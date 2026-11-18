@@ -9,6 +9,7 @@ import path from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type {
   CompetitionFile,
+  ConfidenceFile,
   HomeFile,
   MatchFile,
   MetaFile,
@@ -24,6 +25,16 @@ import { mulberry32, samplePoisson } from '../src/lib/models';
 import type { CompetitionConfig } from '../pipeline/config';
 import type { CompetitionStore, MatchRecord, PlayerLine } from '../pipeline/types';
 import { PublishRejectedError, runBuild, stagingDirFor, type BuildReport } from '../pipeline/build';
+import {
+  FAMILY_BY_ID,
+  settleCandidate,
+  type ConfidenceFamily,
+  type ConfidenceHistoryItem,
+  type ConfidenceSegment,
+  type ConfidenceSettle,
+  type SettledCandidate,
+} from '../pipeline/analytics/confidence';
+import { familyRows, publicPick, slimSummary, validatedOutOfSample } from '../pipeline/publish/confidence';
 import { remainingFixtures } from '../pipeline/publish/simulation';
 import {
   LockedError,
@@ -552,6 +563,254 @@ describe('validateDataDir: cordura y seguridad', () => {
       }
     }
     expect(flagged).toBeGreaterThan(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Pronósticos de alta confianza
+// ---------------------------------------------------------------------------
+
+/** Candidato resuelto sintético (hándicap +1,5 del local o «el visitante marca menos de 3»). */
+function synthCand(family: ConfidenceFamily, segment: ConfidenceSegment, prob: number, result: SettledCandidate['result']): SettledCandidate {
+  const ah = family === 'ah+1.5';
+  const settle: ConfidenceSettle = ah ? { kind: 'handicap', side: 'home', line: 1.5 } : { kind: 'team-total', team: 'away', side: 'under', line: 2.5 };
+  return {
+    family,
+    theme: FAMILY_BY_ID.get(family)!.theme,
+    marketId: ah ? 'ah-home-1.5' : 'team-away-ou-2.5',
+    market: ah ? 'Hándicap asiático Local +1.5' : 'Goles de Visitante: más/menos 2.5',
+    selection: ah ? 'Local +1.5' : 'Visitante marca menos de 3 goles',
+    prob,
+    fairOdds: 1 / prob,
+    settle,
+    segment,
+    result,
+  };
+}
+
+/**
+ * Historial walk-forward inyectado (el mundo sintético no tiene 300 partidos previos a la temporada, así que el motor no
+ * puede reconstruirlo): 900 partidos ficticios calibrados (acierto = probabilidad) para dos familias y ambas fuentes y,
+ * al final, los partidos terminados reales de las últimas 2 semanas, resueltos con su marcador.
+ */
+function confidenceTestHistory(stores: CompetitionStore[]): ConfidenceHistoryItem[] {
+  const rng = mulberry32(2026);
+  const fams: [ConfidenceFamily, ConfidenceSegment][] = [
+    ['ah+1.5', 'mercado'],
+    ['ah+1.5', 'estadistico'],
+    ['team-under-2.5', 'mercado'],
+    ['team-under-2.5', 'estadistico'],
+  ];
+  const items: ConfidenceHistoryItem[] = [];
+  for (let i = 0; i < 900; i++) {
+    items.push({
+      matchId: `hist-${i}`,
+      compId: 'liga-a',
+      date: new Date(NOW.getTime() - (400 - i * 0.42) * DAY).toISOString(),
+      home: 'Local',
+      away: 'Visitante',
+      score: { home: 1, away: 0 },
+      candidates: fams.map(([f, seg]) => {
+        const p = 0.6 + rng() * 0.33;
+        return synthCand(f, seg, p, rng() < p ? 'hit' : 'miss');
+      }),
+    });
+  }
+  for (const s of stores) {
+    for (const m of s.matches) {
+      if (m.status !== 'finished' || !m.score || !m.currentSeason || !(Date.parse(m.date) > NOW.getTime() - 13 * DAY)) continue;
+      const d = { hg: m.score.home, ag: m.score.away };
+      const c = synthCand('ah+1.5', 'mercado', 0.91, 'hit');
+      items.push({ matchId: m.id, compId: m.compId, date: m.date, home: m.home.name, away: m.away.name, score: m.score, candidates: [{ ...c, result: settleCandidate(c, d)! }] });
+    }
+  }
+  return items.sort((a, b) => Date.parse(a.date) - Date.parse(b.date) || a.matchId.localeCompare(b.matchId));
+}
+
+describe('alta confianza (build)', () => {
+  it('sin historial suficiente: confidence.json vacío pero válido, sin cifras en portada y la sección de metodología lo dice', () => {
+    const c = readJson<ConfidenceFile>(outDir, 'confidence.json');
+    expect(c.picks).toEqual([]);
+    expect(c.recent).toEqual([]);
+    expect(c.track.holdout.n).toBe(0);
+    expect(c.track.byFamily.length).toBe(23);
+    expect(c.rules.maxPerMatch).toBe(2);
+    expect(c.note).toMatch(/Todavía no hay partidos suficientes/);
+    const home = readJson<HomeFile>(outDir, 'home.json');
+    expect(home.topConfidence).toEqual([]);
+    expect(home.confidenceHeadline).toBeUndefined();
+    const model = readJson<ModelFile>(outDir, 'model.json');
+    const sec = model.sections.find((x) => x.title === 'Pronósticos de alta confianza');
+    expect(sec?.body.join(' ')).toMatch(/Todavía no hay suficientes partidos/);
+  });
+
+  describe('con historial', () => {
+    let dir: string;
+    let stores: CompetitionStore[];
+    beforeAll(() => {
+      dir = path.join(tmp, 'conf');
+      stores = testStores();
+      runBuild({ stores, configs: CONFIGS, now: NOW, outDir: dir, fast: true, log: () => {}, validate: NO_SANITY, confidenceHistory: confidenceTestHistory(stores) });
+    });
+
+    it('pasa la validación del contrato', () => {
+      const v = validateDataDir(dir, NO_SANITY);
+      expect(v.errors).toEqual([]);
+    });
+
+    it('picks próximos: ordenados por fecha, como mucho 2 por partido de temas distintos y por encima de su umbral', () => {
+      const c = readJson<ConfidenceFile>(dir, 'confidence.json');
+      expect(c.picks.length).toBeGreaterThan(0);
+      expect(c.rules.active).toBeGreaterThan(0);
+      const byMatch = new Map<string, string[]>();
+      for (let i = 0; i < c.picks.length; i++) {
+        const { match, pick } = c.picks[i];
+        if (i) expect(Date.parse(match.date)).toBeGreaterThanOrEqual(Date.parse(c.picks[i - 1].match.date));
+        expect(match.status).toBe('scheduled');
+        expect(match.prediction).toBeUndefined(); // ficha compacta (sin predicción ni cuotas)
+        expect(pick.prob).toBeGreaterThanOrEqual(pick.threshold! - 1e-9);
+        expect(pick.fairOdds).toBeCloseTo(1 / pick.prob, 2);
+        expect(pick.historicalHitRate).toBeGreaterThanOrEqual(0.8);
+        expect(['ah+1.5', 'team-under-2.5']).toContain(pick.family);
+        expect(pick.holdoutN).toBeGreaterThan(0);
+        byMatch.set(match.id, [...(byMatch.get(match.id) ?? []), FAMILY_BY_ID.get(pick.family as ConfidenceFamily)!.theme]);
+      }
+      for (const themes of byMatch.values()) {
+        expect(themes.length).toBeLessThanOrEqual(2);
+        expect(new Set(themes).size).toBe(themes.length);
+      }
+    });
+
+    it('fichas de partido y tarjetas: MatchFile.confidence y prediction.safe = el primer pick', () => {
+      const c = readJson<ConfidenceFile>(dir, 'confidence.json');
+      const ids = [...new Set(c.picks.map((p) => p.match.id))];
+      for (const id of ids) {
+        const f = readJson<MatchFile>(dir, `matches/${id}.json`);
+        const mine = c.picks.filter((p) => p.match.id === id).map((p) => p.pick.selection);
+        expect(f.confidence?.map((p) => p.selection).sort()).toEqual(mine.sort());
+        expect(f.match.prediction?.safe?.selection).toBe(f.confidence![0].selection);
+        expect(f.confidence!.every((p) => p.result === undefined)).toBe(true);
+      }
+      const comp = readJson<CompetitionFile>(dir, 'competitions/liga-a.json');
+      const withSafe = comp.upcoming.filter((m) => m.prediction?.safe);
+      expect(withSafe.length).toBeGreaterThan(0);
+      for (const m of withSafe) expect(ids).toContain(m.id);
+    });
+
+    it('resueltos recientes (holdout): partidos terminados de 14 días con ✓/✗ coherente con el marcador', () => {
+      const c = readJson<ConfidenceFile>(dir, 'confidence.json');
+      expect(c.recent.length).toBeGreaterThan(0);
+      for (let i = 0; i < c.recent.length; i++) {
+        const r = c.recent[i];
+        if (i) expect(Date.parse(r.match.date)).toBeLessThanOrEqual(Date.parse(c.recent[i - 1].match.date));
+        expect(r.match.status).toBe('finished');
+        expect(Date.parse(r.match.date)).toBeGreaterThan(NOW.getTime() - 14 * DAY);
+        const s = r.match.score!;
+        const expected = s.home - s.away + 1.5 > 0 ? 'hit' : 'miss';
+        expect(r.pick.result).toBe(expected);
+        expect(r.hit).toBe(expected === 'hit');
+      }
+      // la ficha de un terminado reciente lleva su reconstrucción ya resuelta
+      const detail = c.recent.find((r) => r.match.hasDetail);
+      if (detail) {
+        const f = readJson<MatchFile>(dir, `matches/${detail.match.id}.json`);
+        expect(f.confidence?.[0].result).toBe(detail.pick.result);
+      }
+    });
+
+    it('cifras honestas: holdout coherente, por nivel y familia, portada y metodología con las mismas cifras', () => {
+      const c = readJson<ConfidenceFile>(dir, 'confidence.json');
+      const h = c.track.holdout;
+      expect(h.n).toBeGreaterThan(100);
+      expect(h.hitRate).toBeCloseTo(h.hits / h.n, 3);
+      expect(h.wilsonLow!).toBeLessThanOrEqual(h.hitRate);
+      expect(h.wilsonHigh!).toBeGreaterThanOrEqual(h.hitRate);
+      expect(Date.parse(c.track.calibration!.to)).toBeLessThan(Date.parse(h.from));
+      expect(c.track.byTier.reduce((t, x) => t + x.n, 0)).toBe(h.n);
+      const ah = c.track.byFamily.find((f) => f.family === 'ah+1.5')!;
+      expect(ah.active).toBe(true);
+      expect(ah.thresholds.length).toBeGreaterThan(0);
+      expect(new Set(ah.thresholds.map((t) => t.source)).size).toBe(ah.thresholds.length);
+      expect(ah.threshold).toBe(Math.min(...ah.thresholds.map((t) => t.threshold)));
+      const btts = c.track.byFamily.find((f) => f.family === 'btts-yes')!;
+      expect(btts.active).toBe(false);
+      expect(btts.hitRate).toBeUndefined();
+      expect(btts.note).toMatch(/No se publica/);
+      const home = readJson<HomeFile>(dir, 'home.json');
+      expect(home.confidenceHeadline).toMatchObject({ hitRate: h.hitRate, picks: h.n, hits: h.hits, upcoming: c.picks.length });
+      expect(home.topConfidence!.length).toBeLessThanOrEqual(8);
+      expect(new Set(home.topConfidence!.map((x) => x.match.id)).size).toBe(home.topConfidence!.length);
+      for (const x of home.topConfidence!) {
+        expect(Date.parse(x.match.date)).toBeLessThanOrEqual(NOW.getTime() + 72 * 3_600_000);
+        expect(validatedOutOfSample(x.pick)).toBe(true);
+      }
+      const model = readJson<ModelFile>(dir, 'model.json');
+      const body = model.sections.find((x) => x.title === 'Pronósticos de alta confianza')!.body.join(' ');
+      expect(body).toContain(`${h.hits.toLocaleString('es-ES')} aciertos en ${h.n.toLocaleString('es-ES')}`);
+      expect(body).toMatch(/alto acierto NO es beneficio/);
+    });
+
+    it('la validación rechaza picks incoherentes en confidence.json', () => {
+      const broken = path.join(tmp, 'conf-broken');
+      fs.cpSync(dir, broken, { recursive: true });
+      const c = readJson<ConfidenceFile>(broken, 'confidence.json') as unknown as Record<string, any>;
+      c.picks[0].pick.prob = c.picks[0].pick.threshold - 0.05; // por debajo de su umbral (y cuota justa incoherente)
+      c.picks[1].pick.tier = 'oro';
+      c.picks[1].pick.historicalHitRate = 0.81; // oro exige >= 0,85
+      c.recent[0].hit = !c.recent[0].hit;
+      c.track.holdout.hitRate = 0.99;
+      c.picks.push({ ...c.picks[0] }, { ...c.picks[0] }); // tres del mismo partido y fuera de orden
+      fs.writeFileSync(path.join(broken, 'confidence.json'), JSON.stringify(c));
+      const all = validateDataDir(broken, NO_SANITY).errors.join('\n');
+      expect(all).toMatch(/confidence\.json: .*< umbral/);
+      expect(all).toMatch(/cuota justa .* incoherente/);
+      expect(all).toMatch(/nivel oro con acierto histórico 0\.81/);
+      expect(all).toMatch(/hit no coincide con pick\.result/);
+      expect(all).toMatch(/hitRate 0\.99 ≠/);
+      expect(all).toMatch(/no está ordenado por fecha/);
+      expect(all).toMatch(/máximo 2/);
+      fs.rmSync(path.join(broken, 'confidence.json'));
+      expect(validateDataDir(broken, NO_SANITY).errors).toContain('confidence.json: archivo ausente');
+    });
+  });
+
+  it('publicPick, fichas compactas y filas por familia (unidades)', () => {
+    const engine = {
+      ...synthCand('team-under-2.5', 'estadistico', 0.8765, 'hit'),
+      marketOdds: 1.1,
+      oddsKind: 'directa' as const,
+      tier: 'oro' as const,
+      historicalHitRate: 0.9012,
+      historicalN: 321,
+      threshold: 0.8,
+      calibratedProb: 0.889,
+    };
+    const p = publicPick(engine, 'void', { 'team-under-2.5': { hitRate: 0.8911, n: 641 } });
+    expect(p).toMatchObject({ family: 'team-under-2.5', prob: 0.8765, tier: 'oro', source: 'estadistico', holdoutHitRate: 0.8911, holdoutN: 641, result: 'void', marketOdds: 1.1 });
+    expect(p.fairOdds).toBeCloseTo(1 / 0.8765, 3);
+    expect(validatedOutOfSample(p)).toBe(true);
+    expect(validatedOutOfSample({ holdoutHitRate: 0.71, holdoutN: 38 })).toBe(false);
+    expect(validatedOutOfSample({ holdoutHitRate: 0.95, holdoutN: 11 })).toBe(false);
+    expect(publicPick(engine).holdoutN).toBeUndefined();
+
+    const s = slimSummary({ id: '1', compId: 'x', compName: 'X', date: '2026-11-20T18:00:00Z', status: 'scheduled', home: T('a'), away: T('b'), hasDetail: true, odds: { provider: 'p', home: 2 }, popularity: 50, prediction: { p: { home: 0.5, draw: 0.3, away: 0.2 }, xgHome: 1, xgAway: 1, over25: 0.5, btts: 0.5, likelyScore: '1-1', likelyScoreProb: 0.1, confidence: 0.5 } });
+    expect(Object.keys(s).sort()).toEqual(['away', 'compId', 'compName', 'date', 'hasDetail', 'home', 'id', 'status']);
+
+    const g = (n: number, hits: number) => ({ n, hits, picks: n, hitRate: hits / n });
+    const ev = {
+      rules: { rules: [{ family: 'cards-over-2.5', segment: 'estadistico', threshold: 0.81 }, { family: '1x2-fav', segment: 'mercado', threshold: 0.77, goldThreshold: 0.82 }] },
+      holdout: { byFamily: { 'cards-over-2.5': g(38, 27), dnb: g(13, 12) } },
+      productionChoice: { exclude: ['btts-no|mercado'] },
+    } as unknown as Parameters<typeof familyRows>[0];
+    const rows = new Map(familyRows(ev).map((r) => [r.family, r]));
+    expect(rows.get('cards-over-2.5')).toMatchObject({ active: true, threshold: 0.81, n: 38, hits: 27 });
+    expect(rows.get('cards-over-2.5')!.hitRate).toBeCloseTo(27 / 38, 9); // sin redondear (71,1 %, no 71,0 %)
+    expect(rows.get('cards-over-2.5')!.note).toMatch(/71,1 %.*por debajo del 80 %/);
+    expect(rows.get('1x2-fav')!.note).toMatch(/aún sin picks fuera de muestra/);
+    expect(rows.get('1x2-fav')!.thresholds).toEqual([{ source: 'mercado', threshold: 0.77, goldThreshold: 0.82 }]);
+    expect(rows.get('dnb')!.note).toMatch(/No se publica.*Muestra fuera de muestra pequeña \(13\)/);
+    expect(rows.get('btts-no')!.note).toMatch(/validación interna/);
+    expect(rows.get('btts-yes')!.hitRate).toBeUndefined();
   });
 });
 

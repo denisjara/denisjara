@@ -1,7 +1,7 @@
 /**
  * Secciones de metodología (español) de public/data/model.json, con los valores ajustados en este build.
  */
-import type { BacktestSummary, ModelFile } from '../../src/types/data';
+import type { BacktestSummary, ConfidenceFile, ModelFile } from '../../src/types/data';
 import { MODEL, UPCOMING_DAYS } from '../config';
 import { MAX_EV } from '../analytics/value';
 import { ELO_GOAL_WEIGHT_FACTOR, LOW_DATA_GAMES } from '../analytics/predict';
@@ -20,6 +20,54 @@ export interface MethodologyInput {
   teams: number;
   players: number;
   valueBets: number;
+  /** pronósticos de alta confianza publicados en este build (cifras del holdout) */
+  confidence?: ConfidenceFile;
+}
+
+const day = (iso: string) => {
+  const t = Date.parse(iso);
+  return Number.isFinite(t) ? new Date(t).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }) : '—';
+};
+
+/** Sección «Pronósticos de alta confianza» con las cifras reales del holdout de este build. */
+export function confidenceSection(cf: ConfidenceFile | undefined, bt: BacktestSummary | undefined): ModelFile['sections'][number] {
+  const body: string[] = [
+    `Qué es: el pronóstico 1X2 acierta ${bt ? pc(bt.model.accuracy, 1) : 'alrededor del 52 %'} de las veces${bt?.market ? ` (el mercado de cierre, ${pc(bt.market.accuracy, 1)})` : ''}, lo normal en fútbol, y no se puede llevar al 80 % para todos los partidos. Lo que sí se puede es elegir, entre más de 20 familias de mercados de cada partido (doble oportunidad, empate no apuesta, hándicap +1,5, más/menos goles, goles por equipo, córners y tarjetas), las selecciones en las que el modelo ha demostrado acertar al menos 4 de cada 5 veces.`,
+    'Sin fuga de datos (walk-forward): cada partido terminado de la temporada actual se predice solo con información anterior a su inicio: Elo previo, Dixon-Coles re-ajustado con partidos anteriores, parámetros de pretemporada, proyecciones de córners y tarjetas con partidos de días anteriores y cuotas de cierre. Sin cuotas, resultado y goles exigen al menos 10 partidos previos de cada equipo; córners y tarjetas, al menos 5 con ese dato.',
+    'Umbrales: una regla por familia y por fuente de la predicción (con cuotas / sin cuotas). La probabilidad del modelo se recalibra (Platt) con el histórico; el umbral parte de la probabilidad cuya versión recalibrada llega al 82 % y la cola (probabilidad ≥ umbral) debe acertar ≥ 82 % con al menos 80 casos y un límite inferior de Wilson (90 %) ≥ 78 %. Nivel oro si su franja acierta ≥ 85 % en el histórico; plata si ≥ 80 %. Como mucho 2 picks por partido, de temas distintos (resultado, goles, córners, tarjetas). Por encima del 93 % la selección se considera trivial y no se publica.',
+  ];
+  const t = cf?.track;
+  const h = t?.holdout;
+  if (cf && t && h && h.n > 0) {
+    const rate = (x: { hits: number; n: number }) => pc(x.n ? x.hits / x.n : 0, 1);
+    const cal = t.calibration;
+    body.push(
+      `Calibración frente a holdout: las reglas que se miden se ajustan solo con el 60 % más antiguo de los partidos${cal ? ` (${day(cal.from)} – ${day(cal.to)}, ${n0(cal.matches)} partidos)` : ''}, y la exigencia se elige con una validación interna dentro de esa ventana. El holdout (${day(h.from)} – ${day(h.to)}, ${n0(h.matches ?? 0)} partidos) no se usó para elegir nada: ${n0(h.hits)} aciertos en ${n0(h.n)} pronósticos resueltos = ${rate(h)} (intervalo de Wilson al 90 %: ${pc(h.wilsonLow ?? 0, 1)} – ${pc(h.wilsonHigh ?? 1, 1)})${h.voids ? `; ${n0(h.voids)} nulos (empate no apuesta con empate)` : ''}.` +
+        (t.virgin && t.virgin.n > 0 ? ` En el tramo final (${day(t.virgin.from)} – ${day(t.virgin.to)}), visto por primera vez con esta cifra: ${rate(t.virgin)} (${n0(t.virgin.hits)}/${n0(t.virgin.n)}).` : ''),
+    );
+    const tiers = t.byTier.map((x) => `${x.tier} ${rate(x)} (${n0(x.hits)}/${n0(x.n)})`).join(', ');
+    const weak = t.byFamily.filter((f) => f.n >= 20 && f.hitRate !== undefined && f.hitRate < 0.8);
+    const plata = t.byTier.find((x) => x.tier === 'plata');
+    body.push(
+      `Por nivel, fuera de muestra: ${tiers}.` +
+        (plata && plata.n > 0 && plata.hitRate < 0.8 ? ' La plata queda por debajo de su etiqueta del 80 %: se publica igualmente, con su acierto real a la vista.' : '') +
+        (weak.length
+          ? ` Familias por debajo del 80 % fuera de muestra: ${weak.map((f) => `${f.label.replace(/(\d)\.(\d)/g, '$1,$2')} ${rate(f)} (${n0(f.hits)}/${n0(f.n)})`).join(', ')}.`
+          : ''),
+    );
+    body.push(
+      `Producción: el mismo procedimiento aplicado a todo el historial (${n0(cf.rules.matches)} partidos) da ${n0(cf.rules.active)} reglas activas para los partidos próximos. Lo validado fuera de muestra es el procedimiento, no esas reglas exactas: alguna familia solo entra con todo el histórico y aún no tiene picks fuera de muestra (se indica en cada pick).`,
+    );
+    const roi = t.roi;
+    body.push(
+      `Advertencias: alto acierto NO es beneficio. La cuota justa media es ${d(t.avgFairOdds)}${roi ? ` y, con cuotas de cierre, solo ${n0(roi.bets)} de ${n0(h.picks)} picks tienen precio${roi.synthetic === roi.bets ? ' (todos sintéticos de doble oportunidad o empate no apuesta, calculados desde el 1X2)' : ''}: apostar 1 unidad a cada uno habría dado un ROI de ${roi.roi >= 0 ? '+' : '−'}${pc(Math.abs(roi.roi), 1)}` : ''}; para el resto (goles por equipo, hándicap, córners, tarjetas) la fuente no publica cuotas y la rentabilidad no se puede medir. La cobertura es casi total (${t.coverage.matches ? pc((t.coverage.matchesWithPick ?? 0) / t.coverage.matches) : '—'} de los partidos tienen pick, unos ${d(t.coverage.picksPerMatchDay ?? t.coverage.picksPerDay, 0)} al día con partidos): no es una lista exclusiva de "apuestas seguras".`,
+      `Límites de la validación: el holdout cubre solo unos dos meses; los picks sin cuotas (Nations League, copas, ligas sin precios) son pocos fuera de muestra${t.bySource?.find((x) => x.source === 'estadistico') ? ` (${n0(t.bySource.find((x) => x.source === 'estadistico')!.n)})` : ''}; los hiperparámetros globales del modelo (pesos del ensamble, Elo de los equipos de copa) se ajustaron con backtests que incluyen ese periodo, y la liga doméstica asignada a cada equipo usa información posterior (solo decide qué modelo de goles se usa). Las cifras se recalculan en cada actualización.`,
+    );
+  } else {
+    body.push('Todavía no hay suficientes partidos terminados para medir el acierto fuera de muestra: no se publican pronósticos de alta confianza.');
+  }
+  body.push('Juego responsable: son estimaciones estadísticas, no garantías. Solo mayores de 18 años y con dinero que puedas permitirte perder.');
+  return { title: 'Pronósticos de alta confianza', body };
 }
 
 export function methodologySections(i: MethodologyInput): ModelFile['sections'] {
@@ -132,6 +180,8 @@ export function methodologySections(i: MethodologyInput): ModelFile['sections'] 
       btLine,
     ],
   });
+
+  sections.push(confidenceSection(i.confidence, bt));
 
   sections.push({
     title: 'Calidad de los datos',

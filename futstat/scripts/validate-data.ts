@@ -210,6 +210,52 @@ const valuePick = obj(
   },
 );
 
+/** Pronóstico de alta confianza: prob >= umbral de su franja, acierto histórico de la franja >= 80 %, cuota justa = 1/p. */
+const CONF_FAMILY = /^[a-z0-9.+-]{1,40}$/;
+const confidencePick = obj(
+  {
+    family: str({ nonEmpty: true, pattern: CONF_FAMILY }),
+    marketId: str({ nonEmpty: true }),
+    market: str({ nonEmpty: true }),
+    selection: str({ nonEmpty: true }),
+    prob: num({ min: 0.5, max: 1 }),
+    fairOdds: num({ min: 1, max: 2 }),
+    tier: str({ oneOf: ['oro', 'plata'] }),
+    historicalHitRate: num({ min: 0.8, max: 1 }),
+    historicalN: num({ min: 1, int: true }),
+  },
+  {
+    marketOdds: odds,
+    oddsKind: str({ oneOf: ['directa', 'sintetica'] }),
+    threshold: num({ min: 0.5, max: 1 }),
+    calibratedProb: prob,
+    source: str({ oneOf: ['mercado', 'estadistico'] }),
+    holdoutHitRate: prob,
+    holdoutN: num({ min: 1, int: true }),
+    result: str({ oneOf: ['hit', 'miss', 'void'] }),
+  },
+  (v, at, c) => {
+    const p = v.prob as number;
+    if (typeof p === 'number' && typeof v.fairOdds === 'number' && p > 0 && Math.abs((v.fairOdds as number) - 1 / p) > 0.01) {
+      fail(c, at, `cuota justa ${v.fairOdds} incoherente con prob ${p} (1/p = ${(1 / p).toFixed(3)})`);
+    }
+    if (typeof v.threshold === 'number' && typeof p === 'number' && p < (v.threshold as number) - 1e-3) fail(c, at, `prob ${p} < umbral ${v.threshold}`);
+    if (v.oddsKind !== undefined && v.marketOdds === undefined) fail(c, at, 'oddsKind sin marketOdds');
+    if ((v.holdoutHitRate === undefined) !== (v.holdoutN === undefined)) fail(c, at, 'holdoutHitRate y holdoutN van juntos');
+    if (v.tier === 'oro' && typeof v.historicalHitRate === 'number' && (v.historicalHitRate as number) < 0.85 - 1e-9) fail(c, at, `nivel oro con acierto histórico ${v.historicalHitRate} < 0,85`);
+  },
+);
+
+/** Hasta 2 picks por partido, de familias distintas. */
+function confidenceList(max: number): Check {
+  return (v, at, c) => {
+    arr(confidencePick, { max })(v, at, c);
+    if (!Array.isArray(v)) return;
+    const fams = v.map((x) => (isObj(x) ? x.family : undefined));
+    if (new Set(fams).size !== fams.length) fail(c, at, 'dos picks de la misma familia en un partido');
+  };
+}
+
 const quickPrediction = obj(
   {
     p: prob1x2,
@@ -221,7 +267,7 @@ const quickPrediction = obj(
     likelyScoreProb: prob,
     confidence: prob,
   },
-  { expCorners: nonNeg, expCards: nonNeg, market: prob1x2, pick: valuePick },
+  { expCorners: nonNeg, expCards: nonNeg, market: prob1x2, pick: valuePick, safe: confidencePick },
 );
 
 const score = obj({ home: count, away: count }, { htHome: count, htAway: count, penHome: count, penAway: count });
@@ -661,9 +707,22 @@ const matchFile = obj(
     table: obj({ group: str(), rows: arr(standingRow, { min: 1 }) }, { homeRank: num({ min: 1, int: true }), awayRank: num({ min: 1, int: true }) }),
     actual: obj({ home: teamMatchStats, away: teamMatchStats }),
     events: arr(matchEvent),
+    confidence: confidenceList(2),
   },
   (v, at, c) => {
     const m = v.match as Record<string, unknown> | undefined;
+    // alta confianza: próximos sin resultado; terminados con resultado; el primero coincide con prediction.safe
+    const conf = v.confidence as Record<string, unknown>[] | undefined;
+    if (Array.isArray(conf) && m) {
+      const finished = m.status === 'finished';
+      conf.forEach((p, i) => {
+        if (!isObj(p)) return;
+        if (finished && p.result === undefined) fail(c, `${at}.confidence[${i}]`, 'pick de un partido terminado sin resultado');
+        if (!finished && p.result !== undefined) fail(c, `${at}.confidence[${i}]`, 'resultado en un partido no terminado');
+      });
+      const safe = (m.prediction as Record<string, unknown> | undefined)?.safe as Record<string, unknown> | undefined;
+      if (safe && conf[0] && (safe.family !== conf[0].family || safe.selection !== conf[0].selection)) fail(c, at, 'prediction.safe no coincide con confidence[0]');
+    }
     if (m && m.hasDetail !== true) fail(c, `${at}.match.hasDetail`, 'una ficha publicada debe tener hasDetail=true');
     const p = (m?.prediction as Record<string, unknown> | undefined)?.p as Record<string, number> | undefined;
     const e = (v.model as Record<string, unknown> | undefined)?.ensemble as Record<string, number> | undefined;
@@ -741,6 +800,136 @@ const metaFile = obj(
   },
 );
 
+/** hitRate = hits / n (n = resueltos) y hits <= n. */
+function checkRate(v: Record<string, unknown>, at: string, c: Ctx, nKey = 'n'): void {
+  const n = v[nKey] as number;
+  const hits = v.hits as number;
+  const rate = v.hitRate as number | undefined;
+  if (typeof n !== 'number' || typeof hits !== 'number') return;
+  if (hits > n) fail(c, at, `aciertos ${hits} > resueltos ${n}`);
+  if (typeof rate === 'number' && n > 0 && Math.abs(rate - hits / n) > 1e-3) fail(c, at, `hitRate ${rate} ≠ ${hits}/${n}`);
+  if (typeof rate === 'number' && n === 0 && rate !== 0) fail(c, at, 'hitRate sin picks resueltos');
+  if (typeof v.picks === 'number' && nKey === 'n' && n > (v.picks as number)) fail(c, at, `resueltos ${n} > picks ${v.picks}`);
+  if (typeof v.wilsonLow === 'number' && typeof rate === 'number' && n > 0 && !((v.wilsonLow as number) <= rate + 1e-9 && rate <= ((v.wilsonHigh as number) ?? 1) + 1e-9)) {
+    fail(c, at, 'intervalo de Wilson que no contiene el acierto');
+  }
+}
+
+const confidenceRecordFields = { picks: count, n: count, hits: count, hitRate: prob };
+const confidenceRecordOpt = { wilsonLow: prob, wilsonHigh: prob, voids: count };
+const confidenceRecord = obj({ ...confidenceRecordFields, from: iso, to: iso }, { ...confidenceRecordOpt, matches: count }, (v, at, c) => checkRate(v, at, c));
+
+/** { match, pick } de alta confianza; settled = partido terminado con resultado. */
+function confidenceEntry(settled: boolean): Check {
+  return obj(
+    { match: matchSummary, pick: confidencePick, ...(settled ? { hit: bool } : {}) },
+    {},
+    (v, at, c) => {
+      const m = v.match as Record<string, unknown> | undefined;
+      const p = v.pick as Record<string, unknown> | undefined;
+      if (!m || !p) return;
+      if (settled) {
+        if (m.status !== 'finished') fail(c, at, 'pick resuelto de un partido no terminado');
+        if (p.result === undefined) fail(c, at, 'pick resuelto sin resultado');
+        if (v.hit !== (p.result === 'hit')) fail(c, at, 'hit no coincide con pick.result');
+      } else {
+        if (m.status !== 'scheduled') fail(c, at, `pick de alta confianza de un partido "${String(m.status)}" (debe estar programado)`);
+        if (p.result !== undefined) fail(c, at, 'resultado en un pick no resuelto');
+      }
+    },
+  );
+}
+
+const confidenceFile = obj(
+  {
+    generatedAt: iso,
+    picks: arr(confidenceEntry(false)),
+    recent: arr(confidenceEntry(true)),
+    track: obj(
+      {
+        holdout: confidenceRecord,
+        byTier: arr(obj({ tier: str({ oneOf: ['oro', 'plata'] }), ...confidenceRecordFields }, confidenceRecordOpt, (v, at, c) => checkRate(v, at, c)), { max: 2 }),
+        byFamily: arr(
+          obj(
+            {
+              family: str({ nonEmpty: true, pattern: CONF_FAMILY }),
+              label: str({ nonEmpty: true }),
+              theme: str({ oneOf: ['resultado', 'goles', 'corners', 'tarjetas'] }),
+              active: bool,
+              thresholds: arr(obj({ source: str({ oneOf: ['mercado', 'estadistico'] }), threshold: num({ min: 0.5, max: 1 }) }, { goldThreshold: num({ min: 0.5, max: 1 }) }), { max: 2 }),
+              picks: count,
+              n: count,
+              hits: count,
+            },
+            { threshold: num({ min: 0.5, max: 1 }), hitRate: prob, note: str({ nonEmpty: true }) },
+            (v, at, c) => {
+              checkRate(v, at, c);
+              if (v.n === 0 && v.hitRate !== undefined) fail(c, at, 'hitRate sin picks resueltos (debe omitirse)');
+              const ths = v.thresholds as unknown[];
+              if (v.active !== (Array.isArray(ths) && ths.length > 0)) fail(c, at, 'active no coincide con thresholds');
+            },
+          ),
+        ),
+        coverage: obj({ picksPerDay: nonNeg }, { picksPerMatchDay: nonNeg, matches: count, matchesWithPick: count }),
+        avgFairOdds: (v, at, c) => {
+          num({ min: 0 })(v, at, c);
+          if (typeof v === 'number' && v !== 0 && v < 1) fail(c, at, `cuota justa media ${v} < 1`);
+        },
+      },
+      {
+        virgin: confidenceRecord,
+        calibration: obj({ from: iso, to: iso, matches: count }),
+        bySource: arr(obj({ source: str({ oneOf: ['mercado', 'estadistico'] }), ...confidenceRecordFields }, confidenceRecordOpt, (v, at, c) => checkRate(v, at, c)), { max: 2 }),
+        avgProb: prob,
+        roi: obj({ bets: num({ min: 1, int: true }), roi: num({ min: -1 }) }, { profit: num(), hitRate: prob, avgOdds: num({ min: 1 }), synthetic: count }),
+      },
+    ),
+    rules: obj({
+      level: count,
+      targetRate: prob,
+      from: iso,
+      to: iso,
+      matches: count,
+      active: count,
+      maxPerMatch: num({ min: 1, int: true }),
+      minHitRate: prob,
+    }),
+    note: str({ nonEmpty: true }),
+  },
+  {},
+  (v, at, c) => {
+    const picks = v.picks as { match?: { id?: string; date?: string }; pick?: { family?: string } }[];
+    if (Array.isArray(picks)) {
+      for (let i = 1; i < picks.length; i++) {
+        if (Date.parse(picks[i].match?.date ?? '') < Date.parse(picks[i - 1].match?.date ?? '')) {
+          fail(c, `${at}.picks`, 'no está ordenado por fecha');
+          break;
+        }
+      }
+      // como mucho maxPerMatch por partido y de familias distintas
+      const max = isObj(v.rules) && typeof v.rules.maxPerMatch === 'number' ? (v.rules.maxPerMatch as number) : 2;
+      const byMatch = new Map<string, string[]>();
+      for (const p of picks) {
+        const id = String(p.match?.id);
+        byMatch.set(id, [...(byMatch.get(id) ?? []), String(p.pick?.family)]);
+      }
+      for (const [id, fams] of byMatch) {
+        if (fams.length > max) fail(c, `${at}.picks`, `${fams.length} picks del partido ${id} (máximo ${max})`);
+        if (new Set(fams).size !== fams.length) fail(c, `${at}.picks`, `dos picks de la misma familia en el partido ${id}`);
+      }
+    }
+    const recent = v.recent as { match?: { date?: string } }[];
+    if (Array.isArray(recent)) {
+      for (let i = 1; i < recent.length; i++) {
+        if (Date.parse(recent[i].match?.date ?? '') > Date.parse(recent[i - 1].match?.date ?? '')) {
+          fail(c, `${at}.recent`, 'no está ordenado del más reciente al más antiguo');
+          break;
+        }
+      }
+    }
+  },
+);
+
 const homeFile = obj(
   {
     generatedAt: iso,
@@ -752,7 +941,20 @@ const homeFile = obj(
     hotPlayers: arr(playerSeasonRow, { max: 12 }),
     highlights: arr(str({ nonEmpty: true })),
   },
-  { modelHeadline: obj({ matches: count, accuracy: prob, rps: num({ min: 0, max: 1 }) }, { marketRps: num({ min: 0, max: 1 }) }) },
+  {
+    modelHeadline: obj({ matches: count, accuracy: prob, rps: num({ min: 0, max: 1 }) }, { marketRps: num({ min: 0, max: 1 }) }),
+    topConfidence: (v, at, c) => {
+      arr(confidenceEntry(false), { max: 8 })(v, at, c);
+      if (Array.isArray(v) && new Set(v.map((x) => (isObj(x) && isObj(x.match) ? x.match.id : undefined))).size !== v.length) {
+        fail(c, at, 'más de un pick del mismo partido');
+      }
+    },
+    confidenceHeadline: obj(
+      { hitRate: prob, picks: num({ min: 1, int: true }), hits: count, from: iso, to: iso },
+      { upcoming: count },
+      (v, at, c) => checkRate(v, at, c, 'picks'),
+    ),
+  },
 );
 
 const playersFile = obj({ generatedAt: iso, players: arr(playerSeasonRow, { max: 600 }) });
@@ -830,7 +1032,7 @@ export interface ValidateOptions {
   partial?: boolean;
 }
 
-const ROOT_FILES = new Set(['meta.json', 'home.json', 'players.json', 'value.json', 'model.json']);
+const ROOT_FILES = new Set(['meta.json', 'home.json', 'players.json', 'value.json', 'model.json', 'confidence.json']);
 const SUB_DIRS = new Set(['competitions', 'matches', 'teams']);
 const SAFE_FILE = /^[A-Za-z0-9_-]{1,40}\.json$/;
 
@@ -917,6 +1119,7 @@ export function validateDataDir(dir: string = OUTPUT_DIR, opts: ValidateOptions 
   check('players.json', playersFile);
   check('value.json', valueFile);
   check('model.json', modelFile);
+  check('confidence.json', confidenceFile);
 
   const compFiles = listJson(dir, 'competitions');
   for (const id of compIds) if (!compFiles.includes(`competitions/${id}.json`)) c.errors.push(`meta.json: falta competitions/${id}.json`);

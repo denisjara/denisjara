@@ -9,6 +9,7 @@
  * posterior es la asignación de liga doméstica de cada equipo (homeLeague), que solo decide qué modelo se usa.
  */
 import type {
+  ConfidencePick,
   LeagueAverages,
   MatchSummary,
   Prob1X2,
@@ -135,6 +136,13 @@ export interface BuildContext {
   compAverages: Map<string, LeagueAverages>;
   compStandings: Map<string, StandingGroup[]>;
   baseContexts: Map<string, PredictContext>;
+  /**
+   * pronósticos de alta confianza (publish/confidence.ts, antes de construir cualquier MatchSummary): partidos próximos
+   * (reglas de producción) → `prediction.safe` y MatchFile.confidence
+   */
+  confidencePicks?: Map<string, ConfidencePick[]>;
+  /** partidos terminados recientes: picks walk-forward del holdout ya resueltos (MatchFile.confidence con `result`) */
+  confidenceSettled?: Map<string, ConfidencePick[]>;
 }
 
 // ---------------------------------------------------------------------------

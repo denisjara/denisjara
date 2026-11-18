@@ -18,6 +18,8 @@ import type {
   BacktestSummary,
   CompetitionFile,
   CompetitionMeta,
+  ConfidenceFile,
+  ConfidencePick,
   FormMatch,
   HomeFile,
   MatchFile,
@@ -143,6 +145,44 @@ export function normPick(p: unknown): ValuePick | undefined {
   } as ValuePick;
 }
 
+const TIERS = new Set(['oro', 'plata']);
+const SOURCES = new Set(['mercado', 'estadistico']);
+const RESULTS = new Set(['hit', 'miss', 'void']);
+const prob01 = (x: unknown): number | undefined => {
+  const v = fin(x);
+  return v !== undefined && v >= 0 && v <= 1 ? v : undefined;
+};
+/** Pronóstico de alta confianza: sin probabilidad válida (0,5–1) o sin acierto histórico se descarta. */
+export function normConfidencePick(p: unknown): ConfidencePick | undefined {
+  if (!isObj(p)) return undefined;
+  const prob = prob01(p.prob);
+  const hist = prob01(p.historicalHitRate);
+  const selection = short(p.selection, 120);
+  if (prob === undefined || prob < 0.5 || hist === undefined || !selection) return undefined;
+  const marketOdds = fin(p.marketOdds);
+  const holdoutHitRate = prob01(p.holdoutHitRate);
+  const holdoutN = fin(p.holdoutN);
+  return {
+    family: short(p.family, 40) || 'otro',
+    marketId: str(p.marketId, 'otro'),
+    market: short(p.market, 120) || 'Mercado',
+    selection,
+    prob,
+    fairOdds: fin(p.fairOdds) ?? Math.min(1000, 1 / prob),
+    marketOdds: marketOdds !== undefined && marketOdds > 1 ? marketOdds : undefined,
+    oddsKind: p.oddsKind === 'directa' || p.oddsKind === 'sintetica' ? p.oddsKind : undefined,
+    tier: TIERS.has(str(p.tier)) ? (p.tier as ConfidencePick['tier']) : 'plata',
+    historicalHitRate: hist,
+    historicalN: Math.max(0, fin(p.historicalN) ?? 0),
+    threshold: prob01(p.threshold),
+    calibratedProb: prob01(p.calibratedProb),
+    source: SOURCES.has(str(p.source)) ? (p.source as ConfidencePick['source']) : undefined,
+    holdoutHitRate: holdoutHitRate !== undefined && holdoutN !== undefined && holdoutN > 0 ? holdoutHitRate : undefined,
+    holdoutN: holdoutHitRate !== undefined && holdoutN !== undefined && holdoutN > 0 ? holdoutN : undefined,
+    result: RESULTS.has(str(p.result)) ? (p.result as ConfidencePick['result']) : undefined,
+  };
+}
+
 const STATUS = new Set<MatchStatus>(['scheduled', 'live', 'finished', 'postponed', 'cancelled']);
 export function normMatch(m: unknown): MatchSummary | undefined {
   if (!isObj(m)) return undefined;
@@ -167,6 +207,7 @@ export function normMatch(m: unknown): MatchSummary | undefined {
         p,
         market: normProb(m.prediction.market),
         pick: normPick(m.prediction.pick),
+        safe: normConfidencePick(m.prediction.safe),
       } as MatchSummary['prediction'];
     }
   }
@@ -374,6 +415,21 @@ function normMeta(v: Obj): MetaFile {
   } as unknown as MetaFile;
 }
 
+const confidenceItem = (b: Obj) => {
+  const match = normMatch(b.match);
+  const pick = normConfidencePick(b.pick);
+  return match && pick ? { match, pick } : undefined;
+};
+
+/** Cifra de cabecera de alta confianza: solo si el acierto y el número de picks son válidos. */
+function normConfidenceHeadline(x: unknown): HomeFile['confidenceHeadline'] {
+  if (!isObj(x)) return undefined;
+  const hitRate = prob01(x.hitRate);
+  const picks = fin(x.picks);
+  if (hitRate === undefined || picks === undefined || picks <= 0) return undefined;
+  return { hitRate, picks, hits: fin(x.hits) ?? Math.round(hitRate * picks), from: validDate(x.from) ?? '', to: validDate(x.to) ?? '', upcoming: fin(x.upcoming) };
+}
+
 function normHome(v: Obj): HomeFile {
   const mh = isObj(v.modelHeadline) && fin(v.modelHeadline.accuracy) !== undefined ? v.modelHeadline : undefined;
   return {
@@ -386,6 +442,8 @@ function normHome(v: Obj): HomeFile {
     hotPlayers: list(v.hotPlayers, normPlayerRow, 60),
     highlights: strList(v.highlights, 50),
     modelHeadline: mh,
+    topConfidence: list(v.topConfidence, confidenceItem, 20),
+    confidenceHeadline: normConfidenceHeadline(v.confidenceHeadline),
   } as unknown as HomeFile;
 }
 
@@ -522,6 +580,7 @@ function normMatchFile(v: Obj): MatchFile {
     actual: isObj(v.actual) && isObj(v.actual.home) && isObj(v.actual.away) && fin(v.actual.home.goals) !== undefined && fin(v.actual.away.goals) !== undefined
       ? { home: finKeys(v.actual.home, ACTUAL_NUM_KEYS), away: finKeys(v.actual.away, ACTUAL_NUM_KEYS) }
       : undefined,
+    confidence: list(v.confidence, normConfidencePick, 4),
   } as unknown as MatchFile;
 }
 
@@ -573,6 +632,100 @@ function normModel(v: Obj): ModelFile {
   } as unknown as ModelFile;
 }
 
+/** Registro de acierto: n, aciertos y acierto coherentes (si no, undefined → la UI muestra "—"). */
+function normRecord<T extends Obj>(x: unknown, extra: (o: Obj) => T | undefined = () => ({}) as T): (T & { picks: number; n: number; hits: number; hitRate: number; wilsonLow?: number; wilsonHigh?: number; voids?: number; from: string; to: string; matches?: number }) | undefined {
+  if (!isObj(x)) return undefined;
+  const n = fin(x.n);
+  const hits = fin(x.hits);
+  const hitRate = prob01(x.hitRate);
+  if (n === undefined || hits === undefined || hitRate === undefined || n < 0 || hits < 0 || hits > n) return undefined;
+  const e = extra(x);
+  if (!e) return undefined;
+  return {
+    ...e,
+    picks: Math.max(n, fin(x.picks) ?? n),
+    n,
+    hits,
+    hitRate,
+    wilsonLow: prob01(x.wilsonLow),
+    wilsonHigh: prob01(x.wilsonHigh),
+    voids: fin(x.voids),
+    from: validDate(x.from) ?? '',
+    to: validDate(x.to) ?? '',
+    matches: fin(x.matches),
+  };
+}
+
+const THEMES = new Set(['resultado', 'goles', 'corners', 'tarjetas']);
+function normConfidence(v: Obj): ConfidenceFile {
+  const t = isObj(v.track) ? v.track : {};
+  const cov = isObj(t.coverage) ? t.coverage : {};
+  const rules = isObj(v.rules) ? v.rules : {};
+  const roi = isObj(t.roi) && fin(t.roi.bets) !== undefined && fin(t.roi.roi) !== undefined ? finKeys(t.roi, ['bets', 'roi', 'profit', 'hitRate', 'avgOdds', 'synthetic']) : undefined;
+  const cal = isObj(t.calibration) && validDate(t.calibration.from) && validDate(t.calibration.to) ? { from: str(t.calibration.from), to: str(t.calibration.to), matches: fin(t.calibration.matches) ?? 0 } : undefined;
+  return {
+    ...(v as object),
+    picks: list(v.picks, confidenceItem, 3000),
+    recent: list(
+      v.recent,
+      (b) => {
+        const it = confidenceItem(b);
+        return it ? { ...it, hit: b.hit === true && it.pick.result !== 'void' && it.pick.result !== 'miss' } : undefined;
+      },
+      3000,
+    ),
+    track: {
+      holdout: normRecord(t.holdout) ?? { picks: 0, n: 0, hits: 0, hitRate: 0, from: '', to: '' },
+      virgin: normRecord(t.virgin),
+      calibration: cal,
+      byTier: list(t.byTier, (x) => normRecord(x, (o) => (TIERS.has(str(o.tier)) ? { tier: o.tier as ConfidencePick['tier'] } : undefined)), 2),
+      bySource: list(t.bySource, (x) => normRecord(x, (o) => (SOURCES.has(str(o.source)) ? { source: o.source as NonNullable<ConfidencePick['source']> } : undefined)), 2),
+      byFamily: list(
+        t.byFamily,
+        (f) => {
+          const family = short(f.family, 40);
+          if (!family) return undefined;
+          const n = Math.max(0, fin(f.n) ?? 0);
+          const hits = Math.min(n, Math.max(0, fin(f.hits) ?? 0));
+          return {
+            family,
+            label: short(f.label, 80) || family,
+            theme: THEMES.has(str(f.theme)) ? (f.theme as ConfidenceFile['track']['byFamily'][number]['theme']) : 'goles',
+            active: bool(f.active),
+            thresholds: list(
+              f.thresholds,
+              (x) => {
+                const threshold = prob01(x.threshold);
+                return threshold !== undefined && SOURCES.has(str(x.source))
+                  ? { source: x.source as NonNullable<ConfidencePick['source']>, threshold, goldThreshold: prob01(x.goldThreshold) }
+                  : undefined;
+              },
+              2,
+            ),
+            threshold: prob01(f.threshold),
+            picks: Math.max(n, fin(f.picks) ?? n),
+            n,
+            hits,
+            hitRate: n > 0 ? prob01(f.hitRate) : undefined,
+            note: optStr(f.note),
+          };
+        },
+        60,
+      ),
+      coverage: { picksPerDay: fin(cov.picksPerDay) ?? 0, picksPerMatchDay: fin(cov.picksPerMatchDay), matches: fin(cov.matches), matchesWithPick: fin(cov.matchesWithPick) },
+      avgFairOdds: fin(t.avgFairOdds) ?? 0,
+      avgProb: prob01(t.avgProb),
+      roi,
+    },
+    rules: {
+      ...finKeys(rules, ['level', 'targetRate', 'matches', 'active', 'maxPerMatch', 'minHitRate']),
+      from: validDate(rules.from) ?? '',
+      to: validDate(rules.to) ?? '',
+    },
+    note: short(v.note, 600),
+  } as unknown as ConfidenceFile;
+}
+
 /**
  * Normaliza el JSON de `path` (ruta relativa al directorio de datos, ya validada).
  * Lanza Error si el archivo no tiene la forma mínima (objeto con `generatedAt`).
@@ -585,6 +738,7 @@ export function normalizeDataFile(path: string, value: unknown): unknown {
   if (path === 'players.json') return normPlayers(value);
   if (path === 'value.json') return normValue(value);
   if (path === 'model.json') return normModel(value);
+  if (path === 'confidence.json') return normConfidence(value);
   let m = /^competitions\/([a-z0-9-]{1,40})\.json$/.exec(path);
   if (m) return normCompetition(value, m[1]);
   m = /^matches\/[0-9]+\.json$/.exec(path);

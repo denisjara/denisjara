@@ -162,6 +162,16 @@ cabeceras de micro-métricas.
 - **`ValuePickChip`** `{ pick: ValuePick, showKelly? }` — "⚡ Local @ 2,10 +6,2%".
 - **`ConfidenceMeter`** `{ value, showLabel? }` — 5 barras + Alta/Media/Baja. **`Meter`** `{ value, color?, height?, label? }`.
 
+### Alta confianza (`Confidence.tsx`, utilidades puras en `lib/confidence.ts`)
+- **`TierBadge`** `{ tier: 'oro'|'plata' }` — insignia con escudo y la palabra (oro = `warn`, plata = neutra; nunca solo color).
+- **`SafePickChip`** `{ pick }` — chip discreto de `MatchCard` (`prediction.safe`); ⚠ si su mercado no está validado fuera de muestra.
+- **`OutOfSampleNote`** `{ pick }` — "Fuera de muestra 89% (864)" o aviso (sin validar / por debajo del 80%).
+- **`ResultMark`** `{ result }` — ✓ acierto · ✗ fallo · = nulo.
+- **`ConfidenceRow`** `{ match, picks, showComp?, when?, settled?, showOdds? }` — fila de lista con los 1–2 pronósticos de un
+  partido (nivel, selección, mercado, prob., cuota justa, cuota de mercado; ✓/✗ si `settled`). Agrupa antes con
+  **`groupByMatch(items)`**. **`outOfSample(pick)`** → `'ok' | 'bajo' | 'sin-validar'`.
+- Textos obligatorios junto a estos pronósticos: alto acierto ≠ beneficio (cuotas bajas) y +18.
+
 ### Forma y equipos
 - **`TeamCrest`** `{ team: {name, abbr?, logo?, color?}, size?=24, alt? }` — logo o iniciales sobre color del equipo.
 - **`FormChips`** `{ form: "WWDLW", max?=5, size?: 'xs'|'sm'|'md', label? }` — V/E/D con letra; último a la derecha subrayado.
@@ -211,7 +221,7 @@ cabeceras de micro-métricas.
 ## 7. Librería (`src/app/lib`)
 
 - **`data.ts`**: `useMeta()`, `useHome()`, `useCompetition(id)`, `useMatch(id)`, `useTeam(id)`, `usePlayers()`,
-  `useValue()`, `useModel()` → `{ data, error, loading, reload }`. `useCompetitionMeta(id)`,
+  `useValue()`, `useModel()`, `useConfidence()` → `{ data, error, loading, reload }`. `useCompetitionMeta(id)`,
   `useCompetitions(ids)` (varias en paralelo, resultados parciales), `fetchJson(path)` con caché,
   `DataError` (`notFound`). Base: `BASE_URL + (VITE_DATA_DIR ?? 'data')`.
 - **`format.ts`**: `pct(p, d?)`, `num(x, d?)`, `int`, `compact`, `odds(o)`, `fairOddsFromProb(p)`, `xg`, `ev`,
@@ -263,7 +273,8 @@ Checklist antes de entregar una página: `npx tsc -p tsconfig.app.json --noEmit`
 
 `npm run data:mock` genera `public/mock-data/` (meta, home, competiciones `laliga`, `premier`, `seriea`,
 `brasileirao`, `saudi`, `champions`, `copadelrey`, 14 partidos con análisis completo — 2 en vivo, 2 terminados,
-el resto próximos —, 6 equipos, players, value, model). Las fechas son relativas al momento de generarlo
+el resto próximos —, 6 equipos, players, value, model y confidence: pronósticos de alta confianza con el mismo generador
+de candidatos que producción y reglas de prueba con cifras realistas). Las fechas son relativas al momento de generarlo
 (siempre hay partidos hoy/mañana/en vivo): regenera si lo usas otro día.
 Arranca con `VITE_DATA_DIR=mock-data npx vite --port <tu puerto> --strictPort`.
 

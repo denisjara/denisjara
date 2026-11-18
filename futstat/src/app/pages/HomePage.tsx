@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Activity, BadgePercent, CalendarClock, Check, Flame, History, Radio, Target, TrendingUp, Users, X, Zap } from 'lucide-react';
-import type { HomeFile, MatchSummary, PlayerSeasonRow, ValuePick } from '../../types/data';
+import { Activity, BadgePercent, CalendarClock, Check, Flame, History, Radio, ShieldCheck, Target, TrendingUp, Users, X, Zap } from 'lucide-react';
+import type { ConfidencePick, HomeFile, MatchSummary, PlayerSeasonRow, ValuePick } from '../../types/data';
 import { useHome, useMeta } from '../lib/data';
 import { pickMarketLabel, pickSelection } from '../lib/picks';
 import { lookup } from '../lib/lookup';
@@ -11,6 +11,7 @@ import { ev as fmtEv, int, kickoff, longDate, num, odds as fmtOdds, pct, plural,
 import {
   Card,
   CompetitionBadge,
+  ConfidenceRow,
   Disclaimer,
   EmptyState,
   ErrorState,
@@ -84,6 +85,7 @@ function FocusMatch({ match: m }: { match: MatchSummary }) {
 function DayHero({ home, liveCount }: { home: HomeFile; liveCount: number }) {
   const { data: meta } = useMeta();
   const mh = home.modelHeadline;
+  const ch = home.confidenceHeadline;
   const counts = meta?.counts;
   const focus = home.popular.find((m) => m.status === 'scheduled' && m.prediction) ?? home.popular[0];
   return (
@@ -125,12 +127,25 @@ function DayHero({ home, liveCount }: { home: HomeFile; liveCount: number }) {
           <div className="grid grid-cols-2 gap-3">
             <KpiTile label="Partidos analizados" value={int(counts?.matchesAnalyzed)} hint="Base del modelo esta temporada" icon={<Activity />} />
             <KpiTile label="Próximos 14 días" value={int(counts?.upcomingMatches)} hint={`En ${plural(meta?.competitions.length ?? 0, 'competición', 'competiciones')}`} icon={<CalendarClock />} />
-            <KpiTile label="Picks de valor" value={int(counts?.valueBets ?? home.topValue.length)} hint="EV ≥ +5% frente a la cuota" icon={<BadgePercent />} accent />
+            <KpiTile label="Picks de valor" value={int(counts?.valueBets ?? home.topValue.length)} hint="EV ≥ +5% frente a la cuota" icon={<BadgePercent />} />
+            <KpiTile
+              label="Picks alta confianza"
+              value={ch?.upcoming !== undefined ? int(ch.upcoming) : '—'}
+              hint="Próximos 14 días · cuotas bajas"
+              icon={<ShieldCheck />}
+            />
             <KpiTile
               label="Acierto 1X2"
               value={mh ? pct(mh.accuracy) : '—'}
               hint={mh ? `RPS ${num(mh.rps, 3)}${mh.marketRps ? ` · mercado ${num(mh.marketRps, 3)}` : ''}` : 'Backtest pendiente'}
               icon={<Target />}
+            />
+            <KpiTile
+              label="Alta confianza"
+              value={ch ? pct(ch.hitRate, 1) : '—'}
+              hint={ch ? `En ${int(ch.picks)} pronósticos fuera de muestra` : 'Sin datos todavía'}
+              icon={<ShieldCheck />}
+              accent
             />
           </div>
           {focus && <FocusMatch match={focus} />}
@@ -195,6 +210,43 @@ function ValueList({ items }: { items: { match: MatchSummary; pick: ValuePick }[
                 </span>
               </span>
             </Link>
+          </li>
+        ))}
+      </ul>
+    </Card>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Pronósticos de alta confianza
+// ---------------------------------------------------------------------------
+function ConfidenceList({ items, headline }: { items: { match: MatchSummary; pick: ConfidencePick }[]; headline: HomeFile['confidenceHeadline'] }) {
+  if (!items.length) {
+    return (
+      <EmptyState
+        compact
+        icon={<ShieldCheck />}
+        title="Sin pronósticos de alta confianza en 72 horas"
+        description="Ningún partido próximo supera los umbrales de un mercado validado fuera de muestra."
+        action={<Link to="/confianza" className="btn">Ver todos</Link>}
+      />
+    );
+  }
+  return (
+    <Card pad="none" className="overflow-hidden">
+      {headline && (
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 border-b border-line bg-surface-2/70 px-3 py-2.5 text-[13px] text-ink-2 sm:px-4">
+          <span>
+            <strong className="num font-display text-[20px] font-extrabold leading-none text-ink-1">{pct(headline.hitRate, 1)}</strong> de acierto en{' '}
+            <strong className="font-semibold text-ink-1">{int(headline.picks)}</strong> pronósticos de partidos no usados para calibrar
+          </span>
+          <span className="text-2xs text-ink-3">Cuotas bajas: alto acierto no es beneficio.</span>
+        </div>
+      )}
+      <ul className="divide-y divide-line/70">
+        {items.map(({ match, pick }) => (
+          <li key={`${match.id}-${pick.family}`}>
+            <ConfidenceRow match={match} picks={[pick]} />
           </li>
         ))}
       </ul>
@@ -369,6 +421,17 @@ export default function HomePage() {
         ) : (
           <EmptyState icon={<CalendarClock />} title={day === 'hoy' ? 'Hoy no hay partidos' : 'Mañana no hay partidos'} description="Consulta el calendario para ver los próximos días." action={<Link to="/partidos" className="btn">Abrir calendario</Link>} />
         )}
+      </Section>
+
+      <Section
+        id="alta-confianza"
+        eyebrow="Próximas 72 horas"
+        title="Pronósticos de alta confianza"
+        icon={<ShieldCheck />}
+        moreTo="/confianza"
+        description="Selecciones de mercados que han acertado al menos 4 de cada 5 veces en partidos no usados para calibrar. Uno por partido, de los mercados validados."
+      >
+        <ConfidenceList items={(home.topConfidence ?? []).filter((x) => x.match.status === 'scheduled' && !(Date.parse(x.match.date) <= Date.now()))} headline={home.confidenceHeadline} />
       </Section>
 
       <div className="grid gap-10 xl:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)] xl:gap-6">

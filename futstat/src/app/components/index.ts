@@ -37,3 +37,5 @@ export type { SafeBlockProps } from './ErrorBoundary';
 export { ExternalLink } from './ExternalLink';
 export { Tooltip, InfoTip } from './Tooltip';
 export { Disclaimer } from './Disclaimer';
+export { TierBadge, SafePickChip, OutOfSampleNote, ResultMark, ConfidenceRow, groupByMatch, confidenceSelection, confidenceMarket, outOfSample, TIER_LABEL, OOS_MIN_N } from './Confidence';
+export type { ConfidenceRowProps } from './Confidence';

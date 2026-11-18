@@ -143,7 +143,9 @@ export function matchSummary(ctx: BuildContext, m: MatchRecord): MatchSummary {
   const isRecentResult = isFinishedRecord(m) && m.currentSeason && t >= resultsFrom(ctx) && t <= ctx.now;
   if (isPending || isRecentResult || extra.hasDetail) {
     const fp = fullPrediction(ctx, m, !!extra.hasDetail);
-    extra.prediction = fp.result.quick;
+    // mejor pick de alta confianza (solo partidos próximos; calculado antes de construir ninguna ficha compacta)
+    const safe = isPending ? ctx.confidencePicks?.get(m.id)?.[0] : undefined;
+    extra.prediction = safe ? { ...fp.result.quick, safe } : fp.result.quick;
     if (isPending) {
       extra.popularity = popularityScore({
         compTier: comp.tier,
@@ -473,6 +475,10 @@ export function buildMatchFile(ctx: BuildContext, m: MatchRecord): MatchFile {
     const evs = publicEvents(ctx, m);
     if (evs.length) file.events = evs;
   }
+
+  // alta confianza: próximos → reglas de producción; terminados → reconstrucción walk-forward ya resuelta
+  const conf = isFinishedRecord(m) ? ctx.confidenceSettled?.get(m.id) : ctx.upcomingIds.has(m.id) ? ctx.confidencePicks?.get(m.id) : undefined;
+  if (conf?.length) file.confidence = conf;
   return file;
 }
 

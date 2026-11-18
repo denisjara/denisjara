@@ -14,6 +14,7 @@ import { FormTab } from './FormTab';
 import { H2HTab } from './H2HTab';
 import { PlayersTab } from './PlayersTab';
 import { ResultTab } from './ResultTab';
+import { ConfidenceBlock } from './ConfidenceBlock';
 
 const TAB_IDS = ['analisis', 'mercados', 'estadisticas', 'forma', 'h2h', 'jugadores', 'resultado'] as const;
 type TabId = (typeof TAB_IDS)[number];
@@ -129,6 +130,10 @@ export default function MatchPage() {
     <div className="space-y-6">
       <SafeBlock label="Marcador y probabilidades">
         <MatchHeader file={file} match={match} />
+      </SafeBlock>
+
+      <SafeBlock label="Alta confianza">
+        <ConfidenceBlock file={file} match={match} />
       </SafeBlock>
 
       <div key={match.id}>
