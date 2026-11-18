@@ -152,7 +152,8 @@ export interface QuickPrediction {
   pick?: ValuePick;
   /**
    * best HIGH-CONFIDENCE pick of an upcoming match, if any (see ConfidencePick). Not related to `confidence` below:
-   * it is a selection whose family has a historical hit rate >= 80 % (low odds, no profit guarantee).
+   * a very likely, low-odds selection whose rule hit >= 80 % out of sample (no edge over the bookmaker, no profit
+   * guarantee).
    */
   safe?: ConfidencePick;
   /** 0..1 — how sure the model is (agreement between sources × data volume) */
@@ -163,14 +164,16 @@ export interface QuickPrediction {
 // High-confidence picks (pipeline/analytics/confidence.ts)
 // ---------------------------------------------------------------------------
 
+/** only 'oro' is published since 2026-11-18; 'plata' is kept for compatibility with older files and never shown */
 export type ConfidenceTier = 'oro' | 'plata';
 /** prediction source: 'mercado' = the ensemble used de-vigged bookmaker odds; 'estadistico' = Dixon-Coles + Elo only */
 export type ConfidenceSource = 'mercado' | 'estadistico';
 export type ConfidenceTheme = 'resultado' | 'goles' | 'corners' | 'tarjetas';
 
 /**
- * A selection whose market family (and prediction source) has hit >= 80 % in the walk-forward history once the model
- * probability passes the family threshold. High hit rate ≠ profit: these are low-odds selections.
+ * A very likely, low-odds selection: its rule (market family + prediction source) passed the out-of-sample validation
+ * (>= 30 picks and >= 80 % in the monthly walk-forward) and its probability band hit >= 85 % in the history used to fit
+ * the rule. High hit rate ≠ edge over the bookmaker ≠ profit: most of it is structural (see track.baseline).
  */
 export interface ConfidencePick {
   /** stable family id: 'dc', 'dnb', 'ah+1.5', 'ou-1.5-over', 'team-score', 'corners-over-6.5', 'cards-over-1.5'... */
@@ -189,7 +192,7 @@ export interface ConfidencePick {
   marketOdds?: number;
   /** 'directa' = published price; 'sintetica' = combination of 1X2 prices (realisable) */
   oddsKind?: 'directa' | 'sintetica';
-  /** 'oro': its band hit >= 85 % in the history used to fit the rules; 'plata': >= 80 % */
+  /** always 'oro' in new files (its band hit >= 85 % in the history used to fit the rule) */
   tier: ConfidenceTier;
   /** hit rate of its band (oro/plata) of its family in the history used to fit the rule (in-sample for that history) */
   historicalHitRate: number;
@@ -201,11 +204,24 @@ export interface ConfidencePick {
   calibratedProb?: number;
   source?: ConfidenceSource;
   /**
-   * OUT-OF-SAMPLE record of its family (holdout, all tiers and sources): hit rate and resolved picks. Absent when the
-   * family has no holdout picks (not validated out of sample yet).
+   * OUT-OF-SAMPLE validation of its rule (family|source): published picks of the monthly walk-forward (rules refitted
+   * each month with all previous matches). Production only publishes rules with >= 30 resolved picks and >= 80 %.
+   * The UI shows no own hit rate when validationN < 50 ("muestra pequeña").
+   */
+  validationHitRate?: number;
+  validationN?: number;
+  validationWilsonLow?: number;
+  validationWilsonHigh?: number;
+  /**
+   * HOLDOUT record of its family (all sources; rules fitted on the calibration window): hit rate, resolved picks and
+   * 90 % Wilson interval. Absent when the family has no holdout picks.
    */
   holdoutHitRate?: number;
   holdoutN?: number;
+  holdoutWilsonLow?: number;
+  holdoutWilsonHigh?: number;
+  /** base rate of its family in the holdout: its natural selection with no threshold, in every match with data */
+  baseRate?: number;
   /** settled result (finished matches only): 'void' = stake returned (draw no bet on a draw) */
   result?: 'hit' | 'miss' | 'void';
 }
@@ -238,8 +254,15 @@ export interface ConfidenceFamilyRow {
   theme: ConfidenceTheme;
   /** true if the production rules publish this family (for at least one source) */
   active: boolean;
-  /** production thresholds per prediction source (empty when not active) */
-  thresholds: { source: ConfidenceSource; threshold: number; goldThreshold?: number }[];
+  /**
+   * PUBLISHED production rules per prediction source (empty when not active), with their out-of-sample validation in
+   * the monthly walk-forward
+   */
+  thresholds: { source: ConfidenceSource; threshold: number; goldThreshold?: number; validationN?: number; validationHits?: number; validationHitRate?: number }[];
+  /** rules of the procedure NOT published: not validated out of sample (< 30 picks or < 80 % in the walk-forward) */
+  unpublished?: { source: ConfidenceSource; n: number; hits: number; hitRate?: number }[];
+  /** excluded beforehand (documented decision), with the reason (Spanish) */
+  excluded?: string;
   /** lowest production threshold (undefined when not active) */
   threshold?: number;
   /** out-of-sample (holdout) picks of the family, published with rules fitted WITHOUT the holdout */
@@ -248,8 +271,33 @@ export interface ConfidenceFamilyRow {
   hits: number;
   /** hits / n — undefined when n = 0 */
   hitRate?: number;
+  /** 90 % Wilson interval of hitRate */
+  wilsonLow?: number;
+  wilsonHigh?: number;
+  /** mean fair odds of its holdout picks */
+  avgFairOdds?: number;
+  /** base rate of the family in the holdout (natural selection, no threshold, every match with data) and its n */
+  baseRate?: number;
+  baseN?: number;
+  /** hitRate − baseRate (proportion points) */
+  lift?: number;
+  /** published picks of the family in the monthly walk-forward */
+  walkForward?: { n: number; hits: number; hitRate: number; wilsonLow?: number; wilsonHigh?: number };
   /** why it is not published / caveat (Spanish) */
   note?: string;
+}
+
+/** Model-free baseline: the same fixed selections in every match. */
+export interface ConfidenceBaseline {
+  /** what it bets (Spanish) */
+  label: string;
+  picks: number;
+  n: number;
+  hits: number;
+  hitRate: number;
+  wilsonLow?: number;
+  wilsonHigh?: number;
+  matches?: number;
 }
 
 export interface ConfidenceFile {
@@ -269,7 +317,7 @@ export interface ConfidenceFile {
     virgin?: ConfidenceRecord;
     /** calibration window (used to fit the rules that are measured on the holdout) */
     calibration?: { from: string; to: string; matches: number };
-    /** holdout by tier */
+    /** holdout by tier (only 'oro' in new files) */
     byTier: ({ tier: ConfidenceTier } & Omit<ConfidenceRecord, 'from' | 'to' | 'matches'>)[];
     /** holdout by prediction source */
     bySource?: ({ source: ConfidenceSource } & Omit<ConfidenceRecord, 'from' | 'to' | 'matches'>)[];
@@ -288,6 +336,19 @@ export interface ConfidenceFile {
     avgProb?: number;
     /** flat 1-unit stake with closing odds, only where a price exists */
     roi?: { bets: number; roi: number; profit?: number; hitRate?: number; avgOdds?: number; synthetic?: number };
+    /** model-free baseline in the same holdout matches */
+    baseline?: ConfidenceBaseline;
+    /** hit rate if every pick hit like its family's base rate (weighted by resolved picks), and hitRate − that */
+    expectedBaseRate?: number;
+    lift?: number;
+    /** monthly walk-forward of the whole procedure (published picks; rules refitted each month and validated) */
+    walkForward?: ConfidenceRecord & {
+      folds: { start: string; end: string; matches: number; picks: number; n: number; hits: number; hitRate: number }[];
+      /** flat 1-unit stake with closing odds over the walk-forward picks that have a price */
+      roi?: { bets: number; roi: number; profit?: number; hitRate?: number; avgOdds?: number; synthetic?: number };
+    };
+    /** rules excluded beforehand */
+    excluded?: { family: string; label: string; reason: string }[];
   };
   /** production rules (same procedure fitted with ALL the history) */
   rules: {
@@ -298,9 +359,14 @@ export interface ConfidenceFile {
     from: string;
     to: string;
     matches: number;
-    /** active family|source rules */
+    /** active (published) family|source rules */
     active: number;
+    /** rules of the procedure not published for lack of out-of-sample validation */
+    unvalidated?: number;
+    /** out-of-sample validation required to publish a rule (walk-forward) */
+    validation?: { minN: number; minRate: number };
     maxPerMatch: number;
+    /** minimum in-history hit rate of a published band (0.85: only 'oro') */
     minHitRate: number;
   };
   /** short Spanish caveat for the UI */
@@ -843,6 +909,12 @@ export interface HomeFile {
     /** resolved holdout picks */
     picks: number;
     hits: number;
+    /** 90 % Wilson interval */
+    wilsonLow?: number;
+    wilsonHigh?: number;
+    /** model-free baseline hit rate in the same matches and mean fair odds of the picks */
+    baselineRate?: number;
+    avgFairOdds?: number;
     from: string;
     to: string;
     /** upcoming picks published (next 14 days) */

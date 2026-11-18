@@ -1,9 +1,9 @@
 /**
- * Pronósticos de ALTA CONFIANZA: selecciones cuyo acierto histórico, medido walk-forward y sin fuga de datos, es
- * >= 80 %. No mejora el 1X2 (que acierta ~52 %, como el mercado): elige, entre muchos mercados de cada partido,
- * aquellos en los que el modelo ha demostrado acertar 4 de cada 5 veces o más. Alto acierto NO es beneficio: son
- * selecciones de cuota baja (cuota justa media ~1,12) y las casas cobran margen; con cuotas de cierre el ROI es
- * negativo.
+ * Pronósticos de ALTA CONFIANZA: selecciones MUY PROBABLES Y DE CUOTA BAJA cuyo acierto, medido walk-forward y sin fuga
+ * de datos, supera el 80 %. No mejora el 1X2 (que acierta ~52 %, como el mercado) ni es una ventaja frente a la casa:
+ * casi todo el acierto es estructural (una estrategia fija sin modelo —el visitante marca menos de 3 + más de 1,5
+ * tarjetas— acierta ~88 % en los mismos partidos; ver fixedBaseline y el lift por familia). Cuota justa media ~1,12; con
+ * cuotas de cierre el ROI es negativo.
  *
  * API (probabilidades en [0, 1], cuotas decimales, textos en español):
  *
@@ -16,58 +16,64 @@
  *       ou-3.5-under, ou-4.5-under, btts-yes, btts-no, team-score, team-under-1.5, team-under-2.5, corners-over-6.5,
  *       corners-over-7.5, corners-over-8.5, corners-under-11.5, corners-under-12.5, cards-over-1.5, cards-over-2.5,
  *       cards-under-5.5, cards-under-6.5. No hay "ah+0.5"/"ah-0.5": con medias líneas son exactamente doble
- *       oportunidad y 1X2 (no aportan).
+ *       oportunidad y 1X2 (no aportan). cards-over-2.5 se genera pero está excluida de las reglas (EXCLUDED_RULES).
  *       segment: 'mercado' si la predicción usa el 1X2 sin margen de la casa (80 % del ensamble), 'estadistico' si no
  *       (Dixon-Coles + Elo): son modelos distintos y se calibran por separado.
  *       Historial suficiente: sin cuotas, resultado y goles exigen >= minTeamGames (10) partidos Elo previos de cada
  *       equipo; córners/tarjetas exigen >= minStatGames (5) partidos previos con el dato de cada equipo.
  *       marketOdds: precio de la casa (1X2, su línea de goles, su hándicap ±1.5) o sintético desde el 1X2 (doble
  *       oportunidad y empate no apuesta: reparto proporcional entre resultados, realizable). oddsKind dice cuál.
+ *   baselineCandidates(input) → la selección natural de cada familia SIN umbral (tasa base de la familia).
  *   candidatesFromPrediction(match, prediction, projections, { history }) → candidatos (envoltorio para el build)
  *   upcomingCandidates(ctx, match) → candidatos de un partido PRÓXIMO con la predicción publicada (fullPrediction)
  *   settleCandidate(candidate, settleDataOf(match)) → 'hit' | 'miss' | 'void' | undefined (sin datos para resolver)
  *       Empate no apuesta: el empate es 'void' (se devuelve) y no cuenta ni como acierto ni como fallo.
+ *       Prórroga o penaltis: goles a 90 minutos con los eventos de gol (si no cuadran con el marcador, el partido se
+ *       excluye) y sin córners ni tarjetas. Un total de 0 tarjetas es un dato ausente.
  *
  *   walkForwardCandidates(ctx, match) → candidatos de un partido TERMINADO solo con información anterior a su
  *       inicio (ver la función). undefined si falta alguna pieza sin fuga (el partido no se evalúa).
- *   confidenceHistory(ctx) → ConfidenceHistoryItem[]  (todos los partidos terminados de la temporada actual, resueltos)
+ *   confidenceHistory(ctx) → ConfidenceHistoryItem[]  (partidos terminados de la temporada actual, resueltos, con la
+ *       selección natural de cada familia para las tasas base)
  *
  *   confidenceRulesFrom(history, opts) → ConfidenceRules   (una regla por familia y fuente)
  *       Método 'platt' (por defecto): recalibración logística q = σ(a + b·logit(p)) ajustada con `history` (>= 150
  *       candidatos resueltos, pendiente >= 0.25). El umbral parte de la prob. del modelo cuya q llega a targetRate
  *       (0.82) y debe cumplir en la cola (prob >= umbral): acierto >= 0.82, n >= 80 y límite inferior de Wilson al
  *       90 % (z = 1.645) >= 0.78; si no, se sube por la rejilla 0.50–0.93. Umbral oro: q >= 0.87 y cola con acierto
- *       >= 0.87, n >= 60, Wilson >= 0.83. La franja plata [umbral, oro) debe acertar >= 0.80 por sí sola. Lo que no
- *       cumple se descarta (rules.rejected, con el motivo). Método 'cola' (sin recalibrar): umbral mínimo cuya cola
- *       cumple; se descartó porque admitía picks marginales que acertaban mucho menos que su etiqueta.
+ *       >= 0.87, n >= 60, Wilson >= 0.83. Lo que no cumple se descarta (rules.rejected, con el motivo).
  *   fitConfidenceProcedure(history, opts) → { rules, chosen, log }
  *       Procedimiento pre-registrado que elige la exigencia SOLO con `history`: validación interna con ventana
  *       creciente (último 40 % de `history` en 3 tramos por día; cada tramo con reglas ajustadas con todo lo anterior)
  *       sobre la escalera objetivo/Wilson 0.82/0.78 → 0.84/0.80 → 0.86/0.82 → 0.88/0.84. En cada nivel se quitan las
  *       reglas (familia|fuente) que en validación aciertan < 0.78 con n >= 30 y se acepta el primer nivel cuya
  *       validación conjunta acierta >= 0.82 con Wilson >= 0.78 (n >= 100). Después reajusta con todo `history`.
+ *       EXCLUDED_RULES (cards-over-2.5) se excluye siempre (decisión documentada con el walk-forward).
  *   selectConfidencePicks(candidates, rules, opts) → ConfidencePick[]
- *       Candidatos que superan el umbral de su regla; como mucho maxPerMatch (2) por partido, de temas distintos
- *       (resultado / goles / córners / tarjetas: nunca 1X y DNB del mismo partido, ni más de 1.5 y ambos marcan),
- *       ordenados por probabilidad recalibrada. Cada pick: tier 'oro' (su franja acierta >= 0.85 en el histórico) |
- *       'plata' (>= 0.80), historicalHitRate, historicalN, threshold y calibratedProb.
+ *       Candidatos que superan el umbral de su regla y cuya franja acierta >= GOLD_MIN_RATE (0,85) en el histórico
+ *       de la regla (solo nivel 'oro'; 'plata' queda en el tipo por compatibilidad); como mucho maxPerMatch (2) por
+ *       partido, de temas distintos (resultado / goles / córners / tarjetas), ordenados por probabilidad recalibrada.
+ *   walkForwardConfidence(history) → walk-forward mensual de TODO el procedimiento (desde el primer mes con >= 1.000
+ *       partidos anteriores) y validación por regla: ruleValidation + filterValidatedRules publican solo reglas con
+ *       >= 30 picks y >= 80 % fuera de muestra acumulados en los tramos anteriores.
+ *   fixedBaseline(items) / familyBaseRates(items) → líneas base sin umbral; confidenceReport añade el lift.
  *
- *   evaluateConfidence(ctx, opts) → ConfidenceEvaluation  (reutilizable por el build; ~20 s con los datos reales)
+ *   evaluateConfidence(ctx, opts) → ConfidenceEvaluation  (reutilizable por el build; ~15 s con los datos reales)
  *       1. Historial walk-forward (o opts.history).
  *       2. Corte temporal por día UTC: CALIBRACIÓN = 60 % más antiguo de los partidos; HOLDOUT = el resto, nunca usado
- *          para elegir nada; "tramo virgen" = 15 % final del total (dentro del holdout), para poder publicar una cifra
- *          limpia si el holdout se tuviera que mirar más de una vez.
- *       3. fitConfidenceProcedure(calibración) → calibrationRules; se miden en el holdout (picks, aciertos, %, Wilson,
- *          por familia, nivel, fuente y competición, cobertura, cuota justa media y ROI plano de 1 unidad con cuotas
- *          de cierre donde existen).
- *       4. rules = fitConfidenceProcedure(TODO el historial): reglas de producción para los partidos próximos.
- *       5. recentSettled = picks del holdout de sus últimos 30 días (fuera de muestra), más recientes primero.
+ *          para ajustar umbrales; tramo final = 15 % final del total (dentro del holdout).
+ *       3. fitConfidenceProcedure(calibración), validadas con los tramos walk-forward ANTERIORES al holdout →
+ *          calibrationRules; se miden en el holdout (picks, aciertos, %, Wilson, línea base sin modelo, tasa base y
+ *          lift por familia, por fuente y competición, cobertura, cuota justa media y ROI plano con cuotas de cierre).
+ *       4. Walk-forward mensual del procedimiento completo (reglas reajustadas cada mes y validadas con lo anterior).
+ *       5. rules = fitConfidenceProcedure(TODO el historial) validadas con TODO el walk-forward: producción.
+ *       6. recentSettled = picks publicados del walk-forward de los últimos 30 días, más recientes primero.
  *
  * Uso en el build: const ev = evaluateConfidence(ctx); para cada partido próximo m:
  *   selectConfidencePicks(upcomingCandidates(ctx, m), ev.rules).
  *
- * Datos de resolución: goles desde el marcador; córners = suma de ambos equipos; tarjetas = amarillas + rojas de
- * ambos equipos (la misma definición que las proyecciones). Sin esas estadísticas el candidato no se resuelve.
+ * Datos de resolución: goles a 90'; córners = suma de ambos equipos; tarjetas = amarillas + rojas de ambos equipos (la
+ * misma definición que las proyecciones). Sin esas estadísticas el candidato no se resuelve.
  */
 import type { MatchRecord } from '../types';
 import type { OddsSnapshot, Prob1X2, StatProjection } from '../../src/types/data';
@@ -500,20 +506,75 @@ export function upcomingCandidates(ctx: BuildContext, m: MatchRecord, opts: Cand
 // ---------------------------------------------------------------------------
 
 export interface SettleData {
+  /** goles a los 90 minutos (en partidos con prórroga, reconstruidos con los eventos de gol hasta el minuto 90) */
   hg: number;
   ag: number;
-  /** córners totales (si ambos equipos tienen el dato) */
+  /** córners totales (si ambos equipos tienen el dato; nunca en partidos con prórroga o penaltis) */
   corners?: number;
-  /** amarillas + rojas totales (si ambos equipos tienen el dato) */
+  /** amarillas + rojas totales (si ambos equipos tienen el dato; nunca en partidos con prórroga o penaltis) */
   cards?: number;
+  /** el partido tuvo prórroga o penaltis: goles a 90' desde los eventos; córners y tarjetas excluidos */
+  extraTime?: boolean;
 }
 
 export type CandidateResult = 'hit' | 'miss' | 'void';
 
-/** Datos para resolver las selecciones de un partido terminado (undefined si no tiene marcador). */
+/** El partido se decidió en la prórroga o en los penaltis (estado normalizado de ESPN o tanda registrada). */
+export function wentBeyond90(m: Pick<MatchRecord, 'statusDetail' | 'score'>): boolean {
+  const sd = (m.statusDetail ?? '').toLowerCase();
+  if (sd.includes('prórroga') || sd.includes('prorroga') || sd.includes('penaltis')) return true;
+  return typeof m.score?.penHome === 'number' || typeof m.score?.penAway === 'number';
+}
+
+const GOAL_EVENTS = new Set(['goal', 'penalty', 'own-goal']);
+
+/**
+ * Marcador a los 90 minutos desde los eventos de gol (el minuto de un gol en el añadido, "90'+3'", es 90). Solo si los
+ * eventos de TODO el partido cuadran con el marcador final por equipo (si no, undefined: el partido no se resuelve).
+ */
+export function score90FromEvents(m: Pick<MatchRecord, 'events' | 'score' | 'home' | 'away'>): { hg: number; ag: number } | undefined {
+  if (!m.score || !Array.isArray(m.events)) return undefined;
+  let h = 0;
+  let a = 0;
+  let h90 = 0;
+  let a90 = 0;
+  for (const e of m.events) {
+    if (!e || !GOAL_EVENTS.has(e.type) || !Number.isFinite(e.minute)) continue;
+    const home = e.teamId === m.home.id;
+    if (!home && e.teamId !== m.away.id) return undefined;
+    if (home) h++;
+    else a++;
+    if (e.minute <= 90) {
+      if (home) h90++;
+      else a90++;
+    }
+  }
+  if (h !== m.score.home || a !== m.score.away) return undefined;
+  return { hg: h90, ag: a90 };
+}
+
+/**
+ * Datos para resolver las selecciones de un partido terminado (undefined si no tiene marcador o no se puede resolver).
+ *  - Prórroga o penaltis: las casas liquidan a 90 minutos ⇒ goles y resultado con los eventos de gol hasta el minuto 90
+ *    (si los eventos no cuadran con el marcador, el partido se excluye); córners y tarjetas se excluyen siempre (la
+ *    fuente los da con la prórroga incluida y no se pueden separar).
+ *  - Tarjetas: un total de 0 cuenta como dato ausente (no como «0 tarjetas»): sin ningún evento de tarjeta de ESPN no se
+ *    distingue de un partido sin estadísticas, y con eventos de tarjeta sería una contradicción.
+ */
 export function settleDataOf(m: MatchRecord): SettleData | undefined {
   if (!isFinishedRecord(m)) return undefined;
-  const out: SettleData = { hg: m.score.home, ag: m.score.away };
+  const et = wentBeyond90(m);
+  let goals = { hg: m.score.home, ag: m.score.away };
+  if (et) {
+    const g90 = score90FromEvents(m);
+    if (!g90) return undefined;
+    goals = g90;
+  }
+  const out: SettleData = { ...goals };
+  if (et) {
+    out.extraTime = true;
+    return out;
+  }
   const h = m.stats?.home;
   const a = m.stats?.away;
   const n = (x: unknown) => (typeof x === 'number' && Number.isFinite(x) && x >= 0 ? x : undefined);
@@ -523,7 +584,11 @@ export function settleDataOf(m: MatchRecord): SettleData | undefined {
     if (ch !== undefined && ca !== undefined) out.corners = ch + ca;
     const yh = n(h.yellow);
     const ya = n(a.yellow);
-    if (yh !== undefined && ya !== undefined) out.cards = yh + ya + (n(h.red) ?? 0) + (n(a.red) ?? 0);
+    if (yh !== undefined && ya !== undefined) {
+      const cards = yh + ya + (n(h.red) ?? 0) + (n(a.red) ?? 0);
+      // 0 tarjetas: sin eventos de tarjeta es un dato ausente; con eventos de tarjeta, una contradicción (también ausente)
+      if (cards > 0) out.cards = cards;
+    }
   }
   return out;
 }
@@ -575,11 +640,16 @@ export interface ConfidenceHistoryItem {
   date: string;
   home: string;
   away: string;
+  /** marcador a los 90 minutos (el que usan las casas para liquidar) */
   score: { home: number; away: number };
   corners?: number;
   cards?: number;
+  /** hubo prórroga o penaltis (goles a 90' reconstruidos con los eventos; córners y tarjetas excluidos) */
+  extraTime?: boolean;
   /** candidatos generados antes del partido y ya resueltos */
   candidates: SettledCandidate[];
+  /** resultado de la selección natural de cada familia sin umbral (baselineCandidates): tasas base por familia */
+  base?: Partial<Record<ConfidenceFamily, CandidateResult>>;
 }
 
 /**
@@ -593,6 +663,12 @@ export interface ConfidenceHistoryItem {
  * Lo único posterior es la liga doméstica asignada a cada equipo, que solo decide qué modelo de goles se usa.
  */
 export function walkForwardCandidates(ctx: BuildContext, m: MatchRecord, opts: CandidateOptions = {}): ConfidenceCandidate[] | undefined {
+  const input = walkForwardInput(ctx, m);
+  return input ? confidenceCandidates(input, opts) : undefined;
+}
+
+/** Entrada de confidenceCandidates de un partido TERMINADO, sin fuga (ver walkForwardCandidates). */
+export function walkForwardInput(ctx: BuildContext, m: MatchRecord): CandidateInput | undefined {
   if (!isFinishedRecord(m) || !m.currentSeason) return undefined;
   const comp = ctx.configById.get(m.compId);
   if (!comp) return undefined;
@@ -607,7 +683,25 @@ export function walkForwardCandidates(ctx: BuildContext, m: MatchRecord, opts: C
   // la forma de ESPN solo afecta al texto explicativo, no a las probabilidades
   const pred = predictMatch(m, pctx, { projections });
   if (![pred.quick.p.home, pred.quick.p.draw, pred.quick.p.away, pred.lambdaHome, pred.lambdaAway].every(Number.isFinite)) return undefined;
-  return candidatesFromPrediction(m, pred, projections, { ...opts, history: teamHistoryBefore(ctx, m, sc, t) });
+  return {
+    homeName: m.home.name,
+    awayName: m.away.name,
+    p: pred.quick.p,
+    matrix: pred.matrix,
+    projections,
+    odds: m.odds,
+    withMarket: !!pred.model.market,
+    ...teamHistoryBefore(ctx, m, sc, t),
+  };
+}
+
+/**
+ * Selección «natural» de cada familia SIN umbral de probabilidad (su lado más probable, cualquier probabilidad): la
+ * tasa base de la familia en partidos comparables. En familias de una sola selección (más de 1,5 tarjetas, ambos
+ * marcan…) es apostar siempre lo mismo; en las de dos lados, el lado que el modelo ve más probable (el favorito).
+ */
+export function baselineCandidates(input: CandidateInput, opts: CandidateOptions = {}): ConfidenceCandidate[] {
+  return confidenceCandidates(input, { ...opts, minProb: 0, maxProb: 1 });
 }
 
 export interface HistoryOptions extends CandidateOptions {
@@ -622,20 +716,33 @@ export function confidenceHistory(ctx: BuildContext, opts: HistoryOptions = {}):
   const only = opts.compIds?.length ? new Set(opts.compIds) : undefined;
   const out: ConfidenceHistoryItem[] = [];
   let skipped = 0;
+  let et90 = 0;
+  let etOut = 0;
   for (const m of ctx.allMatches) {
     if (!m.currentSeason || !isFinishedRecord(m)) continue;
     if (only && !only.has(m.compId)) continue;
     if (!ctx.configById.has(m.compId)) continue;
-    const cands = walkForwardCandidates(ctx, m, opts);
     const d = settleDataOf(m);
-    if (!cands || !d) {
+    if (!d) {
+      if (wentBeyond90(m)) etOut++;
+      else skipped++;
+      continue;
+    }
+    const input = walkForwardInput(ctx, m);
+    if (!input) {
       skipped++;
       continue;
     }
+    const cands = confidenceCandidates(input, opts);
     const settled: SettledCandidate[] = [];
     for (const c of cands) {
       const r = settleCandidate(c, d);
       if (r) settled.push({ ...c, result: r });
+    }
+    const base: Partial<Record<ConfidenceFamily, CandidateResult>> = {};
+    for (const c of baselineCandidates(input, opts)) {
+      const r = settleCandidate(c, d);
+      if (r) base[c.family] = r;
     }
     const item: ConfidenceHistoryItem = {
       matchId: m.id,
@@ -645,13 +752,21 @@ export function confidenceHistory(ctx: BuildContext, opts: HistoryOptions = {}):
       away: m.away.name,
       score: { home: d.hg, away: d.ag },
       candidates: settled,
+      base,
     };
     if (d.corners !== undefined) item.corners = d.corners;
     if (d.cards !== undefined) item.cards = d.cards;
+    if (d.extraTime) {
+      item.extraTime = true;
+      et90++;
+    }
     out.push(item);
   }
   out.sort((a, b) => Date.parse(a.date) - Date.parse(b.date) || a.matchId.localeCompare(b.matchId));
   if (skipped) opts.log?.(`  confianza: ${skipped} partidos sin predicción walk-forward completa (no se evalúan)`);
+  if (et90 || etOut) {
+    opts.log?.(`  confianza: ${et90} partidos con prórroga o penaltis resueltos a 90' (sin córners ni tarjetas); ${etOut} excluidos (eventos de gol incompletos)`);
+  }
   return out;
 }
 
@@ -1049,16 +1164,22 @@ export interface ConfidencePick extends ConfidenceCandidate {
 export interface SelectOptions {
   /** picks como mucho por partido (de temas distintos). Default 2 */
   maxPerMatch?: number;
-  /** acierto histórico mínimo de la franja para publicar. Default 0.80 */
+  /**
+   * acierto histórico mínimo de la franja para publicar. Default 0.85 (GOLD_MIN_RATE: solo se publica el nivel oro;
+   * la franja plata [0,80, 0,85) acertó 79,9 % fuera de muestra en la revisión y ya no se publica)
+   */
   minHitRate?: number;
 }
+
+/** Acierto mínimo de la franja (en el histórico con el que se ajusta la regla) del nivel oro, el único que se publica. */
+export const GOLD_MIN_RATE = 0.85;
 
 const r4 = (x: number) => Math.round(x * 10000) / 10000;
 
 /** Picks publicables de UN partido: superan el umbral de su familia, como mucho maxPerMatch de temas distintos. */
 export function selectConfidencePicks(candidates: ConfidenceCandidate[], rules: ConfidenceRules, opts: SelectOptions = {}): ConfidencePick[] {
   const maxPerMatch = opts.maxPerMatch ?? 2;
-  const minHitRate = opts.minHitRate ?? 0.8;
+  const minHitRate = opts.minHitRate ?? GOLD_MIN_RATE;
   const byKey = new Map(rules.rules.map((r) => [ruleKey(r.family, r.segment), r]));
   const eligible: (ConfidencePick & { rank: number })[] = [];
   for (const c of candidates) {
@@ -1070,7 +1191,7 @@ export function selectConfidencePicks(candidates: ConfidenceCandidate[], rules: 
     const calibratedProb = r.platt ? plattProb(r.platt, c.prob) : c.prob;
     eligible.push({
       ...c,
-      tier: s.hitRate >= 0.85 - EPS ? 'oro' : 'plata',
+      tier: s.hitRate >= GOLD_MIN_RATE - EPS ? 'oro' : 'plata',
       historicalHitRate: r4(s.hitRate),
       historicalN: s.n,
       threshold: isGold ? r.goldThreshold! : r.threshold,
@@ -1126,7 +1247,23 @@ export interface GroupReport extends HitStats {
   picks: number;
   avgFairOdds: number;
   roi?: RoiStats;
+  /**
+   * solo por familia: tasa base de la familia en los partidos del tramo (su selección natural sin umbral, ver
+   * baselineCandidates), resueltas y lift = acierto de los picks − tasa base (en puntos de proporción)
+   */
+  baseRate?: number;
+  baseN?: number;
+  lift?: number;
 }
+
+/** Línea base SIN modelo: 2 selecciones fijas por partido, iguales en todos (ver FIXED_BASELINE_LABEL). */
+export interface BaselineStats extends HitStats {
+  /** selecciones (con nulos) */
+  picks: number;
+  matches: number;
+}
+
+export const FIXED_BASELINE_LABEL = 'el visitante marca menos de 3 goles + más de 1,5 tarjetas (cuando hay dato), en todos los partidos';
 
 export interface ConfidenceReport extends GroupReport {
   from: string;
@@ -1146,6 +1283,14 @@ export interface ConfidenceReport extends GroupReport {
   /** por fuente de la predicción (con mercado / estadística) */
   bySegment: Partial<Record<ConfidenceSegment, GroupReport>>;
   byComp: Record<string, GroupReport>;
+  /** línea base sin modelo en los mismos partidos (FIXED_BASELINE_LABEL) */
+  fixedBaseline: BaselineStats;
+  /**
+   * acierto esperado si cada pick acertara como la tasa base de su familia en estos partidos (media ponderada por los
+   * picks resueltos de cada familia) y lift = hitRate − expectedBaseRate
+   */
+  expectedBaseRate?: number;
+  lift?: number;
 }
 
 function roiOf(picks: SettledPick[]): RoiStats | undefined {
@@ -1213,6 +1358,31 @@ export function settlePicks(items: ConfidenceHistoryItem[], rules: ConfidenceRul
   return out;
 }
 
+/** Línea base sin modelo (FIXED_BASELINE_LABEL) en unos partidos: no usa ninguna probabilidad. */
+export function fixedBaseline(items: ConfidenceHistoryItem[], z = WILSON_Z90): BaselineStats {
+  const rows: { prob: number; result: CandidateResult }[] = [];
+  for (const it of items) {
+    rows.push({ prob: 0, result: overUnderResult(it.score.away, 'under', 2.5) });
+    if (it.cards !== undefined) rows.push({ prob: 0, result: overUnderResult(it.cards, 'over', 1.5) });
+  }
+  return { ...statsOf(rows, z), picks: rows.length, matches: items.length };
+}
+
+/** Tasa base de cada familia en unos partidos: su selección natural sin umbral (ConfidenceHistoryItem.base). */
+export function familyBaseRates(items: ConfidenceHistoryItem[], z = WILSON_Z90): Partial<Record<ConfidenceFamily, HitStats>> {
+  const rows = new Map<ConfidenceFamily, { prob: number; result: CandidateResult }[]>();
+  for (const it of items) {
+    for (const [f, r] of Object.entries(it.base ?? {}) as [ConfidenceFamily, CandidateResult][]) {
+      const arr = rows.get(f) ?? [];
+      arr.push({ prob: 0, result: r });
+      rows.set(f, arr);
+    }
+  }
+  const out: Partial<Record<ConfidenceFamily, HitStats>> = {};
+  for (const [f, arr] of rows) out[f] = statsOf(arr, z);
+  return out;
+}
+
 /** Informe de un tramo: picks, acierto, Wilson, cobertura, cuota justa media, ROI, por familia/nivel/competición. */
 export function confidenceReport(items: ConfidenceHistoryItem[], picks: SettledPick[], z = WILSON_Z90): ConfidenceReport {
   const g = groupReport(picks, z);
@@ -1233,7 +1403,22 @@ export function confidenceReport(items: ConfidenceHistoryItem[], picks: SettledP
     for (const [k, arr] of map) out[k] = groupReport(arr, z);
     return out;
   };
-  return {
+  const byFamily = groupBy((p) => p.family) as Partial<Record<ConfidenceFamily, GroupReport>>;
+  const base = familyBaseRates(items, z);
+  let expHits = 0;
+  let expN = 0;
+  for (const [f, gr] of Object.entries(byFamily) as [ConfidenceFamily, GroupReport][]) {
+    const b = base[f];
+    if (!b || !(b.n > 0)) continue;
+    gr.baseRate = b.hitRate;
+    gr.baseN = b.n;
+    if (gr.n > 0) {
+      gr.lift = gr.hitRate - b.hitRate;
+      expHits += gr.n * b.hitRate;
+      expN += gr.n;
+    }
+  }
+  const out: ConfidenceReport = {
     ...g,
     from: Number.isFinite(from) ? new Date(from).toISOString() : '',
     to: Number.isFinite(to) ? new Date(to).toISOString() : '',
@@ -1243,16 +1428,34 @@ export function confidenceReport(items: ConfidenceHistoryItem[], picks: SettledP
     matchesWithPick: new Set(picks.map((p) => p.matchId)).size,
     picksPerMatchDay: matchDays ? picks.length / matchDays : 0,
     picksPerDay: days ? picks.length / days : 0,
-    byFamily: groupBy((p) => p.family),
+    byFamily,
     byTier: groupBy((p) => p.tier),
     bySegment: groupBy((p) => p.segment),
     byComp: groupBy((p) => p.compId),
+    fixedBaseline: fixedBaseline(items, z),
   };
+  if (expN > 0) {
+    out.expectedBaseRate = expHits / expN;
+    if (g.n > 0) out.lift = g.hitRate - out.expectedBaseRate;
+  }
+  return out;
 }
 
 // ---------------------------------------------------------------------------
 // Procedimiento pre-registrado (elección de la exigencia solo con el histórico dado)
 // ---------------------------------------------------------------------------
+
+/**
+ * Reglas excluidas de antemano por decisión documentada (no por el procedimiento automático). Se aplican en la
+ * calibración, en el walk-forward y en producción.
+ */
+export const EXCLUDED_RULES: { key: string; reason: string }[] = [
+  {
+    key: 'cards-over-2.5',
+    reason:
+      'en las dos fuentes, por decisión tomada con el walk-forward mensual de la revisión del 18 nov 2026: 93/125 = 74,4 % fuera de muestra (con cuotas 78/105, sin cuotas 15/20) y 27/38 = 71,1 % en el holdout; la validación interna no la detectaba (pocos picks en sus tramos). Se revalidará con datos futuros',
+  },
+];
 
 /** Escalera de exigencia (de menos a más conservadora). */
 export const RULE_LADDER: ConfidenceRuleOptions[] = [
@@ -1279,6 +1482,8 @@ export interface ProcedureOptions {
   ladder?: ConfidenceRuleOptions[];
   /** opciones de regla comunes a todos los niveles (método, segmentación…) */
   rule?: ConfidenceRuleOptions;
+  /** reglas excluidas de antemano (claves de ruleKey). Default: EXCLUDED_RULES */
+  fixedExclude?: string[];
   /** familias permitidas de partida (por defecto todas) */
   families?: ConfidenceFamily[];
   select?: SelectOptions;
@@ -1350,6 +1555,8 @@ export function fitConfidenceProcedure(history: ConfidenceHistoryItem[], opts: P
   const select = opts.select ?? {};
   const base: ConfidenceRuleOptions = { ...(opts.rule ?? {}) };
   if (opts.families) base.families = opts.families;
+  const fixed = opts.fixedExclude ?? EXCLUDED_RULES.map((r) => r.key);
+  if (fixed.length || base.exclude?.length) base.exclude = [...new Set([...fixed, ...(base.exclude ?? [])])];
   const log: ProcedureLevelLog[] = [];
   let chosen: { level: number; exclude: string[] } | undefined;
   for (let level = 0; level < ladder.length; level++) {
@@ -1397,18 +1604,199 @@ export function fitConfidenceProcedure(history: ConfidenceHistoryItem[], opts: P
 }
 
 // ---------------------------------------------------------------------------
+// Validación fuera de muestra por regla (walk-forward mensual)
+// ---------------------------------------------------------------------------
+
+/** Una regla (familia|fuente) solo se publica con >= VALIDATION_MIN_N picks y acierto >= VALIDATION_MIN_RATE fuera de muestra. */
+export const VALIDATION_MIN_N = 30;
+export const VALIDATION_MIN_RATE = 0.8;
+/**
+ * El walk-forward empieza el primer día 1 de mes con al menos estos partidos anteriores para ajustar las reglas (con
+ * los datos de 2026: junio, como el walk-forward mensual de la revisión del 18 nov).
+ */
+export const WALK_FORWARD_MIN_TRAIN = 1000;
+
+export interface ValidationOptions {
+  minN?: number;
+  minRate?: number;
+}
+
+export interface RuleValidation extends HitStats {
+  key: string;
+  family: ConfidenceFamily;
+  segment?: ConfidenceSegment;
+  picks: number;
+  validated: boolean;
+}
+
+/** Acierto fuera de muestra acumulado por regla (familia|fuente) de unos picks y si cumple la validación. */
+export function ruleValidation(picks: SettledPick[], segmented = true, o: ValidationOptions = {}): Map<string, RuleValidation> {
+  const minN = o.minN ?? VALIDATION_MIN_N;
+  const minRate = o.minRate ?? VALIDATION_MIN_RATE;
+  const groups = new Map<string, SettledPick[]>();
+  for (const p of picks) {
+    const k = ruleKey(p.family, segmented ? p.segment : undefined);
+    const arr = groups.get(k) ?? [];
+    arr.push(p);
+    groups.set(k, arr);
+  }
+  const out = new Map<string, RuleValidation>();
+  for (const [key, arr] of groups) {
+    const st = statsOf(arr);
+    const v: RuleValidation = { ...st, key, family: arr[0].family, picks: arr.length, validated: st.n >= minN && st.hitRate >= minRate - EPS };
+    if (segmented) v.segment = arr[0].segment;
+    out.set(key, v);
+  }
+  return out;
+}
+
+export interface UnvalidatedRule {
+  key: string;
+  family: ConfidenceFamily;
+  segment?: ConfidenceSegment;
+  /** picks resueltos fuera de muestra y acierto (0 si no hay) */
+  n: number;
+  hits: number;
+  hitRate: number;
+}
+
+/** Reglas que superan la validación fuera de muestra; el resto se devuelven aparte (no se publican). */
+export function filterValidatedRules(
+  rules: ConfidenceRules,
+  validation: Map<string, RuleValidation>,
+  o: ValidationOptions = {},
+): { rules: ConfidenceRules; unvalidated: UnvalidatedRule[] } {
+  const minN = o.minN ?? VALIDATION_MIN_N;
+  const minRate = o.minRate ?? VALIDATION_MIN_RATE;
+  const keep: ConfidenceRule[] = [];
+  const unvalidated: UnvalidatedRule[] = [];
+  for (const r of rules.rules) {
+    const key = ruleKey(r.family, rules.options.segmented ? r.segment : undefined);
+    const v = validation.get(key);
+    if (v && v.n >= minN && v.hitRate >= minRate - EPS) keep.push(r);
+    else {
+      const u: UnvalidatedRule = { key, family: r.family, n: v?.n ?? 0, hits: v?.hits ?? 0, hitRate: v?.hitRate ?? 0 };
+      if (r.segment) u.segment = r.segment;
+      unvalidated.push(u);
+    }
+  }
+  return { rules: { ...rules, rules: keep }, unvalidated };
+}
+
+export interface WalkForwardOptions {
+  /** partidos anteriores mínimos para el primer tramo. Default WALK_FORWARD_MIN_TRAIN */
+  minTrain?: number;
+  procedure?: ProcedureOptions;
+  select?: SelectOptions;
+  validation?: ValidationOptions;
+}
+
+export interface WalkForwardFold {
+  /** inicio (día 1 del mes, UTC) y fin (exclusivo) del tramo */
+  start: string;
+  end: string;
+  /** partidos usados para ajustar las reglas del tramo (todos anteriores a `start`) */
+  trainMatches: number;
+  matches: number;
+  /** nivel de la escalera elegido y reglas del procedimiento / publicadas tras la validación */
+  level: number;
+  rules: number;
+  publishedRules: number;
+  /** picks de todas las reglas del procedimiento (para validar) y picks publicados (reglas validadas) */
+  all: HitStats & { picks: number };
+  published: HitStats & { picks: number };
+}
+
+export interface WalkForwardResult {
+  folds: WalkForwardFold[];
+  /** picks de TODAS las reglas del procedimiento en cada tramo (fuera de muestra): acumulan la validación por regla */
+  candidatePicks: SettledPick[];
+  /** picks publicados: en cada tramo, solo reglas validadas con los tramos anteriores */
+  published: SettledPick[];
+  /** partidos de los tramos */
+  items: ConfidenceHistoryItem[];
+}
+
+/** Inicios de mes (UTC) entre dos instantes. */
+function monthStarts(fromMs: number, toMs: number): number[] {
+  const out: number[] = [];
+  const d = new Date(fromMs);
+  let y = d.getUTCFullYear();
+  let m = d.getUTCMonth();
+  for (;;) {
+    const t = Date.UTC(y, m, 1);
+    if (t > toMs) break;
+    if (t >= fromMs) out.push(t);
+    m++;
+    if (m > 11) {
+      m = 0;
+      y++;
+    }
+  }
+  return out;
+}
+
+/**
+ * Walk-forward mensual de TODO el procedimiento: desde el primer día 1 de mes con >= minTrain partidos anteriores,
+ * cada mes se predice con fitConfidenceProcedure(todo lo anterior a ese día). Dos conjuntos de picks por tramo:
+ *  - candidatePicks: con todas las reglas del procedimiento; acumulan el acierto fuera de muestra de cada regla;
+ *  - published: solo con las reglas validadas por los tramos ANTERIORES (>= 30 picks y >= 80 %), como en producción.
+ */
+export function walkForwardConfidence(history: ConfidenceHistoryItem[], opts: WalkForwardOptions = {}): WalkForwardResult {
+  const minTrain = opts.minTrain ?? WALK_FORWARD_MIN_TRAIN;
+  const select = opts.select ?? {};
+  const out: WalkForwardResult = { folds: [], candidatePicks: [], published: [], items: [] };
+  if (history.length <= minTrain) return out;
+  const times = history.map((h) => Date.parse(h.date));
+  const firstIdx = (t: number) => {
+    const k = times.findIndex((x) => x >= t);
+    return k < 0 ? history.length : k;
+  };
+  const starts = monthStarts(Math.floor(times[minTrain - 1] / DAY_MS) * DAY_MS + 1, times[times.length - 1]);
+  for (let k = 0; k < starts.length; k++) {
+    const a = firstIdx(starts[k]);
+    if (a < minTrain) continue;
+    const endT = k + 1 < starts.length ? starts[k + 1] : Infinity;
+    const b = endT === Infinity ? history.length : firstIdx(endT);
+    if (b <= a) continue;
+    const proc = fitConfidenceProcedure(history.slice(0, a), { ...opts.procedure, select });
+    const items = history.slice(a, b);
+    const all = settlePicks(items, proc.rules, select);
+    const validation = ruleValidation(out.candidatePicks, proc.rules.options.segmented, opts.validation);
+    const filtered = filterValidatedRules(proc.rules, validation, opts.validation);
+    const published = settlePicks(items, filtered.rules, select);
+    out.candidatePicks.push(...all);
+    out.published.push(...published);
+    out.items.push(...items);
+    out.folds.push({
+      start: new Date(starts[k]).toISOString(),
+      end: endT === Infinity ? history[history.length - 1].date : new Date(endT).toISOString(),
+      trainMatches: a,
+      matches: items.length,
+      level: proc.chosen.level,
+      rules: proc.rules.rules.length,
+      publishedRules: filtered.rules.rules.length,
+      all: { ...statsOf(all), picks: all.length },
+      published: { ...statsOf(published), picks: published.length },
+    });
+  }
+  return out;
+}
+
+// ---------------------------------------------------------------------------
 // Evaluación completa (build y script)
 // ---------------------------------------------------------------------------
 
 export interface EvaluateOptions extends HistoryOptions {
   /** fracción más antigua (por partidos) usada para calibrar. Default 0.6 */
   calibrationFraction?: number;
-  /** fracción final del TOTAL reservada como tramo virgen dentro del holdout. Default 0.15 */
+  /** fracción final del TOTAL reservada como tramo final dentro del holdout. Default 0.15 */
   virginFraction?: number;
-  /** días de picks resueltos recientes (del holdout). Default 30 */
+  /** días de picks resueltos recientes (walk-forward publicado). Default 30 */
   recentDays?: number;
   procedure?: ProcedureOptions;
   select?: SelectOptions;
+  walkForward?: Omit<WalkForwardOptions, 'procedure' | 'select'>;
   /** historial ya calculado (para no repetir el walk-forward) */
   history?: ConfidenceHistoryItem[];
 }
@@ -1416,14 +1804,20 @@ export interface EvaluateOptions extends HistoryOptions {
 export interface FamilySegmentRow {
   /** fuente de la predicción (undefined = reglas sin segmentar) */
   segment?: ConfidenceSegment;
-  /** umbral elegido en calibración (undefined = descartada) */
+  /** umbral elegido en calibración (undefined = descartada o sin validar) */
   threshold?: number;
   goldThreshold?: number;
   /** cola en calibración (o mejor cola encontrada si se descartó) */
   calibration: { candidates: number; n: number; hitRate: number; wilsonLow: number };
   rejectedReason?: string;
-  /** umbral y cola con TODO el histórico (reglas de producción) */
+  /** validación fuera de muestra de la regla con los tramos walk-forward anteriores al holdout */
+  calibrationValidation?: { n: number; hits: number; hitRate: number; validated: boolean };
+  /** umbral y cola con TODO el histórico (reglas del procedimiento en producción) */
   production?: { threshold: number; goldThreshold?: number; n: number; hitRate: number };
+  /** validación fuera de muestra de la regla con TODO el walk-forward y si se publica en producción */
+  productionValidation?: { n: number; hits: number; hitRate: number; validated: boolean };
+  /** excluida de antemano (EXCLUDED_RULES) */
+  excluded?: string;
 }
 
 export interface FamilyRow {
@@ -1431,8 +1825,12 @@ export interface FamilyRow {
   label: string;
   theme: ConfidenceTheme;
   segments: FamilySegmentRow[];
-  /** picks publicados de la familia en el holdout (todas las fuentes) */
+  /** picks publicados de la familia en el holdout (todas las fuentes), con tasa base y lift */
   holdout?: GroupReport;
+  /** tasa base de la familia en el holdout (su selección natural sin umbral en todos los partidos con dato) */
+  holdoutBase?: HitStats;
+  /** picks publicados de la familia en el walk-forward mensual */
+  walkForward?: GroupReport;
 }
 
 export interface ConfidenceEvaluation {
@@ -1443,41 +1841,54 @@ export interface ConfidenceEvaluation {
     cutoff: string;
     calibration: { from: string; to: string; matches: number };
     holdout: { from: string; to: string; matches: number };
-    /** inicio (día UTC) del tramo virgen */
+    /** inicio (día UTC) del tramo final del holdout */
     virginCutoff: string;
     virgin: { from: string; to: string; matches: number };
   };
   /** descripción del procedimiento (pre-registrado) */
   procedure: string[];
-  /** reglas de producción (TODO el histórico) */
+  /** reglas de PRODUCCIÓN: procedimiento con TODO el histórico, solo las validadas fuera de muestra (F4) */
   rules: ConfidenceRules;
+  /** reglas del procedimiento en producción que no superan la validación (no se publican) */
+  unvalidated: UnvalidatedRule[];
+  /** validación por regla con todo el walk-forward */
+  validation: RuleValidation[];
   productionChoice: ProcedureResult['chosen'];
   productionLog: ProcedureLevelLog[];
-  /** reglas ajustadas solo con calibración (las que se miden en el holdout) */
+  /** reglas ajustadas solo con calibración y validadas con los tramos walk-forward anteriores al holdout */
   calibrationRules: ConfidenceRules;
+  calibrationUnvalidated: UnvalidatedRule[];
   calibrationChoice: ProcedureResult['chosen'];
   calibrationLog: ProcedureLevelLog[];
   /** picks de calibración con sus propias reglas (dentro de muestra: optimista) */
   calibration: ConfidenceReport;
   holdout: ConfidenceReport;
-  /** holdout antes del tramo virgen y tramo virgen */
+  /** picks resueltos del holdout (reglas de calibración validadas) */
+  holdoutPicks: SettledPick[];
+  /** holdout antes del tramo final y tramo final */
   holdoutEarly: ConfidenceReport;
   virgin: ConfidenceReport;
+  /** walk-forward mensual de todo el procedimiento (picks publicados: reglas validadas con los tramos anteriores) */
+  walkForward: ConfidenceReport & { folds: WalkForwardFold[] };
   byFamily: FamilyRow[];
-  /** picks del holdout de los últimos `recentDays` días (fuera de muestra), más recientes primero */
+  /** reglas excluidas de antemano */
+  excluded: { key: string; reason: string }[];
+  /** picks publicados del walk-forward de los últimos `recentDays` días (fuera de muestra), más recientes primero */
   recentSettled: SettledPick[];
 }
 
 export const PROCEDURE_TEXT = [
-  'Historial walk-forward: cada partido terminado de la temporada actual se predice solo con datos anteriores a su inicio (Elo pre-partido, Dixon-Coles re-ajustado con partidos anteriores, parámetros de pretemporada, proyecciones NB con partidos de días anteriores y cuotas de cierre).',
-  'Corte temporal: calibración = 60 % más antiguo de los partidos (cortando por día UTC); holdout = el resto, que nunca se usa para elegir nada. El 15 % final del total es el "tramo virgen".',
-  'Por familia: umbral mínimo de probabilidad (rejilla 0,50–0,93) con acierto >= objetivo, n >= 80 y límite inferior de Wilson (90 %) >= mínimo; umbral oro con acierto >= 0,87; familias que no cumplen se descartan.',
-  'Exigencia elegida solo con la calibración: validación interna con ventana creciente (último 40 % de la calibración en 3 tramos, cada uno predicho con reglas ajustadas con todo lo anterior) sobre la escalera 0,82/0,78 → 0,84/0,80 → 0,86/0,82 → 0,88/0,84 (objetivo/Wilson). Se quitan familias con acierto < 0,78 (n >= 30) en validación y se acepta el primer nivel con acierto conjunto >= 0,82 y Wilson >= 0,78.',
-  'Publicación: como mucho 2 picks por partido, de temas distintos (resultado, goles, córners, tarjetas), los de mayor acierto histórico de su franja; nivel oro si la franja acierta >= 85 %, plata si >= 80 %.',
-  'Producción: el mismo procedimiento aplicado a TODO el historial.',
+  'Historial walk-forward: cada partido terminado de la temporada actual se predice solo con datos anteriores a su inicio (Elo pre-partido, Dixon-Coles re-ajustado con partidos anteriores, parámetros de pretemporada, proyecciones NB con partidos de días anteriores y cuotas de cierre). Partidos con prórroga o penaltis: goles a 90 minutos con los eventos de gol (si no cuadran, se excluyen) y sin córners ni tarjetas. Un total de 0 tarjetas cuenta como dato ausente.',
+  'Corte temporal: calibración = 60 % más antiguo de los partidos (cortando por día UTC); holdout = el resto, que nunca se usa para ajustar umbrales. El 15 % final del total es el tramo final del holdout.',
+  'Por familia y fuente (con cuotas / sin cuotas): recalibración de Platt; umbral mínimo de probabilidad (rejilla 0,50–0,93) cuya cola acierta >= objetivo con n >= 80 y límite inferior de Wilson (90 %) >= mínimo; umbral oro con acierto >= 0,87; lo que no cumple se descarta.',
+  'Exigencia elegida solo con la calibración: validación interna con ventana creciente (último 40 % de la calibración en 3 tramos) sobre la escalera 0,82/0,78 → 0,84/0,80 → 0,86/0,82 → 0,88/0,84 (objetivo/Wilson). Se quitan reglas con acierto < 0,78 (n >= 30) en validación y se acepta el primer nivel con acierto conjunto >= 0,82 y Wilson >= 0,78.',
+  'Excluida de antemano: «más de 2,5 tarjetas» (las dos fuentes), por su acierto fuera de muestra en el walk-forward (74,4 %).',
+  'Validación por regla (familia|fuente): walk-forward mensual del procedimiento (cada mes, reglas ajustadas con todo lo anterior). Solo se publican reglas con >= 30 picks y acierto >= 80 % acumulados fuera de muestra en los tramos anteriores; el resto quedan como no publicadas.',
+  'Publicación: solo el nivel oro (franjas que aciertan >= 85 % en el histórico con el que se ajustó su regla); como mucho 2 picks por partido, de temas distintos (resultado, goles, córners, tarjetas), por probabilidad recalibrada.',
+  'Producción: el mismo procedimiento aplicado a TODO el historial, validado con TODO el walk-forward.',
 ];
 
-/** Evaluación honesta (calibración → holdout) y reglas de producción. */
+/** Evaluación honesta (calibración → holdout), walk-forward mensual y reglas de producción. */
 export function evaluateConfidence(ctx: BuildContext, opts: EvaluateOptions = {}): ConfidenceEvaluation {
   const history = opts.history ?? confidenceHistory(ctx, opts);
   const calFrac = opts.calibrationFraction ?? 0.6;
@@ -1490,46 +1901,77 @@ export function evaluateConfidence(ctx: BuildContext, opts: EvaluateOptions = {}
   const hold = history.slice(cut);
   const early = history.slice(cut, vcut);
   const virgin = history.slice(vcut);
+  const dayStart = (xs: ConfidenceHistoryItem[]) => (xs[0] ? Math.floor(Date.parse(xs[0].date) / DAY_MS) * DAY_MS : Infinity);
+  const cutoffT = dayStart(hold);
 
   const calProc = fitConfidenceProcedure(calib, { ...opts.procedure, select });
   const prodProc = fitConfidenceProcedure(history, { ...opts.procedure, select });
+  const wf = walkForwardConfidence(history, { ...opts.walkForward, procedure: opts.procedure, select });
+  const segmented = prodProc.rules.options.segmented;
+  // validación de las reglas de calibración: solo tramos walk-forward anteriores al holdout (sin mirar el holdout)
+  const calValidation = ruleValidation(
+    wf.candidatePicks.filter((p) => Date.parse(p.date) < cutoffT),
+    calProc.rules.options.segmented,
+    opts.walkForward?.validation,
+  );
+  const calFiltered = filterValidatedRules(calProc.rules, calValidation, opts.walkForward?.validation);
+  const prodValidation = ruleValidation(wf.candidatePicks, segmented, opts.walkForward?.validation);
+  const prodFiltered = filterValidatedRules(prodProc.rules, prodValidation, opts.walkForward?.validation);
 
-  const calPicks = settlePicks(calib, calProc.rules, select);
-  const holdPicks = settlePicks(hold, calProc.rules, select);
+  const calPicks = settlePicks(calib, calFiltered.rules, select);
+  const holdPicks = settlePicks(hold, calFiltered.rules, select);
   const earlyIds = new Set(early.map((i) => i.matchId));
   const span = (xs: ConfidenceHistoryItem[]) => ({ from: xs[0]?.date ?? '', to: xs[xs.length - 1]?.date ?? '', matches: xs.length });
-  const dayIso = (xs: ConfidenceHistoryItem[]) => (xs[0] ? new Date(Math.floor(Date.parse(xs[0].date) / DAY_MS) * DAY_MS).toISOString() : '');
+  const dayIso = (xs: ConfidenceHistoryItem[]) => (xs[0] ? new Date(dayStart(xs)).toISOString() : '');
 
   const holdout = confidenceReport(hold, holdPicks);
-  const segs: (ConfidenceSegment | undefined)[] = calProc.rules.options.segmented ? ['mercado', 'estadistico'] : [undefined];
+  const wfReport = confidenceReport(wf.items, wf.published);
+  const holdBase = familyBaseRates(hold);
+  const segs: (ConfidenceSegment | undefined)[] = segmented ? ['mercado', 'estadistico'] : [undefined];
+  const fixedKeys = new Map((opts.procedure?.fixedExclude ? opts.procedure.fixedExclude.map((key) => ({ key, reason: '' })) : EXCLUDED_RULES).map((r) => [r.key, r.reason]));
+  const vrow = (v: RuleValidation | undefined) => (v ? { n: v.n, hits: v.hits, hitRate: v.hitRate, validated: v.validated } : undefined);
   const byFamily: FamilyRow[] = CONFIDENCE_FAMILIES.map((f) => {
     const segments = segs.map((segment): FamilySegmentRow => {
+      const key = ruleKey(f.id, segment);
       const r = calProc.rules.rules.find((x) => x.family === f.id && x.segment === segment);
+      const rValidated = calFiltered.rules.rules.includes(r as ConfidenceRule);
       const rej = calProc.rules.rejected.find((x) => x.family === f.id && x.segment === segment);
-      const pr = prodProc.rules.rules.find((x) => x.family === f.id && x.segment === (prodProc.rules.options.segmented ? segment : undefined));
+      const pr = prodProc.rules.rules.find((x) => x.family === f.id && x.segment === segment);
       const row: FamilySegmentRow = {
         calibration: r
           ? { candidates: r.candidates, n: r.tail.n, hitRate: r.tail.hitRate, wilsonLow: r.tail.wilsonLow }
           : { candidates: rej?.candidates ?? 0, n: rej?.best?.n ?? 0, hitRate: rej?.best?.hitRate ?? 0, wilsonLow: rej?.best?.wilsonLow ?? 0 },
       };
       if (segment) row.segment = segment;
-      if (r) {
+      const excluded = fixedKeys.get(key) ?? fixedKeys.get(f.id);
+      if (excluded !== undefined) row.excluded = excluded || 'excluida de antemano';
+      const cv = vrow(calValidation.get(key));
+      if (cv) row.calibrationValidation = cv;
+      if (r && rValidated) {
         row.threshold = r.threshold;
         if (r.goldThreshold !== undefined) row.goldThreshold = r.goldThreshold;
+      } else if (r) {
+        row.rejectedReason = `sin validar fuera de muestra antes del holdout (${cv ? `${cv.hits}/${cv.n} = ${pct1(cv.hitRate)}` : 'sin picks'}; se exigen >= ${VALIDATION_MIN_N} y >= ${pct1(VALIDATION_MIN_RATE)})`;
       } else {
-        row.rejectedReason = rej?.reason ?? 'quitada en la validación interna de la calibración (acierto < 78 %)';
+        row.rejectedReason = excluded !== undefined ? 'excluida de antemano' : (rej?.reason ?? 'quitada en la validación interna de la calibración (acierto < 78 %)');
       }
       if (pr) row.production = { threshold: pr.threshold, goldThreshold: pr.goldThreshold, n: pr.tail.n, hitRate: pr.tail.hitRate };
+      const pv = vrow(prodValidation.get(key));
+      if (pv) row.productionValidation = pv;
       return row;
     });
     const row: FamilyRow = { family: f.id, label: f.label, theme: f.theme, segments };
     const h = holdout.byFamily[f.id];
     if (h) row.holdout = h;
+    const b = holdBase[f.id];
+    if (b) row.holdoutBase = b;
+    const w = wfReport.byFamily[f.id];
+    if (w) row.walkForward = w;
     return row;
   });
 
-  const lastT = hold.length ? Date.parse(hold[hold.length - 1].date) : 0;
-  const recentSettled = holdPicks
+  const lastT = history.length ? Date.parse(history[history.length - 1].date) : 0;
+  const recentSettled = wf.published
     .filter((p) => Date.parse(p.date) > lastT - recentDays * DAY_MS)
     .sort((a, b) => Date.parse(b.date) - Date.parse(a.date) || a.matchId.localeCompare(b.matchId));
 
@@ -1544,14 +1986,18 @@ export function evaluateConfidence(ctx: BuildContext, opts: EvaluateOptions = {}
       virgin: span(virgin),
     },
     procedure: PROCEDURE_TEXT,
-    rules: prodProc.rules,
+    rules: prodFiltered.rules,
+    unvalidated: prodFiltered.unvalidated,
+    validation: [...prodValidation.values()].sort((a, b) => a.key.localeCompare(b.key)),
     productionChoice: prodProc.chosen,
     productionLog: prodProc.log,
-    calibrationRules: calProc.rules,
+    calibrationRules: calFiltered.rules,
+    calibrationUnvalidated: calFiltered.unvalidated,
     calibrationChoice: calProc.chosen,
     calibrationLog: calProc.log,
     calibration: confidenceReport(calib, calPicks),
     holdout,
+    holdoutPicks: holdPicks,
     holdoutEarly: confidenceReport(
       early,
       holdPicks.filter((p) => earlyIds.has(p.matchId)),
@@ -1560,7 +2006,9 @@ export function evaluateConfidence(ctx: BuildContext, opts: EvaluateOptions = {}
       virgin,
       holdPicks.filter((p) => !earlyIds.has(p.matchId)),
     ),
+    walkForward: { ...wfReport, folds: wf.folds },
     byFamily,
+    excluded: [...fixedKeys].map(([key, reason]) => ({ key, reason })),
     recentSettled,
   };
 }

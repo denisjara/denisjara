@@ -29,39 +29,78 @@ const day = (iso: string) => {
   return Number.isFinite(t) ? new Date(t).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }) : '—';
 };
 
+/** Acierto con n e intervalo de Wilson al 90 %: «89,8 % (2.362/2.630; Wilson 88,8–90,7 %)». */
+function rateWithCi(x: { hits: number; n: number; wilsonLow?: number; wilsonHigh?: number }): string {
+  const ci = x.wilsonLow !== undefined && x.wilsonHigh !== undefined ? `; Wilson 90 %: ${pc(x.wilsonLow, 1)}–${pc(x.wilsonHigh, 1)}` : '';
+  return `${pc(x.n ? x.hits / x.n : 0, 1)} (${n0(x.hits)}/${n0(x.n)}${ci})`;
+}
+
+const pp = (x: number) => `${x >= 0 ? '+' : '−'}${d(Math.abs(x * 100), 1)} pp`;
+
 /** Sección «Pronósticos de alta confianza» con las cifras reales del holdout de este build. */
 export function confidenceSection(cf: ConfidenceFile | undefined, bt: BacktestSummary | undefined): ModelFile['sections'][number] {
   const body: string[] = [
-    `Qué es: el pronóstico 1X2 acierta ${bt ? pc(bt.model.accuracy, 1) : 'alrededor del 52 %'} de las veces${bt?.market ? ` (el mercado de cierre, ${pc(bt.market.accuracy, 1)})` : ''}, lo normal en fútbol, y no se puede llevar al 80 % para todos los partidos. Lo que sí se puede es elegir, entre más de 20 familias de mercados de cada partido (doble oportunidad, empate no apuesta, hándicap +1,5, más/menos goles, goles por equipo, córners y tarjetas), las selecciones en las que el modelo ha demostrado acertar al menos 4 de cada 5 veces.`,
-    'Sin fuga de datos (walk-forward): cada partido terminado de la temporada actual se predice solo con información anterior a su inicio: Elo previo, Dixon-Coles re-ajustado con partidos anteriores, parámetros de pretemporada, proyecciones de córners y tarjetas con partidos de días anteriores y cuotas de cierre. Sin cuotas, resultado y goles exigen al menos 10 partidos previos de cada equipo; córners y tarjetas, al menos 5 con ese dato.',
-    'Umbrales: una regla por familia y por fuente de la predicción (con cuotas / sin cuotas). La probabilidad del modelo se recalibra (Platt) con el histórico; el umbral parte de la probabilidad cuya versión recalibrada llega al 82 % y la cola (probabilidad ≥ umbral) debe acertar ≥ 82 % con al menos 80 casos y un límite inferior de Wilson (90 %) ≥ 78 %. Nivel oro si su franja acierta ≥ 85 % en el histórico; plata si ≥ 80 %. Como mucho 2 picks por partido, de temas distintos (resultado, goles, córners, tarjetas). Por encima del 93 % la selección se considera trivial y no se publica.',
+    `Qué es: el pronóstico 1X2 acierta ${bt ? pc(bt.model.accuracy, 1) : 'alrededor del 52 %'} de las veces${bt?.market ? ` (el mercado de cierre, ${pc(bt.market.accuracy, 1)})` : ''}, lo normal en fútbol, y no se puede llevar al 80 % para todos los partidos. Esta sección es otra cosa: entre más de 20 familias de mercados de cada partido (doble oportunidad, empate no apuesta, hándicap +1,5, más/menos goles, goles por equipo, córners y tarjetas) se publican selecciones MUY PROBABLES Y DE CUOTA BAJA. No son una ventaja frente a la casa: casi todo su acierto es estructural, como muestra la línea base de abajo.`,
   ];
   const t = cf?.track;
   const h = t?.holdout;
   if (cf && t && h && h.n > 0) {
-    const rate = (x: { hits: number; n: number }) => pc(x.n ? x.hits / x.n : 0, 1);
     const cal = t.calibration;
+    const b = t.baseline;
     body.push(
-      `Calibración frente a holdout: las reglas que se miden se ajustan solo con el 60 % más antiguo de los partidos${cal ? ` (${day(cal.from)} – ${day(cal.to)}, ${n0(cal.matches)} partidos)` : ''}, y la exigencia se elige con una validación interna dentro de esa ventana. El holdout (${day(h.from)} – ${day(h.to)}, ${n0(h.matches ?? 0)} partidos) no se usó para elegir nada: ${n0(h.hits)} aciertos en ${n0(h.n)} pronósticos resueltos = ${rate(h)} (intervalo de Wilson al 90 %: ${pc(h.wilsonLow ?? 0, 1)} – ${pc(h.wilsonHigh ?? 1, 1)})${h.voids ? `; ${n0(h.voids)} nulos (empate no apuesta con empate)` : ''}.` +
-        (t.virgin && t.virgin.n > 0 ? ` En el tramo final (${day(t.virgin.from)} – ${day(t.virgin.to)}), visto por primera vez con esta cifra: ${rate(t.virgin)} (${n0(t.virgin.hits)}/${n0(t.virgin.n)}).` : ''),
+      `Línea base y lift: ${b ? `una estrategia fija SIN modelo (${b.label}) acierta ${rateWithCi(b)} en los mismos partidos del holdout, frente a ${rateWithCi(h)} de los pronósticos` : `los pronósticos aciertan ${rateWithCi(h)}`}.` +
+        (t.expectedBaseRate !== undefined && t.lift !== undefined
+          ? ` Si cada pronóstico acertara como la tasa base de su familia (su selección natural, sin umbral, en todos los partidos del holdout con dato), acertarían ${pc(t.expectedBaseRate, 1)}: el modelo añade ${pp(t.lift)}.`
+          : '') +
+        ` La cuota justa media es ${d(t.avgFairOdds)}.`,
     );
-    const tiers = t.byTier.map((x) => `${x.tier} ${rate(x)} (${n0(x.hits)}/${n0(x.n)})`).join(', ');
-    const weak = t.byFamily.filter((f) => f.n >= 20 && f.hitRate !== undefined && f.hitRate < 0.8);
-    const plata = t.byTier.find((x) => x.tier === 'plata');
+    const fams = t.byFamily.filter((f) => f.n > 0 && f.baseRate !== undefined);
+    if (fams.length) {
+      body.push(
+        `Por familia (holdout; acierto frente a tasa base y lift): ${fams
+          .map((f) =>
+            f.n >= 50
+              ? `${f.label.replace(/(\d)\.(\d)/g, '$1,$2')} ${pc(f.hitRate ?? 0, 1)} (n = ${n0(f.n)}; Wilson ${pc(f.wilsonLow ?? 0, 1)}–${pc(f.wilsonHigh ?? 1, 1)}) frente a ${pc(f.baseRate ?? 0, 1)}, ${pp(f.lift ?? 0)}`
+              : `${f.label.replace(/(\d)\.(\d)/g, '$1,$2')}: muestra pequeña (n = ${n0(f.n)}), sin acierto propio`,
+          )
+          .join('; ')}. Un lift negativo significa que publicar esa familia en todos los partidos habría acertado más que filtrarla con el modelo.`,
+      );
+    }
     body.push(
-      `Por nivel, fuera de muestra: ${tiers}.` +
-        (plata && plata.n > 0 && plata.hitRate < 0.8 ? ' La plata queda por debajo de su etiqueta del 80 %: se publica igualmente, con su acierto real a la vista.' : '') +
-        (weak.length
-          ? ` Familias por debajo del 80 % fuera de muestra: ${weak.map((f) => `${f.label.replace(/(\d)\.(\d)/g, '$1,$2')} ${rate(f)} (${n0(f.hits)}/${n0(f.n)})`).join(', ')}.`
-          : ''),
+      'Sin fuga de datos (walk-forward): cada partido terminado de la temporada actual se predice solo con información anterior a su inicio: Elo previo, Dixon-Coles re-ajustado con partidos anteriores, parámetros de pretemporada, proyecciones de córners y tarjetas con partidos de días anteriores y cuotas de cierre. Sin cuotas, resultado y goles exigen al menos 10 partidos previos de cada equipo; córners y tarjetas, al menos 5 con ese dato.',
+      'Resolución: como las casas, a 90 minutos. En partidos con prórroga o penaltis, goles y resultado se reconstruyen con los eventos de gol hasta el minuto 90 (si los eventos no cuadran con el marcador, el partido se excluye) y córners y tarjetas se excluyen (la fuente los da con la prórroga incluida). Un total de 0 tarjetas cuenta como dato ausente: sin eventos de tarjeta no se distingue de un partido sin estadísticas.',
+      `Umbrales: una regla por familia y por fuente de la predicción (con cuotas / sin cuotas). La probabilidad del modelo se recalibra (Platt) con el histórico; el umbral parte de la probabilidad cuya versión recalibrada llega al 82 % y la cola (probabilidad ≥ umbral) debe acertar ≥ 82 % con al menos 80 casos y un límite inferior de Wilson (90 %) ≥ 78 %. Solo se publica la franja oro: la que acierta ≥ ${pc(cf.rules.minHitRate || 0.85)} en el histórico con el que se ajustó su regla (la franja plata, 80–85 %, acertó 79,9 % fuera de muestra y se retiró). Como mucho ${cf.rules.maxPerMatch || 2} pronósticos por partido, de temas distintos (resultado, goles, córners, tarjetas). Por encima del 93 % la selección se considera trivial y no se publica.`,
+      `Validación por regla: un walk-forward mensual repite TODO el procedimiento cada mes con los partidos anteriores. Una regla (familia y fuente) solo se publica si acumula, fuera de muestra en los meses anteriores, al menos ${cf.rules.validation?.minN ?? 30} pronósticos con un acierto ≥ ${pc(cf.rules.validation?.minRate ?? 0.8)}; ${cf.rules.unvalidated ? `${n0(cf.rules.unvalidated)} reglas del procedimiento no lo cumplen y no se publican` : 'todas las reglas del procedimiento lo cumplen'}.` +
+        (t.excluded?.length ? ` Excluida de antemano: ${t.excluded.map((e) => `«${e.label.replace(/(\d)\.(\d)/g, '$1,$2').toLowerCase()}» (${e.reason})`).join('; ')}.` : ''),
     );
     body.push(
-      `Producción: el mismo procedimiento aplicado a todo el historial (${n0(cf.rules.matches)} partidos) da ${n0(cf.rules.active)} reglas activas para los partidos próximos. Lo validado fuera de muestra es el procedimiento, no esas reglas exactas: alguna familia solo entra con todo el histórico y aún no tiene picks fuera de muestra (se indica en cada pick).`,
+      `Calibración frente a holdout: las reglas que se miden se ajustan solo con el 60 % más antiguo de los partidos${cal ? ` (${day(cal.from)} – ${day(cal.to)}, ${n0(cal.matches)} partidos)` : ''}, la exigencia se elige con una validación interna dentro de esa ventana y la validación por regla usa solo meses anteriores al holdout. El holdout (${day(h.from)} – ${day(h.to)}, ${n0(h.matches ?? 0)} partidos) no se usó para ajustar umbrales: ${rateWithCi(h)}${h.voids ? `; ${n0(h.voids)} nulos (empate no apuesta con empate)` : ''}.` +
+        (t.virgin && t.virgin.n > 0 ? ` Tramo final (${day(t.virgin.from)} – ${day(t.virgin.to)}): ${rateWithCi(t.virgin)}.` : '') +
+        ' Transparencia: las correcciones de la revisión del 18 nov 2026 (solo oro, sin «más de 2,5 tarjetas», validación por regla y resolución a 90 minutos) se decidieron después de ver el holdout y el walk-forward, así que el holdout ya no es del todo virgen para ellas. Antes de esas correcciones, con datos hasta el 14 nov, el holdout acertaba 88,8 % (2.522/2.841; Wilson 87,8–89,7 %).',
+    );
+    const wf = t.walkForward;
+    if (wf && wf.n > 0) {
+      const rates = wf.folds.filter((f) => f.n >= 50).map((f) => f.hits / f.n);
+      body.push(
+        `Walk-forward mensual de todo el procedimiento (${day(wf.from)} – ${day(wf.to)}; cada mes, reglas reajustadas y validadas con lo anterior): ${rateWithCi(wf)}` +
+          (rates.length ? `; por mes, entre ${pc(Math.min(...rates), 1)} y ${pc(Math.max(...rates), 1)} (meses con al menos 50 pronósticos).` : '.'),
+      );
+    }
+    body.push(
+      `Producción: el mismo procedimiento aplicado a todo el historial (${n0(cf.rules.matches)} partidos), con la validación de todo el walk-forward, da ${n0(cf.rules.active)} reglas publicadas para los partidos próximos. Cada pronóstico muestra el acierto fuera de muestra de su regla con su n y su intervalo; con menos de 50 casos no se da acierto propio («muestra pequeña»).`,
     );
     const roi = t.roi;
+    const wroi = t.walkForward?.roi;
+    const roiText = roi
+      ? ` y, con cuotas de cierre, solo ${n0(roi.bets)} de ${n0(h.picks)} picks del holdout tienen precio${roi.synthetic === roi.bets ? ' (todos sintéticos de doble oportunidad o empate no apuesta, calculados desde el 1X2)' : ''}: apostar 1 unidad a cada uno habría dado un ROI de ${roi.roi >= 0 ? '+' : '−'}${pc(Math.abs(roi.roi), 1)}`
+      : wroi
+        ? `; en el holdout ningún pick publicado tiene cuota de cierre y en el walk-forward solo ${n0(wroi.bets)} de ${n0(t.walkForward!.picks)} la tienen${wroi.synthetic !== undefined && wroi.synthetic >= wroi.bets - 1 ? ' (casi todas sintéticas de doble oportunidad o empate no apuesta, calculadas desde el 1X2)' : ''}: apostar 1 unidad a cada uno habría dado un ROI de ${wroi.roi >= 0 ? '+' : '−'}${pc(Math.abs(wroi.roi), 1)}`
+        : '';
     body.push(
-      `Advertencias: alto acierto NO es beneficio. La cuota justa media es ${d(t.avgFairOdds)}${roi ? ` y, con cuotas de cierre, solo ${n0(roi.bets)} de ${n0(h.picks)} picks tienen precio${roi.synthetic === roi.bets ? ' (todos sintéticos de doble oportunidad o empate no apuesta, calculados desde el 1X2)' : ''}: apostar 1 unidad a cada uno habría dado un ROI de ${roi.roi >= 0 ? '+' : '−'}${pc(Math.abs(roi.roi), 1)}` : ''}; para el resto (goles por equipo, hándicap, córners, tarjetas) la fuente no publica cuotas y la rentabilidad no se puede medir. La cobertura es casi total (${t.coverage.matches ? pc((t.coverage.matchesWithPick ?? 0) / t.coverage.matches) : '—'} de los partidos tienen pick, unos ${d(t.coverage.picksPerMatchDay ?? t.coverage.picksPerDay, 0)} al día con partidos): no es una lista exclusiva de "apuestas seguras".`,
-      `Límites de la validación: el holdout cubre solo unos dos meses; los picks sin cuotas (Nations League, copas, ligas sin precios) son pocos fuera de muestra${t.bySource?.find((x) => x.source === 'estadistico') ? ` (${n0(t.bySource.find((x) => x.source === 'estadistico')!.n)})` : ''}; los hiperparámetros globales del modelo (pesos del ensamble, Elo de los equipos de copa) se ajustaron con backtests que incluyen ese periodo, y la liga doméstica asignada a cada equipo usa información posterior (solo decide qué modelo de goles se usa). Las cifras se recalculan en cada actualización.`,
+      `Advertencias: alto acierto NO es beneficio. La cuota justa media es ${d(t.avgFairOdds)}${roiText}; para el resto (goles por equipo, hándicap, córners, tarjetas) la fuente no publica cuotas y la rentabilidad no se puede medir. La cobertura es casi total (${t.coverage.matches ? pc((t.coverage.matchesWithPick ?? 0) / t.coverage.matches) : '—'} de los partidos tienen pick, unos ${d(t.coverage.picksPerMatchDay ?? t.coverage.picksPerDay, 0)} al día con partidos): no es una lista exclusiva de "apuestas seguras".`,
+      `Cuotas de cierre: ESPN las entrega en el resumen del partido con la fecha del partido como marca de tiempo, así que esa marca no demuestra que sean previas. Las pruebas son empíricas: ${bt?.market ? `el favorito de cierre acierta ${pc(bt.market.accuracy, 1)} con una log-loss de ${d(bt.market.logLoss, 3)}${bt.marketMatches ? ` (n = ${n0(bt.marketMatches)})` : ''}` : 'el favorito de cierre acierta 53,9 % con una log-loss de 0,961 (n = 2.919)'}, valores típicos de cuotas previas al partido (unas cuotas contaminadas por el resultado acertarían mucho más); en la revisión del 18 nov, frente al último registro previo al partido (n = 280) la probabilidad del resultado real solo subía 0,37 pp en el cierre, sin ningún caso de más de 15 pp, y re-prediciendo el holdout con las cuotas de APERTURA el acierto era 88,9 % (con cierre, 88,8 %).`,
+      'Fugas residuales mínimas (medidas en la revisión del 18 nov): la liga doméstica asignada a cada equipo y el Elo inicial usan información posterior; rehaciendo todo el contexto solo con datos hasta el final de cada día, en 5 días del holdout (231 partidos) las probabilidades no cambian y en dos días anteriores la diferencia máxima es de 0,0005, sin cambiar ningún pronóstico. Los pesos del ensamble se ajustaron el 3 nov con partidos que incluyen el holdout: con pesos alternativos (0,2/0,2/0,6 y 0,7/0,3) y reglas reajustadas solo en calibración, el holdout acertaba 88,9 % (frente a 88,8 %).',
+      `Límites de la validación: el holdout cubre solo unos dos meses; los picks sin cuotas (Nations League, copas, ligas sin precios) son pocos fuera de muestra${t.bySource?.find((x) => x.source === 'estadistico') ? ` (${n0(t.bySource.find((x) => x.source === 'estadistico')!.n)})` : ''}; los intervalos de Wilson suponen picks independientes (con 2 por partido no lo son del todo; un bootstrap por día da intervalos casi iguales). Las cifras se recalculan en cada actualización.`,
     );
   } else {
     body.push('Todavía no hay suficientes partidos terminados para medir el acierto fuera de muestra: no se publican pronósticos de alta confianza.');

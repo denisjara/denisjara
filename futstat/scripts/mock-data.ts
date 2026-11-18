@@ -932,42 +932,57 @@ interface Pred {
 // Alta confianza: candidatos reales (pipeline/analytics/confidence.ts) y reglas de prueba con cifras realistas
 // ---------------------------------------------------------------------------
 interface MockRule {
-  /** umbral y umbral oro (probabilidad del modelo) */
-  th: number;
+  /** umbral (prob. del modelo) de la franja oro: solo se publica el nivel oro */
   gold: number;
-  /** acierto histórico y n de las franjas oro y plata (dentro de muestra) */
+  /** fuente de la regla */
+  source?: 'mercado' | 'estadistico';
+  /** acierto histórico y n de la franja oro (dentro de muestra) */
   oro: [number, number];
-  plata: [number, number];
-  /** fuera de muestra: aciertos y resueltos (sin holdout = familia nueva, sin validar) */
+  /** validación fuera de muestra de la regla (walk-forward mensual): aciertos y resueltos */
+  val: [number, number];
+  /** holdout de la familia: aciertos y resueltos (sin holdout = regla validada después del corte) */
   hold?: [number, number];
+  /** tasa base de la familia en el holdout */
+  base: number;
 }
+/** Cifras del build real del 18 nov 2026 (redondeadas): reglas publicadas en producción. */
 const MOCK_RULES: Partial<Record<ConfidenceFamily, MockRule>> = {
-  '1x2-fav': { th: 0.77, gold: 0.82, oro: [0.874, 412], plata: [0.812, 160] },
-  dc: { th: 0.82, gold: 0.87, oro: [0.912, 233], plata: [0.842, 128], hold: [161, 180] },
-  dnb: { th: 0.8, gold: 0.85, oro: [0.9, 140], plata: [0.83, 60], hold: [12, 13] },
-  'ah+1.5': { th: 0.8, gold: 0.86, oro: [0.917, 690], plata: [0.851, 277], hold: [765, 864] },
-  'ou-1.5-over': { th: 0.82, gold: 0.87, oro: [0.889, 300], plata: [0.83, 165], hold: [104, 123] },
-  'ou-4.5-under': { th: 0.83, gold: 0.88, oro: [0.9, 420], plata: [0.856, 234], hold: [81, 90] },
-  'team-score': { th: 0.8, gold: 0.85, oro: [0.92, 410], plata: [0.86, 262], hold: [241, 261] },
-  'team-under-2.5': { th: 0.8, gold: 0.85, oro: [0.906, 800], plata: [0.86, 278], hold: [571, 641] },
-  'corners-over-6.5': { th: 0.75, gold: 0.82, oro: [0.89, 520], plata: [0.84, 280], hold: [200, 224] },
-  'cards-over-1.5': { th: 0.76, gold: 0.83, oro: [0.91, 300], plata: [0.85, 156], hold: [234, 262] },
-  'cards-over-2.5': { th: 0.81, gold: 0.88, oro: [0.866, 418], plata: [0.82, 120], hold: [27, 38] },
-  'cards-under-6.5': { th: 0.83, gold: 0.88, oro: [0.88, 300], plata: [0.84, 226], hold: [83, 97] },
+  dc: { gold: 0.87, oro: [0.886, 385], val: [128, 142], base: 0.811 },
+  dnb: { gold: 0.85, oro: [0.919, 246], val: [54, 58], base: 0.73 },
+  'ah+1.5': { gold: 0.86, oro: [0.907, 1420], val: [1349, 1521], hold: [749, 845], base: 0.911 },
+  'ou-1.5-over': { gold: 0.87, oro: [0.891, 321], val: [193, 222], hold: [83, 93], base: 0.809 },
+  'ou-4.5-under': { gold: 0.88, oro: [0.91, 589], val: [170, 183], hold: [82, 91], base: 0.801 },
+  'team-score': { gold: 0.86, oro: [0.907, 689], val: [453, 490], hold: [220, 240], base: 0.857 },
+  'team-under-2.5': { gold: 0.87, oro: [0.908, 1310], val: [1060, 1174], hold: [541, 608], base: 0.893 },
+  'corners-over-6.5': { gold: 0.85, oro: [0.892, 766], val: [542, 624], hold: [244, 273], base: 0.854 },
+  'cards-over-1.5': { gold: 0.79, oro: [0.926, 1040], val: [626, 678], hold: [443, 480], base: 0.938 },
 };
-const MOCK_HOLD = (f: string) => {
-  const h = MOCK_RULES[f as ConfidenceFamily]?.hold;
-  return h ? { holdoutHitRate: r(h[0] / h[1], 4), holdoutN: h[1] } : {};
+/** Tasas base de las familias sin regla publicada (holdout real). */
+const MOCK_BASE: Partial<Record<ConfidenceFamily, number>> = {
+  '1x2-fav': 0.566, 'ou-2.5-over': 0.577, 'ou-2.5-under': 0.423, 'ou-3.5-under': 0.636, 'btts-yes': 0.569, 'btts-no': 0.431, 'team-under-1.5': 0.692,
+  'corners-over-7.5': 0.748, 'corners-over-8.5': 0.637, 'corners-under-11.5': 0.703, 'corners-under-12.5': 0.783, 'cards-over-2.5': 0.807, 'cards-under-5.5': 0.689, 'cards-under-6.5': 0.811,
+};
+const MOCK_OOS = (f: string) => {
+  const rule = MOCK_RULES[f as ConfidenceFamily];
+  if (!rule) return {};
+  const [vh, vn] = rule.val;
+  const [vlo, vhi] = wilsonInterval(vh, vn);
+  const out: Partial<ConfidencePick> = { validationHitRate: r(vh / vn, 4), validationN: vn, validationWilsonLow: r(vlo, 4), validationWilsonHigh: r(vhi, 4), baseRate: rule.base };
+  if (rule.hold) {
+    const [hh, hn] = rule.hold;
+    const [lo, hi] = wilsonInterval(hh, hn);
+    Object.assign(out, { holdoutHitRate: r(hh / hn, 4), holdoutN: hn, holdoutWilsonLow: r(lo, 4), holdoutWilsonHigh: r(hi, 4) });
+  }
+  return out;
 };
 
-/** Selección como en producción: prob >= umbral, como mucho 2 por partido de temas distintos, por prob. recalibrada. */
+/** Selección como en producción: solo franja oro, como mucho 2 por partido de temas distintos, por prob. recalibrada. */
 function mockConfidencePicks(cands: ConfidenceCandidate[]): ConfidencePick[] {
   const eligible = cands
     .map((c) => {
       const rule = MOCK_RULES[c.family];
-      if (!rule || c.prob < rule.th) return undefined;
-      const band = c.prob >= rule.gold ? rule.oro : rule.plata;
-      const calibratedProb = r(clampN(band[0] + (c.prob - (c.prob >= rule.gold ? rule.gold : rule.th)) * 0.6, 0.8, 0.97), 4);
+      if (!rule || c.prob < rule.gold) return undefined;
+      const calibratedProb = r(clampN(rule.oro[0] + (c.prob - rule.gold) * 0.6, 0.85, 0.97), 4);
       const pick: ConfidencePick = {
         family: c.family,
         marketId: c.marketId,
@@ -975,13 +990,13 @@ function mockConfidencePicks(cands: ConfidenceCandidate[]): ConfidencePick[] {
         selection: c.selection,
         prob: r(c.prob, 4),
         fairOdds: r(1 / c.prob, 3),
-        tier: band[0] >= 0.85 ? 'oro' : 'plata',
-        historicalHitRate: band[0],
-        historicalN: band[1],
-        threshold: c.prob >= rule.gold ? rule.gold : rule.th,
+        tier: 'oro',
+        historicalHitRate: rule.oro[0],
+        historicalN: rule.oro[1],
+        threshold: rule.gold,
         calibratedProb,
         source: c.segment,
-        ...MOCK_HOLD(c.family),
+        ...MOCK_OOS(c.family),
       };
       if (c.marketOdds) {
         pick.marketOdds = r(c.marketOdds, 3);
@@ -1941,22 +1956,26 @@ const rec = (hits: number, n: number, picks = n) => {
   const [lo, hi] = wilsonInterval(hits, n);
   return { picks, n, hits, hitRate: r(hits / n, 4), wilsonLow: r(lo, 4), wilsonHigh: r(hi, 4) };
 };
+const expBase = sum(holdRows.map((x) => x.hold![1] * x.base)) / holdN;
+const wfFolds: [number, number, number, number][] = [
+  // inicio (días antes de DAY0), partidos, aciertos, resueltos
+  [170, 51, 0, 0],
+  [140, 164, 105, 118],
+  [109, 708, 970, 1105],
+  [78, 733, 1031, 1141],
+  [48, 923, 1426, 1568],
+  [17, 405, 680, 763],
+];
 const confidenceFile: ConfidenceFile = {
   generatedAt: GENERATED_AT,
   picks: confPicks,
   recent: confRecent,
   track: {
-    holdout: { ...rec(holdHits, holdN, holdN + 4), voids: 4, from: iso(DAY0 - 60 * DAY), to: iso(NOW_MS - DAY), matches: 1596 },
-    virgin: { ...rec(1041, 1186, 1187), voids: 1, from: iso(DAY0 - 21 * DAY), to: iso(NOW_MS - DAY), matches: 633 },
-    calibration: { from: iso(DAY0 - 297 * DAY), to: iso(DAY0 - 61 * DAY), matches: 2371 },
-    byTier: [
-      { tier: 'oro', ...rec(holdHits - 107, holdN - 134, holdN - 130), voids: 4 },
-      { tier: 'plata', ...rec(107, 134) },
-    ],
-    bySource: [
-      { source: 'mercado', ...rec(holdHits - 53, holdN - 59, holdN - 55), voids: 4 },
-      { source: 'estadistico', ...rec(53, 59) },
-    ],
+    holdout: { ...rec(holdHits, holdN), voids: 0, from: iso(DAY0 - 62 * DAY), to: iso(NOW_MS - DAY), matches: 1605 },
+    virgin: { ...rec(921, 1031), voids: 0, from: iso(DAY0 - 23 * DAY), to: iso(NOW_MS - DAY), matches: 610 },
+    calibration: { from: iso(DAY0 - 300 * DAY), to: iso(DAY0 - 63 * DAY), matches: 2393 },
+    byTier: [{ tier: 'oro', ...rec(holdHits, holdN), voids: 0 }],
+    bySource: [{ source: 'mercado', ...rec(holdHits, holdN), voids: 0 }],
     byFamily: CONFIDENCE_FAMILIES.map((f) => {
       const rule = MOCK_RULES[f.id];
       const h = rule?.hold;
@@ -1965,26 +1984,69 @@ const confidenceFile: ConfidenceFile = {
         label: f.label,
         theme: f.theme,
         active: !!rule,
-        thresholds: rule ? [{ source: 'mercado', threshold: rule.th, goldThreshold: rule.gold }] : [],
+        thresholds: rule ? [{ source: 'mercado', threshold: rule.gold, validationN: rule.val[1], validationHits: rule.val[0], validationHitRate: r(rule.val[0] / rule.val[1], 4) }] : [],
         picks: h ? h[1] : 0,
         n: h ? h[1] : 0,
         hits: h ? h[0] : 0,
       };
-      if (rule) row.threshold = rule.th;
-      if (h) row.hitRate = r(h[0] / h[1], 4);
-      if (!rule) row.note = 'No se publica: en el histórico no llega al 82 % de acierto con muestra suficiente.';
-      else if (!h) row.note = 'Solo entra en las reglas ajustadas con todo el histórico: aún sin picks fuera de muestra.';
-      else if (h[1] >= 20 && h[0] / h[1] < 0.8) row.note = `Fuera de muestra acierta ${((h[0] / h[1]) * 100).toFixed(1).replace('.', ',')} % (${h[0]}/${h[1]}): por debajo del 80 %.`;
-      else if (h[1] < 20) row.note = `Muestra fuera de muestra pequeña (${h[1]}).`;
+      if (rule) row.threshold = rule.gold;
+      const base = rule?.base ?? MOCK_BASE[f.id];
+      if (base !== undefined) {
+        row.baseRate = base;
+        row.baseN = f.theme === 'corners' ? 1257 : f.theme === 'tarjetas' ? 1249 : 1444;
+      }
+      if (h) {
+        const x = rec(h[0], h[1]);
+        row.hitRate = x.hitRate;
+        row.wilsonLow = x.wilsonLow;
+        row.wilsonHigh = x.wilsonHigh;
+        row.avgFairOdds = 1.13;
+        if (base !== undefined) row.lift = x.hitRate - base;
+      }
+      if (f.id === 'cards-over-2.5') {
+        row.excluded = 'en las dos fuentes, por decisión tomada con el walk-forward mensual: 93/125 = 74,4 % fuera de muestra (datos simulados)';
+        row.note = 'Excluida de antemano: falló fuera de muestra en el walk-forward (74,4 %).';
+      } else if (!rule) row.note = 'No se publica: en el histórico no llega al 82 % de acierto con muestra suficiente.';
       return row;
     }),
-    coverage: { picksPerDay: 47.4, picksPerMatchDay: 48.2, matches: 1596, matchesWithPick: 1439 },
-    avgFairOdds: 1.12,
-    avgProb: 0.891,
-    roi: { bets: 193, roi: -0.0413, profit: -7.97, hitRate: 0.8953, avgOdds: 1.071, synthetic: 193 },
+    coverage: { picksPerDay: 42.4, picksPerMatchDay: 43.1, matches: 1605, matchesWithPick: 1402 },
+    avgFairOdds: 1.128,
+    avgProb: 0.888,
+    baseline: { label: 'el visitante marca menos de 3 goles + más de 1,5 tarjetas (cuando hay dato), en todos los partidos', ...rec(2761, 3125), matches: 1605 },
+    expectedBaseRate: r(expBase, 4),
+    lift: r(holdHits / holdN - expBase, 4),
+    walkForward: {
+      ...rec(4212, 4695, 4709),
+      voids: 14,
+      from: iso(DAY0 - 170 * DAY),
+      to: iso(NOW_MS - DAY),
+      matches: 2984,
+      folds: wfFolds.map(([d, matches, hits, n], k) => ({
+        start: iso(DAY0 - d * DAY),
+        end: k + 1 < wfFolds.length ? iso(DAY0 - wfFolds[k + 1][0] * DAY) : iso(NOW_MS - DAY),
+        matches,
+        picks: n,
+        n,
+        hits,
+        hitRate: n ? r(hits / n, 4) : 0,
+      })),
+      roi: { bets: 139, roi: -0.0087, profit: -1.209, hitRate: 0.9134, avgOdds: 1.084, synthetic: 138 },
+    },
+    excluded: [{ family: 'cards-over-2.5', label: 'Más de 2.5 tarjetas', reason: 'en las dos fuentes, por decisión tomada con el walk-forward mensual: 93/125 = 74,4 % fuera de muestra (datos simulados)' }],
   },
-  rules: { level: 0, targetRate: 0.82, from: iso(DAY0 - 297 * DAY), to: iso(NOW_MS - DAY), matches: 3967, active: 21, maxPerMatch: 2, minHitRate: 0.8 },
-  note: 'Alto acierto no es beneficio: son selecciones de cuota baja (cuota justa media 1,12) y las casas cobran margen. Con cuotas de cierre solo se pueden medir 193 picks del holdout (7 %): ROI −4,1 %. No garantiza nada. Juego responsable, solo mayores de 18 años. (Datos simulados.)',
+  rules: {
+    level: 0,
+    targetRate: 0.82,
+    from: iso(DAY0 - 300 * DAY),
+    to: iso(NOW_MS - DAY),
+    matches: 3998,
+    active: Object.keys(MOCK_RULES).length,
+    unvalidated: 9,
+    validation: { minN: 30, minRate: 0.8 },
+    maxPerMatch: 2,
+    minHitRate: 0.85,
+  },
+  note: 'Son selecciones muy probables con cuota baja (cuota justa media 1,13), no una ventaja frente a la casa: una estrategia fija sin modelo acierta 88,4 % en los mismos partidos y, frente a la tasa base de sus familias, el lift es de +0,5 pp. Casi ninguno de estos mercados tiene cuota publicada en la fuente: su rentabilidad no se puede medir. No garantiza nada. Juego responsable, solo mayores de 18 años. (Datos simulados.)',
 };
 write('confidence.json', confidenceFile);
 
@@ -2023,7 +2085,7 @@ const homeFile: HomeFile = {
   modelHeadline: { matches: globalBt.matches, accuracy: globalBt.model.accuracy, rps: globalBt.model.rps, marketRps: globalBt.market?.rps },
   topConfidence: (() => {
     const seen = new Set<string>();
-    const validated = (p: ConfidencePick) => (p.holdoutN ?? 0) >= 20 && (p.holdoutHitRate ?? 0) >= 0.8;
+    const validated = (p: ConfidencePick) => (p.validationN ?? 0) >= 50 && (p.validationHitRate ?? 0) >= 0.8;
     return confPicks
       .filter((x) => Date.parse(x.match.date) > NOW_MS && Date.parse(x.match.date) <= NOW_MS + 3 * DAY && validated(x.pick))
       .sort((a, b) => b.pick.calibratedProb! - a.pick.calibratedProb!)
@@ -2035,6 +2097,10 @@ const homeFile: HomeFile = {
     hitRate: confidenceFile.track.holdout.hitRate,
     picks: confidenceFile.track.holdout.n,
     hits: confidenceFile.track.holdout.hits,
+    wilsonLow: confidenceFile.track.holdout.wilsonLow,
+    wilsonHigh: confidenceFile.track.holdout.wilsonHigh,
+    baselineRate: confidenceFile.track.baseline!.hitRate,
+    avgFairOdds: confidenceFile.track.avgFairOdds,
     from: confidenceFile.track.holdout.from,
     to: confidenceFile.track.holdout.to,
     upcoming: confPicks.length,

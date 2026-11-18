@@ -22,8 +22,17 @@ import {
   confidenceCandidates,
   confidenceHistory,
   confidenceRulesFrom,
+  EXCLUDED_RULES,
+  GOLD_MIN_RATE,
   evaluateConfidence,
+  filterValidatedRules,
+  fitConfidenceProcedure,
   fitPlatt,
+  fixedBaseline,
+  confidenceReport,
+  ruleValidation,
+  settleDataOf,
+  walkForwardConfidence,
   plattProb,
   selectConfidencePicks,
   settleCandidate,
@@ -37,6 +46,7 @@ import {
   type ConfidenceHistoryItem,
   type ConfidenceRules,
   type SettledCandidate,
+  type SettledPick,
 } from '../../pipeline/analytics/confidence';
 import { baseContext, computeWalkForward, createContext } from '../../pipeline/publish/context';
 import { predictMatch } from '../../pipeline/analytics/predict';
@@ -208,6 +218,44 @@ function synthHistory(n: number, seed: number, opts: { shift?: number; family?: 
   return out;
 }
 
+describe('resolución a 90 minutos y datos ausentes (revisión F6/F8)', () => {
+  const T = (id: string) => ({ id, name: id, short: id, abbr: id });
+  const base = (over: Partial<MatchRecord> = {}): MatchRecord => ({
+    id: 'm1',
+    compId: 'copa',
+    season: 2026,
+    currentSeason: true,
+    date: '2026-10-01T19:00:00Z',
+    status: 'finished',
+    home: T('h'),
+    away: T('a'),
+    score: { home: 2, away: 1 },
+    stats: { home: { goals: 2, corners: 5, yellow: 2, red: 0 }, away: { goals: 1, corners: 4, yellow: 1 } },
+    ...over,
+  });
+  const goal = (teamId: string, minute: number, type: 'goal' | 'penalty' | 'own-goal' = 'goal') => ({ minute, clock: `${minute}'`, type, teamId });
+  it('sin prórroga: marcador final, córners y tarjetas', () => {
+    expect(settleDataOf(base())).toEqual({ hg: 2, ag: 1, corners: 9, cards: 3 });
+  });
+  it('prórroga: goles a 90 con los eventos y sin córners ni tarjetas', () => {
+    const m = base({ statusDetail: 'Final (prórroga)', events: [goal('h', 30), goal('a', 88), goal('h', 90), goal('h', 105, 'penalty')], score: { home: 3, away: 1 } });
+    expect(settleDataOf(m)).toEqual({ hg: 2, ag: 1, extraTime: true });
+  });
+  it('penaltis: el marcador de la tanda no cuenta; empate a 90 se resuelve como empate', () => {
+    const m = base({ statusDetail: 'Final (penaltis)', events: [goal('h', 10), goal('a', 70)], score: { home: 1, away: 1, penHome: 4, penAway: 3 } });
+    expect(settleDataOf(m)).toEqual({ hg: 1, ag: 1, extraTime: true });
+    expect(settleCandidate({ settle: { kind: 'outcome', win: ['home', 'away'] } }, settleDataOf(m)!)).toBe('miss');
+  });
+  it('prórroga con eventos de gol que no cuadran con el marcador: el partido se excluye', () => {
+    expect(settleDataOf(base({ statusDetail: 'Final (prórroga)', events: [goal('h', 30)], score: { home: 3, away: 1 } }))).toBeUndefined();
+    expect(settleDataOf(base({ statusDetail: 'Final (prórroga)', events: undefined }))).toBeUndefined();
+  });
+  it('0 tarjetas en total es un dato ausente', () => {
+    const m = base({ stats: { home: { goals: 2, corners: 5, yellow: 0, red: 0 }, away: { goals: 1, corners: 4, yellow: 0 } } });
+    expect(settleDataOf(m)).toEqual({ hg: 2, ag: 1, corners: 9 });
+  });
+});
+
 describe('elección de umbrales', () => {
   it('Wilson: intervalo correcto en casos conocidos', () => {
     const [lo, hi] = wilsonInterval(82, 100);
@@ -289,14 +337,95 @@ describe('selección por partido', () => {
     expect(new Set(picks.map((p) => p.theme)).size).toBe(2);
     expect(picks.filter((p) => p.family === 'dc' || p.family === 'dnb').length).toBeLessThanOrEqual(1);
     for (const p of picks) {
-      expect(['oro', 'plata']).toContain(p.tier);
-      expect(p.historicalHitRate).toBeGreaterThanOrEqual(0.8);
+      // solo nivel oro (revisión F3): la franja plata [0,80, 0,85) ya no se publica
+      expect(p.tier).toBe('oro');
+      expect(p.historicalHitRate).toBeGreaterThanOrEqual(GOLD_MIN_RATE);
       expect(p.historicalN).toBeGreaterThan(0);
-      if (p.tier === 'oro') expect(p.historicalHitRate).toBeGreaterThanOrEqual(0.85);
     }
+    // con el mínimo antiguo (0,80) aparecerían picks de franjas plata; con el actual, nunca
+    const all = (['dc', 'dnb', 'ou-4.5-under', 'team-under-2.5', 'cards-over-1.5'] as ConfidenceFamily[]).flatMap((f) =>
+      [0.8, 0.82, 0.84, 0.86, 0.88, 0.9].map((q) => selectConfidencePicks([mk(f, q)], rules, { maxPerMatch: 1 })),
+    );
+    expect(all.flat().every((p) => p.tier === 'oro')).toBe(true);
     // por debajo del umbral no sale nada
     expect(selectConfidencePicks([mk('dc', 0.55)], rules)).toHaveLength(0);
     expect(selectConfidencePicks([mk('dc', 0.92)], rules, { maxPerMatch: 1 })).toHaveLength(1);
+  });
+});
+
+describe('revisión: exclusión de antemano, validación por regla y línea base (F1/F2/F4)', () => {
+  it('«más de 2,5 tarjetas» nunca tiene regla, aunque sus datos sean buenos', () => {
+    expect(EXCLUDED_RULES.map((r) => r.key)).toEqual(['cards-over-2.5']);
+    const h = [...synthHistory(3000, 41, { family: 'cards-over-2.5' }), ...synthHistory(3000, 42, { family: 'ou-4.5-under' })].sort((a, b) => a.date.localeCompare(b.date));
+    const proc = fitConfidenceProcedure(h);
+    expect(proc.rules.rules.some((r) => r.family === 'cards-over-2.5')).toBe(false);
+    expect(proc.rules.rules.some((r) => r.family === 'ou-4.5-under')).toBe(true);
+    // se puede desactivar explícitamente (solo para pruebas)
+    expect(fitConfidenceProcedure(h, { fixedExclude: [] }).rules.rules.some((r) => r.family === 'cards-over-2.5')).toBe(true);
+  });
+
+  it('validación por regla: solo se publican reglas con >= 30 picks y >= 80 % fuera de muestra', () => {
+    const pick = (family: ConfidenceFamily, result: 'hit' | 'miss'): SettledPick =>
+      ({ family, segment: 'mercado', result, prob: 0.9 }) as unknown as SettledPick;
+    const picks = [
+      ...Array.from({ length: 40 }, (_, i) => pick('ou-4.5-under', i < 36 ? 'hit' : 'miss')), // 90 %, n = 40 → sí
+      ...Array.from({ length: 29 }, () => pick('dc', 'hit')), // 100 %, n = 29 → no (muestra)
+      ...Array.from({ length: 50 }, (_, i) => pick('team-score', i < 38 ? 'hit' : 'miss')), // 76 % → no
+    ];
+    const v = ruleValidation(picks);
+    expect(v.get('ou-4.5-under|mercado')!.validated).toBe(true);
+    expect(v.get('dc|mercado')!.validated).toBe(false);
+    expect(v.get('team-score|mercado')!.validated).toBe(false);
+    const rules = confidenceRulesFrom(
+      (['ou-4.5-under', 'dc', 'team-score', 'team-under-2.5'] as ConfidenceFamily[]).flatMap((f, k) => synthHistory(3000, 50 + k, { family: f })),
+    );
+    expect(rules.rules.length).toBe(4);
+    const f = filterValidatedRules(rules, v);
+    expect(f.rules.rules.map((r) => r.family)).toEqual(['ou-4.5-under']);
+    expect(f.unvalidated.map((u) => [u.key, u.n]).sort()).toEqual([
+      ['dc|mercado', 29],
+      ['team-score|mercado', 50],
+      ['team-under-2.5|mercado', 0],
+    ]);
+  });
+
+  it('walk-forward mensual: cada tramo con reglas de lo anterior y publica solo reglas validadas por tramos previos', () => {
+    const h = (['ou-4.5-under', 'team-under-2.5'] as ConfidenceFamily[])
+      .flatMap((f, k) => synthHistory(2400, 60 + k, { family: f, from: Date.UTC(2026, 0, 1) }))
+      .sort((a, b) => a.date.localeCompare(b.date) || a.matchId.localeCompare(b.matchId));
+    const wf = walkForwardConfidence(h, { minTrain: 1500 });
+    expect(wf.folds.length).toBeGreaterThan(2);
+    for (const f of wf.folds) {
+      expect(f.trainMatches).toBeGreaterThanOrEqual(1500);
+      // las reglas de un tramo solo usan partidos anteriores a su inicio
+      expect(Date.parse(h[f.trainMatches - 1].date)).toBeLessThan(Date.parse(f.start));
+      expect(f.publishedRules).toBeLessThanOrEqual(f.rules);
+    }
+    // el primer tramo no tiene validación previa: no publica nada
+    expect(wf.folds[0].published.picks).toBe(0);
+    expect(wf.published.length).toBeGreaterThan(0);
+    expect(wf.published.every((p) => Date.parse(p.date) >= Date.parse(wf.folds[1].start))).toBe(true);
+  });
+
+  it('línea base sin modelo y lift frente a la tasa base de cada familia', () => {
+    const items: ConfidenceHistoryItem[] = [
+      { matchId: '1', compId: 'x', date: '2026-10-01T00:00:00Z', home: 'A', away: 'B', score: { home: 0, away: 3 }, cards: 4, candidates: [], base: { 'ou-4.5-under': 'hit' } },
+      { matchId: '2', compId: 'x', date: '2026-10-02T00:00:00Z', home: 'A', away: 'B', score: { home: 1, away: 1 }, candidates: [], base: { 'ou-4.5-under': 'hit' } },
+      { matchId: '3', compId: 'x', date: '2026-10-03T00:00:00Z', home: 'A', away: 'B', score: { home: 4, away: 1 }, cards: 1, candidates: [], base: { 'ou-4.5-under': 'miss' } },
+    ];
+    const b = fixedBaseline(items);
+    // visitante < 3: fallo, acierto, acierto; más de 1,5 tarjetas (solo con dato): acierto, fallo
+    expect([b.hits, b.n, b.picks, b.matches]).toEqual([3, 5, 5, 3]);
+    const picks = [
+      { family: 'ou-4.5-under', segment: 'mercado', tier: 'oro', result: 'hit', prob: 0.9, fairOdds: 1.11, matchId: '1', compId: 'x', date: items[0].date },
+      { family: 'ou-4.5-under', segment: 'mercado', tier: 'oro', result: 'hit', prob: 0.9, fairOdds: 1.11, matchId: '2', compId: 'x', date: items[1].date },
+    ] as unknown as SettledPick[];
+    const r = confidenceReport(items, picks);
+    expect(r.byFamily['ou-4.5-under']!.baseRate).toBeCloseTo(2 / 3, 9);
+    expect(r.byFamily['ou-4.5-under']!.lift).toBeCloseTo(1 - 2 / 3, 9);
+    expect(r.expectedBaseRate).toBeCloseTo(2 / 3, 9);
+    expect(r.lift).toBeCloseTo(1 / 3, 9);
+    expect(r.fixedBaseline.hits).toBe(3);
   });
 });
 

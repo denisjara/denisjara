@@ -28,6 +28,7 @@ import {
   Sparkline,
   TeamCrest,
   ValuePickChip,
+  ciText,
   cx,
   matchHref,
 } from '../components';
@@ -143,9 +144,12 @@ function DayHero({ home, liveCount }: { home: HomeFile; liveCount: number }) {
             <KpiTile
               label="Alta confianza"
               value={ch ? pct(ch.hitRate, 1) : '—'}
-              hint={ch ? `En ${int(ch.picks)} pronósticos fuera de muestra` : 'Sin datos todavía'}
+              hint={
+                ch
+                  ? `Fuera de muestra · n = ${int(ch.picks)}${ch.wilsonLow !== undefined ? ` · ${ciText(ch.wilsonLow, ch.wilsonHigh)}` : ''}${ch.baselineRate !== undefined ? ` · sin modelo ${pct(ch.baselineRate, 1)}` : ''}`
+                  : 'Sin datos todavía'
+              }
               icon={<ShieldCheck />}
-              accent
             />
           </div>
           {focus && <FocusMatch match={focus} />}
@@ -238,9 +242,13 @@ function ConfidenceList({ items, headline }: { items: { match: MatchSummary; pic
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1 border-b border-line bg-surface-2/70 px-3 py-2.5 text-[13px] text-ink-2 sm:px-4">
           <span>
             <strong className="num font-display text-[20px] font-extrabold leading-none text-ink-1">{pct(headline.hitRate, 1)}</strong> de acierto en{' '}
-            <strong className="font-semibold text-ink-1">{int(headline.picks)}</strong> pronósticos de partidos no usados para calibrar
+            <strong className="font-semibold text-ink-1">{int(headline.picks)}</strong> selecciones muy probables de partidos no usados para calibrar
+            {headline.wilsonLow !== undefined && <span className="num text-2xs text-ink-3"> (Wilson 90%: {ciText(headline.wilsonLow, headline.wilsonHigh)})</span>}
           </span>
-          <span className="text-2xs text-ink-3">Cuotas bajas: alto acierto no es beneficio.</span>
+          <span className="text-2xs text-ink-3">
+            {headline.baselineRate !== undefined ? `Sin modelo, una estrategia fija acierta ${pct(headline.baselineRate, 1)}. ` : ''}
+            {headline.avgFairOdds !== undefined ? `Cuota justa media ${num(headline.avgFairOdds, 2)}: ` : 'Cuotas bajas: '}no es una ventaja frente a la casa.
+          </span>
         </div>
       )}
       <ul className="divide-y divide-line/70">
@@ -429,7 +437,7 @@ export default function HomePage() {
         title="Pronósticos de alta confianza"
         icon={<ShieldCheck />}
         moreTo="/confianza"
-        description="Selecciones de mercados que han acertado al menos 4 de cada 5 veces en partidos no usados para calibrar. Uno por partido, de los mercados validados."
+        description="Selecciones muy probables y de cuota baja, de mercados validados fuera de muestra (≥ 80% de acierto). Uno por partido. Aciertan mucho porque son fáciles, no porque ganen a la casa."
       >
         <ConfidenceList items={(home.topConfidence ?? []).filter((x) => x.match.status === 'scheduled' && !(Date.parse(x.match.date) <= Date.now()))} headline={home.confidenceHeadline} />
       </Section>

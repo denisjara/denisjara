@@ -163,14 +163,20 @@ cabeceras de micro-métricas.
 - **`ConfidenceMeter`** `{ value, showLabel? }` — 5 barras + Alta/Media/Baja. **`Meter`** `{ value, color?, height?, label? }`.
 
 ### Alta confianza (`Confidence.tsx`, utilidades puras en `lib/confidence.ts`)
-- **`TierBadge`** `{ tier: 'oro'|'plata' }` — insignia con escudo y la palabra (oro = `warn`, plata = neutra; nunca solo color).
-- **`SafePickChip`** `{ pick }` — chip discreto de `MatchCard` (`prediction.safe`); ⚠ si su mercado no está validado fuera de muestra.
-- **`OutOfSampleNote`** `{ pick }` — "Fuera de muestra 89% (864)" o aviso (sin validar / por debajo del 80%).
+- Solo existe el nivel **oro** (desde el 18 nov 2026): la UI no muestra niveles; los picks `plata` de ficheros antiguos
+  se descartan en `sanitize.ts`. **`TierBadge`** queda por compatibilidad (no pinta nada con `plata`).
+- **`RateCI`** `{ rate, n, hits?, lo?, hi?, showHits? }` — acierto + `n = …` + intervalo de Wilson al 90 % (lo calcula
+  con `wilson90(hits, n)` si falta). Con `n < 50` (`OOS_MIN_N`) no da acierto propio: «Muestra pequeña (n = …)».
+  **Ningún acierto de alta confianza se muestra sin su n y su intervalo.** `ciText(lo, hi)` → "88,8–90,7%".
+- **`SafePickChip`** `{ pick }` — chip discreto de `MatchCard` (`prediction.safe`): 🛡 selección + prob.; ⚠ sin validación.
+- **`OutOfSampleNote`** `{ pick }` — validación de su regla en el walk-forward: "Fuera de muestra 89% (n = 1.521 · 87–90%)",
+  «muestra pequeña (n = 36)» o aviso.
 - **`ResultMark`** `{ result }` — ✓ acierto · ✗ fallo · = nulo.
 - **`ConfidenceRow`** `{ match, picks, showComp?, when?, settled?, showOdds? }` — fila de lista con los 1–2 pronósticos de un
-  partido (nivel, selección, mercado, prob., cuota justa, cuota de mercado; ✓/✗ si `settled`). Agrupa antes con
-  **`groupByMatch(items)`**. **`outOfSample(pick)`** → `'ok' | 'bajo' | 'sin-validar'`.
-- Textos obligatorios junto a estos pronósticos: alto acierto ≠ beneficio (cuotas bajas) y +18.
+  partido (selección, mercado, validación, prob., cuota justa, cuota de mercado; ✓/✗ si `settled`). Agrupa antes con
+  **`groupByMatch(items)`**. **`outOfSample(pick)`** → `'ok' | 'pequena' | 'bajo' | 'sin-validar'`.
+- Textos obligatorios junto a estos pronósticos: son «selecciones muy probables con cuota baja», no una ventaja frente a
+  la casa; junto al acierto, la línea base sin modelo (`track.baseline`), la tasa base / lift y la cuota justa media; +18.
 
 ### Forma y equipos
 - **`TeamCrest`** `{ team: {name, abbr?, logo?, color?}, size?=24, alt? }` — logo o iniciales sobre color del equipo.

@@ -72,7 +72,7 @@ Para generarlo en local: `npm run build:standalone` → `standalone/FutStat-Lab.
 |---|---|---|
 | **Inicio / Partidos populares** | `/` | Los partidos más relevantes de las próximas 72 h (ranking de popularidad), partidos de hoy y de mañana, resultados recientes con acierto del modelo, mejores apuestas de valor, jugadores en mejor forma y titulares del día. |
 | **Calendario** | `/partidos` | Todos los partidos por día y competición, con probabilidades 1X2, goles esperados, marcador más probable y cuotas cuando existen. |
-| **Alta confianza** | `/confianza` | Pronósticos de alta confianza: entre más de 20 mercados de cada partido, las selecciones cuya familia ha acertado al menos el 80 % fuera de muestra. Cabecera con el acierto real del holdout, qué es y qué no es, picks de los próximos 14 días por día (nivel oro/plata, probabilidad, cuota justa y de mercado), acierto por mercado y resultados recientes con ✓/✗. |
+| **Alta confianza** | `/confianza` | Selecciones muy probables y de cuota baja cuyo mercado ha acertado al menos el 80 % fuera de muestra. Cabecera con el acierto real del holdout (n e intervalo de Wilson) junto a la línea base sin modelo, la tasa base y el lift; qué es y qué no es; picks de los próximos 14 días por día (probabilidad, cuota justa y de mercado, validación de su regla); acierto por mercado frente a su tasa base y resultados recientes con ✓/✗. |
 | **Ligas** | `/c/<liga>` | Una sección propia por cada liga (LaLiga, Premier League, Serie A, Bundesliga…) con pestañas: clasificación (con xPts y Elo), próximos partidos, resultados, estadísticas de equipos (goles, córners, tarjetas, tiros, posesión, over/BTTS, porterías a cero, goles por tramo de minutos), ratings, simulación de temporada, jugadores y backtest de esa liga. |
 | **Competiciones** | `/c/<competición>` | Champions, Europa League, Conference, Libertadores, Sudamericana, Nations League y copas nacionales, con la misma estructura (tabla de fase de liga cuando existe). |
 | **Análisis de partido** | `/m/<id>` | Ficha completa al estilo de una casa de apuestas: más de 20 familias de mercados (1X2, doble oportunidad, empate no apuesta, más/menos goles, ambos marcan, hándicap asiático y europeo, marcador exacto, mitades, descanso/final, goles por equipo, córners, tarjetas, tiros, faltas…) con probabilidad del modelo, cuota justa, cuota de mercado y valor esperado; matriz de marcadores; desglose del modelo (Dixon-Coles, Elo, mercado y ensamble) con explicación en lenguaje natural; forma reciente de ambos equipos; cara a cara; comparativa estadística; proyecciones de córners, tarjetas, tiros, tiros a puerta, faltas y fueras de juego; *props* de jugadores; y, en partidos terminados, estadísticas reales y eventos. |
@@ -234,12 +234,13 @@ esperado** (`EV = p · cuota − 1`).
 
 ### 11. Pronósticos de alta confianza
 
-El 1X2 acierta en torno al **52 %** (3.967 partidos de la temporada; el mercado de cierre, 53,8 %): es lo normal en
-fútbol y **no se puede llevar al 80 % para todos los partidos**. Lo que sí se puede es otra cosa: entre las muchas
-selecciones de cada partido, quedarse solo con las que, por encima de cierto umbral de probabilidad, han acertado al
-menos 4 de cada 5 veces **en partidos que no se usaron para elegir ese umbral**. Motor:
+El 1X2 acierta en torno al **52 %** (el mercado de cierre, ~54 %): es lo normal en fútbol y **no se puede llevar al
+80 % para todos los partidos**. Esta sección es otra cosa: entre muchas selecciones de cada partido, publica
+**selecciones muy probables y de cuota baja** cuyo mercado ha acertado al menos el 80 % fuera de muestra. **No son una
+ventaja frente a la casa**: casi todo su acierto es estructural (ver la línea base sin modelo). Motor:
 [`pipeline/analytics/confidence.ts`](pipeline/analytics/confidence.ts); publicación:
-[`pipeline/publish/confidence.ts`](pipeline/publish/confidence.ts) → `public/data/confidence.json`.
+[`pipeline/publish/confidence.ts`](pipeline/publish/confidence.ts) → `public/data/confidence.json`; informe:
+`npx tsx scripts/eval-confidence.ts`.
 
 **Procedimiento (sin fuga de datos):**
 
@@ -250,41 +251,64 @@ menos 4 de cada 5 veces **en partidos que no se usaron para elegir ese umbral**.
   (Elo previo, Dixon-Coles re-ajustado, parámetros de pretemporada, proyecciones de córners/tarjetas con partidos
   anteriores y cuotas de cierre). Sin cuotas, resultado y goles exigen al menos 10 partidos previos de cada equipo;
   córners y tarjetas, 5 con ese dato.
+- **Resolución a 90 minutos**, como las casas: con prórroga o penaltis, goles y resultado se reconstruyen con los eventos
+  de gol hasta el minuto 90 (si no cuadran con el marcador, el partido se excluye) y córners y tarjetas se excluyen. Un
+  total de 0 tarjetas cuenta como dato ausente.
 - **Umbrales por familia y fuente** (con cuotas / sin cuotas): recalibración de Platt; el umbral parte de la
   probabilidad cuya versión recalibrada llega al 82 % y la cola debe acertar ≥ 82 % con n ≥ 80 y un límite inferior de
-  Wilson (90 %) ≥ 78 %. Nivel **oro** si su franja acierta ≥ 85 % en el histórico; **plata** si ≥ 80 %. Como mucho 2
-  pronósticos por partido, de temas distintos.
-- **Calibración frente a holdout:** las reglas que se miden se ajustan solo con el 60 % más antiguo de los partidos
-  (con una validación interna dentro de esa ventana para elegir la exigencia) y se aplican sin tocar nada al resto.
-- **Producción:** el mismo procedimiento con todo el historial elige los pronósticos de los próximos partidos. Lo
-  validado fuera de muestra es el procedimiento, no esas reglas exactas: cada pronóstico muestra el acierto fuera de
-  muestra de su familia y avisa si no está validada o si queda por debajo del 80 %.
+  Wilson (90 %) ≥ 78 %. **Solo se publica el nivel oro**: la franja que acierta ≥ 85 % en el histórico de su regla. Como
+  mucho 2 pronósticos por partido, de temas distintos.
+- **Validación por regla:** un walk-forward mensual repite todo el procedimiento cada mes con los partidos anteriores
+  (desde el primer mes con ≥ 1.000 partidos previos). Una regla (familia y fuente) solo se publica con **≥ 30 picks y
+  ≥ 80 % de acierto fuera de muestra** acumulados en los meses anteriores. «Más de 2,5 tarjetas» está **excluida de
+  antemano** (74,4 % en el walk-forward de la revisión).
+- **Calibración frente a holdout:** las reglas que se miden se ajustan solo con el 60 % más antiguo de los partidos y se
+  validan solo con meses anteriores al holdout; después se aplican sin tocar nada al resto.
+- **Producción:** el mismo procedimiento con todo el historial, validado con todo el walk-forward.
 
-**Cifras reales (build del 15 de noviembre de 2026; se recalculan en cada actualización):**
+**Cifras reales (build del 18 de noviembre de 2026, datos hasta el 17 nov; se recalculan en cada actualización):**
 
-| Tramo | Partidos | Pronósticos | Acierto (Wilson 90 %) |
+| Tramo | Partidos | Pronósticos (aciertos / resueltos) | Acierto (Wilson 90 %) |
 |---|---|---|---|
-| Calibración (22 ene – 15 sept), dentro de muestra, solo referencia | 2.371 | 4.312 | 90,4 % |
-| **Holdout (16 sept – 14 nov), nunca usado para elegir nada** | **1.596** | **2.522 / 2.841** | **88,8 % (87,8–89,7 %)** |
-| Tramo final del holdout (25 oct – 14 nov), visto por primera vez con la cifra publicada | 633 | 1.041 / 1.186 | 87,8 % (86,1–89,3 %) |
+| **Holdout (17 sept – 17 nov), reglas ajustadas sin él** | **1.605** | **2.362 / 2.630** | **89,8 % (88,8–90,7 %)** |
+| Tramo final del holdout (26 oct – 17 nov) | 610 | 921 / 1.031 | 89,3 % (87,6–90,8 %) |
+| Walk-forward mensual (1 jun – 17 nov, reglas reajustadas y validadas cada mes) | 2.984 | 4.212 / 4.695 | 89,7 % (89,0–90,4 %) |
+| Partidos posteriores a la revisión (15–17 nov), únicos limpios frente a las correcciones | 31 | 49 / 51 | 96,1 % (88,8–98,7 %), aún muy pocos |
 
-Por nivel, fuera de muestra: oro 89,2 % (2.415/2.707) y **plata 79,9 % (107/134), por debajo de su etiqueta del
-80 %** (se publica igualmente, con su acierto real a la vista). Por fuente: con cuotas 88,7 % (2.469/2.782), sin cuotas
-89,8 % (53/59). La familia «más de 2,5 tarjetas» acierta **71,1 % (27/38)** fuera de muestra y se marca con un aviso.
+**Contexto obligatorio (mismos partidos del holdout):**
+
+| Referencia | Acierto |
+|---|---|
+| Estos pronósticos | 89,8 % (n = 2.630) |
+| Cada pronóstico acertando como la tasa base de su familia (su selección natural, sin umbral, en todos los partidos) | 89,3 % → **lift +0,5 pp** |
+| Estrategia fija SIN modelo: el visitante marca menos de 3 goles + más de 1,5 tarjetas, en todos los partidos | 88,4 % (2.761 / 3.125; 87,4–89,3 %) |
+
+Por familia (holdout, acierto frente a tasa base): hándicap +1,5 88,6 % frente a 91,1 % (**−2,5 pp**); más de 1,5
+tarjetas 92,3 % frente a 93,8 % (**−1,5 pp**); un equipo marca menos de 3 89,0 % frente a 89,3 % (−0,3 pp); más de
+6,5 córners 89,4 % frente a 85,4 % (+4,0 pp); un equipo marca 91,7 % frente a 85,7 % (+5,9 pp); más de 1,5 goles
+89,2 % frente a 80,9 % (+8,4 pp); menos de 4,5 goles 90,1 % frente a 80,1 % (+10,0 pp). Cuota justa media **1,13**.
 
 **Advertencias:**
 
-- **Alto acierto no es beneficio.** La cuota justa media es 1,12. Solo 193 de los 2.845 pronósticos del holdout tienen
-  cuota de cierre (todas sintéticas de doble oportunidad / empate no apuesta, calculadas desde el 1X2): apostar 1 unidad
-  a cada uno habría dado un **ROI de −4,1 %**. Para el resto (goles por equipo, hándicap, córners, tarjetas) ESPN no
-  publica precio y la rentabilidad no se puede medir.
-- **Cobertura casi total:** el 90 % de los partidos tiene pronóstico (unos 48 al día con partidos). No es una lista
-  exclusiva de «apuestas seguras»: aproximadamente 1 de cada 9 falla.
-- **Validación limitada:** el holdout cubre unos dos meses y hay pocos pronósticos sin cuotas fuera de muestra (59). Los
-  hiperparámetros globales del modelo se ajustaron con backtests que incluyen ese periodo y la liga doméstica asignada a
-  cada equipo usa información posterior (solo decide qué modelo de goles se usa).
-- «Resultados recientes» es una reconstrucción walk-forward (reglas ajustadas sin esos partidos y cuotas de cierre), no
-  un registro de lo que se publicó en su momento.
+- **Alto acierto no es beneficio ni ventaja.** Son cuotas muy bajas. En el holdout ningún pick publicado tiene cuota
+  de cierre (doble oportunidad y empate no apuesta solo se validaron después del corte); en el walk-forward, 139 de
+  4.709 la tienen (casi todas sintéticas desde el 1X2): **ROI −0,9 %**. Para el resto ESPN no publica precio.
+- **Cobertura casi total:** el 87 % de los partidos tiene pronóstico (unos 43 al día con partidos); 1 de cada 10 falla.
+- **Transparencia:** las correcciones de la revisión adversarial del 18 nov (solo oro, sin «más de 2,5 tarjetas»,
+  validación por regla, resolución a 90 minutos, 0 tarjetas = ausente) se decidieron **después de ver el holdout y el
+  walk-forward**, así que el holdout ya no es del todo virgen para ellas. Antes de corregir, con datos hasta el 14 nov,
+  el holdout acertaba 88,8 % (2.522/2.841; Wilson 87,8–89,7 %), con la plata en 79,9 %. Solo los partidos posteriores
+  al 14 nov son limpios frente a estas decisiones (aún muy pocos).
+- **Cuotas de cierre:** ESPN las entrega con la fecha del partido como marca de tiempo, así que esa marca no prueba que
+  sean previas. Pruebas empíricas: el favorito de cierre acierta ~54 % con log-loss ~0,96 (valores típicos previos al
+  partido); frente al último registro previo (n = 280) el cierre solo se mueve 0,37 pp hacia el resultado (ningún caso
+  > 15 pp); con cuotas de APERTURA el holdout acertaba 88,9 % (con cierre, 88,8 %).
+- **Fugas residuales mínimas:** la liga doméstica asignada y el Elo inicial usan información posterior (Δprob = 0 en 5
+  días del holdout; máx. 0,0005 en días anteriores; ningún pick cambia); los pesos del ensamble se ajustaron con
+  partidos que incluyen el holdout (con pesos alternativos, 88,9 %).
+- **Validación limitada:** dos meses de holdout, casi sin picks sin cuotas fuera de muestra; Wilson supone picks
+  independientes (con 2 por partido no lo son del todo; un bootstrap por día da intervalos casi iguales).
+- «Resultados recientes» es lo que habría publicado el walk-forward mensual, no un registro de lo que se publicó.
 
 ### Parámetros principales
 

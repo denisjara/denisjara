@@ -145,23 +145,35 @@ export function normPick(p: unknown): ValuePick | undefined {
   } as ValuePick;
 }
 
-const TIERS = new Set(['oro', 'plata']);
+/** solo se muestra el nivel oro: los picks 'plata' de ficheros antiguos (o con un nivel desconocido) se descartan */
+const TIERS = new Set(['oro']);
 const SOURCES = new Set(['mercado', 'estadistico']);
 const RESULTS = new Set(['hit', 'miss', 'void']);
 const prob01 = (x: unknown): number | undefined => {
   const v = fin(x);
   return v !== undefined && v >= 0 && v <= 1 ? v : undefined;
 };
-/** Pronóstico de alta confianza: sin probabilidad válida (0,5–1) o sin acierto histórico se descarta. */
+/** Acierto + n + intervalo de Wilson opcionales y coherentes (el intervalo debe contener el acierto). */
+function oosRecord(rate: unknown, n: unknown, lo: unknown, hi: unknown): { rate?: number; n?: number; lo?: number; hi?: number } {
+  const r = prob01(rate);
+  const k = fin(n);
+  if (r === undefined || k === undefined || k <= 0) return {};
+  const l = prob01(lo);
+  const h = prob01(hi);
+  const ci = l !== undefined && h !== undefined && l <= r + 1e-9 && r <= h + 1e-9;
+  return { rate: r, n: Math.round(k), lo: ci ? l : undefined, hi: ci ? h : undefined };
+}
+
+/** Pronóstico de alta confianza: sin probabilidad válida (0,5–1), sin acierto histórico o de nivel plata se descarta. */
 export function normConfidencePick(p: unknown): ConfidencePick | undefined {
   if (!isObj(p)) return undefined;
   const prob = prob01(p.prob);
   const hist = prob01(p.historicalHitRate);
   const selection = short(p.selection, 120);
-  if (prob === undefined || prob < 0.5 || hist === undefined || !selection) return undefined;
+  if (prob === undefined || prob < 0.5 || hist === undefined || !selection || !TIERS.has(str(p.tier))) return undefined;
   const marketOdds = fin(p.marketOdds);
-  const holdoutHitRate = prob01(p.holdoutHitRate);
-  const holdoutN = fin(p.holdoutN);
+  const ho = oosRecord(p.holdoutHitRate, p.holdoutN, p.holdoutWilsonLow, p.holdoutWilsonHigh);
+  const va = oosRecord(p.validationHitRate, p.validationN, p.validationWilsonLow, p.validationWilsonHigh);
   return {
     family: short(p.family, 40) || 'otro',
     marketId: str(p.marketId, 'otro'),
@@ -171,14 +183,21 @@ export function normConfidencePick(p: unknown): ConfidencePick | undefined {
     fairOdds: fin(p.fairOdds) ?? Math.min(1000, 1 / prob),
     marketOdds: marketOdds !== undefined && marketOdds > 1 ? marketOdds : undefined,
     oddsKind: p.oddsKind === 'directa' || p.oddsKind === 'sintetica' ? p.oddsKind : undefined,
-    tier: TIERS.has(str(p.tier)) ? (p.tier as ConfidencePick['tier']) : 'plata',
+    tier: 'oro',
     historicalHitRate: hist,
     historicalN: Math.max(0, fin(p.historicalN) ?? 0),
     threshold: prob01(p.threshold),
     calibratedProb: prob01(p.calibratedProb),
     source: SOURCES.has(str(p.source)) ? (p.source as ConfidencePick['source']) : undefined,
-    holdoutHitRate: holdoutHitRate !== undefined && holdoutN !== undefined && holdoutN > 0 ? holdoutHitRate : undefined,
-    holdoutN: holdoutHitRate !== undefined && holdoutN !== undefined && holdoutN > 0 ? holdoutN : undefined,
+    validationHitRate: va.rate,
+    validationN: va.n,
+    validationWilsonLow: va.lo,
+    validationWilsonHigh: va.hi,
+    holdoutHitRate: ho.rate,
+    holdoutN: ho.n,
+    holdoutWilsonLow: ho.lo,
+    holdoutWilsonHigh: ho.hi,
+    baseRate: prob01(p.baseRate),
     result: RESULTS.has(str(p.result)) ? (p.result as ConfidencePick['result']) : undefined,
   };
 }
@@ -427,7 +446,22 @@ function normConfidenceHeadline(x: unknown): HomeFile['confidenceHeadline'] {
   const hitRate = prob01(x.hitRate);
   const picks = fin(x.picks);
   if (hitRate === undefined || picks === undefined || picks <= 0) return undefined;
-  return { hitRate, picks, hits: fin(x.hits) ?? Math.round(hitRate * picks), from: validDate(x.from) ?? '', to: validDate(x.to) ?? '', upcoming: fin(x.upcoming) };
+  const lo = prob01(x.wilsonLow);
+  const hi = prob01(x.wilsonHigh);
+  const ci = lo !== undefined && hi !== undefined && lo <= hitRate + 1e-9 && hitRate <= hi + 1e-9;
+  const fair = fin(x.avgFairOdds);
+  return {
+    hitRate,
+    picks,
+    hits: fin(x.hits) ?? Math.round(hitRate * picks),
+    wilsonLow: ci ? lo : undefined,
+    wilsonHigh: ci ? hi : undefined,
+    baselineRate: prob01(x.baselineRate),
+    avgFairOdds: fair !== undefined && fair >= 1 ? fair : undefined,
+    from: validDate(x.from) ?? '',
+    to: validDate(x.to) ?? '',
+    upcoming: fin(x.upcoming),
+  };
 }
 
 function normHome(v: Obj): HomeFile {
@@ -678,7 +712,7 @@ function normConfidence(v: Obj): ConfidenceFile {
       holdout: normRecord(t.holdout) ?? { picks: 0, n: 0, hits: 0, hitRate: 0, from: '', to: '' },
       virgin: normRecord(t.virgin),
       calibration: cal,
-      byTier: list(t.byTier, (x) => normRecord(x, (o) => (TIERS.has(str(o.tier)) ? { tier: o.tier as ConfidencePick['tier'] } : undefined)), 2),
+      byTier: list(t.byTier, (x) => normRecord(x, (o) => (TIERS.has(str(o.tier)) ? { tier: o.tier as ConfidencePick['tier'] } : undefined)), 1),
       bySource: list(t.bySource, (x) => normRecord(x, (o) => (SOURCES.has(str(o.source)) ? { source: o.source as NonNullable<ConfidencePick['source']> } : undefined)), 2),
       byFamily: list(
         t.byFamily,
@@ -696,17 +730,38 @@ function normConfidence(v: Obj): ConfidenceFile {
               f.thresholds,
               (x) => {
                 const threshold = prob01(x.threshold);
+                const vn = fin(x.validationN);
                 return threshold !== undefined && SOURCES.has(str(x.source))
-                  ? { source: x.source as NonNullable<ConfidencePick['source']>, threshold, goldThreshold: prob01(x.goldThreshold) }
+                  ? {
+                      source: x.source as NonNullable<ConfidencePick['source']>,
+                      threshold,
+                      goldThreshold: prob01(x.goldThreshold),
+                      validationN: vn,
+                      validationHits: fin(x.validationHits),
+                      validationHitRate: vn !== undefined && vn > 0 ? prob01(x.validationHitRate) : undefined,
+                    }
                   : undefined;
               },
               2,
             ),
+            unpublished: list(
+              f.unpublished,
+              (x) => (SOURCES.has(str(x.source)) ? { source: x.source as NonNullable<ConfidencePick['source']>, n: Math.max(0, fin(x.n) ?? 0), hits: Math.max(0, fin(x.hits) ?? 0), hitRate: prob01(x.hitRate) } : undefined),
+              2,
+            ),
+            excluded: optStr(f.excluded),
             threshold: prob01(f.threshold),
             picks: Math.max(n, fin(f.picks) ?? n),
             n,
             hits,
             hitRate: n > 0 ? prob01(f.hitRate) : undefined,
+            wilsonLow: n > 0 ? prob01(f.wilsonLow) : undefined,
+            wilsonHigh: n > 0 ? prob01(f.wilsonHigh) : undefined,
+            avgFairOdds: (fin(f.avgFairOdds) ?? 0) >= 1 ? fin(f.avgFairOdds) : undefined,
+            baseRate: prob01(f.baseRate),
+            baseN: fin(f.baseN),
+            lift: fin(f.lift) !== undefined && Math.abs(fin(f.lift)!) <= 1 ? fin(f.lift) : undefined,
+            walkForward: isObj(f.walkForward) ? normRecord({ ...f.walkForward, from: '', to: '' }) : undefined,
             note: optStr(f.note),
           };
         },
@@ -716,13 +771,39 @@ function normConfidence(v: Obj): ConfidenceFile {
       avgFairOdds: fin(t.avgFairOdds) ?? 0,
       avgProb: prob01(t.avgProb),
       roi,
+      baseline: isObj(t.baseline) && optStr(t.baseline.label) ? (() => {
+        const r = normRecord({ ...t.baseline, from: '', to: '' });
+        return r ? { label: short(t.baseline.label, 200), picks: r.picks, n: r.n, hits: r.hits, hitRate: r.hitRate, wilsonLow: r.wilsonLow, wilsonHigh: r.wilsonHigh, matches: r.matches } : undefined;
+      })() : undefined,
+      expectedBaseRate: prob01(t.expectedBaseRate),
+      lift: fin(t.lift) !== undefined && Math.abs(fin(t.lift)!) <= 1 ? fin(t.lift) : undefined,
+      walkForward: isObj(t.walkForward) ? (() => {
+        const w = t.walkForward as Obj;
+        const r = normRecord(w);
+        if (!r) return undefined;
+        const wroi = isObj(w.roi) && fin(w.roi.bets) !== undefined && fin(w.roi.roi) !== undefined ? finKeys(w.roi, ['bets', 'roi', 'profit', 'hitRate', 'avgOdds', 'synthetic']) : undefined;
+        return {
+          ...r,
+          folds: list(
+            w.folds,
+            (f) => {
+              const fr = normRecord({ ...f, from: f.start, to: f.end });
+              return fr && validDate(f.start) ? { start: str(f.start), end: validDate(f.end) ?? '', matches: fin(f.matches) ?? 0, picks: fr.picks, n: fr.n, hits: fr.hits, hitRate: fr.hitRate } : undefined;
+            },
+            24,
+          ),
+          roi: wroi,
+        };
+      })() : undefined,
+      excluded: list(t.excluded, (x) => (optStr(x.family) && optStr(x.reason) ? { family: short(x.family, 60), label: short(x.label, 80) || short(x.family, 60), reason: short(x.reason, 600) } : undefined), 10),
     },
     rules: {
-      ...finKeys(rules, ['level', 'targetRate', 'matches', 'active', 'maxPerMatch', 'minHitRate']),
+      ...finKeys(rules, ['level', 'targetRate', 'matches', 'active', 'unvalidated', 'maxPerMatch', 'minHitRate']),
+      validation: isObj(rules.validation) && fin(rules.validation.minN) !== undefined ? { minN: fin(rules.validation.minN)!, minRate: prob01(rules.validation.minRate) ?? 0.8 } : undefined,
       from: validDate(rules.from) ?? '',
       to: validDate(rules.to) ?? '',
     },
-    note: short(v.note, 600),
+    note: short(v.note, 1200),
   } as unknown as ConfidenceFile;
 }
 

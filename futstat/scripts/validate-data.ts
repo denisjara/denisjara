@@ -210,7 +210,11 @@ const valuePick = obj(
   },
 );
 
-/** Pronóstico de alta confianza: prob >= umbral de su franja, acierto histórico de la franja >= 80 %, cuota justa = 1/p. */
+/**
+ * Pronóstico de alta confianza: solo nivel oro (acierto histórico de la franja >= 85 %), prob >= umbral de su franja,
+ * cuota justa = 1/p; acierto fuera de muestra (validación walk-forward de su regla y holdout de su familia) con n e
+ * intervalo de Wilson que lo contiene.
+ */
 const CONF_FAMILY = /^[a-z0-9.+-]{1,40}$/;
 const confidencePick = obj(
   {
@@ -220,8 +224,8 @@ const confidencePick = obj(
     selection: str({ nonEmpty: true }),
     prob: num({ min: 0.5, max: 1 }),
     fairOdds: num({ min: 1, max: 2 }),
-    tier: str({ oneOf: ['oro', 'plata'] }),
-    historicalHitRate: num({ min: 0.8, max: 1 }),
+    tier: str({ oneOf: ['oro'] }),
+    historicalHitRate: num({ min: 0.85, max: 1 }),
     historicalN: num({ min: 1, int: true }),
   },
   {
@@ -230,8 +234,15 @@ const confidencePick = obj(
     threshold: num({ min: 0.5, max: 1 }),
     calibratedProb: prob,
     source: str({ oneOf: ['mercado', 'estadistico'] }),
+    validationHitRate: prob,
+    validationN: num({ min: 1, int: true }),
+    validationWilsonLow: prob,
+    validationWilsonHigh: prob,
     holdoutHitRate: prob,
     holdoutN: num({ min: 1, int: true }),
+    holdoutWilsonLow: prob,
+    holdoutWilsonHigh: prob,
+    baseRate: prob,
     result: str({ oneOf: ['hit', 'miss', 'void'] }),
   },
   (v, at, c) => {
@@ -242,6 +253,14 @@ const confidencePick = obj(
     if (typeof v.threshold === 'number' && typeof p === 'number' && p < (v.threshold as number) - 1e-3) fail(c, at, `prob ${p} < umbral ${v.threshold}`);
     if (v.oddsKind !== undefined && v.marketOdds === undefined) fail(c, at, 'oddsKind sin marketOdds');
     if ((v.holdoutHitRate === undefined) !== (v.holdoutN === undefined)) fail(c, at, 'holdoutHitRate y holdoutN van juntos');
+    if ((v.validationHitRate === undefined) !== (v.validationN === undefined)) fail(c, at, 'validationHitRate y validationN van juntos');
+    for (const k of ['validation', 'holdout'] as const) {
+      const r = v[`${k}HitRate`];
+      const lo = v[`${k}WilsonLow`];
+      const hi = v[`${k}WilsonHigh`];
+      if ((lo === undefined) !== (hi === undefined)) fail(c, at, `${k}WilsonLow y ${k}WilsonHigh van juntos`);
+      if (typeof r === 'number' && typeof lo === 'number' && typeof hi === 'number' && !(lo <= r + 1e-9 && r <= hi + 1e-9)) fail(c, at, `intervalo de Wilson (${k}) que no contiene el acierto`);
+    }
     if (v.tier === 'oro' && typeof v.historicalHitRate === 'number' && (v.historicalHitRate as number) < 0.85 - 1e-9) fail(c, at, `nivel oro con acierto histórico ${v.historicalHitRate} < 0,85`);
   },
 );
@@ -835,6 +854,10 @@ function confidenceEntry(settled: boolean): Check {
       } else {
         if (m.status !== 'scheduled') fail(c, at, `pick de alta confianza de un partido "${String(m.status)}" (debe estar programado)`);
         if (p.result !== undefined) fail(c, at, 'resultado en un pick no resuelto');
+        // producción solo publica reglas validadas fuera de muestra (walk-forward: >= 30 picks y >= 80 %)
+        if (p.validationN !== undefined && ((p.validationN as number) < 30 || (p.validationHitRate as number) < 0.8 - 1e-9)) {
+          fail(c, at, `pick de una regla sin validar fuera de muestra (${String(p.validationHitRate)}, n = ${String(p.validationN)})`);
+        }
       }
     },
   );
@@ -848,7 +871,7 @@ const confidenceFile = obj(
     track: obj(
       {
         holdout: confidenceRecord,
-        byTier: arr(obj({ tier: str({ oneOf: ['oro', 'plata'] }), ...confidenceRecordFields }, confidenceRecordOpt, (v, at, c) => checkRate(v, at, c)), { max: 2 }),
+        byTier: arr(obj({ tier: str({ oneOf: ['oro'] }), ...confidenceRecordFields }, confidenceRecordOpt, (v, at, c) => checkRate(v, at, c)), { max: 1 }),
         byFamily: arr(
           obj(
             {
@@ -856,17 +879,46 @@ const confidenceFile = obj(
               label: str({ nonEmpty: true }),
               theme: str({ oneOf: ['resultado', 'goles', 'corners', 'tarjetas'] }),
               active: bool,
-              thresholds: arr(obj({ source: str({ oneOf: ['mercado', 'estadistico'] }), threshold: num({ min: 0.5, max: 1 }) }, { goldThreshold: num({ min: 0.5, max: 1 }) }), { max: 2 }),
+              thresholds: arr(
+                obj(
+                  { source: str({ oneOf: ['mercado', 'estadistico'] }), threshold: num({ min: 0.5, max: 1 }) },
+                  { goldThreshold: num({ min: 0.5, max: 1 }), validationN: count, validationHits: count, validationHitRate: prob },
+                  (v, at, c) => {
+                    // regla publicada ⇒ validada fuera de muestra
+                    if (typeof v.validationN === 'number' && ((v.validationN as number) < 30 || ((v.validationHitRate as number) ?? 0) < 0.8 - 1e-9)) {
+                      fail(c, at, `regla publicada sin validación fuera de muestra (n = ${String(v.validationN)}, ${String(v.validationHitRate)})`);
+                    }
+                  },
+                ),
+                { max: 2 },
+              ),
               picks: count,
               n: count,
               hits: count,
             },
-            { threshold: num({ min: 0.5, max: 1 }), hitRate: prob, note: str({ nonEmpty: true }) },
+            {
+              threshold: num({ min: 0.5, max: 1 }),
+              hitRate: prob,
+              wilsonLow: prob,
+              wilsonHigh: prob,
+              avgFairOdds: num({ min: 1 }),
+              baseRate: prob,
+              baseN: count,
+              lift: num({ min: -1, max: 1 }),
+              unpublished: arr(obj({ source: str({ oneOf: ['mercado', 'estadistico'] }), n: count, hits: count }, { hitRate: prob }), { max: 2 }),
+              excluded: str({ nonEmpty: true }),
+              walkForward: obj({ n: count, hits: count, hitRate: prob }, { wilsonLow: prob, wilsonHigh: prob }, (v, at, c) => checkRate(v, at, c)),
+              note: str({ nonEmpty: true }),
+            },
             (v, at, c) => {
               checkRate(v, at, c);
               if (v.n === 0 && v.hitRate !== undefined) fail(c, at, 'hitRate sin picks resueltos (debe omitirse)');
               const ths = v.thresholds as unknown[];
               if (v.active !== (Array.isArray(ths) && ths.length > 0)) fail(c, at, 'active no coincide con thresholds');
+              if (v.excluded !== undefined && v.active) fail(c, at, 'familia excluida de antemano con reglas publicadas');
+              if (typeof v.lift === 'number' && typeof v.hitRate === 'number' && typeof v.baseRate === 'number' && Math.abs((v.lift as number) - ((v.hitRate as number) - (v.baseRate as number))) > 1e-4) {
+                fail(c, at, 'lift distinto de acierto − tasa base');
+              }
             },
           ),
         ),
@@ -882,6 +934,19 @@ const confidenceFile = obj(
         bySource: arr(obj({ source: str({ oneOf: ['mercado', 'estadistico'] }), ...confidenceRecordFields }, confidenceRecordOpt, (v, at, c) => checkRate(v, at, c)), { max: 2 }),
         avgProb: prob,
         roi: obj({ bets: num({ min: 1, int: true }), roi: num({ min: -1 }) }, { profit: num(), hitRate: prob, avgOdds: num({ min: 1 }), synthetic: count }),
+        baseline: obj({ label: str({ nonEmpty: true }), ...confidenceRecordFields }, { wilsonLow: prob, wilsonHigh: prob, matches: count }, (v, at, c) => checkRate(v, at, c)),
+        expectedBaseRate: prob,
+        lift: num({ min: -1, max: 1 }),
+        walkForward: obj(
+          { ...confidenceRecordFields, from: iso, to: iso, folds: arr(obj({ start: iso, end: iso, matches: count, picks: count, n: count, hits: count, hitRate: prob }, {}, (v, at, c) => checkRate(v, at, c))) },
+          {
+            ...confidenceRecordOpt,
+            matches: count,
+            roi: obj({ bets: num({ min: 1, int: true }), roi: num({ min: -1 }) }, { profit: num(), hitRate: prob, avgOdds: num({ min: 1 }), synthetic: count }),
+          },
+          (v, at, c) => checkRate(v, at, c),
+        ),
+        excluded: arr(obj({ family: str({ nonEmpty: true, pattern: /^[a-z0-9.+|-]{1,60}$/ }), label: str({ nonEmpty: true }), reason: str({ nonEmpty: true }) })),
       },
     ),
     rules: obj({
@@ -892,8 +957,8 @@ const confidenceFile = obj(
       matches: count,
       active: count,
       maxPerMatch: num({ min: 1, int: true }),
-      minHitRate: prob,
-    }),
+      minHitRate: num({ min: 0.85, max: 1 }),
+    }, { unvalidated: count, validation: obj({ minN: num({ min: 1, int: true }), minRate: prob }) }),
     note: str({ nonEmpty: true }),
   },
   {},
@@ -951,7 +1016,7 @@ const homeFile = obj(
     },
     confidenceHeadline: obj(
       { hitRate: prob, picks: num({ min: 1, int: true }), hits: count, from: iso, to: iso },
-      { upcoming: count },
+      { upcoming: count, wilsonLow: prob, wilsonHigh: prob, baselineRate: prob, avgFairOdds: num({ min: 1 }) },
       (v, at, c) => checkRate(v, at, c, 'picks'),
     ),
   },
