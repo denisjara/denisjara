@@ -251,6 +251,8 @@ export class ViewerController {
         this.statusTimer = setTimeout(() => {
           this.statusTimer = null;
           this.setStatus({ zoom: this.view.zoom });
+          // Vista actual (zoom y desplazamiento) a la vista de las pruebas automáticas y de quien inspeccione la página.
+          this.host.dataset.view = `${this.view.zoom} ${this.view.ox} ${this.view.oy}`;
         }, 120);
       }
     }
@@ -782,7 +784,10 @@ export class ViewerController {
     const sheet = currentSheet();
     if (!v || !sheet) return null;
     const hidden = this.layerHidden;
+    const k = this.mPerUnit();
+    const gap = store.get().ui.regionGap;
     const res = findRegion(v.xy, p, {
+      bridge: k !== null && gap > 0 ? gap / k : 0,
       eps: sheet.kind === 'pdf' ? 0.05 : Math.max(sheet.w, sheet.h) * 1e-6,
       bounds: { minX: 0, minY: 0, maxX: sheet.w, maxY: sheet.h },
       query: (a, b, c, d) => queryBox(v, a, b, c, d),

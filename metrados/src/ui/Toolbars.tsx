@@ -65,6 +65,7 @@ export function OptionsBar() {
   const deduct = useStore((s) => s.ui.deduct);
   const snapOn = useStore((s) => s.ui.snapOn);
   const snaps = useStore((s) => s.ui.snaps);
+  const regionGap = useStore((s) => s.ui.regionGap);
   const showLabels = useStore((s) => s.project.settings.showLabels);
   const sheet = useStore((s) => s.project.sheets.find((x) => x.id === s.ui.sheetId) ?? null);
   const status = useViewerStatus();
@@ -141,6 +142,37 @@ export function OptionsBar() {
             <CircleMinus size={15} />
             <span className="max-sm:hidden">Descuento</span>
           </button>
+        )}
+
+        {tool === 'region' && (
+          <Menu
+            label="Cerrar los vanos de puerta al detectar el recinto"
+            className="chip h-9 shrink-0 rounded-md"
+            content={
+              <>
+                {regionGap > 0 ? `Cierra vanos ≤ ${fmt(regionGap, 2)} m` : 'Sin cerrar vanos'}
+                <ChevronDown size={14} className="text-ink-3" />
+              </>
+            }
+          >
+            {(close) => (
+              <div className="w-64">
+                <p className="px-2.5 py-1.5 text-2xs text-ink-3">Une las caras de muro alineadas que una puerta interrumpe. Oculta antes las capas de puertas y mobiliario para que no recorten el ambiente.</p>
+                {[0, 0.8, 1.0, 1.2, 1.5, 2.0, 3.0].map((g) => (
+                  <MenuItem
+                    key={g}
+                    icon={regionGap === g ? <Check size={15} /> : undefined}
+                    onClick={() => {
+                      store.setUi({ regionGap: g });
+                      close();
+                    }}
+                  >
+                    {g === 0 ? 'No cerrar (solo lo dibujado)' : `Vanos de hasta ${fmt(g, 2)} m`}
+                  </MenuItem>
+                ))}
+              </div>
+            )}
+          </Menu>
         )}
 
         <span className="mx-0.5 h-6 w-px shrink-0 bg-line" aria-hidden />
@@ -225,27 +257,32 @@ export function OptionsBar() {
         </button>
       </div>
 
-      {status.drafting && (
-        <div className="float pointer-events-auto flex items-center gap-1 p-1">
-          {status.canFinish && (
-            <button type="button" className="btn btn-primary h-9 min-h-0" onClick={() => viewer.current?.finishDraft()}>
-              <Check size={16} /> Terminar
-            </button>
-          )}
-          <button type="button" className="btn btn-ghost h-9 min-h-0" onClick={() => viewer.current?.undoDraftPoint()}>
-            <Undo2 size={16} /> <span className="max-sm:hidden">Quitar punto</span>
-          </button>
-          <button type="button" className="btn btn-ghost h-9 min-h-0" onClick={() => viewer.current?.cancelDraft()}>
-            <X size={16} /> <span className="max-sm:hidden">Cancelar</span>
-          </button>
-        </div>
-      )}
-
       {!status.loading && status.raster && tool !== 'select' && (
         <p className="float pointer-events-auto max-w-xl px-3 py-1.5 text-2xs text-ink-2">
           Esta lámina es una imagen (escaneo o foto): no tiene líneas a las que engancharse. La precisión depende del escaneo; calibra con una cota conocida y marca los puntos con mucho zoom.
         </p>
       )}
+    </div>
+  );
+}
+
+/** Acciones del trazo en curso. Va abajo, lejos de donde se dibuja; con teclado bastan Intro, Retroceso y Esc. */
+export function DraftBar() {
+  const status = useViewerStatus();
+  if (!status.drafting) return null;
+  return (
+    <div className="float absolute bottom-[calc(4.75rem+env(safe-area-inset-bottom,0px))] left-1/2 z-20 flex -translate-x-1/2 items-center gap-1 p-1 md:bottom-9">
+      {status.canFinish && (
+        <button type="button" className="btn btn-primary h-9 min-h-0" onClick={() => viewer.current?.finishDraft()}>
+          <Check size={16} /> Terminar
+        </button>
+      )}
+      <button type="button" className="btn btn-ghost h-9 min-h-0" onClick={() => viewer.current?.undoDraftPoint()}>
+        <Undo2 size={16} /> <span className="max-sm:hidden">Quitar punto</span>
+      </button>
+      <button type="button" className="btn btn-ghost h-9 min-h-0" onClick={() => viewer.current?.cancelDraft()}>
+        <X size={16} /> <span className="max-sm:hidden">Cancelar</span>
+      </button>
     </div>
   );
 }

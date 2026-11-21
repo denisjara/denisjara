@@ -200,6 +200,8 @@ interface Group {
   color?: string;
   detail: string;
   count: number;
+  /** El grupo son posiciones (bloques), no trazos: solo se puede contar. */
+  pointsOnly?: boolean;
   /** Trazos del grupo según la magnitud de la partida activa. */
   parts(base: 'L' | 'A' | 'P' | 'N'): { parts: Part[]; points: Pt[] };
 }
@@ -288,7 +290,7 @@ function useGroups(rt: SheetRuntime | null): { layers: Group[]; styles: Group[];
       }
       const blocks = [...byName.entries()]
         .sort((a, b) => b[1].length - a[1].length)
-        .map(([name, pts]): Group => ({ key: `b${name}`, label: name, detail: `${pts.length} ${pts.length === 1 ? 'inserción' : 'inserciones'}`, count: pts.length, parts: () => ({ parts: [], points: pts }) }));
+        .map(([name, pts]): Group => ({ key: `b${name}`, label: name, detail: `${pts.length} ${pts.length === 1 ? 'inserción' : 'inserciones'}`, count: pts.length, pointsOnly: true, parts: () => ({ parts: [], points: pts }) }));
       return { layers: layers.sort((a, b) => b.count - a.count), styles: [], blocks };
     }
     const layers = rt.layers.map((l, i): Group => ({ key: `l${i}`, label: l.name, detail: `${fmt(l.paths, 0)} trazos`, count: l.paths, parts: collectPdf(rt, (p) => v.pathLayer[p] === i + 1) })).filter((g) => g.count > 0);
@@ -315,6 +317,10 @@ function measureGroup(g: Group, prefix: string): void {
   if (!partida) {
     store.toast('Elige o crea primero la partida que vas a medir.');
     store.setUi({ dialog: { type: 'partida' } });
+    return;
+  }
+  if (g.pointsOnly && partida.base !== 'N') {
+    store.toast('Para contar bloques elige una partida de cantidad (und, pto…).');
     return;
   }
   const { parts, points } = g.parts(partida.base);
@@ -355,7 +361,7 @@ function GroupList({ title, groups, prefix, shown, onShow }: { title: string; gr
               </span>
             </button>
             <button type="button" className="btn h-7 min-h-0 shrink-0 px-2 text-2xs" onClick={() => measureGroup(g, prefix)}>
-              Medir
+              {g.pointsOnly ? 'Contar' : 'Medir'}
             </button>
           </li>
         ))}

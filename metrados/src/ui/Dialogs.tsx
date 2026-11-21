@@ -47,6 +47,8 @@ function ScaleDialog({ d }: { d: Extract<Dialog, { type: 'scale' }> }) {
   const mPerUnit = mode === 'ratio' ? (ratio && ratio > 0 ? mPerUnitFromRatio(ratio) : null) : mode === 'units' ? UNIT_TO_M[unit] : planDist && real && real > 0 ? real / planDist : null;
   const modes: ScaleMode[] = sheet.kind === 'pdf' ? ['ratio', 'calib'] : sheet.kind === 'dxf' ? ['units', 'calib'] : ['calib'];
   const modeLabel: Record<ScaleMode, string> = { ratio: 'Escala del plano', units: 'Unidad de dibujo', calib: 'Calibrar con una cota' };
+  // La lámina de un DXF lleva alrededor un margen del 2 % de su lado mayor.
+  const margin = (Math.max(sheet.w, sheet.h) / 1.04) * 0.02;
   const declared = drawingUnitFromInsUnits(rt?.dxf?.insUnits);
   const guessed = sheet.kind === 'dxf' ? guessDrawingUnit(Math.max(sheet.w, sheet.h) / 1.04) : null;
   const otherRatio = sheet.scales.find((s) => s.source === 'ratio' && s.id !== existing?.id)?.ratio ?? rt?.ratios[0];
@@ -66,7 +68,7 @@ function ScaleDialog({ d }: { d: Extract<Dialog, { type: 'scale' }> }) {
 
   return (
     <Modal
-      title={existing ? 'Editar escala' : sheet.scales.length ? 'Añadir otra escala a la lámina' : 'Escala de la lámina'}
+      title={existing ? (existing.source === 'units' ? 'Unidad del dibujo' : 'Editar escala') : sheet.scales.length ? 'Añadir otra escala a la lámina' : 'Escala de la lámina'}
       onClose={close}
       footer={
         <>
@@ -149,7 +151,7 @@ function ScaleDialog({ d }: { d: Extract<Dialog, { type: 'scale' }> }) {
             ))}
           </div>
           <p className="num mt-3 rounded-md bg-panel-2 px-2.5 py-2">
-            Con esta unidad el dibujo mide <b>{fmt((sheet.w / 1.04) * UNIT_TO_M[unit], 2)} × {fmt((sheet.h / 1.04) * UNIT_TO_M[unit], 2)} m</b>. ¿Tiene sentido para tu plano?
+            Con esta unidad el dibujo mide <b>{fmt((sheet.w - 2 * margin) * UNIT_TO_M[unit], 2)} × {fmt((sheet.h - 2 * margin) * UNIT_TO_M[unit], 2)} m</b>. ¿Tiene sentido para tu plano?
           </p>
           <p className="mt-2 text-2xs text-ink-3">
             {declared ? `El archivo declara ${UNIT_LABEL[declared]}.` : guessed ? `El archivo no declara su unidad; por el tamaño del dibujo parecen ${UNIT_LABEL[guessed]}.` : ''} Muchos planos se dibujan en metros aunque la plantilla diga milímetros: ante la duda, mide una cota con la Regla.

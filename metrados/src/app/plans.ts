@@ -225,8 +225,9 @@ async function sniffKind(file: File): Promise<SheetKind | 'dwg' | 'tiff' | null>
   if (ascii.includes('%PDF-')) return 'pdf';
   if (/^AC10\d\d/.test(ascii)) return 'dwg';
   if (ascii.startsWith('II*\0') || ascii.startsWith('MM\0*')) return 'tiff';
+  // Antes que las imágenes: el tipo MIME oficial de un DXF es «image/vnd.dxf».
+  if (/\.dxf$/i.test(file.name) || /dxf/i.test(file.type) || ascii.startsWith('AutoCAD Binary DXF') || /^\s*0\s*\r?\n\s*SECTION/.test(String.fromCharCode(...head))) return 'dxf';
   if (file.type.startsWith('image/') || IMAGE_EXT.test(file.name)) return 'image';
-  if (/\.dxf$/i.test(file.name) || ascii.startsWith('AutoCAD Binary DXF') || /^\s*0\s*\r?\n\s*SECTION/.test(String.fromCharCode(...head))) return 'dxf';
   if (/\.pdf$/i.test(file.name)) return 'pdf';
   return null;
 }

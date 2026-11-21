@@ -30,6 +30,11 @@ export interface RegionOptions {
   startHalfSize?: number;
   /** Tope de segmentos considerados en una ventana (por defecto 60000). */
   maxSegments?: number;
+  /**
+   * Cierre de vanos: si es > 0, dos tramos alineados cuyos extremos enfrentados distan menos que esto se unen con un
+   * tramo recto (la cara de un muro interrumpida por una puerta). Por defecto 0: se mide solo lo que está dibujado.
+   */
+  bridge?: number;
 }
 
 export type RegionResult =
@@ -295,6 +300,71 @@ function build(seg: ArrayLike<number>, win: BBox, eps: number): Graph {
 }
 
 // ---------------------------------------------------------------------------
+// Cierre de vanos
+// ---------------------------------------------------------------------------
+
+/**
+ * Tramos que cierran los huecos entre segmentos alineados: para cada extremo E de un segmento se busca, siguiendo su
+ * misma recta hacia fuera y a menos de `maxGap`, el extremo más cercano de otro segmento que continúe esa recta.
+ * Devuelve los tramos nuevos (x1, y1, x2, y2 seguidos), con las coordenadas exactas de los extremos que unen.
+ */
+function bridgeGaps(seg: number[], maxGap: number, eps: number): number[] {
+  const n = seg.length >> 2;
+  // Rejilla de extremos con celdas del tamaño del hueco máximo: los candidatos están en las 9 celdas vecinas.
+  const cells = new Map<number, number[]>();
+  const key = (cx: number, cy: number): number => cx * 73856093 + cy * 19349663;
+  for (let e = 0; e < 2 * n; e++) {
+    const k = key(Math.floor(seg[2 * e] / maxGap), Math.floor(seg[2 * e + 1] / maxGap));
+    const list = cells.get(k);
+    if (list) list.push(e);
+    else cells.set(k, [e]);
+  }
+  const out: number[] = [];
+  const done = new Set<number>();
+  for (let e = 0; e < 2 * n; e++) {
+    const o = e ^ 1; // el otro extremo del mismo segmento
+    const ex = seg[2 * e];
+    const ey = seg[2 * e + 1];
+    let dx = ex - seg[2 * o];
+    let dy = ey - seg[2 * o + 1];
+    const len = Math.hypot(dx, dy);
+    if (!(len > eps)) continue;
+    dx /= len;
+    dy /= len;
+    let best = -1;
+    let bestAlong = maxGap;
+    const cx = Math.floor(ex / maxGap);
+    const cy = Math.floor(ey / maxGap);
+    for (let i = cx - 1; i <= cx + 1; i++) {
+      for (let j = cy - 1; j <= cy + 1; j++) {
+        const list = cells.get(key(i, j));
+        if (!list) continue;
+        for (const f of list) {
+          if (f >> 1 === e >> 1) continue;
+          const wx = seg[2 * f] - ex;
+          const wy = seg[2 * f + 1] - ey;
+          const along = wx * dx + wy * dy;
+          if (along <= eps || along >= bestAlong || Math.abs(dx * wy - dy * wx) > eps) continue;
+          // El otro segmento tiene que seguir la misma recta y alejarse: su extremo lejano queda más allá.
+          const h = f ^ 1;
+          const hx = seg[2 * h] - ex;
+          const hy = seg[2 * h + 1] - ey;
+          if (hx * dx + hy * dy <= along + eps || Math.abs(dx * hy - dy * hx) > 2 * eps) continue;
+          best = f;
+          bestAlong = along;
+        }
+      }
+    }
+    if (best < 0) continue;
+    const id = e < best ? e * 2 * n + best : best * 2 * n + e;
+    if (done.has(id)) continue;
+    done.add(id);
+    out.push(ex, ey, seg[2 * best], seg[2 * best + 1]);
+  }
+  return out;
+}
+
+// ---------------------------------------------------------------------------
 // Ciclos
 // ---------------------------------------------------------------------------
 
@@ -498,6 +568,7 @@ export function findRegion(segs: Float64Array, p: Pt, opts: RegionOptions): Regi
       if (picked.length > 4 * maxSegments) return { ok: false, reason: 'too-complex' };
     }
     if (picked.length >= 12) {
+      if (opts.bridge && opts.bridge > eps) for (const v of bridgeGaps(picked, opts.bridge, eps)) picked.push(v);
       const g = build(picked, win, eps);
       let found: ReturnType<typeof locate> = null;
       for (let k = 0; k < RAY_ANGLES.length && found === null; k++) found = locate(g, p, eps, RAY_ANGLES[k], true);

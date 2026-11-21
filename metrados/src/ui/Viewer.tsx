@@ -9,7 +9,7 @@ import { store, useStore } from '../app/store';
 import { viewer, ViewerController } from '../viewer/controller';
 import { PLAN_ACCEPT, pickFiles } from './files';
 import { Spinner, useViewerStatus } from './kit';
-import { OptionsBar, ToolRail, ZoomBar } from './Toolbars';
+import { DraftBar, OptionsBar, ToolRail, ZoomBar } from './Toolbars';
 
 export async function openPlanDialog(): Promise<void> {
   const files = await pickFiles(PLAN_ACCEPT, true);
@@ -76,6 +76,7 @@ export function Viewer() {
           <OptionsBar />
           <ToolRail />
           <ZoomBar />
+          <DraftBar />
           {status.hint && (
             <p className="pointer-events-none absolute bottom-3 left-[max(1rem,env(safe-area-inset-left,0px))] right-44 hidden truncate text-2xs text-ink-3 md:block" aria-live="off">
               {status.hint}

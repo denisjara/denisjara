@@ -240,7 +240,10 @@ export function Toasts() {
   const toasts = useStore((s) => s.ui.toasts);
   if (!toasts.length) return null;
   return (
-    <div className="pointer-events-none fixed inset-x-0 bottom-0 z-[60] flex flex-col items-center gap-2 px-4 pb-[calc(1rem+env(safe-area-inset-bottom,0px))]" aria-live="polite">
+    <div
+      className="pointer-events-none fixed z-[60] flex flex-col gap-2 max-md:inset-x-0 max-md:top-[calc(3.5rem+env(safe-area-inset-top,0px))] max-md:items-center max-md:px-4 md:bottom-10 md:left-[max(1rem,env(safe-area-inset-left,0px))] md:items-start"
+      aria-live="polite"
+    >
       {toasts.map((t) => (
         <div
           key={t.id}

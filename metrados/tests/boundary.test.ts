@@ -156,6 +156,33 @@ describe('recinto que contiene un punto', () => {
     expect(region([], { x: 1, y: 1 })).toEqual({ ok: false, reason: 'open' });
   });
 
+  it('cierre de vanos: une las caras de muro alineadas a ambos lados de una puerta', () => {
+    // Ambiente de 5 × 4 con un vano de 0.90 en el muro inferior (con sus mochetas) que da a un pasillo abierto.
+    const segs: Seg[] = [
+      [0, 0, 2, 0],
+      [2.9, 0, 5, 0],
+      [5, 0, 5, 4],
+      [5, 4, 0, 4],
+      [0, 4, 0, 0],
+      [2, 0, 2, -0.15],
+      [2.9, 0, 2.9, -0.15],
+      [-3, -0.15, 2, -0.15],
+      [2.9, -0.15, 9, -0.15],
+    ];
+    const data = pack(segs);
+    const p = { x: 2.5, y: 2 };
+    expect(findRegion(data, p, { eps: 1e-6, bounds: BOUNDS })).toEqual({ ok: false, reason: 'open' });
+    const r = findRegion(data, p, { eps: 1e-6, bounds: BOUNDS, bridge: 1.2 });
+    if (!r.ok) throw new Error(r.reason);
+    expect(r.area).toBe(20);
+    expect(r.outer).toHaveLength(4);
+    // un hueco mayor que el máximo no se cierra
+    expect(findRegion(data, p, { eps: 1e-6, bounds: BOUNDS, bridge: 0.8 })).toEqual({ ok: false, reason: 'open' });
+    // dos tramos paralelos pero no alineados (desfasados 5 cm) no se unen
+    const offset = pack([[0, 0, 2, 0], [2.9, 0.05, 5, 0.05], [5, 0.05, 5, 4], [5, 4, 0, 4], [0, 4, 0, 0]]);
+    expect(findRegion(offset, p, { eps: 1e-6, bounds: BOUNDS, bridge: 1.2 })).toEqual({ ok: false, reason: 'open' });
+  });
+
   it('respeta el filtro de capas ocultas', () => {
     const segs: Seg[] = [...rect(0, 0, 10, 6), [4, 0, 4, 6]];
     const data = pack(segs);

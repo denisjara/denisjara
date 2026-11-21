@@ -22,7 +22,6 @@ export type Dialog =
   | { type: 'scale'; sheetId: string; calib?: { a: Pt; b: Pt }; scaleId?: string }
   | { type: 'partida'; partidaId?: string; base?: Base }
   | { type: 'catalog' }
-  | { type: 'export' }
   | { type: 'projects' }
   | { type: 'help' }
   | { type: 'confirm'; title: string; message: string; confirmLabel: string; danger?: boolean; onConfirm: () => void };
@@ -40,6 +39,8 @@ export interface UiState {
   deduct: boolean;
   snapOn: boolean;
   snaps: SnapModes;
+  /** Área automática: ancho máximo (en metros) de los vanos que se cierran solos; 0 = no cerrar ninguno. */
+  regionGap: number;
   panelTab: PanelTab;
   panelOpen: boolean;
   tableOpen: boolean;
@@ -93,6 +94,7 @@ export class Store {
         deduct: false,
         snapOn: true,
         snaps: { ...ALL_SNAPS },
+        regionGap: 1.2,
         panelTab: 'partidas',
         panelOpen: typeof window === 'undefined' ? true : window.innerWidth >= 900,
         tableOpen: false,
