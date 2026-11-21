@@ -1,0 +1,289 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ==========================================================================
+   Metrado Lab — "mesa de dibujo": el plano (papel blanco) sobre un tablero con retícula; la interfaz son paneles
+   que flotan encima. Cada color es una tripleta "R G B" para poder usar opacidad en Tailwind.
+   El tema claro vive en :root; el oscuro ("cianotipo") redefine los mismos tokens con el sistema en oscuro
+   (salvo que se haya elegido claro) y cuando se elige oscuro a mano.
+   ========================================================================== */
+:root {
+  --c-board: 226 233 240; /* tablero bajo el plano */
+  --c-board-grid: 204 214 226; /* retícula del tablero */
+  --c-panel: 252 253 254; /* paneles y barras */
+  --c-panel-2: 241 245 249; /* cabeceras, controles */
+  --c-panel-3: 227 234 242; /* hover / activo */
+  --c-line: 213 221 231;
+  --c-line-strong: 168 181 197;
+  --c-ink: 16 32 54; /* tinta azul marino */
+  --c-ink-2: 62 80 104;
+  --c-ink-3: 100 116 137;
+  --c-accent: 22 86 201; /* azul de plano */
+  --c-on-accent: 255 255 255;
+  --c-accent-soft: 223 233 252;
+  --c-accent-text: 18 74 178;
+  --c-danger: 196 38 46; /* lápiz rojo: descuentos y borrar */
+  --c-danger-soft: 253 231 231;
+  --c-warn: 150 90 0;
+  --c-warn-soft: 255 240 210;
+  --c-ok: 14 122 68;
+  --c-shadow: 16 32 54;
+  --c-paper: 255 255 255;
+  --top-h: 48px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    color-scheme: dark;
+    --c-board: 9 19 35;
+    --c-board-grid: 19 35 60;
+    --c-panel: 15 28 49;
+    --c-panel-2: 21 37 63;
+    --c-panel-3: 31 51 84;
+    --c-line: 37 57 90;
+    --c-line-strong: 68 92 132;
+    --c-ink: 231 239 250;
+    --c-ink-2: 172 189 212;
+    --c-ink-3: 130 150 178;
+    --c-accent: 104 164 255;
+    --c-on-accent: 8 20 40;
+    --c-accent-soft: 25 47 86;
+    --c-accent-text: 142 190 255;
+    --c-danger: 255 120 120;
+    --c-danger-soft: 72 26 34;
+    --c-warn: 245 186 76;
+    --c-warn-soft: 64 47 14;
+    --c-ok: 86 206 138;
+    --c-shadow: 0 0 0;
+    --c-paper: 255 255 255;
+  }
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --c-board: 9 19 35;
+  --c-board-grid: 19 35 60;
+  --c-panel: 15 28 49;
+  --c-panel-2: 21 37 63;
+  --c-panel-3: 31 51 84;
+  --c-line: 37 57 90;
+  --c-line-strong: 68 92 132;
+  --c-ink: 231 239 250;
+  --c-ink-2: 172 189 212;
+  --c-ink-3: 130 150 178;
+  --c-accent: 104 164 255;
+  --c-on-accent: 8 20 40;
+  --c-accent-soft: 25 47 86;
+  --c-accent-text: 142 190 255;
+  --c-danger: 255 120 120;
+  --c-danger-soft: 72 26 34;
+  --c-warn: 245 186 76;
+  --c-warn-soft: 64 47 14;
+  --c-ok: 86 206 138;
+  --c-shadow: 0 0 0;
+  --c-paper: 255 255 255;
+}
+
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+  html {
+    -webkit-text-size-adjust: 100%;
+    box-sizing: border-box;
+  }
+  body {
+    margin: 0;
+    overflow: hidden;
+    overscroll-behavior: none;
+    background: rgb(var(--c-board));
+    color: rgb(var(--c-ink));
+    font-family: 'Sofia Sans', 'DIN Alternate', Bahnschrift, system-ui, -apple-system, 'Segoe UI', sans-serif;
+    font-size: 14px;
+    line-height: 1.4;
+    -webkit-font-smoothing: antialiased;
+    -webkit-tap-highlight-color: transparent;
+  }
+  button,
+  input,
+  select,
+  textarea {
+    font: inherit;
+    color: inherit;
+  }
+  button {
+    cursor: pointer;
+  }
+  button:disabled {
+    cursor: default;
+  }
+  :focus-visible {
+    outline: 2px solid rgb(var(--c-accent));
+    outline-offset: 1px;
+  }
+  ::selection {
+    background: rgb(var(--c-accent) / 0.25);
+  }
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: rgb(var(--c-line-strong)) transparent;
+  }
+  input[type='number'] {
+    -moz-appearance: textfield;
+    appearance: textfield;
+  }
+  input[type='number']::-webkit-outer-spin-button,
+  input[type='number']::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+@layer components {
+  /* Rótulo de plano: mayúsculas condensadas con algo de tracking. */
+  .rotulo {
+    font-family: 'Sofia Sans Condensed', 'DIN Condensed', 'Arial Narrow', system-ui, sans-serif;
+    font-weight: 600;
+    font-size: 0.75rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: rgb(var(--c-ink-3));
+  }
+  .num {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: 'tnum' 1;
+  }
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    min-height: 2.25rem;
+    padding: 0 0.8rem;
+    border-radius: 6px;
+    border: 1px solid rgb(var(--c-line-strong) / 0.7);
+    background: rgb(var(--c-panel));
+    font-weight: 600;
+    white-space: nowrap;
+    transition:
+      background-color 120ms,
+      border-color 120ms;
+  }
+  .btn:hover:not(:disabled) {
+    background: rgb(var(--c-panel-3));
+  }
+  .btn:disabled {
+    opacity: 0.45;
+  }
+  .btn-primary {
+    background: rgb(var(--c-accent));
+    border-color: rgb(var(--c-accent));
+    color: rgb(var(--c-on-accent));
+  }
+  .btn-primary:hover:not(:disabled) {
+    background: rgb(var(--c-accent) / 0.88);
+  }
+  .btn-danger {
+    color: rgb(var(--c-danger));
+    border-color: rgb(var(--c-danger) / 0.45);
+  }
+  .btn-danger:hover:not(:disabled) {
+    background: rgb(var(--c-danger-soft));
+  }
+  .btn-ghost {
+    border-color: transparent;
+    background: transparent;
+  }
+  .icon-btn {
+    display: inline-grid;
+    place-items: center;
+    width: 2.25rem;
+    height: 2.25rem;
+    border-radius: 6px;
+    color: rgb(var(--c-ink-2));
+    transition:
+      background-color 120ms,
+      color 120ms;
+  }
+  .icon-btn:hover:not(:disabled) {
+    background: rgb(var(--c-panel-3));
+    color: rgb(var(--c-ink));
+  }
+  .icon-btn:disabled {
+    opacity: 0.35;
+  }
+  .icon-btn[aria-pressed='true'],
+  .icon-btn[data-active='true'] {
+    background: rgb(var(--c-accent));
+    color: rgb(var(--c-on-accent));
+  }
+  .field {
+    width: 100%;
+    min-height: 2.25rem;
+    padding: 0.3rem 0.6rem;
+    border-radius: 6px;
+    border: 1px solid rgb(var(--c-line-strong) / 0.8);
+    background: rgb(var(--c-panel));
+  }
+  .field:hover {
+    border-color: rgb(var(--c-line-strong));
+  }
+  .field:focus {
+    outline: 2px solid rgb(var(--c-accent));
+    outline-offset: 0;
+    border-color: transparent;
+  }
+  .float {
+    background: rgb(var(--c-panel));
+    border: 1px solid rgb(var(--c-line));
+    border-radius: 10px;
+    box-shadow:
+      0 1px 2px rgb(var(--c-shadow) / 0.1),
+      0 8px 24px -8px rgb(var(--c-shadow) / 0.28);
+  }
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    min-height: 1.75rem;
+    padding: 0 0.6rem;
+    border-radius: 999px;
+    border: 1px solid rgb(var(--c-line-strong) / 0.7);
+    background: rgb(var(--c-panel));
+    font-weight: 600;
+    font-size: 0.8125rem;
+    white-space: nowrap;
+  }
+  .chip:hover:not(:disabled) {
+    background: rgb(var(--c-panel-3));
+  }
+  .chip[aria-pressed='true'] {
+    background: rgb(var(--c-accent-soft));
+    border-color: rgb(var(--c-accent) / 0.6);
+    color: rgb(var(--c-accent-text));
+  }
+  .kbd {
+    display: inline-block;
+    min-width: 1.35rem;
+    padding: 0 0.3rem;
+    border-radius: 4px;
+    border: 1px solid rgb(var(--c-line-strong) / 0.8);
+    background: rgb(var(--c-panel-2));
+    font-size: 0.6875rem;
+    font-weight: 600;
+    line-height: 1.15rem;
+    text-align: center;
+    color: rgb(var(--c-ink-2));
+  }
+}

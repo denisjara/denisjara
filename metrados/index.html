@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <!--
+      Política de seguridad de contenido (CSP) para DESARROLLO (`npm run dev`). Debe ir antes de cualquier script o estilo.
+      En producción (`npm run build`) el plugin metrados:csp de vite.config.ts la sustituye por la de scripts/csp.ts:
+      sin 'unsafe-inline', con los sha256 de los <script>/<style> en línea calculados en cada build.
+        · 'unsafe-inline' en script-src y style-src: solo en desarrollo (preámbulo de React Fast Refresh y <style> de Vite).
+        · 'wasm-unsafe-eval': decodificadores de imagen de pdf.js (JPEG 2000, JBIG2) compilados a WebAssembly.
+        · worker-src blob:: el hilo de trabajo de pdf.js.
+      La app no se conecta a ningún servidor: los planos se leen y se quedan en el navegador.
+    -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob:; connect-src 'self' ws://127.0.0.1:* blob:; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'none'"
+    />
+    <meta name="referrer" content="no-referrer" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="description" content="Metrado Lab — metrados de obra sobre planos PDF, DXF e imagen: lee la geometría exacta del plano, mide longitudes, áreas y cantidades y exporta la hoja de metrados a Excel." />
+    <title>Metrado Lab</title>
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%231656c9'/%3E%3Cpath d='M7 24V8h4.2l4.8 9 4.8-9H25v16' stroke='%23fff' stroke-width='2.6' fill='none' stroke-linejoin='round' stroke-linecap='round'/%3E%3C/svg%3E"
+    />
+    <style>
+      /* Pantalla de arranque (dentro de #root; React la sustituye al montar). */
+      :root { padding: env(safe-area-inset-top, 0px) 0 env(safe-area-inset-bottom, 0px); box-sizing: border-box; height: 100%; }
+      .boot { box-sizing: border-box; width: calc(100% - 32px); max-width: 26rem; margin: 18vh auto 0; padding: 24px; text-align: center; font: 15px/1.5 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; color: #3e5068; background: #fcfdfe; border: 1px solid #d5dde7; border-radius: 10px; }
+      .boot-title { margin: 0 0 6px; font-size: 20px; font-weight: 700; color: #102036; }
+      .boot p { margin: 0 0 8px; }
+      .boot-slow { visibility: hidden; animation: boot-show 0s linear 10s forwards; }
+      @media (prefers-color-scheme: dark) { .boot { color: #acbdd4; background: #0f1c31; border-color: #25395a; } .boot-title { color: #e7effa; } }
+      @keyframes boot-show { to { visibility: visible; } }
+    </style>
+    <script>
+      // Aplica el tema guardado antes del primer pintado. Sin preferencia guardada manda el sistema.
+      (function () {
+        try {
+          var s = window.localStorage.getItem('metrado-theme');
+          if (s === 'light' || s === 'dark') document.documentElement.setAttribute('data-theme', s);
+        } catch (e) {}
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root">
+      <div class="boot" role="status">
+        <p class="boot-title">Metrado Lab</p>
+        <p>Preparando la mesa de dibujo…</p>
+        <p class="boot-slow">Está tardando más de lo normal. Recarga la página; si sigue igual, tu navegador puede ser demasiado antiguo.</p>
+      </div>
+    </div>
+    <noscript>Metrado Lab necesita JavaScript para leer los planos.</noscript>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

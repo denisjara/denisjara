@@ -1,0 +1,14 @@
+node_modules/
+dist/
+dist-standalone/
+standalone/
+.cache/
+*.log
+.DS_Store
+# Recursos de pdf.js copiados desde node_modules en cada build (wasm, cmaps, tipografías estándar)
+public/pdfjs/
+# Variables de entorno locales (el proyecto no necesita secretos, pero por si acaso)
+.env
+.env.*
+# Salidas de las pruebas en navegador
+e2e-out/
