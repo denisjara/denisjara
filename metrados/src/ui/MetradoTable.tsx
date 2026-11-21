@@ -172,7 +172,7 @@ export function MetradoTable() {
   const incomplete = blocks.some((b) => b.incomplete);
   return (
     <section aria-label="Hoja de metrados" className="absolute inset-0 z-40 flex animate-sheet-up flex-col bg-panel print:static">
-      <header className="flex flex-wrap items-center gap-2 border-b border-line px-[max(1rem,env(safe-area-inset-left,0px))] py-2 print:hidden">
+      <header className="flex flex-wrap items-center gap-2 border-b border-line pl-[max(1rem,env(safe-area-inset-left,0px))] pr-[max(1rem,env(safe-area-inset-right,0px))] py-2 print:hidden">
         <div className="mr-auto min-w-0">
           <p className="rotulo">Hoja de metrados</p>
           <h2 className="truncate text-base font-bold">{project.name}</h2>
@@ -210,7 +210,8 @@ export function MetradoTable() {
         {blocks.length === 0 ? (
           <p className="px-4 py-10 text-center text-ink-3">Aún no hay partidas. Crea una en el panel Partidas y mide sobre el plano.</p>
         ) : (
-          <table className="w-full min-w-[60rem] border-collapse text-[13px]">
+          <div className="min-w-[61rem] px-2">
+          <table className="w-full border-collapse text-[13px]">
             <thead className="sticky top-0 z-10 bg-panel shadow-[0_1px_0_rgb(var(--c-line-strong))]">
               <tr className="rotulo text-left">
                 <th className="px-2 py-2 font-semibold">Ítem</th>
@@ -232,6 +233,7 @@ export function MetradoTable() {
               <Block key={b.partida.id} block={b} project={project} selection={selection} />
             ))}
           </table>
+          </div>
         )}
         <p className="px-4 py-3 text-2xs text-ink-3">
           Parcial = N.º de veces × las medidas de la fila. Las medidas leídas del plano se redondean a {d} decimales antes de multiplicar; el total de cada partida es la suma de sus parciales. Los descuentos restan.

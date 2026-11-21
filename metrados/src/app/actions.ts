@@ -4,7 +4,7 @@
  */
 import type { Part } from '../core/geometry';
 import { kindForBase, newId, type Base, type Measurement, type MeasurementKind, type Partida, type ScaleDef, type Sheet } from '../core/model';
-import { forgetFile, forgetSheet, importFiles, type ImportResult } from './plans';
+import { forgetSheet, importFiles, type ImportResult } from './plans';
 import { store, type ToolId } from './store';
 
 /** Bases de partida con las que trabaja cada herramienta de medición. */
@@ -243,11 +243,6 @@ export function removeFile(fileId: string): void {
   // El archivo sigue en memoria por si se deshace la eliminación; se libera al cerrar el proyecto.
   const after = store.get();
   if (!after.project.sheets.some((s) => s.id === after.ui.sheetId)) store.setUi({ sheetId: after.project.sheets[0]?.id ?? null, tool: 'select', selection: [] });
-}
-
-/** Libera de memoria los archivos que ya no pertenecen a ningún proyecto abierto. */
-export function releaseFiles(fileIds: readonly string[]): void {
-  for (const id of fileIds) forgetFile(id);
 }
 
 /** Abre archivos de planos y los añade al proyecto. */

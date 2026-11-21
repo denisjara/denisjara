@@ -76,7 +76,7 @@ export function OptionsBar() {
   const measuring = !!bases;
 
   return (
-    <div className="pointer-events-none absolute inset-x-0 top-3 z-20 flex flex-col items-center gap-2 px-[max(1rem,env(safe-area-inset-left,0px))]">
+    <div className="pointer-events-none absolute inset-x-0 top-3 z-20 flex flex-col items-center gap-2 pl-[max(1rem,env(safe-area-inset-left,0px))] pr-[max(1rem,env(safe-area-inset-right,0px))]">
       <div className="float pointer-events-auto flex max-w-full flex-wrap items-center justify-center gap-1.5 p-1.5">
         <Menu
           label="Partida activa"

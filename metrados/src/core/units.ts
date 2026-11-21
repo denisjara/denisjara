@@ -76,8 +76,6 @@ export function formatNumber(n: number, decimals = 2): string {
   return `${neg && !isZero ? '-' : ''}${grouped}${frac ? `.${frac}` : ''}`;
 }
 
-export const formatQty = (n: number, decimals: number, unit: string): string => `${formatNumber(n, decimals)} ${unit}`;
-
 /**
  * Interpreta un número tecleado. Acepta punto o coma decimal ("3.25", "3,25") y separadores de miles cuando hay
  * ambos ("1,234.5" o "1.234,5": el último es el decimal). Devuelve null si no es un número.

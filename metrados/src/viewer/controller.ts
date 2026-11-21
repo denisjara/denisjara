@@ -11,13 +11,13 @@ import { addMeasurement, currentSheet, patchMeasurement, removeMeasurements, set
 import { getRuntime, type SheetRuntime } from '../app/plans';
 import { store, type ToolId } from '../app/store';
 import { findRegion } from '../core/boundary';
-import { dist, emptyBBox, extendBBox, partBBox, type BBox, type Part, type Pt, type Vtx } from '../core/geometry';
+import { dist, emptyBBox, partBBox, type BBox, type Part, type Pt, type Vtx } from '../core/geometry';
 import { rawQuantities } from '../core/metrado';
 import type { Measurement, Partida, Sheet } from '../core/model';
 import { formatNumber, parseNumber } from '../core/units';
 import { nearestPath, partOfPath, PATH_CLOSED, queryBox, snapPoint, type SnapHit } from '../core/vector';
 import { tracePart } from '../io/dxf/scene';
-import { drawOverlay, geoOf, hitDistance, type DraftView, type OverlayColors } from './overlay';
+import { drawOverlay, hitDistance, type DraftView, type OverlayColors } from './overlay';
 import { fitView, PlanLayer, toSheet, toScreenX, toScreenY, type BoardColors, type View } from './plan-layer';
 
 const SNAP_PX = 12;
@@ -74,6 +74,14 @@ const HINTS: Record<ToolId, string> = {
   region: 'Mueve el cursor dentro de un recinto cerrado: se resalta. Clic para medirlo',
   calibrate: 'Clic en los dos extremos de una cota conocida',
 };
+
+/** Botones, pestañas y enlaces con el foco: Intro y Espacio son suyos (los activan), no atajos del visor. */
+function isControl(target: EventTarget | null): boolean {
+  const el = target as HTMLElement | null;
+  if (!el || !el.tagName) return false;
+  const role = el.getAttribute('role');
+  return el.tagName === 'BUTTON' || el.tagName === 'A' || el.tagName === 'SUMMARY' || role === 'button' || role === 'tab' || role === 'menuitem';
+}
 
 function isTyping(target: EventTarget | null): boolean {
   const el = target as HTMLElement | null;
@@ -1094,6 +1102,7 @@ export class ViewerController {
     if (isTyping(e.target) || ui.dialog || ui.tableOpen) return;
     const mod = e.ctrlKey || e.metaKey;
     const key = e.key;
+    if ((key === 'Enter' || key === ' ') && isControl(e.target)) return;
     if (mod && key.toLowerCase() === 'z') {
       e.preventDefault();
       if (e.shiftKey) store.redo();
@@ -1234,19 +1243,6 @@ export class ViewerController {
       this.invalidate(true);
     }
   }
-
-  /** Caja de la lámina que se ve ahora (para crear cosas "en lo visible"). */
-  visibleBox(): BBox {
-    const a = toSheet(this.view, 0, 0);
-    const b = toSheet(this.view, this.cssW, this.cssH);
-    const box = emptyBBox();
-    extendBBox(box, a.x, a.y);
-    extendBBox(box, b.x, b.y);
-    return box;
-  }
-
-  /** Geometría derivada de una medición (para que la interfaz no dependa del módulo de dibujo). */
-  static geo = geoOf;
 }
 
 /** El visor montado en pantalla (lo usan los botones de zoom, la hoja de metrados, la búsqueda de texto…). */

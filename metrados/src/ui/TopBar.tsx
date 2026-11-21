@@ -56,7 +56,7 @@ export function TopBar() {
   const theme = useStore((s) => s.ui.theme);
   const hasPartidas = useStore((s) => s.project.partidas.length > 0);
   return (
-    <header className="z-40 flex h-12 shrink-0 items-center gap-1.5 border-b border-line bg-panel px-[max(1rem,env(safe-area-inset-left,0px))] print:hidden">
+    <header className="z-40 flex h-12 shrink-0 items-center gap-1.5 border-b border-line bg-panel pl-[max(1rem,env(safe-area-inset-left,0px))] pr-[max(1rem,env(safe-area-inset-right,0px))] print:hidden">
       <div className="flex shrink-0 items-center gap-2" aria-label="Metrado Lab">
         <span className="grid h-7 w-7 place-items-center rounded-md bg-accent text-accent-ink" aria-hidden>
           <svg width="17" height="17" viewBox="0 0 32 32" fill="none" stroke="currentColor" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round">

@@ -83,7 +83,7 @@ function LaminasTab() {
   };
 
   return (
-    <div className="h-full overflow-y-auto px-3 pb-6 pt-3">
+    <div className="h-full overflow-y-auto px-4 pb-6 pt-3">
       <button type="button" className="btn h-8 min-h-0 w-full text-[13px]" onClick={() => void openPlanDialog()}>
         <FileUp size={15} /> Añadir plano (PDF, DXF o imagen)
       </button>
@@ -464,7 +464,7 @@ function LecturaTab() {
       </div>
     );
   return (
-    <div className="h-full overflow-y-auto px-3 pb-6 pt-3">
+    <div className="h-full overflow-y-auto px-4 pb-6 pt-3">
       <div className="rounded-md border border-line bg-panel-2 px-2.5 py-2 text-[13px] text-ink-2">
         <p>
           <ScanSearch size={15} className="mr-1 inline text-accent-text" />
@@ -502,7 +502,7 @@ export function SidePanel({ narrow }: { narrow: boolean }) {
       aria-label="Panel del proyecto"
       className={cx(
         'z-30 flex flex-col border-line bg-panel',
-        narrow ? 'absolute inset-x-0 bottom-0 max-h-[72%] min-h-[45%] animate-sheet-up rounded-t-xl border-t pb-[env(safe-area-inset-bottom,0px)] shadow-pop' : 'w-[340px] shrink-0 border-l',
+        narrow ? 'absolute inset-x-0 bottom-0 max-h-[72%] min-h-[45%] animate-sheet-up rounded-t-xl border-t pb-[env(safe-area-inset-bottom,0px)] shadow-pop' : 'w-[calc(348px+env(safe-area-inset-right,0px))] shrink-0 border-l pr-[env(safe-area-inset-right,0px)]',
       )}
     >
       <div className="flex items-center gap-1 border-b border-line px-2 pt-1.5" role="tablist">

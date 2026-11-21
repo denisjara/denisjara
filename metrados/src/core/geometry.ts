@@ -83,9 +83,7 @@ export function matIsSimilarity(m: Mat, eps = 1e-9): boolean {
 }
 
 export const dist = (a: Pt, b: Pt): number => Math.hypot(b.x - a.x, b.y - a.y);
-export const dist2 = (a: Pt, b: Pt): number => (b.x - a.x) * (b.x - a.x) + (b.y - a.y) * (b.y - a.y);
 export const lerp = (a: Pt, b: Pt, t: number): Pt => ({ x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t });
-export const samePt = (a: Pt, b: Pt, eps = 0): boolean => Math.abs(a.x - b.x) <= eps && Math.abs(a.y - b.y) <= eps;
 
 // ---------------------------------------------------------------------------
 // Arcos (bulge)
@@ -117,9 +115,6 @@ export function arcFromBulge(a: Pt, b: Pt, bulge: number): ArcInfo | null {
   const a0 = Math.atan2(a.y - cy, a.x - cx);
   return { cx, cy, r, a0, a1: a0 + theta, theta };
 }
-
-/** Bulge de un arco de centro y radio dados que barre `theta` radianes (con signo). */
-export const bulgeFromAngle = (theta: number): number => Math.tan(theta / 4);
 
 /**
  * Arco circular (centro, radio, ángulo inicial y barrido con signo) como vértices con bulge.

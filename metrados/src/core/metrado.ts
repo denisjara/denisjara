@@ -60,8 +60,6 @@ export function scaleOf(sheet: Sheet | undefined, scaleId: string | null): Scale
   return sheet.scales.find((s) => s.id === scaleId) ?? null;
 }
 
-export const PARAM_KEYS: readonly ParamKey[] = ['largo', 'ancho', 'alto', 'factor'];
-
 /** Multiplicadores que una partida puede usar según su base (el largo no tiene sentido si ya se mide una longitud). */
 export function allowedParams(base: Base): ParamKey[] {
   if (base === 'L' || base === 'P') return ['ancho', 'alto', 'factor'];
@@ -168,24 +166,6 @@ export function buildSheet(project: Project): PartidaBlock[] {
     }
     return { partida, rows, total: roundTo(total, d), incomplete };
   });
-}
-
-/** Total de una sola partida (para la lista lateral). */
-export function partidaTotal(project: Project, partidaId: string): { total: number; count: number; incomplete: boolean } {
-  const partida = project.partidas.find((p) => p.id === partidaId);
-  if (!partida) return { total: 0, count: 0, incomplete: false };
-  const sheets = new Map(project.sheets.map((s) => [s.id, s]));
-  let total = 0;
-  let count = 0;
-  let incomplete = false;
-  for (const m of project.measurements) {
-    if (m.partidaId !== partidaId) continue;
-    count++;
-    const row = buildRow(m, partida, m.sheetId ? sheets.get(m.sheetId) : undefined, project.settings.decimals);
-    if (row.parcial === null) incomplete = true;
-    else total += row.parcial;
-  }
-  return { total: roundTo(total, project.settings.decimals), count, incomplete };
 }
 
 /** Texto de la fórmula de una partida, p. ej. "Longitud × Ancho × Alto". */

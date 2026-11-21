@@ -280,7 +280,7 @@ export function PartidasTab() {
   const selection = useStore((s) => s.ui.selection);
   return (
     <div className="flex h-full flex-col">
-      <div className="flex items-center gap-1.5 px-3 pb-2 pt-3">
+      <div className="flex items-center gap-1.5 px-4 pb-2 pt-3">
         <button type="button" className="btn h-8 min-h-0 flex-1 text-[13px]" onClick={() => store.setUi({ dialog: { type: 'partida' } })}>
           <Plus size={15} /> Nueva partida
         </button>
@@ -301,7 +301,7 @@ export function PartidasTab() {
           </div>
         </div>
       ) : (
-        <ul className="min-h-0 flex-1 space-y-1 overflow-y-auto px-2 pb-4">
+        <ul className="min-h-0 flex-1 space-y-1 overflow-y-auto px-2.5 pb-4">
           {project.partidas.map((p, i) => (
             <PartidaCard key={p.id} partida={p} project={project} active={p.id === activeId} selection={p.id === activeId ? selection : NO_SELECTION} index={i} count={project.partidas.length} />
           ))}
