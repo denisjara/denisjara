@@ -36,6 +36,12 @@ soporte.
 - La configuración de compilación y de dependencias: `futstat/package.json`,
   `futstat/package-lock.json`, `futstat/vite.config.ts`.
 - Los workflows y la configuración de `.github/`.
+- Metrado Lab (`metrados/`): la app, sus scripts de compilación y sus dependencias. No tiene
+  servidor ni envía datos: los planos se leen y se guardan solo en el navegador del usuario. Su
+  CSP de producción está en `metrados/scripts/csp.ts` (sin `'unsafe-inline'`, sin conexiones a
+  terceros; no exige Trusted Types porque pdf.js crea su hilo de trabajo a partir de una URL).
+  Los archivos que abre (PDF, DXF, imágenes, copias de proyecto `.zip`) se tratan como datos no
+  confiables: se validan al leerlos y nunca se ejecutan.
 
 **Fuera del alcance**
 

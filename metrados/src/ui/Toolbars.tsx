@@ -33,8 +33,8 @@ export function ToolRail() {
     >
       {TOOLS.map((t, i) => (
         <div key={t.id} className="flex md:flex-col">
-          {i > 0 && TOOLS[i - 1].group !== t.group && <span className="mx-1 my-1.5 w-px shrink-0 bg-line md:mx-1.5 md:my-1 md:h-px md:w-auto" aria-hidden />}
-          <button type="button" className="icon-btn h-10 w-10 shrink-0" aria-pressed={tool === t.id} title={`${TOOL_LABEL[t.id]} (${t.key})`} aria-label={TOOL_LABEL[t.id]} onClick={() => setTool(t.id)}>
+          {i > 0 && TOOLS[i - 1].group !== t.group && <span className="mx-0.5 my-1.5 w-px shrink-0 bg-line md:mx-1.5 md:my-1 md:h-px md:w-auto" aria-hidden />}
+          <button type="button" className="icon-btn h-10 w-[2.2rem] shrink-0 md:w-10" aria-pressed={tool === t.id} title={`${TOOL_LABEL[t.id]} (${t.key})`} aria-label={TOOL_LABEL[t.id]} onClick={() => setTool(t.id)}>
             {t.icon}
           </button>
         </div>
@@ -81,7 +81,7 @@ export function OptionsBar() {
         <Menu
           label="Partida activa"
           align="left"
-          className="chip h-9 max-w-[15rem] shrink-0 rounded-md"
+          className="chip h-9 max-w-[9.5rem] shrink-0 rounded-md sm:max-w-[15rem]"
           content={
             <>
               {active ? <Swatch color={active.color} /> : <Plus size={14} />}

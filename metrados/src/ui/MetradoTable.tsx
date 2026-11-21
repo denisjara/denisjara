@@ -36,7 +36,7 @@ const cellNum = 'num whitespace-nowrap px-2 py-1 text-right';
 function EditableParam({ m, block, k }: { m: Measurement; block: PartidaBlock; k: ParamKey }) {
   if (!usedParams(block.partida).includes(k)) return <td className={cellNum} />;
   return (
-    <td className="px-1 py-0.5">
+    <td className="px-1 py-0.5 text-right">
       <NumberField
         ariaLabel={k}
         className="!min-h-0 h-7 !w-20 !px-1.5"
@@ -64,15 +64,15 @@ function Row({ m, row, block, index, d, selected }: { m: Measurement; row: Metra
         />
       </td>
       <td className="px-2 py-1 text-2xs text-ink-3">{m.kind === 'manual' ? 'manual' : row.sheetName}</td>
-      <td className="px-1 py-0.5">
-        <div className="flex items-center gap-1">
+      <td className="px-1 py-0.5 text-right">
+        <div className="flex items-center justify-end gap-1">
           {m.deduct && <span className="font-bold text-danger">−</span>}
           <NumberField ariaLabel="N.º de veces" className="!min-h-0 h-7 !w-16 !px-1.5" value={m.times} onChange={(v) => patchMeasurement(m.id, { times: v ?? 1 }, `m:${m.id}:times`)} />
         </div>
       </td>
       {/* Cant. */}
       {base === 'N' && m.kind === 'manual' ? (
-        <td className="px-1 py-0.5">
+        <td className="px-1 py-0.5 text-right">
           <NumberField ariaLabel="Cantidad" className="!min-h-0 h-7 !w-16 !px-1.5" value={m.manual} onChange={(v) => patchMeasurement(m.id, { manual: v ?? 0 }, `m:${m.id}:manual`)} />
         </td>
       ) : (
@@ -80,7 +80,7 @@ function Row({ m, row, block, index, d, selected }: { m: Measurement; row: Metra
       )}
       {/* Largo */}
       {(base === 'L' || base === 'P') && m.kind === 'manual' ? (
-        <td className="px-1 py-0.5">
+        <td className="px-1 py-0.5 text-right">
           <NumberField ariaLabel="Largo" className="!min-h-0 h-7 !w-20 !px-1.5" value={m.manual} onChange={(v) => patchMeasurement(m.id, { manual: v ?? 0 }, `m:${m.id}:manual`)} />
         </td>
       ) : base === 'N' ? (
@@ -92,7 +92,7 @@ function Row({ m, row, block, index, d, selected }: { m: Measurement; row: Metra
       <EditableParam m={m} block={block} k="alto" />
       {/* Área */}
       {base === 'A' && m.kind === 'manual' ? (
-        <td className="px-1 py-0.5">
+        <td className="px-1 py-0.5 text-right">
           <NumberField ariaLabel="Área" className="!min-h-0 h-7 !w-20 !px-1.5" value={m.manual} onChange={(v) => patchMeasurement(m.id, { manual: v ?? 0 }, `m:${m.id}:manual`)} />
         </td>
       ) : (

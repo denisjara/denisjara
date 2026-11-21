@@ -59,7 +59,7 @@ export function Modal({ title, onClose, children, footer, wide }: { title: strin
   useEffect(() => {
     const prev = document.activeElement as HTMLElement | null;
     const el = ref.current;
-    const first = el?.querySelector<HTMLElement>('[data-autofocus], input:not([type=hidden]), select, textarea, button.btn-primary');
+    const first = el?.querySelector<HTMLElement>('[data-autofocus]') ?? el?.querySelector<HTMLElement>('input:not([type=hidden]), select, textarea, button.btn-primary');
     (first ?? el)?.focus();
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {

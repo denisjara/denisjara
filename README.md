@@ -13,6 +13,17 @@ validados con un backtest público.
 
 <sub>Herramienta informativa para mayores de 18 años. Ninguna predicción garantiza resultados.</sub>
 
+## Metrado Lab — metrados de obra sobre planos
+
+App para metrar directamente sobre el plano (PDF de CAD, DXF o imagen): lee la geometría vectorial del
+archivo, engancha el cursor a sus vértices exactos y calcula longitudes, áreas y cantidades por partida,
+con hoja de metrados editable y exportación a Excel con fórmulas. Todo ocurre en el navegador: los planos
+no salen del equipo.
+
+- **Web:** https://denisjara.github.io/denisjara/metrados/
+- **Versión portátil (un solo archivo, sin instalar nada):** [Metrado-Lab.html](https://github.com/denisjara/denisjara/blob/main/metrados/descargas/Metrado-Lab.html)
+- **Proyecto y documentación:** [metrados/](https://github.com/denisjara/denisjara/tree/main/metrados) · [README de Metrado Lab](https://github.com/denisjara/denisjara/blob/main/metrados/README.md)
+
 ---
 
 ## Hi there 👋

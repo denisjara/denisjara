@@ -1,5 +1,5 @@
 # ---------------------------------------------------------------------------
-# FutStat Lab — comprobaciones de cada pull request (incluidos los de Dependabot)
+# FutStat Lab y Metrado Lab — comprobaciones de cada pull request (incluidos los de Dependabot)
 #
 # Antes de fusionar nada en main: instalación reproducible, auditoría de
 # dependencias, typecheck, tests (modelos, pipeline con un mundo sintético y
@@ -85,3 +85,58 @@ jobs:
         env:
           VITE_DATA_DIR: mock-data
         run: npm run build
+
+  # Metrado Lab (metrados/): la otra app del repositorio. Mismas comprobaciones: instalación reproducible, auditoría,
+  # typecheck, tests (geometría, lectores de PDF y DXF, exportador de Excel) y compilación de la web y de la versión
+  # portátil. La validación del Excel con openpyxl y LibreOffice se salta sola si no están instalados.
+  metrados:
+    name: Comprobaciones de PR (Metrado Lab)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: metrados
+    steps:
+      - name: Descargar el código
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
+
+      - name: Preparar Node.js 22
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: metrados/package-lock.json
+
+      - name: Instalar dependencias
+        timeout-minutes: 10
+        run: npm ci --no-audit --no-fund
+
+      # Bloqueante: una vulnerabilidad alta o crítica en una dependencia que acaba en la web.
+      - name: Auditar dependencias de producción (bloqueante)
+        timeout-minutes: 5
+        run: npm audit --omit=dev --audit-level=high
+
+      - name: Auditar todas las dependencias (informativo)
+        timeout-minutes: 5
+        continue-on-error: true
+        run: npm audit --audit-level=moderate
+
+      - name: Typecheck (app, scripts y tests)
+        timeout-minutes: 5
+        run: npm run typecheck
+
+      - name: Tests
+        timeout-minutes: 10
+        run: npm test
+
+      - name: Compilar la web
+        timeout-minutes: 10
+        run: npm run build
+
+      - name: Generar versión portátil (un solo archivo)
+        timeout-minutes: 10
+        run: npm run build:standalone

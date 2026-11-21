@@ -42,6 +42,43 @@ updates:
       - dependency-name: tailwindcss
         update-types: ["version-update:semver-major"]
 
+  # Dependencias npm de Metrado Lab (metrados/package.json / package-lock.json). Mismas reglas.
+  - package-ecosystem: npm
+    directory: /metrados
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: Europe/Madrid
+    versioning-strategy: increase
+    cooldown:
+      default-days: 7
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "deps"
+      prefix-development: "deps-dev"
+    groups:
+      npm-menores-y-parches:
+        update-types:
+          - minor
+          - patch
+    ignore:
+      # Igual que FutStat Lab: React 18 y Tailwind 3.
+      - dependency-name: react
+        update-types: ["version-update:semver-major"]
+      - dependency-name: react-dom
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "@types/react"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "@types/react-dom"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: tailwindcss
+        update-types: ["version-update:semver-major"]
+      # pdf.js cambia su API interna entre versiones mayores (la lectura vectorial depende de ella):
+      # subirlo de versión mayor es una tarea aparte, con sus pruebas.
+      - dependency-name: pdfjs-dist
+        update-types: ["version-update:semver-major"]
+
   # Actions usadas en .github/workflows (fijadas a SHA; Dependabot actualiza el
   # SHA y el comentario de versión).
   - package-ecosystem: github-actions

@@ -2,7 +2,7 @@
 # CodeQL — análisis estático de seguridad
 #
 # Busca vulnerabilidades en el código JavaScript/TypeScript (app React y
-# pipeline Node de futstat/) y en los propios workflows de GitHub Actions
+# pipeline Node de futstat/, app de metrados/) y en los propios workflows de GitHub Actions
 # (inyección de scripts, permisos excesivos...). Los resultados aparecen en
 # Security → Code scanning. No publica ni modifica nada.
 # ---------------------------------------------------------------------------
@@ -60,6 +60,11 @@ jobs:
               - futstat/dist
               - futstat/public
               - futstat/data-store
+              - metrados/dist
+              - metrados/dist-standalone
+              - metrados/standalone
+              - metrados/descargas
+              - metrados/public
               - '**/node_modules'
 
       - name: Analizar

@@ -652,7 +652,7 @@ function HelpDialog() {
               <b className="text-ink">DXF</b>: se leen las coordenadas del dibujo tal cual, con precisión doble. Longitudes y áreas (rectas, arcos y curvas) se calculan con fórmula, no con aproximaciones.
             </li>
             <li>
-              <b className="text-ink">PDF vectorial</b>: se leen los vértices que el PDF contiene; el enganche coloca cada punto exactamente sobre ellos. El límite es el del propio archivo (un PDF de CAD guarda las coordenadas con una resolución en torno a 0.02 mm de papel, es decir ±1 mm reales a escala 1:50).
+              <b className="text-ink">PDF vectorial</b>: se leen los vértices que el PDF contiene; el enganche coloca cada punto exactamente sobre ellos. El límite es el del propio archivo: un PDF de CAD suele guardar las coordenadas con una resolución en torno a 0.02 mm de papel (±1 mm reales a escala 1:50).
             </li>
             <li>
               <b className="text-ink">Escaneos y fotos</b>: no hay vértices que leer; la precisión depende de la imagen y de dónde hagas clic. Calibra con la cota más larga que tengas y trabaja con mucho zoom.

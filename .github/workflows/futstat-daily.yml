@@ -5,6 +5,8 @@
 # Dixon-Coles, mercados, proyecciones, jugadores, simulaciones y backtest),
 # compila la web y la publica en GitHub Pages:
 #   https://denisjara.github.io/denisjara/
+# En el mismo sitio va Metrado Lab (metrados/), la app de metrados sobre planos:
+#   https://denisjara.github.io/denisjara/metrados/
 #
 # Requisito único: Settings → Pages → Build and deployment → Source: "GitHub Actions".
 # Nota: los cron de GitHub solo se ejecutan en la rama por defecto (main) y
@@ -47,6 +49,7 @@ on:
     branches: [main]
     paths:
       - 'futstat/**'
+      - 'metrados/**'
       - '.github/workflows/futstat-daily.yml'
 
 # Sin permisos por defecto: cada job declara solo los que necesita.
@@ -84,7 +87,9 @@ jobs:
         with:
           node-version: 22
           cache: npm
-          cache-dependency-path: futstat/package-lock.json
+          cache-dependency-path: |
+            futstat/package-lock.json
+            metrados/package-lock.json
 
       # 3. Instalación reproducible de dependencias (exactamente las de package-lock.json).
       #    La auditoría se hace al final, justo antes de publicar (pasos 14-15): así un fallo
@@ -215,6 +220,40 @@ jobs:
         run: |
           npm run build:standalone
           cp standalone/FutStat-Lab.html dist/FutStat-Lab.html
+
+      # 13c. Metrado Lab (metrados/): la otra app del repositorio. Pages solo admite un sitio por repositorio y cada
+      #      despliegue lo sustituye entero, así que se compila aquí y se publica dentro del mismo sitio, en
+      #      …/metrados/ (con su versión portátil en …/metrados/Metrado-Lab.html). No descarga datos de nadie:
+      #      solo falla si su código o sus dependencias están rotos, y eso ya lo comprueba ci.yml en cada PR.
+      #      Si aun así fallara, FutStat Lab se publica igualmente y se avisa en el resumen (esa pasada, …/metrados/
+      #      no estaría en el sitio hasta la siguiente ejecución correcta).
+      - name: "Metrado Lab: instalar dependencias"
+        id: metrados-deps
+        timeout-minutes: 10
+        continue-on-error: true
+        working-directory: metrados
+        run: npm ci --no-audit --no-fund
+
+      - name: "Metrado Lab: tests, auditoría y compilación"
+        id: metrados-build
+        if: steps.metrados-deps.outcome == 'success'
+        timeout-minutes: 15
+        continue-on-error: true
+        working-directory: metrados
+        run: |
+          npm test
+          npm audit --omit=dev --audit-level=high
+          npm run build
+          npm run build:standalone
+          rm -rf ../futstat/dist/metrados
+          cp -r dist ../futstat/dist/metrados
+          cp standalone/Metrado-Lab.html ../futstat/dist/metrados/Metrado-Lab.html
+
+      - name: Avisar si Metrado Lab no se pudo publicar
+        if: steps.metrados-deps.outcome == 'failure' || steps.metrados-build.outcome == 'failure'
+        run: |
+          rm -rf dist/metrados
+          echo "::warning title=Metrado Lab no publicado::La compilación de metrados/ falló (tests, auditoría o build). FutStat Lab se publica igualmente; en esta pasada la web no incluye /metrados/."
 
       # 14. Bloqueante: si alguna dependencia que acaba en la web publicada tiene una
       #     vulnerabilidad conocida de gravedad alta o crítica, no se publica nada.

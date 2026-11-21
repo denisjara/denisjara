@@ -1160,8 +1160,11 @@ export class ViewerController {
       return;
     }
     const tools: Record<string, ToolId> = { v: 'select', l: 'line', a: 'area', r: 'rect', c: 'count', m: 'ruler', t: 'pick', b: 'region', k: 'calibrate' };
-    if (tools[k]) setTool(tools[k]);
-    else if (k === 'f') this.fit();
+    if (tools[k]) {
+      // Sin esto, si la herramienta abre un diálogo, la letra del atajo se escribiría en su primer campo.
+      e.preventDefault();
+      setTool(tools[k]);
+    } else if (k === 'f') this.fit();
     else if (k === '+' || k === '=') this.zoomBy(1.4);
     else if (k === '-') this.zoomBy(1 / 1.4);
     else if (k === 's' || key === 'F3') {

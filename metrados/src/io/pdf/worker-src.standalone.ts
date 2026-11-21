@@ -2,15 +2,49 @@
  * Hilo de trabajo de pdf.js en la versión portátil (un solo HTML, sin servidor): el código va incrustado en el
  * documento como texto inerte y se arranca desde una URL blob:. Los decodificadores WebAssembly también van
  * incrustados (en base64) y se entregan a pdf.js con una fábrica de datos propia en vez de descargarlos.
+ *
+ * El código incrustado es un script clásico (scripts/build-standalone.ts lo adapta): abierto con doble clic
+ * (file://), el navegador no deja arrancar workers de tipo módulo desde blob:, pero sí clásicos.
  */
-let cached: string | null = null;
+import type { WorkerHost } from './worker-src';
 
-export function workerSrc(): string {
-  if (cached) return cached;
+/** Arranca el hilo y espera su primer mensaje («ready»). null si el navegador o la página no lo permiten. */
+function startWorker(url: string): Promise<Worker | null> {
+  return new Promise((resolve) => {
+    let worker: Worker;
+    try {
+      worker = new Worker(url);
+    } catch {
+      resolve(null);
+      return;
+    }
+    const finish = (ok: boolean): void => {
+      clearTimeout(timer);
+      worker.removeEventListener('message', onMessage);
+      worker.removeEventListener('error', onError);
+      if (!ok) worker.terminate();
+      resolve(ok ? worker : null);
+    };
+    const onMessage = (): void => finish(true);
+    const onError = (): void => finish(false);
+    const timer = setTimeout(() => finish(false), 8000);
+    worker.addEventListener('message', onMessage);
+    worker.addEventListener('error', onError);
+  });
+}
+
+export async function prepareWorker(lib: WorkerHost): Promise<void> {
   const code = document.getElementById('pdfjs-worker')?.textContent ?? '';
   if (!code) throw new Error('Este archivo no incluye el lector de PDF.');
-  cached = URL.createObjectURL(new Blob([code], { type: 'text/javascript' }));
-  return cached;
+  const url = URL.createObjectURL(new Blob([code], { type: 'text/javascript' }));
+  const worker = await startWorker(url);
+  if (worker) {
+    lib.GlobalWorkerOptions.workerPort = worker;
+    return;
+  }
+  // Sin hilo de trabajo: pdf.js se carga en la propia página (al importarse se registra en globalThis.pdfjsWorker).
+  await import(/* @vite-ignore */ url);
+  lib.GlobalWorkerOptions.workerSrc = url;
 }
 
 let embedded: Record<string, string> | null = null;

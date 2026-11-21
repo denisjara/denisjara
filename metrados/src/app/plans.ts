@@ -65,7 +65,8 @@ export function forgetFile(fileId: string): void {
   const f = loaded.get(fileId);
   if (!f) return;
   loaded.delete(fileId);
-  void f.pdf?.then((d) => d.loadingTask.destroy()).catch(() => undefined);
+  // (El documento no se destruye: en la versión portátil todos comparten un mismo hilo de trabajo.)
+  void f.pdf?.then((d) => d.cleanup()).catch(() => undefined);
   void f.image?.then((b) => b.close()).catch(() => undefined);
 }
 
