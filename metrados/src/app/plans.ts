@@ -65,7 +65,7 @@ export function forgetFile(fileId: string): void {
   const f = loaded.get(fileId);
   if (!f) return;
   loaded.delete(fileId);
-  void f.pdf?.then((d) => d.destroy()).catch(() => undefined);
+  void f.pdf?.then((d) => d.loadingTask.destroy()).catch(() => undefined);
   void f.image?.then((b) => b.close()).catch(() => undefined);
 }
 

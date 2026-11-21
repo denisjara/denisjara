@@ -553,8 +553,20 @@ print(json.dumps(out))
       // openpyxl no deshace el escape _x005F_ de las cadenas; Excel y LibreOffice sí (ver la prueba siguiente).
       const expected = { ...VALUES[i] };
       if (i === 0 && sheet.values.C8 === 'a_x005F_x0041_b') expected.C8 = 'a_x005F_x0041_b';
+      // openpyxl convierte en MergedCell (sin valor ni estilo propios) las celdas absorbidas por una combinación:
+      // no aparecen en el volcado. Las combinaciones de la prueba son de una sola letra de columna.
+      for (const range of SHEETS[i].merges ?? []) {
+        const m = /^([A-Z])(\d+):([A-Z])(\d+)$/.exec(range);
+        if (!m) continue;
+        for (let c = m[1].charCodeAt(0); c <= m[3].charCodeAt(0); c++) {
+          for (let r = Number(m[2]); r <= Number(m[4]); r++) {
+            const ref = `${String.fromCharCode(c)}${r}`;
+            if (ref !== `${m[1]}${m[2]}`) delete expected[ref];
+          }
+        }
+      }
       expect(sheet.values, NAMES[i]).toEqual(expected);
-      for (const [ref, value] of Object.entries(VALUES[i])) {
+      for (const [ref, value] of Object.entries(expected)) {
         const type = typeof value === 'string' ? (value.startsWith('=') && !/^[AC]7$/.test(ref) ? 'f' : 's') : typeof value === 'boolean' ? 'b' : 'n';
         expect(sheet.types[ref], `${NAMES[i]}!${ref}`).toBe(type === 'f' && i === 0 && ref === 'A7' ? 's' : type);
       }
@@ -565,7 +577,7 @@ print(json.dumps(out))
     expect(dump.sheets[0].types.F2).toBe('f');
 
     const [metrado, resumen] = dump.sheets;
-    expect([metrado.dimensions, resumen.dimensions]).toEqual(['A1:F15', 'A1:C8']);
+    expect([metrado.dimensions, resumen.dimensions]).toEqual(['A1:F12', 'A1:C8']); // openpyxl la recalcula con las celdas que tienen contenido (la fila 15 solo tiene alto)
     expect([metrado.freeze, resumen.freeze]).toEqual(['B2', 'A3']);
     expect([metrado.selected, resumen.selected]).toEqual([true, false]);
     expect([metrado.merged, resumen.merged]).toEqual([['A12:F12'], ['A1:C1']]);

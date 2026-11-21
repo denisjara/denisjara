@@ -8,7 +8,7 @@ import { deleteProject, listProjects, loadProject, type ProjectInfo } from '../a
 import { importProjectFile } from '../app/project-file';
 import { registerFile } from '../app/plans';
 import { store, useStore, type Dialog } from '../app/store';
-import { BASIC_FORMULAS, CATALOG, nextCode, partidaFromTemplate, type PartidaTemplate } from '../core/catalog';
+import { CATALOG, nextCode, partidaFromTemplate, type PartidaTemplate } from '../core/catalog';
 import { dist } from '../core/geometry';
 import { allowedParams, formulaText } from '../core/metrado';
 import { emptyProject, kindForBase, newId, nextPartidaColor, PARTIDA_COLORS, type Base, type DrawingUnit, type ParamKey, type Partida, type ScaleDef } from '../core/model';

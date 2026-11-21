@@ -30,8 +30,6 @@ export interface RegionOptions {
   startHalfSize?: number;
   /** Tope de segmentos considerados en una ventana (por defecto 60000). */
   maxSegments?: number;
-  /** Cierre de huecos: si es > 0, dos extremos sueltos (nodos de grado 1) más cercanos que esto se unen con un tramo recto (vanos de puerta, dibujo descuidado). Por defecto 0. */
-  gap?: number;
 }
 
 export type RegionResult =
@@ -294,4 +292,229 @@ function build(seg: ArrayLike<number>, win: BBox, eps: number): Graph {
     for (let k = start[v]; k < start[v + 1]; k++) next[adj[k] ^ 1] = adj[k > start[v] ? k - 1 : start[v + 1] - 1];
   }
   return { x, y, tail, src, start, adj, next };
+}
+
+// ---------------------------------------------------------------------------
+// Ciclos
+// ---------------------------------------------------------------------------
+
+/** Nodos del ciclo de la semiarista h0 (la cola de cada semiarista, en orden). Marca las semiaristas recorridas. */
+function cycleOf(g: Graph, h0: number, seen?: Uint8Array): number[] {
+  const out: number[] = [];
+  let h = h0;
+  do {
+    out.push(g.tail[h]);
+    if (seen) seen[h] = 1;
+    h = g.next[h];
+  } while (h !== h0 && out.length <= g.tail.length);
+  return out;
+}
+
+function signedArea(g: Graph, nodes: number[]): number {
+  let a = 0;
+  for (let i = 0, j = nodes.length - 1; i < nodes.length; j = i++) a += g.x[nodes[j]] * g.y[nodes[i]] - g.x[nodes[i]] * g.y[nodes[j]];
+  return a / 2;
+}
+
+function ringOf(g: Graph, nodes: number[]): Ring {
+  const box = emptyBBox();
+  const pts = nodes.map((n) => {
+    extendBBox(box, g.x[n], g.y[n]);
+    return { x: g.x[n], y: g.y[n] };
+  });
+  return { pts, area: polygonSignedArea(pts), box };
+}
+
+/**
+ * Deja el ciclo como polígono simple: quita las antenas (tramos recorridos de ida y vuelta: una línea que entra en el
+ * recinto sin cerrarlo) y los vértices intermedios de tramos exactamente alineados. Los vértices que quedan son los
+ * nodos originales, sin tocar sus coordenadas.
+ */
+function simplify(g: Graph, cycle: number[]): Pt[] {
+  const st: number[] = [];
+  for (const n of cycle) {
+    if (st.length >= 2 && st[st.length - 2] === n) st.pop();
+    else st.push(n);
+  }
+  // El ciclo es circular: una antena puede quedar partida entre el final y el principio de la lista.
+  for (let changed = true; changed && st.length >= 3; ) {
+    changed = false;
+    if (st[st.length - 1] === st[1]) {
+      st.shift();
+      st.pop();
+      changed = true;
+    } else if (st[st.length - 2] === st[0]) {
+      st.pop();
+      st.pop();
+      changed = true;
+    }
+  }
+  if (st.length < 3) return [];
+  // Vértices alineados (con la tolerancia del redondeo en coma flotante, no con eps: una curva teselada no se aplana).
+  const keep: number[] = [];
+  const n = st.length;
+  for (let i = 0; i < n; i++) {
+    const a = st[(i + n - 1) % n];
+    const b = st[i];
+    const c = st[(i + 1) % n];
+    const ux = g.x[b] - g.x[a];
+    const uy = g.y[b] - g.y[a];
+    const vx = g.x[c] - g.x[b];
+    const vy = g.y[c] - g.y[b];
+    const straight = Math.abs(ux * vy - uy * vx) <= 1e-12 * Math.hypot(ux, uy) * Math.hypot(vx, vy) && ux * vx + uy * vy > 0;
+    if (!straight) keep.push(b);
+  }
+  return keep.map((k) => ({ x: g.x[k], y: g.y[k] }));
+}
+
+const perimeterOf = (pts: Pt[]): number => {
+  let s = 0;
+  for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) s += Math.hypot(pts[i].x - pts[j].x, pts[i].y - pts[j].y);
+  return s;
+};
+
+// ---------------------------------------------------------------------------
+// Localización de la cara
+// ---------------------------------------------------------------------------
+
+/** Direcciones del rayo: si una pasa demasiado cerca de un nodo (cruce ambiguo) se prueba la siguiente. */
+const RAY_ANGLES = [0.0137, 0.7411, 1.9173, 2.6331, 3.7019, 4.4213, 5.3407, 1.2289];
+
+/**
+ * Contorno exterior de la cara que contiene a p: semiarista de partida de su ciclo, o −1 si la cara no está cerrada
+ * en este grafo. `strict`: si un cruce cae junto a un nodo antes de encontrar el contorno devuelve null (reintentar).
+ */
+function locate(g: Graph, p: Pt, eps: number, angle: number, strict: boolean): { h: number; cycle: number[] } | -1 | null {
+  const dx = Math.cos(angle);
+  const dy = Math.sin(angle);
+  const hits: { t: number; h: number; near: boolean }[] = [];
+  for (let h = 0; h < g.tail.length; h += 2) {
+    const u = g.tail[h];
+    const v = g.tail[h + 1];
+    const ex = g.x[v] - g.x[u];
+    const ey = g.y[v] - g.y[u];
+    const den = dx * ey - dy * ex;
+    const len = Math.hypot(ex, ey);
+    if (Math.abs(den) <= 1e-14 * len) continue;
+    const qx = g.x[u] - p.x;
+    const qy = g.y[u] - p.y;
+    const t = (qx * ey - qy * ex) / den;
+    if (!(t > 0)) continue;
+    const s = (qx * dy - qy * dx) / den;
+    const d = Math.min(s, 1 - s) * len;
+    if (d < -eps) continue;
+    // La semiarista que deja a p a su izquierda: su cara es la que el rayo recorre justo antes del cruce.
+    const left = ex * (p.y - g.y[u]) - ey * (p.x - g.x[u]) > 0;
+    hits.push({ t, h: left ? h : h + 1, near: d < eps });
+  }
+  hits.sort((a, b) => a.t - b.t);
+  for (const hit of hits) {
+    if (hit.near) {
+      if (strict) return null;
+      continue;
+    }
+    const cycle = cycleOf(g, hit.h);
+    // El primer ciclo de área positiva que encierra a p es el contorno exterior de su cara; los anteriores son islas
+    // (área negativa), el interior de esas islas (no encierran a p) o antenas (área nula).
+    if (signedArea(g, cycle) > 0 && inRing(p, ringOf(g, cycle))) return { h: hit.h, cycle };
+  }
+  return -1;
+}
+
+/** Islas de la cara: contorno exterior de cada componente del grafo que queda dentro y no toca el contorno. */
+function islands(g: Graph, outer: number[], outerRing: Ring, eps: number): Pt[][] {
+  const parent = new Int32Array(g.x.length).map((_, i) => i);
+  const find = (a: number): number => {
+    while (parent[a] !== a) a = parent[a] = parent[parent[a]];
+    return a;
+  };
+  for (let h = 0; h < g.tail.length; h += 2) {
+    const a = find(g.tail[h]);
+    const b = find(g.tail[h + 1]);
+    if (a !== b) parent[a] = b;
+  }
+  const main = find(outer[0]);
+  const seen = new Uint8Array(g.tail.length);
+  // Por componente: su ciclo de área más negativa, que es su contorno visto desde fuera.
+  const best = new Map<number, { area: number; cycle: number[] }>();
+  for (let h = 0; h < g.tail.length; h++) {
+    if (seen[h]) continue;
+    const comp = find(g.tail[h]);
+    if (comp === main) {
+      seen[h] = 1;
+      continue;
+    }
+    if (!inRing({ x: g.x[g.tail[h]], y: g.y[g.tail[h]] }, outerRing)) {
+      seen[h] = 1;
+      continue;
+    }
+    const cycle = cycleOf(g, h, seen);
+    const area = signedArea(g, cycle);
+    const cur = best.get(comp);
+    if (!cur || area < cur.area) best.set(comp, { area, cycle });
+  }
+  const rings: Ring[] = [];
+  for (const { area, cycle } of best.values()) {
+    if (!(area < -eps * eps)) continue;
+    const pts = simplify(g, cycle);
+    if (pts.length >= 3) rings.push({ pts, area: polygonSignedArea(pts), box: ringOf(g, cycle).box });
+  }
+  // Una isla dentro de otra isla no pertenece a esta cara.
+  return rings.filter((r) => !rings.some((o) => o !== r && Math.abs(o.area) > Math.abs(r.area) && inRing(r.pts[0], o))).map((r) => r.pts);
+}
+
+/**
+ * Cara del plano que contiene a p. segs: x1, y1, x2, y2 por segmento.
+ *  - outer: contorno exterior como polígono simple (sin repetir el primer punto), con área con signo positiva,
+ *    sin antenas y con los vértices alineados fundidos; sus vértices son extremos originales o cruces calculados.
+ *  - holes: contorno de cada isla que queda dentro (área con signo negativa). No se restan de `area`.
+ *  - 'open': la cara no cierra dentro de los límites; 'on-edge': p está sobre un segmento; 'too-complex': demasiados
+ *    segmentos en la ventana de búsqueda.
+ */
+export function findRegion(segs: Float64Array, p: Pt, opts: RegionOptions): RegionResult {
+  const { eps, bounds } = opts;
+  const total = segs.length >> 2;
+  const maxSegments = opts.maxSegments ?? 60000;
+  const full = grow(bounds, 4 * eps);
+  if (!inBox(p.x, p.y, full) || !Number.isFinite(p.x + p.y)) return { ok: false, reason: 'open' };
+  let half = opts.startHalfSize ?? Math.max(bounds.maxX - bounds.minX, bounds.maxY - bounds.minY) / 16;
+  if (!(half > 0)) half = 1;
+  for (;;) {
+    const win: BBox = { minX: Math.max(full.minX, p.x - half), minY: Math.max(full.minY, p.y - half), maxX: Math.min(full.maxX, p.x + half), maxY: Math.min(full.maxY, p.y + half) };
+    const covers = win.minX <= full.minX && win.minY <= full.minY && win.maxX >= full.maxX && win.maxY >= full.maxY;
+    const cand = opts.query ? opts.query(win.minX, win.minY, win.maxX, win.maxY) : null;
+    const count = cand ? cand.length : total;
+    const picked: number[] = [];
+    for (let k = 0; k < count; k++) {
+      const i = cand ? cand[k] : k;
+      if (opts.accept && !opts.accept(i)) continue;
+      const x1 = segs[4 * i];
+      const y1 = segs[4 * i + 1];
+      const x2 = segs[4 * i + 2];
+      const y2 = segs[4 * i + 3];
+      if (!touches(x1, y1, x2, y2, win)) continue;
+      if (distToSegment(p, { x: x1, y: y1 }, { x: x2, y: y2 }) < eps) return { ok: false, reason: 'on-edge' };
+      picked.push(x1, y1, x2, y2);
+      if (picked.length > 4 * maxSegments) return { ok: false, reason: 'too-complex' };
+    }
+    if (picked.length >= 12) {
+      const g = build(picked, win, eps);
+      let found: ReturnType<typeof locate> = null;
+      for (let k = 0; k < RAY_ANGLES.length && found === null; k++) found = locate(g, p, eps, RAY_ANGLES[k], true);
+      if (found === null) found = locate(g, p, eps, RAY_ANGLES[0], false);
+      if (found !== null && found !== -1) {
+        const ring = ringOf(g, found.cycle);
+        // Un ciclo bien dentro de la ventana es definitivo: nada de lo que queda fuera puede tocarlo.
+        const m = Math.max(4 * eps, half * 1e-6);
+        const inside = ring.box.minX > win.minX + m && ring.box.minY > win.minY + m && ring.box.maxX < win.maxX - m && ring.box.maxY < win.maxY - m;
+        if (inside || covers) {
+          const outer = simplify(g, found.cycle);
+          if (outer.length < 3) return { ok: false, reason: 'open' };
+          return { ok: true, outer, holes: islands(g, found.cycle, ring, eps), area: Math.abs(polygonSignedArea(outer)), perimeter: perimeterOf(outer) };
+        }
+      }
+    }
+    if (covers) return { ok: false, reason: 'open' };
+    half *= 2;
+  }
 }
