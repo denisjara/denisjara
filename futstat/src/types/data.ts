@@ -169,6 +169,7 @@ export interface QuickPrediction {
 export type ConfidenceTier = 'oro' | 'plata';
 /** prediction source: 'mercado' = the ensemble used de-vigged bookmaker odds; 'estadistico' = Dixon-Coles + Elo only */
 export type ConfidenceSource = 'mercado' | 'estadistico';
+/** themes of ConfidenceFile picks; the daily section (DailyFile) adds 'tiros', 'faltas' and 'jugadores' via DailyCategory */
 export type ConfidenceTheme = 'resultado' | 'goles' | 'corners' | 'tarjetas';
 
 /**
@@ -905,6 +906,8 @@ export interface HomeFile {
   /** best high-confidence picks of the next 72 h (max 8, one per match, chronological) */
   topConfidence?: { match: MatchSummary; pick: ConfidencePick }[];
   /** out-of-sample (holdout) record of the high-confidence picks */
+  /** "Pronósticos del día" teaser: best picks of today (or of the next day with matches), from daily.json */
+  daily?: { date: string; matches: number; picks: number; top: { match: MatchSummary; pick: DailyPick }[] };
   confidenceHeadline?: {
     hitRate: number;
     /** resolved holdout picks */
