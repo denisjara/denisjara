@@ -17,9 +17,11 @@ futstat/
   pipeline/fetch.ts          CLI: descarga/actualiza data-store
   pipeline/analytics/        Modelos de alto nivel (ratings, predicción, mercados, proyecciones, jugadores, simulación, backtest)
   pipeline/build.ts          CLI: data-store → public/data/*.json
+  pipeline/experiments/      Banco de pruebas de modelos: variantes con ganchos (types.ts), motor (bench.ts); ver su README
   scripts/mock-data.ts       Genera JSON falsos (pero realistas) en public/mock-data/ para desarrollar la UI
   scripts/validate-data.ts   Puerta de calidad de los JSON publicados (contrato + cordura + frescura)
   scripts/check-store.ts     Puerta de calidad del data-store en CI (integridad + sin recortes)
+  scripts/eval-model.ts      Evalúa variantes del banco de pruebas frente a producción (walk-forward, ventanas, holdout protegido)
   scripts/csp.ts             CSP de producción (hashes de bloques en línea + Trusted Types) para vite.config.ts
   src/app/ ...               App React
   tests/                     Vitest

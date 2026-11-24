@@ -256,7 +256,11 @@ export function methodologySections(i: MethodologyInput): ModelFile['sections'] 
 export function modelParameters(ctx: BuildContext): Record<string, number | string> {
   const s = ctx.suite;
   const out: Record<string, number | string> = {};
-  for (const [k, v] of Object.entries(MODEL)) out[k] = v as number;
+  for (const [k, v] of Object.entries(MODEL)) {
+    // parámetros compuestos (ventaja local por grupo, contracción del total): una clave plana por campo
+    if (v && typeof v === 'object') for (const [sk, sv] of Object.entries(v)) out[`${k}.${sk}`] = sv as number;
+    else out[k] = v as number;
+  }
   out.eloDrawBase = Math.round(s.eloBuild.drawParams.drawBase * 1000) / 1000;
   out.eloDrawScale = Math.round(s.eloBuild.drawParams.drawScale);
   out.eloGoalSupremacyPer100 = Math.round(s.eloGoal.a * 1000) / 1000;

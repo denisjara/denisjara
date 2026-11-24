@@ -21,6 +21,7 @@ import {
   shrink,
 } from '../../src/lib/models';
 import type { MatchRecord, TeamMatchStats } from '../types';
+import type { DispersionMode } from '../experiments/types';
 
 export type StatKey = StatProjection['key'];
 
@@ -117,8 +118,12 @@ export const STAT_DEFS: StatDef[] = [
 
 export const STAT_DEF_BY_KEY = new Map(STAT_DEFS.map((d) => [d.key, d]));
 
-/** Partidos ficticios de prior para la contracción de las tasas de equipo. */
-export const PRIOR_N = 6;
+/**
+ * Partidos ficticios de prior para la contracción de las tasas de equipo. 40 desde el 22-nov-2026 (antes 6, demasiado
+ * débil): Brier medio de córners (8,5/9,5/10,5) y tarjetas (3,5/4,5) en la ventana de ajuste −0,0042 y −0,0041, con
+ * córners mejor en las dos sub-ventanas y tarjetas en la segunda (agente «totals» + combinación; resultado a 90').
+ */
+export const PRIOR_N = 40;
 /** Partidos ficticios de prior para la media de la competición (hacia los valores por defecto). */
 export const LEAGUE_PRIOR_N = 20;
 /** Vida media (días) de la ponderación temporal de los partidos. */
@@ -158,9 +163,28 @@ export interface StatContext {
   league: Record<StatKey, LeagueStatAvg>;
   /** dispersión NB por equipo y partido (Infinity = Poisson) */
   dispersion: Record<StatKey, number>;
+  /** dispersión propia de cada equipo (solo con la opción dispersion: 'team' del banco de pruebas) */
+  teamDispersion?: Map<string, Partial<Record<StatKey, number>>>;
   teams: Map<string, Partial<Record<StatKey, TeamStatProfile>>>;
   priorN: number;
 }
+
+/** Opciones del contexto de estadísticas (banco de pruebas); por defecto, producción. */
+export interface StatContextOptions {
+  /** partidos ficticios de la contracción de las tasas de equipo (PRIOR_N) */
+  priorN?: number;
+  /** vida media de la ponderación temporal (HALF_LIFE_DAYS) */
+  halfLifeDays?: number;
+  /** partidos ficticios de la media de la competición (LEAGUE_PRIOR_N) */
+  leaguePriorN?: number;
+  /** método de la dispersión NB (por defecto 'pooled', el de producción) */
+  dispersion?: DispersionMode;
+  /** solo estas estadísticas (por defecto todas) */
+  keys?: StatKey[];
+}
+
+/** Observaciones ficticias (a la dispersión común) de la dispersión por equipo. */
+const TEAM_DISPERSION_PRIOR_N = 20;
 
 const DAY_MS = 86_400_000;
 
@@ -193,7 +217,11 @@ function usable(m: MatchRecord): boolean {
  * @param matches temporada actual de la competición + últimos partidos de cada equipo en otras competiciones
  *                (los no terminados o sin estadísticas se ignoran; duplicados por id también).
  */
-export function buildStatContext(matches: MatchRecord[], compId: string): StatContext {
+export function buildStatContext(matches: MatchRecord[], compId: string, opts: StatContextOptions = {}): StatContext {
+  const halfLife = opts.halfLifeDays ?? HALF_LIFE_DAYS;
+  const leaguePriorN = opts.leaguePriorN ?? LEAGUE_PRIOR_N;
+  const defs = opts.keys ? STAT_DEFS.filter((d) => opts.keys!.includes(d.key)) : STAT_DEFS;
+  const mode: DispersionMode = opts.dispersion ?? 'pooled';
   const seen = new Set<string>();
   const ms: MatchRecord[] = [];
   for (const m of matches) {
@@ -205,14 +233,14 @@ export function buildStatContext(matches: MatchRecord[], compId: string): StatCo
   const weightOf = (m: MatchRecord) => {
     const t = Date.parse(m.date);
     const age = Number.isFinite(t) && latest > 0 ? Math.max(0, (latest - t) / DAY_MS) : 0;
-    return Math.pow(0.5, age / HALF_LIFE_DAYS);
+    return Math.pow(0.5, age / halfLife);
   };
 
   const league = {} as Record<StatKey, LeagueStatAvg>;
   const dispersion = {} as Record<StatKey, number>;
   const teams = new Map<string, Partial<Record<StatKey, TeamStatProfile>>>();
 
-  for (const def of STAT_DEFS) {
+  for (const def of defs) {
     // ---- medias por competición y lado
     const perComp = new Map<string, { h: number; a: number; n: number }>();
     let gh = 0;
@@ -249,8 +277,8 @@ export function buildStatContext(matches: MatchRecord[], compId: string): StatCo
       la = def.defaultAway;
       ln = 0;
     }
-    lh = shrink(lh, ln, def.defaultHome, LEAGUE_PRIOR_N);
-    la = shrink(la, ln, def.defaultAway, LEAGUE_PRIOR_N);
+    lh = shrink(lh, ln, def.defaultHome, leaguePriorN);
+    la = shrink(la, ln, def.defaultAway, leaguePriorN);
     league[def.key] = { home: lh, away: la, n: own?.n ?? 0 };
 
     const normFor = (cId: string): { h: number; a: number } => {
@@ -295,12 +323,16 @@ export function buildStatContext(matches: MatchRecord[], compId: string): StatCo
     dispersion[def.key] = Infinity;
   }
 
-  const ctx: StatContext = { compId, league, dispersion, teams, priorN: PRIOR_N };
+  const ctx: StatContext = { compId, league, dispersion, teams, priorN: opts.priorN ?? PRIOR_N };
 
   // ---- dispersión NB por método de momentos sobre los residuos del modelo (partidos de la competición o todos)
-  for (const def of STAT_DEFS) {
+  for (const def of defs) {
+    if (mode === 'poisson' || typeof mode === 'number') {
+      dispersion[def.key] = mode === 'poisson' ? Infinity : mode;
+      continue;
+    }
     const own = ms.filter((m) => m.compId === compId);
-    const pool = own.length >= MIN_COMP_MATCHES ? own : ms;
+    const pool = mode === 'global' ? ms : own.length >= MIN_COMP_MATCHES ? own : ms;
     let smu2 = 0;
     let sex = 0;
     let n = 0;
@@ -324,8 +356,44 @@ export function buildStatContext(matches: MatchRecord[], compId: string): StatCo
     } else {
       dispersion[def.key] = Infinity;
     }
+    if (mode === 'team') teamDispersions(ctx, def, ms, n > 0 ? smu2 / n : 0);
   }
   return ctx;
+}
+
+/**
+ * Dispersión NB propia de cada equipo (su recuento a favor) por método de momentos, contraída hacia la común con
+ * TEAM_DISPERSION_PRIOR_N observaciones ficticias de media μ² = `meanMu2`.
+ */
+function teamDispersions(ctx: StatContext, def: StatDef, ms: MatchRecord[], meanMu2: number): void {
+  const acc = new Map<string, { smu2: number; sex: number }>();
+  for (const m of ms) {
+    const h = def.read(m.stats!.home);
+    const a = def.read(m.stats!.away);
+    if (h === undefined || a === undefined) continue;
+    const e = expectedPair(ctx, def.key, m.home.id, m.away.id);
+    for (const [team, x, mu] of [
+      [m.home.id, h, e.home],
+      [m.away.id, a, e.away],
+    ] as const) {
+      const t = acc.get(team) ?? { smu2: 0, sex: 0 };
+      t.smu2 += mu * mu;
+      t.sex += (x - mu) * (x - mu) - mu;
+      acc.set(team, t);
+    }
+  }
+  const r0 = ctx.dispersion[def.key];
+  const prior2 = TEAM_DISPERSION_PRIOR_N * meanMu2;
+  const priorEx = Number.isFinite(r0) && r0 > 0 ? prior2 / r0 : 0;
+  const out = (ctx.teamDispersion ??= new Map());
+  for (const [team, t] of acc) {
+    const num = t.smu2 + prior2;
+    const den = t.sex + priorEx;
+    const r = den > 0 && num > 0 ? num / den : Infinity;
+    const rec = out.get(team) ?? {};
+    rec[def.key] = !Number.isFinite(r) || r > 500 ? Infinity : Math.max(1.5, r);
+    out.set(team, rec);
+  }
 }
 
 /** Valor esperado de la estadística para cada equipo. */
@@ -369,8 +437,8 @@ export function projectMatchStats(homeId: string, awayId: string, statCtx: StatC
     if (L.n === 0 && !hasTeamData) continue; // sin ningún dato de esta estadística
     const e = expectedPair(statCtx, def.key, homeId, awayId);
     const r = statCtx.dispersion[def.key];
-    const hd = nbPmfArray(e.home, r, def.maxK);
-    const ad = nbPmfArray(e.away, r, def.maxK);
+    const hd = nbPmfArray(e.home, statCtx.teamDispersion?.get(homeId)?.[def.key] ?? r, def.maxK);
+    const ad = nbPmfArray(e.away, statCtx.teamDispersion?.get(awayId)?.[def.key] ?? r, def.maxK);
     const total = convolve(hd, ad, def.maxK * 2);
     const most = compareDists(hd, ad);
     out.push({

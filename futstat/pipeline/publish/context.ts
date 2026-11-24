@@ -30,11 +30,24 @@ import {
   type EloGoalCoeffs,
   type ModelSuite,
 } from '../analytics/ratings';
-import { contextFor, predictProbsOnly, type PredictContext, type PredictionResult, type ProbsOnlyResult } from '../analytics/predict';
+import {
+  componentRow,
+  contextFor,
+  predictComponents,
+  predictProbsFromComponents,
+  predictProbsOnly,
+  type PredictComponents,
+  type PredictContext,
+  type PredictionResult,
+  type ProbsOnlyResult,
+} from '../analytics/predict';
 import { walkForwardDC } from '../analytics/backtest';
 import { eloPercentile } from '../analytics/popularity';
-import { buildStatContext, type StatContext } from '../analytics/projections';
+import { buildStatContext, type StatContext, type StatKey } from '../analytics/projections';
+import { settleDataOf } from '../analytics/settle';
 import type { XgMap } from '../analytics/teamStats';
+import { blendParts, type ComponentRow, type ModelVariant, type WalkForwardRow } from '../experiments/types';
+import type { HistorySource } from '../experiments/history';
 import { DAY_MS, pushTo } from './util';
 
 /** Partidos programados cuya hora de inicio pasó hace menos de esto siguen contando como próximos. */
@@ -53,6 +66,13 @@ export interface BuildOptions {
   /** menos iteraciones (simulación, re-ajustes walk-forward) para depurar */
   fast?: boolean;
   log?: (msg: string) => void;
+  /** variante del banco de pruebas (pipeline/experiments); sin ella (o vacía), producción */
+  variant?: ModelVariant;
+  /**
+   * (banco de pruebas) modelos actuales ya ajustados con LOS MISMOS stores, fecha y ganchos elo/dc de la variante:
+   * se reutilizan en lugar de recalcularlos
+   */
+  suite?: ModelSuite;
 }
 
 export interface WfPrediction {
@@ -122,6 +142,12 @@ export interface BuildContext {
   wfTimeline: Map<string, { t: number; model: DCModel }[]>;
   /** predicción pre-partido (walk-forward) de cada partido terminado de la temporada actual */
   wf: Map<string, WfPrediction>;
+  /** variante del banco de pruebas (undefined = producción) */
+  variant?: ModelVariant;
+  /** partidos por equipo/competición + Elo: vistas del pasado (contracción del total de producción y ganchos de la variante) */
+  history: HistorySource;
+  /** ensamble del combinador de la variante en el walk-forward (solo variantes con `combine`) */
+  wfCombined: Map<string, { p: Prob1X2; over25?: number }>;
   /** λ pre-partido de los partidos terminados (proxy de xG) */
   xg: XgMap;
   upcomingIds: Set<string>;
@@ -290,7 +316,7 @@ export function createContext(opts: BuildOptions): BuildContext {
   }
 
   // ---- modelos a fecha actual
-  const suite = buildModelSuite([...stores.values()], opts.configs, refDate);
+  const suite = opts.suite ?? buildModelSuite([...stores.values()], opts.configs, refDate, opts.variant);
   const ratings = suite.eloBuild.elo.ratings();
   // selecciones: equipos que solo aparecen en competiciones de selecciones (fuera del ranking de clubes)
   const nationalComps = new Set(opts.configs.filter((c) => isNationalTeamComp(c)).map((c) => c.id));
@@ -343,6 +369,9 @@ export function createContext(opts: BuildOptions): BuildContext {
     wfModels: new Map(),
     wfTimeline: new Map(),
     wf: new Map(),
+    variant: opts.variant,
+    history: { matchesByTeam, matchesByComp, elo: suite.eloBuild.elo },
+    wfCombined: new Map(),
     xg: new Map(),
     upcomingIds,
     liveIds,
@@ -366,6 +395,10 @@ export function baseContext(ctx: BuildContext, comp: CompetitionConfig): Predict
   let c = ctx.baseContexts.get(comp.id);
   if (!c) {
     c = contextFor(ctx.suite, comp, ctx.configById);
+    // historial: contracción del total de producción (media de goles de la competición antes de cada partido) y
+    // ganchos de la variante
+    c.history = ctx.history;
+    if (ctx.variant) c.variant = ctx.variant;
     ctx.baseContexts.set(comp.id, c);
   }
   return c;
@@ -405,10 +438,13 @@ export function wfContext(ctx: BuildContext, m: MatchRecord): PredictContext {
     if (mod) dc.set(lg, mod);
   }
   const pre = m.currentSeason ? ctx.preSeason.get(comp.id) : undefined;
-  if (pre && t >= pre.cutoff) {
-    return { ...base, dcModels: dc, drawParams: pre.drawParams, eloGoal: pre.eloGoal, leagueAvgGoals: pre.leagueAvgGoals };
-  }
-  return { ...base, dcModels: dc };
+  const out: PredictContext =
+    pre && t >= pre.cutoff
+      ? { ...base, dcModels: dc, drawParams: pre.drawParams, eloGoal: pre.eloGoal, leagueAvgGoals: pre.leagueAvgGoals }
+      : { ...base, dcModels: dc };
+  const combined = ctx.wfCombined.get(m.id);
+  if (combined) out.precombined = combined;
+  return out;
 }
 
 /**
@@ -431,37 +467,52 @@ export function preSeasonParams(ctx: BuildContext, cutoff: number): PreSeasonPar
   return { cutoff, drawParams, eloGoal, leagueAvgGoals, samples: samples.length };
 }
 
-/**
- * Ajusta los Dixon-Coles walk-forward de cada liga (desde el inicio más temprano de las temporadas actuales, para
- * cubrir también copas y competiciones continentales) y calcula la predicción pre-partido de todos los partidos
- * terminados de la temporada actual. Rellena ctx.wfModels, ctx.wfTimeline, ctx.wf y ctx.xg.
- */
-export function computeWalkForward(ctx: BuildContext): { refits: number; predictions: number } {
+/** Inicio (ms) del walk-forward: primer partido terminado de las temporadas actuales (Infinity si no hay). */
+export function walkForwardStart(ctx: BuildContext): number {
   let from = Infinity;
   for (const list of ctx.matchesByComp.values()) {
     for (const m of list) if (m.currentSeason && isFinishedRecord(m)) from = Math.min(from, Date.parse(m.date));
   }
+  return from;
+}
+
+/**
+ * Dixon-Coles walk-forward de cada liga (desde el inicio más temprano de las temporadas actuales, para cubrir también
+ * copas y competiciones continentales), con los ganchos `dc` de la variante. Rellena ctx.wfModels y ctx.wfTimeline.
+ */
+export function fitWalkForwardModels(ctx: BuildContext): { refits: number } {
+  const from = walkForwardStart(ctx);
   let refits = 0;
-  if (Number.isFinite(from)) {
-    const fromIso = new Date(from).toISOString();
-    for (const comp of ctx.configs) {
-      if (comp.kind !== 'league') continue;
-      const list = ctx.matchesByComp.get(comp.id);
-      if (!list?.length) continue;
-      const models = walkForwardDC(list, MODEL.dcXi, ctx.fast ? 14 : 7, { from: fromIso, maxIter: ctx.fast ? 60 : 120 });
-      ctx.wfModels.set(comp.id, models);
-      const timeline: { t: number; model: DCModel }[] = [];
-      for (const m of list) {
-        const mod = models.get(m.id);
-        if (!mod) continue;
-        if (timeline.length && timeline[timeline.length - 1].model === mod) continue;
-        timeline.push({ t: Date.parse(m.date), model: mod });
-      }
-      refits += timeline.length;
-      ctx.wfTimeline.set(comp.id, timeline);
+  if (!Number.isFinite(from)) return { refits };
+  const fromIso = new Date(from).toISOString();
+  const dc = ctx.variant?.dc;
+  for (const comp of ctx.configs) {
+    if (comp.kind !== 'league') continue;
+    const list = ctx.matchesByComp.get(comp.id);
+    if (!list?.length) continue;
+    const models = walkForwardDC(list, dc?.xi ?? MODEL.dcXi, ctx.fast ? 14 : 7, {
+      from: fromIso,
+      maxIter: ctx.fast ? 60 : 120,
+      windowDays: dc?.windowDays,
+      priorWeight: dc?.priorWeight,
+      hooks: dc,
+    });
+    ctx.wfModels.set(comp.id, models);
+    const timeline: { t: number; model: DCModel }[] = [];
+    for (const m of list) {
+      const mod = models.get(m.id);
+      if (!mod) continue;
+      if (timeline.length && timeline[timeline.length - 1].model === mod) continue;
+      timeline.push({ t: Date.parse(m.date), model: mod });
     }
+    refits += timeline.length;
+    ctx.wfTimeline.set(comp.id, timeline);
   }
-  // parámetros sin fuga por competición: corte = primer partido terminado de su temporada actual (por día)
+  return { refits };
+}
+
+/** Parámetros sin fuga por competición: corte = primer partido terminado de su temporada actual (por día). */
+function computePreSeason(ctx: BuildContext): void {
   const byCutoff = new Map<number, PreSeasonParams | undefined>();
   for (const [compId, list] of ctx.matchesByComp) {
     if (!ctx.configById.has(compId)) continue;
@@ -473,19 +524,114 @@ export function computeWalkForward(ctx: BuildContext): { refits: number; predict
     const p = byCutoff.get(day);
     if (p) ctx.preSeason.set(compId, p);
   }
+}
+
+function storeWf(ctx: BuildContext, id: string, r: ProbsOnlyResult): boolean {
+  if (![r.p.home, r.p.draw, r.p.away, r.lambdaHome, r.lambdaAway].every(Number.isFinite)) return false;
+  ctx.wf.set(id, { p: r.p, over25: r.over25, btts: r.btts, lambdaHome: r.lambdaHome, lambdaAway: r.lambdaAway, sources: r.sources });
+  ctx.xg.set(id, { home: r.lambdaHome, away: r.lambdaAway });
+  return true;
+}
+
+/** Fila de reajuste de un combinador: componentes + resultado a 90' (o final si no se puede reconstruir). */
+export function walkForwardRowOf(row: ComponentRow, m: MatchRecord): WalkForwardRow | undefined {
+  if (!isFinishedRecord(m)) return undefined;
+  const d = settleDataOf(m);
+  const hg = d ? d.hg : m.score.home;
+  const ag = d ? d.ag : m.score.away;
+  const out: WalkForwardRow = { ...row, outcome: hg > ag ? 0 : hg === ag ? 1 : 2, hg, ag };
+  if (!d) out.extraTimeUnresolved = true;
+  return out;
+}
+
+/** Fechas de reajuste del combinador (ms) que cubren [first, last]: día 1 de cada mes UTC o cada N días. */
+export function refitBoundaries(first: number, last: number, every: 'monthly' | number = 'monthly'): number[] {
+  const out: number[] = [];
+  if (!Number.isFinite(first) || !Number.isFinite(last)) return out;
+  if (every === 'monthly') {
+    const d = new Date(first);
+    let y = d.getUTCFullYear();
+    let mo = d.getUTCMonth();
+    for (let t = Date.UTC(y, mo, 1); t <= last; t = Date.UTC(y, mo, 1)) {
+      out.push(t);
+      mo++;
+      if (mo === 12) {
+        mo = 0;
+        y++;
+      }
+    }
+    return out;
+  }
+  const step = Math.max(1, Math.round(every)) * DAY_MS;
+  for (let t = Math.floor(first / DAY_MS) * DAY_MS; t <= last; t += step) out.push(t);
+  return out;
+}
+
+/**
+ * Predicción pre-partido (walk-forward) de todos los partidos terminados de la temporada actual. Con un combinador
+ * de variante (`combine`): componentes de todos los partidos → orden cronológico → en cada fecha de reajuste
+ * prepare(filas estrictamente anteriores) → blend; al final prepare(todas las filas) para los partidos próximos.
+ */
+export function predictWalkForward(ctx: BuildContext): { predictions: number } {
+  computePreSeason(ctx);
   let n = 0;
+  const combine = ctx.variant?.combine;
+  if (!combine) {
+    for (const [compId, list] of ctx.matchesByComp) {
+      if (!ctx.configById.has(compId)) continue;
+      for (const m of list) {
+        if (!m.currentSeason || !isFinishedRecord(m) || ctx.wf.has(m.id)) continue;
+        if (storeWf(ctx, m.id, predictProbsOnly(m, wfContext(ctx, m)))) n++;
+      }
+    }
+    return { predictions: n };
+  }
+  const items: { m: MatchRecord; t: number; pctx: PredictContext; comps: PredictComponents; row: ComponentRow }[] = [];
+  const seen = new Set<string>();
   for (const [compId, list] of ctx.matchesByComp) {
     if (!ctx.configById.has(compId)) continue;
     for (const m of list) {
-      if (!m.currentSeason || !isFinishedRecord(m) || ctx.wf.has(m.id)) continue;
-      const r = predictProbsOnly(m, wfContext(ctx, m));
-      if (![r.p.home, r.p.draw, r.p.away, r.lambdaHome, r.lambdaAway].every(Number.isFinite)) continue;
-      ctx.wf.set(m.id, { p: r.p, over25: r.over25, btts: r.btts, lambdaHome: r.lambdaHome, lambdaAway: r.lambdaAway, sources: r.sources });
-      ctx.xg.set(m.id, { home: r.lambdaHome, away: r.lambdaAway });
+      if (!m.currentSeason || !isFinishedRecord(m) || seen.has(m.id)) continue;
+      seen.add(m.id);
+      const pctx = wfContext(ctx, m);
+      const comps = predictComponents(m, pctx);
+      items.push({ m, t: Date.parse(m.date), pctx, comps, row: componentRow(comps, pctx) });
+    }
+  }
+  items.sort((a, b) => a.t - b.t || a.m.id.localeCompare(b.m.id));
+  const rows: WalkForwardRow[] = [];
+  const bounds = items.length ? refitBoundaries(items[0].t, items[items.length - 1].t, combine.refitEvery ?? 'monthly') : [];
+  let bi = 0;
+  let done = 0; // items[0..done) ya están en `rows`
+  const prepareAt = (t: number) => {
+    while (done < items.length && items[done].t < t) {
+      const r = walkForwardRowOf(items[done].row, items[done].m);
+      if (r) rows.push(r);
+      done++;
+    }
+    combine.prepare?.(rows.slice(), new Date(t).toISOString());
+  };
+  for (const it of items) {
+    while (bi < bounds.length && bounds[bi] <= it.t) prepareAt(bounds[bi++]);
+    const combined = blendParts(combine.blend(it.row));
+    if (storeWf(ctx, it.m.id, predictProbsFromComponents(it.comps, it.pctx, combined))) {
+      ctx.wfCombined.set(it.m.id, combined);
       n++;
     }
   }
-  return { refits, predictions: n };
+  // partidos próximos: combinador reajustado con todas las filas anteriores a la fecha del build
+  prepareAt(ctx.now);
+  return { predictions: n };
+}
+
+/**
+ * Ajusta los Dixon-Coles walk-forward de cada liga y calcula la predicción pre-partido de todos los partidos
+ * terminados de la temporada actual. Rellena ctx.wfModels, ctx.wfTimeline, ctx.wf y ctx.xg.
+ */
+export function computeWalkForward(ctx: BuildContext): { refits: number; predictions: number } {
+  const { refits } = fitWalkForwardModels(ctx);
+  const { predictions } = predictWalkForward(ctx);
+  return { refits, predictions };
 }
 
 // ---------------------------------------------------------------------------
@@ -526,12 +672,13 @@ export function currentElo(ctx: BuildContext, team: string): number {
 /**
  * Contexto de estadísticas (córners, tarjetas, tiros...) de una competición: partidos terminados de su temporada
  * actual + partidos de sus equipos (cualquier competición) de los últimos TEAM_WINDOW_DAYS días. Con `before`
- * solo usa partidos anteriores (fichas de partidos ya jugados). Cacheado por competición y día.
+ * solo usa partidos anteriores (fichas de partidos ya jugados). Cacheado por competición y día. `opts.keys`: solo esas
+ * estadísticas (banco de pruebas: córners y tarjetas).
  */
-export function statContext(ctx: BuildContext, compId: string, before?: number): StatContext {
+export function statContext(ctx: BuildContext, compId: string, before?: number, opts: { keys?: StatKey[] } = {}): StatContext {
   const cutoff = before ?? ctx.now + 1;
   const dayKey = before === undefined ? 'now' : String(Math.floor(before / DAY_MS));
-  const key = `${compId}|${dayKey}`;
+  const key = opts.keys ? `${compId}|${dayKey}|${opts.keys.join(',')}` : `${compId}|${dayKey}`;
   let sc = ctx.statContexts.get(key);
   if (sc) return sc;
   const limit = before === undefined ? cutoff : Math.floor(before / DAY_MS) * DAY_MS;
@@ -547,7 +694,7 @@ export function statContext(ctx: BuildContext, compId: string, before?: number):
       if (t >= from && t < limit) pool.set(m.id, m);
     }
   }
-  sc = buildStatContext([...pool.values()], compId);
+  sc = buildStatContext([...pool.values()], compId, { ...ctx.variant?.stats, ...(opts.keys ? { keys: opts.keys } : {}) });
   ctx.statContexts.set(key, sc);
   return sc;
 }

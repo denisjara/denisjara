@@ -13,6 +13,7 @@
 import { Elo, fitDixonColes, fitEloDrawParams, type DCMatch, type DCModel } from '../../src/lib/models';
 import { MODEL, type CompetitionConfig } from '../config';
 import type { CompetitionStore, MatchRecord } from '../types';
+import type { DcHooks, EloHooks, ModelVariant } from '../experiments/types';
 
 const DAY_MS = 86_400_000;
 /** Días iniciales de datos excluidos de la calibración de empates y de Elo→goles (el Elo aún se está estabilizando). */
@@ -196,11 +197,12 @@ export function initialElo(
   configsById: Map<string, CompetitionConfig>,
   fallbackComp?: CompetitionConfig,
   promoted = false,
+  tierOffset: number = MODEL.eloTierOffset,
 ): number {
   const league = homeLeague.get(teamId);
   const cfg = league ? configsById.get(league) : undefined;
   const tier = (cfg ? cfg.tier : fallbackTier(fallbackComp)) - (promoted ? PROMOTED_TIER_PENALTY : 0);
-  return MODEL.eloInit + (tier - 5) * MODEL.eloTierOffset;
+  return MODEL.eloInit + (tier - 5) * tierOffset;
 }
 
 /**
@@ -258,11 +260,18 @@ export function computeHomeLeague(stores: CompetitionStore[], configs: Competiti
 export function buildElo(
   stores: CompetitionStore[],
   configs: CompetitionConfig[],
-  opts: { before?: string } = {},
+  opts: { before?: string; hooks?: EloHooks } = {},
 ): EloBuild {
   const configsById = new Map(configs.map((c) => [c.id, c]));
   const homeLeague = computeHomeLeague(stores, configs);
-  const elo = new Elo({ k: MODEL.eloK, homeAdv: MODEL.eloHomeAdv, init: MODEL.eloInit });
+  const hk = opts.hooks;
+  const tierOffset = hk?.tierOffset ?? MODEL.eloTierOffset;
+  const elo = new Elo({
+    k: hk?.k ?? MODEL.eloK,
+    homeAdv: hk?.homeAdv ?? MODEL.eloHomeAdv,
+    init: MODEL.eloInit,
+    ...(hk?.goalMultiplier ? { goalMultiplier: hk.goalMultiplier } : {}),
+  });
   const preMatch = new Map<string, { home: number; away: number }>();
   const samples: EloSample[] = [];
   const gamesByTeam = new Map<string, number>();
@@ -280,8 +289,8 @@ export function buildElo(
     const t = Date.parse(m.date);
     // equipo nuevo en una liga que ya tenía ELO_BURN_IN_DAYS de historial ⇒ ascendido de una categoría no cubierta
     const promoted = comp?.kind === 'league' && t > (compStart.get(m.compId) ?? t) + ELO_BURN_IN_DAYS * DAY_MS;
-    if (!elo.has(h)) elo.set(h, initialElo(h, homeLeague, configsById, comp, promoted && homeLeague.get(h) === m.compId));
-    if (!elo.has(a)) elo.set(a, initialElo(a, homeLeague, configsById, comp, promoted && homeLeague.get(a) === m.compId));
+    if (!elo.has(h)) elo.set(h, initialElo(h, homeLeague, configsById, comp, promoted && homeLeague.get(h) === m.compId, tierOffset));
+    if (!elo.has(a)) elo.set(a, initialElo(a, homeLeague, configsById, comp, promoted && homeLeague.get(a) === m.compId, tierOffset));
     const neutral = !!m.neutral;
     const diff = elo.diff(h, a, neutral);
     const hg = m.score.home;
@@ -294,7 +303,7 @@ export function buildElo(
       hg,
       ag,
       neutral,
-      kMultiplier: kMultiplierFor(comp?.kind),
+      kMultiplier: hk?.kMultiplier ? hk.kMultiplier(m, comp) : kMultiplierFor(comp?.kind),
     });
     preMatch.set(m.id, { home: r.preHome, away: r.preAway });
     gamesByTeam.set(h, (gamesByTeam.get(h) ?? 0) + 1);
@@ -322,8 +331,25 @@ export function buildElo(
 // Dixon-Coles por liga
 // ---------------------------------------------------------------------------
 
+/**
+ * DCMatch de un partido terminado para el ajuste Dixon-Coles. Con ganchos de variante: goles ajustados (fitGoals,
+ * con el marcador real para τ) y peso extra (weight).
+ */
+export function toDcMatch(m: FinishedMatch, hooks?: DcHooks): DCMatch {
+  const out: DCMatch = { home: m.home.id, away: m.away.id, hg: m.score.home, ag: m.score.away, date: m.date, neutral: !!m.neutral };
+  if (hooks?.fitGoals) {
+    const g = hooks.fitGoals(m);
+    out.hg = g.hg;
+    out.ag = g.ag;
+    out.rawHg = m.score.home;
+    out.rawAg = m.score.away;
+  }
+  if (hooks?.weight) out.weight = hooks.weight(m);
+  return out;
+}
+
 /** DCMatch de los partidos terminados de un store dentro de la ventana [refDate − windowDays, refDate). */
-export function dcMatchesFor(store: CompetitionStore, refDate: string, windowDays = MODEL.dcWindowDays): DCMatch[] {
+export function dcMatchesFor(store: CompetitionStore, refDate: string, windowDays: number = MODEL.dcWindowDays, hooks?: DcHooks): DCMatch[] {
   const ref = Date.parse(refDate);
   const from = ref - windowDays * DAY_MS;
   const seen = new Set<string>();
@@ -333,7 +359,7 @@ export function dcMatchesFor(store: CompetitionStore, refDate: string, windowDay
     const t = Date.parse(m.date);
     if (!Number.isFinite(t) || t >= ref || t < from) continue;
     seen.add(m.id);
-    out.push({ home: m.home.id, away: m.away.id, hg: m.score.home, ag: m.score.away, date: m.date, neutral: !!m.neutral });
+    out.push(hooks ? toDcMatch(m, hooks) : { home: m.home.id, away: m.away.id, hg: m.score.home, ag: m.score.away, date: m.date, neutral: !!m.neutral });
   }
   return out;
 }
@@ -346,15 +372,23 @@ export function fitLeagueModels(
   stores: CompetitionStore[],
   configs: CompetitionConfig[],
   refDate: string,
+  hooks?: DcHooks,
 ): Map<string, DCModel> {
   const cfg = new Map(configs.map((c) => [c.id, c]));
   const out = new Map<string, DCModel>();
   for (const s of stores) {
     const c = cfg.get(s.compId);
     if (!c || c.kind !== 'league') continue;
-    const ms = dcMatchesFor(s, refDate);
+    const ms = dcMatchesFor(s, refDate, hooks?.windowDays ?? MODEL.dcWindowDays, hooks);
     if (ms.length < DC_MIN_MATCHES) continue;
-    out.set(s.compId, fitDixonColes(ms, { refDate, xi: MODEL.dcXi }));
+    out.set(
+      s.compId,
+      fitDixonColes(ms, {
+        refDate,
+        xi: hooks?.xi ?? MODEL.dcXi,
+        ...(hooks?.priorWeight !== undefined ? { priorWeight: hooks.priorWeight } : {}),
+      }),
+    );
   }
   return out;
 }
@@ -526,11 +560,17 @@ export function eloGoalModel(
 
 /**
  * Ajusta todos los modelos de ratings a una fecha de referencia: Elo global (partidos anteriores a refDate),
- * Dixon-Coles por liga, medias de goles y modelo Elo→goles.
+ * Dixon-Coles por liga, medias de goles y modelo Elo→goles. `variant` (banco de pruebas): ganchos elo/dc; sin ellos,
+ * producción.
  */
-export function buildModelSuite(stores: CompetitionStore[], configs: CompetitionConfig[], refDate: string): ModelSuite {
-  const eloBuild = buildElo(stores, configs, { before: refDate });
-  const dcModels = fitLeagueModels(stores, configs, refDate);
+export function buildModelSuite(
+  stores: CompetitionStore[],
+  configs: CompetitionConfig[],
+  refDate: string,
+  variant?: ModelVariant,
+): ModelSuite {
+  const eloBuild = buildElo(stores, configs, { before: refDate, hooks: variant?.elo });
+  const dcModels = fitLeagueModels(stores, configs, refDate, variant?.dc);
   const leagueAvgGoals = leagueAverageGoals(stores, refDate);
   const eloGoal = fitEloGoalModel(eloBuild.samples, eloBuild.homeLeague, leagueAvgGoals, dcModels);
   return { eloBuild, dcModels, eloGoal, leagueAvgGoals, refDate };

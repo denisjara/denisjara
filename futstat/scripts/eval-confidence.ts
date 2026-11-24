@@ -1,7 +1,7 @@
 /**
  * Informe de los pronósticos de ALTA CONFIANZA (pipeline/analytics/confidence.ts) con los datos reales.
  *
- *   npx tsx scripts/eval-confidence.ts [--now=2026-11-15T12:00:00Z] [--out=ruta.json] [--ocultar-virgen]
+ *   npx tsx scripts/eval-confidence.ts [--now=2026-11-15T12:00:00Z] [--out=ruta.json] [--ocultar-virgen] [--variant=baseline]
  *
  * Calcula el historial walk-forward (predicciones sin fuga de todos los partidos terminados de la temporada actual),
  * elige las reglas SOLO con la ventana de calibración (60 % más antiguo) y las mide en el holdout (el resto), que
@@ -13,6 +13,8 @@
  * --ocultar-virgen: muestra solo la primera parte del holdout (sin el tramo virgen final ni el total) y no escribe
  * esas cifras en el JSON. Sirve para mirar el holdout una vez y, si hubiera que corregir algo, publicar después una
  * cifra limpia con el tramo virgen.
+ * --variant: (banco de pruebas) mismas predicciones de una variante de pipeline/experiments; `baseline` = el modelo
+ * de producción anterior al 22-nov-2026, para comparar antes/después con el mismo procedimiento.
  */
 import fs from 'node:fs';
 import path from 'node:path';
@@ -30,6 +32,8 @@ import {
   type GroupReport,
 } from '../pipeline/analytics/confidence';
 import { CONFIDENCE_MAX_PER_MATCH, CONFIDENCE_MIN_HIT_RATE } from '../pipeline/publish/confidence';
+import { loadVariant } from '../pipeline/experiments/load';
+import { isEmptyVariant } from '../pipeline/experiments/types';
 
 /** Fin de los datos de la revisión independiente: lo posterior no se había visto al tomar sus decisiones. */
 const REVIEW_DATA_END = '2026-11-15T00:00:00Z';
@@ -132,7 +136,10 @@ function hideVirgin(e: ConfidenceEvaluation): Record<string, unknown> {
   return out;
 }
 
-export function main(args: string[]): number {
+export async function main(args: string[]): Promise<number> {
+  const variantName = argValue(args, 'variant');
+  const loaded = variantName ? await loadVariant(variantName) : undefined;
+  const variant = loaded && !isEmptyVariant(loaded) ? loaded : undefined;
   const nowArg = argValue(args, 'now');
   const now = nowArg ? new Date(nowArg) : new Date();
   if (Number.isNaN(now.getTime())) throw new Error(`--now inválido: ${nowArg}`);
@@ -144,13 +151,13 @@ export function main(args: string[]): number {
     console.error('No hay datos en data-store/: ejecuta antes `npm run data:fetch`.');
     return 1;
   }
-  const ctx = createContext({ stores, configs: COMPETITIONS, now });
+  const ctx = createContext({ stores, configs: COMPETITIONS, now, variant });
   computeWalkForward(ctx);
   const history = confidenceHistory(ctx, { log: (m) => console.log(m) });
   const e = evaluateConfidence(ctx, { history, select: { maxPerMatch: CONFIDENCE_MAX_PER_MATCH, minHitRate: CONFIDENCE_MIN_HIT_RATE } });
   const secs = (performance.now() - t0) / 1000;
 
-  console.log(`FutStat Lab · pronósticos de alta confianza · ${now.toISOString()} (${num(secs, 1)} s)`);
+  console.log(`FutStat Lab · pronósticos de alta confianza · ${now.toISOString()} (${num(secs, 1)} s)${loaded ? ` · variante ${loaded.name}` : ''}`);
   console.log(`Historial walk-forward: ${history.length} partidos terminados de la temporada actual (${day(history[0]?.date ?? '')} → ${day(history[history.length - 1]?.date ?? '')})`);
   console.log(`Calibración: ${e.split.calibration.matches} partidos (${day(e.split.calibration.from)} → ${day(e.split.calibration.to)})`);
   console.log(`Holdout:     ${e.split.holdout.matches} partidos (${day(e.split.holdout.from)} → ${day(e.split.holdout.to)}), nunca usado para elegir`);
@@ -227,10 +234,13 @@ const isMain = (() => {
 })();
 
 if (isMain) {
-  try {
-    process.exitCode = main(process.argv.slice(2));
-  } catch (e) {
-    console.error(e instanceof Error ? (e.stack ?? e.message) : e);
-    process.exitCode = 1;
-  }
+  main(process.argv.slice(2)).then(
+    (code) => {
+      process.exitCode = code;
+    },
+    (e: unknown) => {
+      console.error(e instanceof Error ? (e.stack ?? e.message) : e);
+      process.exitCode = 1;
+    },
+  );
 }

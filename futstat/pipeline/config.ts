@@ -90,6 +90,25 @@ export const COMPETITIONS: CompetitionConfig[] = [
 export const COMPETITION_BY_ID = new Map(COMPETITIONS.map((c) => [c.id, c]));
 export const COMPETITION_BY_SLUG = new Map(COMPETITIONS.map((c) => [c.slug, c]));
 
+/** Competitions of the Americas (leagues, continental tournaments and cup) for the home-advantage groups. */
+export const AMERICAS_COMPETITIONS: ReadonlySet<string> = new Set([
+  'brasileirao',
+  'argentina',
+  'ligamx',
+  'mls',
+  'chile',
+  'libertadores',
+  'sudamericana',
+  'copachile',
+]);
+
+/** Home-advantage group of a competition: region (AM = Americas, EU = Europe and the rest) × kind. */
+export type HomeAdvGroup = `${'EU' | 'AM'}-${CompetitionKind}`;
+
+export function homeAdvGroup(comp: Pick<CompetitionConfig, 'id' | 'kind'>): HomeAdvGroup {
+  return `${AMERICAS_COMPETITIONS.has(comp.id) ? 'AM' : 'EU'}-${comp.kind}`;
+}
+
 // ---------------------------------------------------------------------------
 // Paths
 // ---------------------------------------------------------------------------
@@ -181,6 +200,28 @@ export const MODEL = {
   lowDataGames: 10,
   /** factor of the statistical weights with 0 Elo games (grows linearly to 1 at lowDataGames): 0 = market only */
   lowDataFloor: 0,
+  /**
+   * Home advantage (Elo points) used ONLY to turn the Elo difference into 1X2 probabilities, by competition group
+   * (see homeAdvGroup; groups missing here use eloHomeAdv, the one of the ratings). EMPTY = 65 everywhere.
+   *
+   * Tried and REVERTED on 22 Nov 2026 after the single holdout look. Table chosen by the «tune» agent with the Elo alone
+   * on 2025-01 → 2026-05: EU-league 50 · EU-cup 25 · EU-continental 80 · AM-league 70 · AM-continental 75. Ensemble 1X2
+   * RPS (result at 90'): tuning −0.00025 [−0.00044; −0.00008] · T1 −0.00006 (n.s.) · T2 −0.00029 [−0.00055; −0.00008],
+   * but HOLDOUT (16 Sep → 21 Nov, 1,713 matches, together with the totals changes below) +0.00015 [−0.00037; +0.00064],
+   * continental competitions +0.00122 [+0.00046; +0.00221] and top competitions +0.00022 [+0.00004; +0.00043]: the gain
+   * did not replicate, so the conversion keeps the ratings' home advantage. Kept as a parameter (and the bench hook
+   * `eloProbs.homeAdv`) for future experiments.
+   */
+  eloProbHomeAdv: {} as Readonly<Partial<Record<HomeAdvGroup, number>>>,
+  /**
+   * Matches WITHOUT a market goal line and outside national cups: the expected total goals (λh + λa after recalibrating
+   * to the ensemble) is shrunk towards the competition average, T' = L + s·(T − L), keeping the 1X2. L = goals per
+   * match of the competition in the last `windowDays` (half-life `halfLifeDays`, `priorN` virtual matches towards
+   * `globalTotal`), computed only with matches that started before the predicted one. Reason: without the market the
+   * Dixon-Coles totals are too spread between matches (where it predicted 1.78 goals there were 2.12, where 3.25 there
+   * were 2.85). Cups are excluded (real extreme totals in ties between divisions; shrinking them was worse).
+   */
+  totalShrink: { s: 0.5, windowDays: 365, halfLifeDays: 180, priorN: 30, globalTotal: 2.6 },
   /** value bets */
   minEv: 0.05,
   minProb: 0.12,

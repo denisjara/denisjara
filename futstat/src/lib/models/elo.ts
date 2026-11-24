@@ -7,6 +7,8 @@ export interface EloOptions {
   k: number;
   homeAdv: number;
   init: number;
+  /** multiplicador por diferencia de goles (por defecto goalMultiplier) */
+  goalMultiplier?: (goalDiff: number) => number;
 }
 
 export interface EloMatch {
@@ -74,7 +76,8 @@ export class Elo {
     const we = eloExpectation(this.diff(m.home, m.away, m.neutral));
     const w = m.hg > m.ag ? 1 : m.hg === m.ag ? 0.5 : 0;
     const k = this.opts.k * (m.kMultiplier ?? 1);
-    const delta = k * goalMultiplier(m.hg - m.ag) * (w - we);
+    const g = this.opts.goalMultiplier ? this.opts.goalMultiplier(m.hg - m.ag) : goalMultiplier(m.hg - m.ag);
+    const delta = k * g * (w - we);
     const postHome = preHome + delta;
     const postAway = preAway - delta;
     this.r.set(m.home, postHome);

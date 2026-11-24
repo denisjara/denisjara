@@ -2,7 +2,9 @@
  * Predicción de un partido: ensamble de Dixon-Coles (o Elo→goles), Elo y mercado sin margen.
  *
  *  1. λ por Dixon-Coles de la liga del partido (o de la liga doméstica común de ambos equipos).
- *  2. Probabilidades Elo (eloProbs con drawParams calibrados).
+ *  2. Probabilidades Elo (eloProbs con drawParams calibrados). La ventaja local de esta conversión puede depender del
+ *     grupo de competiciones (MODEL.eloProbHomeAdv); hoy la tabla está vacía (65 en todos, como los ratings): una
+ *     tabla por grupo mejoró la ventana de ajuste pero no el holdout y se revirtió (ver config.ts).
  *  3. Mercado sin margen (Shin) si hay cuotas 1X2 completas.
  *  4. Ensamble lineal. Con cuotas: wDixonColes/wElo/wMarket; sin cuotas: wDixonColesNoMarket/wEloNoMarket
  *     (pesos calibrados por separado en el backtest). Sin DC, la parte de goles usa el modelo Elo→goles con peso
@@ -10,7 +12,9 @@
  *     cuotas, el peso de las fuentes estadísticas se reduce (factor lowDataFactor) en favor del mercado.
  *  5. λ finales con fitLambdas hacia el objetivo ensamblado (1X2 + P(más de 2.5) mezcla DC/mercado; si la casa
  *     ofrece otra línea x.5 se traduce a P(más de 2.5) con un total Poisson equivalente).
- *  6. Matriz final con rho (DC o −0.05), mercados de goles, mercados de estadísticas, apuestas de valor.
+ *  6. Sin línea de goles del mercado y fuera de copas nacionales, el total esperado se contrae hacia la media de goles
+ *     de la competición (MODEL.totalShrink, ver analytics/totals.ts) manteniendo el 1X2.
+ *  7. Matriz final con rho (DC o −0.05), mercados de goles, mercados de estadísticas, apuestas de valor.
  *
  * Decisiones calibradas con un backtest walk-forward sobre datos reales (temporadas actuales, cuotas de cierre;
  * números en el comentario de MODEL en pipeline/config.ts):
@@ -48,7 +52,7 @@ import {
   type DCModel,
   type Elo,
 } from '../../src/lib/models';
-import { COMPETITION_BY_ID, MODEL, isPlausibleMargin, overroundOf, type CompetitionConfig } from '../config';
+import { COMPETITION_BY_ID, MODEL, homeAdvGroup, isPlausibleMargin, overroundOf, type CompetitionConfig } from '../config';
 import type { MatchRecord } from '../types';
 import {
   eloGoalBaseTotal,
@@ -60,7 +64,18 @@ import {
   type ModelSuite,
 } from './ratings';
 import { statMarkets } from './projections';
+import { productionTotalFactor } from './totals';
 import { findValueBets } from './value';
+import {
+  blendParts,
+  preMatchView,
+  type ComponentRow,
+  type Features,
+  type HookInfo,
+  type ModelVariant,
+  type PreMatch,
+} from '../experiments/types';
+import { historyView, type HistorySource } from '../experiments/history';
 
 /** rho por defecto cuando no hay modelo Dixon-Coles. */
 export const DEFAULT_RHO = -0.05;
@@ -134,6 +149,18 @@ export interface PredictContext {
   configs?: Map<string, CompetitionConfig>;
   /** pesos del ensamble (por defecto los de MODEL) */
   weights?: EnsembleWeights;
+  /** variante del banco de pruebas (pipeline/experiments); sin ella, producción */
+  variant?: ModelVariant;
+  /**
+   * partidos por equipo/competición: vistas del pasado para la contracción del total de producción y para los ganchos
+   * de la variante (baseContext/wfContext lo rellenan siempre; sin él no se contrae el total)
+   */
+  history?: HistorySource;
+  /**
+   * ensamble ya calculado en el walk-forward por el combinador de la variante (partidos terminados): se usa en lugar
+   * de volver a combinar, para que la predicción mostrada sea la del walk-forward (sin fuga del reajuste final).
+   */
+  precombined?: { p: Prob1X2; over25?: number };
 }
 
 export interface PredictOptions {
@@ -161,6 +188,8 @@ export interface ProbsOnlyResult {
   sources: { elo: Prob1X2; dc?: Prob1X2; eloGoals?: Prob1X2; market?: Prob1X2; marketOver25?: number };
   /** partidos Elo previos del equipo con menos historial */
   minEloGames: number;
+  /** P(más de 2,5) objetivo usado al recalibrar los λ */
+  over25Target: number;
 }
 
 /** Contexto de predicción para una competición a partir de un ModelSuite. */
@@ -194,6 +223,33 @@ interface GoalSource {
   model?: DCModel;
 }
 
+/** Componentes de la predicción (antes del ensamble). */
+export interface PredictComponents {
+  match: MatchRecord;
+  homeId: string;
+  awayId: string;
+  neutral: boolean;
+  eloHome: number;
+  eloAway: number;
+  /** diferencia Elo con la ventaja local de los ratings (MODEL.eloHomeAdv): la usa el modelo Elo→goles */
+  diff: number;
+  /** diferencia Elo con la ventaja local del grupo de competiciones: la de las probabilidades del Elo */
+  probDiff: number;
+  /** ventaja local de las probabilidades (0 en campo neutral) */
+  probHomeAdv: number;
+  eloP: Prob1X2;
+  goal: GoalSource;
+  market?: { probs: Prob1X2; margin: number; method: string; over25?: number };
+  minEloGames: number;
+  /** pesos efectivos de producción (sin renormalizar) */
+  ew: { goal: number; elo: number; market: number };
+  /** rasgos de la variante ({} sin variante) */
+  features: Features;
+  /** información pre-partido para los ganchos de la variante (solo si la variante la necesita) */
+  info?: HookInfo;
+  pre?: PreMatch;
+}
+
 interface Core {
   homeId: string;
   awayId: string;
@@ -201,6 +257,9 @@ interface Core {
   eloHome: number;
   eloAway: number;
   diff: number;
+  /** diferencia y ventaja local de las probabilidades del Elo (ver PredictComponents) */
+  probDiff: number;
+  probHomeAdv: number;
   eloP: Prob1X2;
   goal: GoalSource;
   market?: { probs: Prob1X2; margin: number; method: string; over25?: number };
@@ -229,6 +288,20 @@ function configsOf(ctx: PredictContext): Map<string, CompetitionConfig> {
   return ctx.configs ?? COMPETITION_BY_ID;
 }
 
+/** Ventaja local del Elo (puntos) de los ratings: la de la variante o MODEL.eloHomeAdv. */
+function eloHomeAdvOf(ctx: PredictContext): number {
+  return ctx.variant?.elo?.homeAdv ?? MODEL.eloHomeAdv;
+}
+
+/**
+ * Ventaja local (puntos) de la conversión diferencia Elo → 1X2 en la competición del contexto: la del grupo
+ * (MODEL.eloProbHomeAdv o el gancho eloProbs de la variante) o, si el grupo no está en la tabla, la de los ratings.
+ */
+export function eloProbHomeAdvOf(ctx: PredictContext): number {
+  const table = ctx.variant?.eloProbs?.homeAdv ?? MODEL.eloProbHomeAdv;
+  return table[homeAdvGroup(ctx.comp)] ?? eloHomeAdvOf(ctx);
+}
+
 /** Rating de un equipo: pre-partido si existe, actual si el equipo es conocido, inicial por tier si es nuevo. */
 function ratingsFor(match: MatchRecord, ctx: PredictContext): { home: number; away: number } {
   const pre = ctx.preMatch?.get(match.id);
@@ -239,7 +312,7 @@ function ratingsFor(match: MatchRecord, ctx: PredictContext): { home: number; aw
     // equipo nunca visto en una liga con historial ⇒ ascendido
     const lg = ctx.homeLeague.get(team);
     const promoted = ctx.comp.kind === 'league' && lg === ctx.comp.id && ctx.dcModels.has(lg);
-    return initialElo(team, ctx.homeLeague, cfgs, ctx.comp, promoted);
+    return initialElo(team, ctx.homeLeague, cfgs, ctx.comp, promoted, ctx.variant?.elo?.tierOffset ?? MODEL.eloTierOffset);
   };
   return { home: r(match.home.id), away: r(match.away.id) };
 }
@@ -338,28 +411,134 @@ export function eloGamesBefore(elo: Elo, team: string, t: number): number {
   return n;
 }
 
-function core(match: MatchRecord, ctx: PredictContext): Core {
+/** Fuente de goles con λ ajustados (matriz, 1X2 y más de 2,5 recalculados). */
+function adjustedGoal(goal: GoalSource, l: { lambdaHome: number; lambdaAway: number }): GoalSource {
+  const m = scoreMatrix(l.lambdaHome, l.lambdaAway, goal.rho, FULL_GOALS);
+  return { ...goal, lambdaHome: l.lambdaHome, lambdaAway: l.lambdaAway, probs: outcomeProbs(m), over25: over25Of(m) };
+}
+
+function variantHistory(ctx: PredictContext): HistorySource {
+  if (!ctx.history) throw new Error(`La variante «${ctx.variant?.name}» necesita el historial de partidos (PredictContext.history): usa los contextos del build (baseContext/wfContext)`);
+  return ctx.history;
+}
+
+/** Componentes pre-ensamble de un partido: Elo, fuente de goles (con lambdaAdjust de la variante), mercado y pesos. */
+export function predictComponents(match: MatchRecord, ctx: PredictContext): PredictComponents {
   const homeId = match.home.id;
   const awayId = match.away.id;
   const neutral = !!match.neutral;
   const r = ratingsFor(match, ctx);
-  const diff = r.home + (neutral ? 0 : MODEL.eloHomeAdv) - r.away;
-  const eloP = eloProbs(diff, ctx.drawParams);
-  const goal = goalSource(match, ctx, diff, neutral);
+  const diff = r.home + (neutral ? 0 : eloHomeAdvOf(ctx)) - r.away;
+  const probHomeAdv = neutral ? 0 : eloProbHomeAdvOf(ctx);
+  const probDiff = r.home + probHomeAdv - r.away;
+  const eloP = eloProbs(probDiff, ctx.drawParams);
+  let goal = goalSource(match, ctx, diff, neutral);
   const market = marketFrom(match.odds);
   const t = Date.parse(match.date);
   const minEloGames = Math.min(eloGamesBefore(ctx.elo, homeId, t), eloGamesBefore(ctx.elo, awayId, t));
-
   const ew = ensembleWeights(ctx.weights ?? defaultWeights(), { hasMarket: !!market, goalKind: goal.kind, minGames: minEloGames });
-  const wGoal = ew.goal;
-  const wElo = ew.elo;
-  const wMkt = ew.market;
-  const sw = wGoal + wElo + wMkt;
-  const ensemble = blend([
-    { probs: goal.probs, weight: wGoal },
-    { probs: eloP, weight: wElo },
-    ...(market ? [{ probs: market.probs, weight: wMkt }] : []),
+  const v = ctx.variant;
+  let features: Features = {};
+  let info: HookInfo | undefined;
+  let pre: PreMatch | undefined;
+  if (v && (v.features || v.lambdaAdjust || v.totals?.adjustTotal)) {
+    pre = preMatchView(match);
+    const history = historyView(variantHistory(ctx), t);
+    const fctx = { comp: ctx.comp, configs: configsOf(ctx), homeLeague: ctx.homeLeague };
+    if (v.features) {
+      features = v.features(fctx, pre, history);
+      for (const [k, x] of Object.entries(features)) {
+        if (typeof x !== 'number' || Number.isNaN(x)) throw new Error(`Variante «${v.name}»: el rasgo «${k}» no es un número (${String(x)}) en el partido ${match.id}`);
+      }
+    }
+    info = {
+      ...fctx,
+      history,
+      elo: { home: r.home, away: r.away, diff, probs: eloP },
+      goalKind: goal.kind,
+      dcModel: goal.model,
+      dcCompId: goal.compId,
+      rho: goal.rho,
+      market: market ? { probs: market.probs, over25: market.over25, margin: market.margin } : undefined,
+      minEloGames,
+      features,
+    };
+    if (v.lambdaAdjust) {
+      const l = v.lambdaAdjust({ ctx: info, match: pre, lambdaHome: goal.lambdaHome, lambdaAway: goal.lambdaAway, features });
+      if (!(l.lambdaHome > 0) || !(l.lambdaAway > 0) || !Number.isFinite(l.lambdaHome) || !Number.isFinite(l.lambdaAway)) {
+        throw new Error(`Variante «${v.name}»: lambdaAdjust devolvió λ no válidos (${l.lambdaHome}, ${l.lambdaAway}) en el partido ${match.id}`);
+      }
+      goal = adjustedGoal(goal, l);
+    }
+  }
+  return { match, homeId, awayId, neutral, eloHome: r.home, eloAway: r.away, diff, probDiff, probHomeAdv, eloP, goal, market, minEloGames, ew, features, info, pre };
+}
+
+/** Ensamble de producción (pool lineal con los pesos efectivos). */
+function productionBlend(c: PredictComponents): Prob1X2 {
+  return blend([
+    { probs: c.goal.probs, weight: c.ew.goal },
+    { probs: c.eloP, weight: c.ew.elo },
+    ...(c.market ? [{ probs: c.market.probs, weight: c.ew.market }] : []),
   ]);
+}
+
+/** Fila de componentes (entrada de los combinadores de las variantes). */
+export function componentRow(c: PredictComponents, ctx: PredictContext): ComponentRow {
+  const row: ComponentRow = {
+    matchId: c.match.id,
+    date: c.match.date,
+    compId: c.match.compId,
+    kind: ctx.comp.kind,
+    tier: ctx.comp.tier,
+    neutral: c.neutral,
+    hasMarket: !!c.market,
+    goalKind: c.goal.kind,
+    goal: c.goal.probs,
+    elo: c.eloP,
+    goalOver25: c.goal.over25,
+    lambdaHome: c.goal.lambdaHome,
+    lambdaAway: c.goal.lambdaAway,
+    rho: c.goal.rho,
+    eloDiff: c.diff,
+    minEloGames: c.minEloGames,
+    features: c.features,
+    production: productionBlend(c),
+    weights: { ...c.ew },
+  };
+  if (c.goal.kind === 'dc') row.dc = c.goal.probs;
+  else row.eloGoals = c.goal.probs;
+  if (c.market) {
+    row.market = c.market.probs;
+    if (c.market.over25 !== undefined) row.marketOver25 = c.market.over25;
+  }
+  return row;
+}
+
+/**
+ * Ensamble, recalibración de λ y matriz final a partir de los componentes. `combined`: ensamble ya calculado (walk-
+ * forward con combinador); si no, el combinador de la variante o el pool lineal de producción.
+ */
+function finish(c: PredictComponents, ctx: PredictContext, combined?: { p: Prob1X2; over25?: number }): Core {
+  const wGoal = c.ew.goal;
+  const wElo = c.ew.elo;
+  const wMkt = c.ew.market;
+  const sw = wGoal + wElo + wMkt;
+  const goal = c.goal;
+  const market = c.market;
+  const v = ctx.variant;
+  let ensemble: Prob1X2;
+  let over25Override: number | undefined;
+  if (combined) {
+    ensemble = combined.p;
+    over25Override = combined.over25;
+  } else if (v?.combine) {
+    const r = blendParts(v.combine.blend(componentRow(c, ctx)));
+    ensemble = r.p;
+    over25Override = r.over25;
+  } else {
+    ensemble = productionBlend(c);
+  }
   // pesos publicados: con Elo→goles, la parte de goles se reporta dentro de Elo (ambas derivan del rating)
   const weights =
     goal.kind === 'dc'
@@ -368,30 +547,68 @@ function core(match: MatchRecord, ctx: PredictContext): Core {
 
   // objetivo de Más de 2.5: mezcla modelo de goles / mercado
   const over25Target =
-    market?.over25 !== undefined && wGoal + wMkt > 0 ? (wGoal * goal.over25 + wMkt * market.over25) / (wGoal + wMkt) : goal.over25;
+    over25Override !== undefined && Number.isFinite(over25Override)
+      ? over25Override
+      : market?.over25 !== undefined && wGoal + wMkt > 0
+        ? (wGoal * goal.over25 + wMkt * market.over25) / (wGoal + wMkt)
+        : goal.over25;
 
   const rho = goal.rho;
-  const fitted = fitLambdas({ ...ensemble, over25: over25Target }, rho, { lambdaHome: goal.lambdaHome, lambdaAway: goal.lambdaAway });
+  let fitted = fitLambdas({ ...ensemble, over25: over25Target }, rho, { lambdaHome: goal.lambdaHome, lambdaAway: goal.lambdaAway });
+  // total de goles: gancho de la variante o, en producción, contracción hacia la media de la competición sin línea de
+  // goles del mercado (salvo copas)
+  let f: number;
+  if (v?.totals?.adjustTotal) {
+    f = v.totals.adjustTotal({
+      ctx: c.info!,
+      match: c.pre!,
+      features: c.features,
+      lambdaHome: fitted.lambdaHome,
+      lambdaAway: fitted.lambdaAway,
+      ensemble,
+      over25Target,
+    });
+    if (!(f > 0) || !Number.isFinite(f)) throw new Error(`Variante «${v.name}»: adjustTotal devolvió un factor no válido (${f}) en el partido ${c.match.id}`);
+  } else {
+    f = productionTotalFactor({
+      hasMarketTotal: market?.over25 !== undefined,
+      kind: ctx.comp.kind,
+      compId: c.match.compId,
+      before: ctx.history ? historyView(ctx.history, Date.parse(c.match.date)) : undefined,
+      lambdaHome: fitted.lambdaHome,
+      lambdaAway: fitted.lambdaAway,
+    });
+  }
+  if (f !== 1) {
+    const target = over25Of(scoreMatrix(fitted.lambdaHome * f, fitted.lambdaAway * f, rho, FULL_GOALS));
+    fitted = fitLambdas({ ...ensemble, over25: target }, rho, fitted);
+  }
   const matrix = scoreMatrix(fitted.lambdaHome, fitted.lambdaAway, rho, FULL_GOALS);
   return {
-    homeId,
-    awayId,
-    neutral,
-    eloHome: r.home,
-    eloAway: r.away,
-    diff,
-    eloP,
+    homeId: c.homeId,
+    awayId: c.awayId,
+    neutral: c.neutral,
+    eloHome: c.eloHome,
+    eloAway: c.eloAway,
+    diff: c.diff,
+    probDiff: c.probDiff,
+    probHomeAdv: c.probHomeAdv,
+    eloP: c.eloP,
     goal,
     market,
     weights,
     ensemble,
     over25Target,
-    minEloGames,
+    minEloGames: c.minEloGames,
     rho,
     lambdaHome: fitted.lambdaHome,
     lambdaAway: fitted.lambdaAway,
     matrix,
   };
+}
+
+function core(match: MatchRecord, ctx: PredictContext): Core {
+  return finish(predictComponents(match, ctx), ctx, ctx.precombined);
 }
 
 // ---------------------------------------------------------------------------
@@ -487,7 +704,7 @@ function buildExplanation(match: MatchRecord, ctx: PredictContext, c: Core, proj
   const raw = c.eloHome - c.eloAway;
   out.push(
     `Elo: ${H} ${Math.round(c.eloHome)} vs ${A} ${Math.round(c.eloAway)} (${fmtSigned(raw)} para el local` +
-      `${c.neutral ? ', campo neutral' : `, ${fmtSigned(c.diff)} con el factor campo`}) → ${p1x2(c.eloP)}.`,
+      `${c.neutral ? ', campo neutral' : `, ${fmtSigned(c.probDiff)} con el factor campo`}) → ${p1x2(c.eloP)}.`,
   );
 
   // 2. Ataque/defensa vs media de liga
@@ -549,9 +766,11 @@ function buildExplanation(match: MatchRecord, ctx: PredictContext, c: Core, proj
   if (c.neutral) {
     out.push('Campo neutral: no se aplica ventaja local.');
   } else {
-    const withAdv = eloProbs(c.diff, ctx.drawParams).home;
-    const without = eloProbs(c.diff - MODEL.eloHomeAdv, ctx.drawParams).home;
-    let txt = `Factor campo: +${MODEL.eloHomeAdv} puntos Elo para ${H} (≈ ${fmtSigned((withAdv - without) * 100, 1)} pp de probabilidad de victoria)`;
+    // ventaja local de las probabilidades: depende del grupo de competiciones (MODEL.eloProbHomeAdv)
+    const homeAdv = c.probHomeAdv;
+    const withAdv = eloProbs(c.probDiff, ctx.drawParams).home;
+    const without = eloProbs(c.probDiff - homeAdv, ctx.drawParams).home;
+    let txt = `Factor campo: +${homeAdv} puntos Elo para ${H} (≈ ${fmtSigned((withAdv - without) * 100, 1)} pp de probabilidad de victoria)`;
     if (c.goal.kind === 'dc' && c.goal.model && c.goal.model.homeAdv > 0) {
       txt += `; en esta liga el local marca un ${Math.round((c.goal.model.homeAdv - 1) * 100)}% más`;
     }
@@ -660,7 +879,7 @@ export function predictMatch(match: MatchRecord, ctx: PredictContext, opts: Pred
     lambdaHome: round(c.lambdaHome, 3),
     lambdaAway: round(c.lambdaAway, 3),
     rho: round(c.rho, 4),
-    elo: { home: Math.round(c.eloHome), away: Math.round(c.eloAway), diff: Math.round(c.diff), probs: roundProbs(c.eloP) },
+    elo: { home: Math.round(c.eloHome), away: Math.round(c.eloAway), diff: Math.round(c.probDiff), probs: roundProbs(c.eloP) },
     ensemble: roundProbs(c.ensemble),
     weights: { dixonColes: round(c.weights.dixonColes, 3), elo: round(c.weights.elo, 3), market: round(c.weights.market, 3) },
     scoreMatrix: c.matrix.slice(0, maxG + 1).map((row) => row.slice(0, maxG + 1).map((v) => round(v, 5))),
@@ -685,7 +904,22 @@ export function predictMatch(match: MatchRecord, ctx: PredictContext, opts: Pred
 
 /** Versión rápida para backtest: probabilidades del ensamble, Más de 2.5, ambos marcan y fuentes (sin mercados). */
 export function predictProbsOnly(match: MatchRecord, ctx: PredictContext): ProbsOnlyResult {
-  const c = core(match, ctx);
+  return probsFromCore(core(match, ctx));
+}
+
+/**
+ * predictProbsOnly a partir de componentes ya calculados (walk-forward con combinador de la variante): `combined` es
+ * el ensamble del combinador (si se omite, ctx.precombined, el combinador de la variante o producción).
+ */
+export function predictProbsFromComponents(
+  comps: PredictComponents,
+  ctx: PredictContext,
+  combined?: { p: Prob1X2; over25?: number },
+): ProbsOnlyResult {
+  return probsFromCore(finish(comps, ctx, combined ?? ctx.precombined));
+}
+
+function probsFromCore(c: Core): ProbsOnlyResult {
   const sources: ProbsOnlyResult['sources'] = { elo: c.eloP };
   if (c.goal.kind === 'dc') sources.dc = c.goal.probs;
   else sources.eloGoals = c.goal.probs;
@@ -701,5 +935,6 @@ export function predictProbsOnly(match: MatchRecord, ctx: PredictContext): Probs
     lambdaAway: c.lambdaAway,
     sources,
     minEloGames: c.minEloGames,
+    over25Target: c.over25Target,
   };
 }

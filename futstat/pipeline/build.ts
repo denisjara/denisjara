@@ -1,7 +1,7 @@
 /**
  * CLI: data-store/<compId>.json → public/data/*.json (contrato en src/types/data.ts).
  *
- *   npx tsx pipeline/build.ts [--only=laliga,champions] [--fast] [--now=2026-11-03T12:00:00Z] [--out=dir] [--no-sanity] [--allow-stale]
+ *   npx tsx pipeline/build.ts [--only=laliga,champions] [--fast] [--now=2026-11-03T12:00:00Z] [--out=dir] [--no-sanity] [--allow-stale] [--variant=nombre]
  *
  *   --only       publica solo esas competiciones (los modelos se ajustan siempre con todos los stores)
  *   --fast       menos iteraciones (simulación 2.000, re-ajuste walk-forward quincenal) para depurar
@@ -9,6 +9,8 @@
  *   --out        directorio de salida (por defecto public/data)
  *   --no-sanity  valida solo el contrato, sin umbrales de cordura (desarrollo con datos parciales)
  *   --allow-stale publica aunque la última descarga correcta de ESPN tenga más de 72 h (desarrollo con un almacén viejo)
+ *   --variant    (banco de pruebas) publica con la variante pipeline/experiments/<nombre>.ts en lugar de producción;
+ *                pensado para revisar los JSON de una variante con --out (no lo uses para public/data)
  *
  * Seguridad del equipo: --out solo acepta un directorio inexistente, vacío o con una salida anterior de FutStat (nunca
  * borra contenido ajeno) y un cerrojo impide dos builds a la vez sobre la misma salida.
@@ -62,6 +64,8 @@ import {
   type CleanStats,
 } from './publish/util';
 import { DEFAULT_SANITY, validateDataDir, type ValidateOptions, type ValidationResult } from '../scripts/validate-data';
+import { loadVariant } from './experiments/load';
+import type { ModelVariant } from './experiments/types';
 
 export interface RunBuildOptions extends BuildOptions {
   outDir: string;
@@ -273,7 +277,7 @@ function argValue(args: string[], name: string): string | undefined {
   return i >= 0 ? a.slice(i + 1) : '';
 }
 
-export function main(args: string[]): number {
+export async function main(args: string[]): Promise<number> {
   const only = argValue(args, 'only')
     ?.split(',')
     .map((s) => s.trim())
@@ -285,7 +289,9 @@ export function main(args: string[]): number {
   const outDir = path.resolve(argValue(args, 'out') || OUTPUT_DIR);
   const noSanity = argValue(args, 'no-sanity') !== undefined;
   const allowStale = argValue(args, 'allow-stale') !== undefined;
-  const known = new Set(['only', 'fast', 'now', 'out', 'no-sanity', 'allow-stale']);
+  const variantName = argValue(args, 'variant');
+  const variant: ModelVariant | undefined = variantName ? await loadVariant(variantName) : undefined;
+  const known = new Set(['only', 'fast', 'now', 'out', 'no-sanity', 'allow-stale', 'variant']);
   const unknownArgs = args.filter((a) => !known.has(a.replace(/^--/, '').split('=')[0]));
   if (unknownArgs.length) throw new Error(`Argumentos desconocidos: ${unknownArgs.join(' ')}`);
   if (only) {
@@ -293,7 +299,9 @@ export function main(args: string[]): number {
     if (unknown.length) throw new Error(`Competiciones desconocidas en --only: ${unknown.join(', ')}`);
   }
 
-  console.log(`FutStat Lab · build ${now.toISOString()}${fast ? ' (rápido)' : ''}${only ? ` · solo ${only.join(', ')}` : ''}`);
+  console.log(
+    `FutStat Lab · build ${now.toISOString()}${fast ? ' (rápido)' : ''}${only ? ` · solo ${only.join(', ')}` : ''}${variant ? ` · variante ${variant.name}` : ''}`,
+  );
   const t0 = performance.now();
   const stores = loadAllStores();
   if (!stores.length) {
@@ -312,7 +320,7 @@ export function main(args: string[]): number {
       };
   let r: BuildReport;
   try {
-    r = runBuild({ stores, configs: COMPETITIONS, now, only, fast, outDir, validate });
+    r = runBuild({ stores, configs: COMPETITIONS, now, only, fast, outDir, validate, variant });
   } catch (e) {
     if (e instanceof PublishRejectedError) {
       console.error(`\n✗ ${e.message}.`);
@@ -351,10 +359,13 @@ const isMain = (() => {
 })();
 
 if (isMain) {
-  try {
-    process.exitCode = main(process.argv.slice(2));
-  } catch (e) {
-    console.error(e instanceof Error ? (e.stack ?? e.message) : e);
-    process.exitCode = 1;
-  }
+  main(process.argv.slice(2)).then(
+    (code) => {
+      process.exitCode = code;
+    },
+    (e: unknown) => {
+      console.error(e instanceof Error ? (e.stack ?? e.message) : e);
+      process.exitCode = 1;
+    },
+  );
 }

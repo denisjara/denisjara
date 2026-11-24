@@ -25,6 +25,13 @@ export interface DCMatch {
   date: string;
   neutral?: boolean;
   weight?: number;
+  /**
+   * marcador REAL (entero) cuando hg/ag son goles "ajustados" (p. ej. mezcla con xG; pueden no ser enteros): la parte
+   * de Poisson del ajuste usa hg/ag y la corrección τ/ρ de Dixon-Coles el marcador real. Sin ellos hg/ag deben ser
+   * enteros (comportamiento original).
+   */
+  rawHg?: number;
+  rawAg?: number;
 }
 
 export interface DCModel {
@@ -102,9 +109,14 @@ export function fitDixonColes(matches: DCMatch[], opts: DCFitOptions): DCModel {
 
   // ---- datos válidos
   const valid: { m: DCMatch; w: number }[] = [];
+  const isCount = (x: number | undefined) => Number.isInteger(x) && (x as number) >= 0;
   for (const m of matches) {
     if (!m || !m.home || !m.away || m.home === m.away) continue;
-    if (!Number.isInteger(m.hg) || !Number.isInteger(m.ag) || m.hg < 0 || m.ag < 0) continue;
+    if (m.rawHg !== undefined || m.rawAg !== undefined) {
+      // goles ajustados (reales no negativos) + marcador real entero para τ
+      if (!isCount(m.rawHg) || !isCount(m.rawAg)) continue;
+      if (!Number.isFinite(m.hg) || !Number.isFinite(m.ag) || m.hg < 0 || m.ag < 0) continue;
+    } else if (!Number.isInteger(m.hg) || !Number.isInteger(m.ag) || m.hg < 0 || m.ag < 0) continue;
     const t = Date.parse(m.date);
     const days = Number.isFinite(t) && Number.isFinite(ref) ? Math.max(0, (ref - t) / DAY_MS) : 0;
     const w = Math.exp(-xi * days) * (m.weight === undefined ? 1 : m.weight);
@@ -121,6 +133,9 @@ export function fitDixonColes(matches: DCMatch[], opts: DCFitOptions): DCModel {
   const ai = new Int32Array(N);
   const hg = new Float64Array(N);
   const ag = new Float64Array(N);
+  // marcador real para la corrección τ (= hg/ag salvo con goles ajustados)
+  const rh = new Float64Array(N);
+  const ra = new Float64Array(N);
   const w = new Float64Array(N);
   const nonNeutral = new Uint8Array(N);
   const counts = new Array<number>(T).fill(0);
@@ -135,6 +150,8 @@ export function fitDixonColes(matches: DCMatch[], opts: DCFitOptions): DCModel {
     ai[k] = index.get(m.away)!;
     hg[k] = m.hg;
     ag[k] = m.ag;
+    rh[k] = m.rawHg ?? m.hg;
+    ra[k] = m.rawAg ?? m.ag;
     w[k] = wk;
     nonNeutral[k] = m.neutral ? 0 : 1;
     counts[hi[k]]++;
@@ -181,8 +198,8 @@ export function fitDixonColes(matches: DCMatch[], opts: DCFitOptions): DCModel {
       const prevHome = homeAdv;
       computeLambdas();
       for (let k = 0; k < N; k++) {
-        if (rho !== 0 && hg[k] < 2 && ag[k] < 2) {
-          const t = tauTerms(hg[k], ag[k], lamH[k], lamA[k], rho);
+        if (rho !== 0 && rh[k] < 2 && ra[k] < 2) {
+          const t = tauTerms(rh[k], ra[k], lamH[k], lamA[k], rho);
           // sin recortar por partido: la ecuación de score se cumple sobre la suma
           yH[k] = hg[k] + t.dH;
           yA[k] = ag[k] + t.dA;
@@ -263,11 +280,11 @@ export function fitDixonColes(matches: DCMatch[], opts: DCFitOptions): DCModel {
 
   // log-verosimilitud (solo términos que dependen de ρ) con λ fijos
   const lowIdx: number[] = [];
-  for (let k = 0; k < N; k++) if (hg[k] < 2 && ag[k] < 2) lowIdx.push(k);
+  for (let k = 0; k < N; k++) if (rh[k] < 2 && ra[k] < 2) lowIdx.push(k);
   const rhoLogLik = (rho: number): number => {
     let s = 0;
     for (const k of lowIdx) {
-      const t = tauTerms(hg[k], ag[k], lamH[k], lamA[k], rho).logTau;
+      const t = tauTerms(rh[k], ra[k], lamH[k], lamA[k], rho).logTau;
       if (t === -Infinity) return -Infinity;
       s += w[k] * t;
     }
@@ -314,7 +331,7 @@ export function fitDixonColes(matches: DCMatch[], opts: DCFitOptions): DCModel {
   // log-verosimilitud completa ponderada
   let logLik = 0;
   for (let k = 0; k < N; k++) {
-    const lt = hg[k] < 2 && ag[k] < 2 ? tauTerms(hg[k], ag[k], lamH[k], lamA[k], rho).logTau : 0;
+    const lt = rh[k] < 2 && ra[k] < 2 ? tauTerms(rh[k], ra[k], lamH[k], lamA[k], rho).logTau : 0;
     logLik +=
       w[k] *
       (lt +

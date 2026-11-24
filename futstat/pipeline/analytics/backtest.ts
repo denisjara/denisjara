@@ -16,6 +16,8 @@ import { brierBinary, calibration, devig, fitDixonColes, round, scoreSet, type D
 import { MODEL } from '../config';
 import type { MatchRecord } from '../types';
 import { finishedSorted, isFinished } from './teamStats';
+import { toDcMatch } from './ratings';
+import type { DcHooks } from '../experiments/types';
 
 export interface BacktestItem {
   match: MatchRecord;
@@ -271,6 +273,8 @@ export interface WalkForwardOptions {
   /** iteraciones/tolerancia del ajuste (más laxas que el ajuste de producción para ir rápido) */
   maxIter?: number;
   tol?: number;
+  /** ganchos de variante (banco de pruebas): goles ajustados y peso extra de cada partido histórico */
+  hooks?: Pick<DcHooks, 'fitGoals' | 'weight'>;
 }
 
 /**
@@ -294,14 +298,19 @@ export function walkForwardDC(
   const refitMs = Math.max(1, refitEveryDays) * DAY_MS;
   const fromT = opts.from ? Date.parse(opts.from) : -Infinity;
   const times = fin.map((m) => Date.parse(m.date));
-  const dcm: DCMatch[] = fin.map((m) => ({
-    home: m.home.id,
-    away: m.away.id,
-    hg: m.score.home,
-    ag: m.score.away,
-    date: m.date,
-    neutral: m.neutral || undefined,
-  }));
+  const hooks = opts.hooks?.fitGoals || opts.hooks?.weight ? opts.hooks : undefined;
+  const dcm: DCMatch[] = fin.map((m) =>
+    hooks
+      ? toDcMatch(m, hooks)
+      : {
+          home: m.home.id,
+          away: m.away.id,
+          hg: m.score.home,
+          ag: m.score.away,
+          date: m.date,
+          neutral: m.neutral || undefined,
+        },
+  );
   let lo = 0;
   let hi = 0;
   let lastFit = -Infinity;

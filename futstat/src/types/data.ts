@@ -25,6 +25,7 @@
  *  public/data/players.json                  -> PlayersFile      (global player form leaderboard)
  *  public/data/value.json                    -> ValueFile        (all value bets across competitions)
  *  public/data/model.json                    -> ModelFile        (methodology + global backtest)
+ *  public/data/daily.json                    -> DailyFile        (best picks of the day, all markets, per match)
  *  public/data/confidence.json               -> ConfidenceFile   (high-confidence picks + honest out-of-sample record)
  */
 
@@ -947,4 +948,90 @@ export interface ModelFile {
   backtest: BacktestSummary; // aggregated across competitions
   perCompetition: { compId: string; compName: string; backtest: BacktestSummary }[];
   parameters: Record<string, number | string>;
+}
+
+// ---------------------------------------------------------------------------
+// Daily best picks — "Pronósticos del día" (public/data/daily.json)
+// ---------------------------------------------------------------------------
+
+/** Market category of a daily pick. 'jugadores' = player props (shots on target, shots, goal). */
+export type DailyCategory = 'resultado' | 'goles' | 'tiros' | 'corners' | 'tarjetas' | 'faltas' | 'jugadores';
+
+/**
+ * A pick of the daily section: a validated high-confidence selection (same rules as ConfidencePick: its family passed
+ * the out-of-sample validation) plus what the page needs to explain it.
+ */
+export interface DailyPick extends ConfidencePick {
+  category: DailyCategory;
+  /** one short Spanish sentence with the numbers behind the pick ("El Madrid promedia 6,7 tiros a puerta en casa…") */
+  reason?: string;
+  /** player props only. If the player does not take part, bookmakers usually void the bet. */
+  player?: { id: string; name: string; short: string; teamId: string; position?: string; expMinutes?: number };
+  /** 0..100 ranking score (calibrated probability, out-of-sample record of its family, lift over its base rate) */
+  score?: number;
+}
+
+/** Expected numbers of the match (model projections), for context next to the picks. */
+export interface DailyExpected {
+  goals: { home: number; away: number; total: number };
+  shotsOnTarget?: { home: number; away: number; total: number };
+  shots?: { home: number; away: number; total: number };
+  corners?: { home: number; away: number; total: number };
+  cards?: { home: number; away: number; total: number };
+  fouls?: { home: number; away: number; total: number };
+}
+
+export interface DailyMatch {
+  match: MatchSummary;
+  /** validated picks of this match, best first (at most 2 per category and 8 in total) */
+  picks: DailyPick[];
+  expected: DailyExpected;
+  /** 2–5 short Spanish bullets: the reading of the match across markets (goals, shots, corners, cards, players) */
+  analysis: string[];
+}
+
+/** Suggested accumulator: legs from DIFFERENT matches (independent), with the combined probability. */
+export interface DailyCombo {
+  id: string; // 'segura' | 'equilibrada' | 'atrevida'
+  label: string; // "Combinada segura"
+  legs: { matchId: string; home: string; away: string; compName: string; pick: DailyPick }[];
+  /** product of the calibrated probabilities of the legs */
+  prob: number;
+  fairOdds: number;
+  /** product of bookmaker odds when every leg has one */
+  marketOdds?: number;
+}
+
+export interface DailyDay {
+  /** local date YYYY-MM-DD in the home time zone (Europe/Madrid) */
+  date: string;
+  /** matches of the day with at least one pick: competition prestige first, then kick-off */
+  matches: DailyMatch[];
+  /** best picks of the day (max 10), best first; at most one per match */
+  top: { matchId: string; pick: DailyPick }[];
+  /** 0–3 suggested accumulators */
+  combos: DailyCombo[];
+  counts: { matches: number; picks: number; matchesAnalyzed: number };
+}
+
+export interface DailyFile {
+  generatedAt: string;
+  /** today and the next days with matches (at most 4 days), chronological */
+  days: DailyDay[];
+  /** categories in display order with their Spanish label */
+  categories: { id: DailyCategory; label: string }[];
+  /**
+   * OUT-OF-SAMPLE record of the daily selection rule itself (every validated pick, up to 2 per category and 8 per
+   * match), from the monthly walk-forward: overall, by category, and for the accumulators.
+   */
+  track: {
+    overall: ConfidenceRecord;
+    byCategory: ({ category: DailyCategory; label: string; baseRate?: number } & Omit<ConfidenceRecord, 'from' | 'to' | 'matches'>)[];
+    /** how often each kind of accumulator would have hit (all legs), walk-forward */
+    combos?: { id: string; label: string; days: number; hits: number; hitRate: number; avgLegs: number; avgFairOdds: number }[];
+    /** model-free baseline for context (same idea as ConfidenceFile.track.baseline) */
+    baseline?: ConfidenceBaseline;
+  };
+  /** Spanish caveat shown on the page (high hit rate ≠ edge over the bookmaker; +18; lineups) */
+  note: string;
 }
