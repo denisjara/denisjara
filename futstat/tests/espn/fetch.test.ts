@@ -27,8 +27,14 @@ describe('fetch CLI helpers', () => {
       summaries: false,
       maxSummaries: 5,
       concurrency: 3,
+      officials: true,
+      officialsOnly: false,
+      maxOfficials: 4000,
       help: false,
     });
+    expect(parseArgs(['--officials-only', '--max-officials=20000'])).toMatchObject({ officials: true, officialsOnly: true, maxOfficials: 20000 });
+    expect(parseArgs(['--no-officials'])).toMatchObject({ officials: false });
+    expect(() => parseArgs(['--officials-only', '--no-officials'])).toThrow();
     expect(() => parseArgs(['--foo'])).toThrow();
   });
 });

@@ -178,7 +178,22 @@ export function sanitizeMatchRecord(x: unknown, compId: string): MatchRecord | u
   setIf(m, 'summaryAttempts', num(x.summaryAttempts, 0, 1000));
   setIf(m, 'summaryRetryAt', validDate(x.summaryRetryAt));
   setIf(m, 'downgradeSeen', num(x.downgradeSeen, 0, 1000));
+  setIf(m, 'referee', sanitizeReferee(x.referee));
+  setIf(m, 'refereeChecks', num(x.refereeChecks, 0, 1000));
+  setIf(m, 'refereeRetryAt', validDate(x.refereeRetryAt));
   return m;
+}
+
+/** Longitud máxima del nombre de un árbitro guardado. */
+export const REFEREE_NAME_MAX = 80;
+
+/** Árbitro guardado: id de ESPN (token corto) y nombre no vacío, recortado y acotado; cualquier otra cosa se descarta. */
+export function sanitizeReferee(x: unknown): MatchRecord['referee'] {
+  if (!isObj(x) || typeof x.id !== 'string' || typeof x.name !== 'string') return undefined;
+  const id = x.id.trim();
+  const name = x.name.replace(/\s+/g, ' ').trim().slice(0, REFEREE_NAME_MAX).trim();
+  if (!/^[A-Za-z0-9_-]{1,40}$/.test(id) || !name) return undefined;
+  return { id, name };
 }
 
 /** A stored player line with every field checked (undefined = discard). Missing counters (older schema) count as 0. */
@@ -504,6 +519,15 @@ function mergeOne(prev: MatchRecord, inc: MatchRecord): MatchRecord {
     delete m.summaryFetched;
     delete m.summaryAttempts;
     delete m.summaryRetryAt;
+  }
+
+  // árbitro: lo aportan /officials o el resumen, nunca el scoreboard → se conserva del registro guardado (con su
+  // contabilidad de reintentos), salvo que el partido se haya movido más de un día (aplazado: nueva designación)
+  const sameSlot = Math.abs(Date.parse(inc.date) - Date.parse(prev.date)) <= DAY_MS;
+  if (sameSlot) {
+    if (!m.referee && prev.referee) m.referee = prev.referee;
+    if (m.refereeChecks === undefined && prev.refereeChecks !== undefined) m.refereeChecks = prev.refereeChecks;
+    if (m.refereeRetryAt === undefined && prev.refereeRetryAt !== undefined) m.refereeRetryAt = prev.refereeRetryAt;
   }
 
   return m;

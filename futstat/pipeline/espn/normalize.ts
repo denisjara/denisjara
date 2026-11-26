@@ -122,6 +122,7 @@ interface RawSummary {
   pickcenter?: (RawOdds | null)[];
   odds?: (RawOdds | null)[];
   header?: { competitions?: { neutralSite?: boolean; status?: RawStatus; competitors?: RawCompetitor[] }[] };
+  gameInfo?: { officials?: unknown };
 }
 interface RawStandingEntry { team?: RawTeam; stats?: RawStat[]; note?: { color?: string; description?: string } }
 interface RawStandingsChild { name?: string; abbreviation?: string; standings?: { entries?: RawStandingEntry[] } }
@@ -860,6 +861,8 @@ export interface SummaryResult {
   pens?: { home: number; away: number };
   /** neutral venue flag from the header */
   neutral?: boolean;
+  /** árbitro de `gameInfo.officials` (el resumen no trae su id: fetch.ts lo busca por nombre o en /officials) */
+  referee?: { id?: string; name: string };
   /** true when the match went to extra time (players' full time = 120) */
   extraTime: boolean;
   players: PlayerLine[];
@@ -980,6 +983,14 @@ export function normalizeSummary(raw: unknown, match: MatchRecord): SummaryResul
   }
   const fullTime = extraTime ? 120 : 90;
   const out: SummaryResult = { extraTime, players: [] };
+
+  // árbitro (gameInfo.officials): solo nombre, ESPN no da su id en el resumen
+  try {
+    const ref = pickReferee(s.gameInfo && typeof s.gameInfo === 'object' ? s.gameInfo.officials : undefined);
+    if (ref) out.referee = ref;
+  } catch (e) {
+    warnNormalize('resumen: árbitro ilegible', errMsg(e));
+  }
 
   // header: HT score, penalties, neutral
   try {
@@ -1149,6 +1160,49 @@ function playerLineOf(p: RawRosterEntry, c: PlayerLineCtx): PlayerLine | undefin
     if (st.has('goalsConceded')) line.goalsConceded = playerStat(st, 'goalsConceded');
   }
   return line;
+}
+
+// ---------------------------------------------------------------------------
+// Árbitros (summary gameInfo.officials y endpoint core /officials)
+// ---------------------------------------------------------------------------
+/** Longitud máxima del nombre de un árbitro (igual que REFEREE_NAME_MAX del almacén). */
+const REFEREE_NAME_MAX = 80;
+
+/**
+ * Árbitro principal de una lista de oficiales de ESPN: el de `position.name` "Referee" (exacto: no "Assistant
+ * Referee" ni "Video Assistant Referee"); si ninguno lo indica, el de `order` 1. Sin nombre utilizable → undefined.
+ */
+export function pickReferee(list: unknown): { id?: string; name: string } | undefined {
+  if (!Array.isArray(list)) return undefined;
+  const items = list.filter((o): o is Record<string, unknown> => !!o && typeof o === 'object' && !Array.isArray(o));
+  const posName = (o: Record<string, unknown>) => {
+    const p = o.position;
+    const n = p && typeof p === 'object' ? (p as { name?: unknown }).name : undefined;
+    return typeof n === 'string' ? n.trim().toLowerCase() : '';
+  };
+  const o = items.find((x) => posName(x) === 'referee') ?? items.find((x) => x.order === 1 || x.order === '1');
+  if (!o) return undefined;
+  const name = cleanText(o.displayName, REFEREE_NAME_MAX) ?? cleanText(o.fullName, REFEREE_NAME_MAX);
+  if (!name) return undefined;
+  return compact({ id: cleanId(o.id), name });
+}
+
+/** Resultado de leer una respuesta de /officials. */
+export type OfficialsParse =
+  | { kind: 'referee'; referee: { id: string; name: string } }
+  /** ESPN aún no publica el árbitro (`count: 0`, lista vacía o sin árbitro con id) */
+  | { kind: 'empty' }
+  /** la respuesta no tiene la forma esperada */
+  | { kind: 'invalid' };
+
+/** Lee la respuesta del endpoint core `/officials` ({count, items:[{id, displayName, position:{name}, order}]}). */
+export function parseOfficialsResponse(raw: unknown): OfficialsParse {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return { kind: 'invalid' };
+  const r = raw as { count?: unknown; items?: unknown };
+  if (r.items === undefined) return r.count === 0 ? { kind: 'empty' } : { kind: 'invalid' };
+  if (!Array.isArray(r.items)) return { kind: 'invalid' };
+  const ref = pickReferee(r.items);
+  return ref?.id ? { kind: 'referee', referee: { id: ref.id, name: ref.name } } : { kind: 'empty' };
 }
 
 /** true when a summary carried something worth persisting (players or extended stats). */

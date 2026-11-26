@@ -9,7 +9,7 @@ import fs from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { fitDixonColes, goalMultiplier, mulberry32, sampleNegBin, samplePoisson, type DCMatch } from '../../src/lib/models';
 import { MODEL, type CompetitionConfig } from '../../pipeline/config';
-import type { CompetitionStore, MatchRecord } from '../../pipeline/types';
+import type { CompetitionStore, MatchRecord, PlayerLine } from '../../pipeline/types';
 import { kMultiplierFor } from '../../pipeline/analytics/ratings';
 import { predictMatch } from '../../pipeline/analytics/predict';
 import { PRIOR_N } from '../../pipeline/analytics/projections';
@@ -24,8 +24,9 @@ import {
   runVariant,
   type EvalData,
 } from '../../pipeline/experiments/bench';
+import { historyView } from '../../pipeline/experiments/history';
 import { checkVariantSource, loadVariant, validateVariant } from '../../pipeline/experiments/load';
-import { BASELINE_VARIANT, PRODUCTION_VARIANT, preMatchView, type ModelVariant, type WalkForwardRow } from '../../pipeline/experiments/types';
+import { BASELINE_VARIANT, PRODUCTION_VARIANT, isEmptyVariant, preMatchView, type ModelVariant, type StatPairs, type WalkForwardRow } from '../../pipeline/experiments/types';
 import example from '../../pipeline/experiments/example';
 import { HOLDOUT_LOG, main as evalMain } from '../../scripts/eval-model';
 
@@ -37,14 +38,54 @@ const CONFIGS = [LIGA, COPA];
 
 /**
  * Liga de 12 equipos (una jornada el sábado desde 2025-01 hasta 2026-10, temporada actual desde 2026-06-01, cuotas
- * de cierre en la mitad de los partidos) y una copa entre equipos de la liga los miércoles de la temporada actual.
- * La copa va PRIMERO en los stores: el walk-forward la procesa antes que la liga (orden no cronológico entre
- * competiciones, el caso en que un estado global de una variante filtraría el futuro).
+ * de cierre en la mitad de los partidos, 6 árbitros) y una copa entre equipos de la liga los miércoles de la
+ * temporada actual. Líneas de jugador (13 por equipo: 11 titulares y 2 suplentes) desde 2026-03-01; el jugador 0 de
+ * cada equipo se pierde un partido de cada 5 (habitual que falta). La copa va PRIMERO en los stores: el walk-forward
+ * la procesa antes que la liga (orden no cronológico entre competiciones, el caso en que un estado global de una
+ * variante filtraría el futuro).
  */
 function benchWorld(seed = 5): CompetitionStore[] {
   const rng = mulberry32(seed);
   const teams = Array.from({ length: 12 }, (_, i) => ({ id: `X${i}`, name: `Equipo ${i}`, short: `Eq${i}`, abbr: `E${i}`, att: 1.45 - 0.07 * i, def: 0.7 + 0.06 * i }));
   const ref = (t: (typeof teams)[number]) => ({ id: t.id, name: t.name, short: t.short, abbr: t.abbr });
+  const lines: Record<string, PlayerLine[]> = { [LIGA.id]: [], [COPA.id]: [] };
+  const games = new Map<string, number>();
+  const linesOf = (m: MatchRecord, side: 'home' | 'away', goals: number) => {
+    const team = m[side];
+    const opp = side === 'home' ? m.away : m.home;
+    const n = (games.get(team.id) ?? 0) + 1;
+    games.set(team.id, n);
+    for (let k = 0; k < 13; k++) {
+      if (k === 0 && n % 5 === 0) continue; // el habitual falta
+      const sub = k >= 11;
+      const pos = k === 0 ? 'G' : k < 5 ? 'D' : k < 9 ? 'M' : 'F';
+      const shots = pos === 'G' ? 0 : samplePoisson(pos === 'F' ? 2.2 : 0.8, rng);
+      lines[m.compId].push({
+        matchId: m.id,
+        compId: m.compId,
+        date: m.date,
+        teamId: team.id,
+        opponentId: opp.id,
+        isHome: side === 'home',
+        playerId: `${team.id}p${k}`,
+        name: `Jugador ${k} ${team.id}`,
+        short: `J${k}`,
+        position: pos,
+        starter: !sub,
+        minutes: sub ? 30 : 90,
+        goals: pos === 'F' && goals > 0 && k === 9 + (n % 2) ? goals : 0,
+        assists: 0,
+        shots,
+        shotsOnTarget: Math.min(shots, samplePoisson(0.4, rng)),
+        yellow: rng() < 0.12 ? 1 : 0,
+        red: 0,
+        foulsCommitted: samplePoisson(1, rng),
+        foulsSuffered: samplePoisson(1, rng),
+        offsides: 0,
+        ownGoals: 0,
+      });
+    }
+  };
   let id = 7000;
   const play = (compId: string, date: number, h: (typeof teams)[number], a: (typeof teams)[number], withOdds: boolean): MatchRecord => {
     const lh = 1.2 * h.att * a.def * 1.2;
@@ -62,10 +103,15 @@ function benchWorld(seed = 5): CompetitionStore[] {
       away: ref(a),
       score: { home: hg, away: ag },
       stats: {
-        home: { goals: hg, corners: sampleNegBin(5.4, 12, rng), yellow: samplePoisson(1.9, rng) + 1, red: 0, shots: sampleNegBin(13, 20, rng), shotsOnTarget: 4 },
-        away: { goals: ag, corners: sampleNegBin(4.4, 12, rng), yellow: samplePoisson(2.2, rng), red: 0, shots: sampleNegBin(11, 20, rng), shotsOnTarget: 3 },
+        home: { goals: hg, corners: sampleNegBin(5.4, 12, rng), yellow: samplePoisson(1.9, rng) + 1, red: 0, shots: sampleNegBin(13, 20, rng), shotsOnTarget: 4, fouls: sampleNegBin(12, 20, rng) },
+        away: { goals: ag, corners: sampleNegBin(4.4, 12, rng), yellow: samplePoisson(2.2, rng), red: 0, shots: sampleNegBin(11, 20, rng), shotsOnTarget: 3, fouls: sampleNegBin(12, 20, rng) },
       },
+      referee: { id: `R${id % 6}`, name: `Árbitro ${id % 6}` },
     };
+    if (date >= Date.UTC(2026, 2, 1)) {
+      linesOf(m, 'home', hg);
+      linesOf(m, 'away', ag);
+    }
     if (withOdds) {
       // cuotas con margen ~5 % alrededor de una probabilidad aproximada
       const ph = Math.min(0.8, Math.max(0.1, 0.45 + 0.25 * (lh - la)));
@@ -92,8 +138,8 @@ function benchWorld(seed = 5): CompetitionStore[] {
     }
   }
   return [
-    { compId: COPA.id, slug: COPA.slug, updatedAt: '2026-11-01T00:00:00Z', matches: cup, players: [], standings: [] },
-    { compId: LIGA.id, slug: LIGA.slug, updatedAt: '2026-11-01T00:00:00Z', matches: league, players: [], standings: [] },
+    { compId: COPA.id, slug: COPA.slug, updatedAt: '2026-11-01T00:00:00Z', matches: cup, players: lines[COPA.id], standings: [] },
+    { compId: LIGA.id, slug: LIGA.slug, updatedAt: '2026-11-01T00:00:00Z', matches: league, players: lines[LIGA.id], standings: [] },
   ];
 }
 
@@ -115,7 +161,18 @@ const identity: ModelVariant = {
     adjustTotal: ({ ctx, match, lambdaHome, lambdaAway }) =>
       productionTotalFactor({ hasMarketTotal: ctx.market?.over25 !== undefined, kind: ctx.comp.kind, compId: match.compId, before: ctx.history, lambdaHome, lambdaAway }),
   },
-  stats: { priorN: PRIOR_N, halfLifeDays: 150, dispersion: 'pooled', leaguePriorN: 20 },
+  // multiplicadores 1 en todas las estadísticas proyectadas (y la vista del árbitro, que no cambia nada)
+  stats: {
+    priorN: PRIOR_N,
+    halfLifeDays: 150,
+    dispersion: 'pooled',
+    leaguePriorN: 20,
+    adjust: ({ base, match, history }) => {
+      if (match.referee) history.refereeMatches(match.referee.id);
+      return Object.fromEntries(Object.keys(base).map((k) => [k, { home: 1, away: 1 }])) as StatPairs;
+    },
+  },
+  players: { adjust: ({ base, history, teamId }) => (history.playerLines(teamId).length >= 0 ? { cardsFactor: base.cardsFactor } : {}) },
 };
 
 describe('variante vacía = producción', () => {
@@ -123,20 +180,55 @@ describe('variante vacía = producción', () => {
   computeWalkForward(prod);
   const base = runVariant(PRODUCTION_VARIANT, data);
 
-  it('el walk-forward del banco (variante vacía) es el del build', () => {
+  it('el walk-forward del banco (variante vacía) es el del build; además predice las temporadas pasadas desde prev', () => {
     expect(prod.wf.size).toBeGreaterThan(120);
-    expect(base.rows.size).toBe(prod.wf.size);
     for (const [id, wf] of prod.wf) {
       const r = base.rows.get(id)!;
       expect(r.p).toEqual([wf.p.home, wf.p.draw, wf.p.away]);
       expect([r.over25, r.btts, r.lh, r.la]).toEqual([wf.over25, wf.btts, wf.lambdaHome, wf.lambdaAway]);
     }
+    // el build nunca predice temporadas pasadas; el banco sí (2026-01-01 → inicio de la actual), y solo esas de más
+    const extra = [...base.rows.keys()].filter((id) => !prod.wf.has(id)).map((id) => prod.matchById.get(id)!);
+    expect(extra.length).toBeGreaterThan(100);
+    for (const m of extra) {
+      expect(m.currentSeason).toBe(false);
+      expect(m.date >= '2026-01-01').toBe(true);
+    }
+    expect(prod.allMatches.some((m) => !m.currentSeason && !prod.wf.has(m.id))).toBe(true);
+  });
+
+  it('ventana prev: solo partidos de temporadas pasadas, sin tocar las demás; faltas, tiros, líneas por equipo y props', () => {
+    const infos = matchInfos(base.ctx!);
+    const prev = compare(base, base, infos, 'prev', data);
+    expect(prev.n).toBeGreaterThan(100);
+    expect(prev.composition).toEqual({ [LIGA.id]: prev.n });
+    const tuning = compare(base, base, infos, 'tuning', data);
+    const pre = compare(base, base, infos, 'pre', data);
+    expect(pre.n).toBe(0); // en este mundo no hay partidos de la temporada actual antes de junio
+    for (const k of ['fouls', 'shots', 'sot', 'teamGoals', 'teamCards', 'teamCorners', 'pScorer', 'pCard', 'pSot1', 'pShots2'] as const) {
+      expect(tuning.ci[k]?.diff).toBe(0);
+    }
+    expect(tuning.model.fouls!.n).toBe(tuning.n);
+    expect(tuning.playerSets!.common).toBeGreaterThan(1000);
+    expect(tuning.playerSets!.onlyBaseline + tuning.playerSets!.onlyVariant).toBe(0);
+    const segs = Object.fromEntries(tuning.segments.map((x) => [x.id, x.n]));
+    expect(segs['arbitro-conocido']).toBe(tuning.n);
+    expect(segs['falta-habitual']).toBeGreaterThan(10);
+    expect(segs['falta-habitual']).toBeLessThan(tuning.n);
+    expect(segs['final-de-liga']).toBe(0); // la temporada actual de la liga sigue hasta el final de los datos
+    expect(segs.vuelta).toBe(0);
   });
 
   it('una variante con TODOS los ganchos en los valores de producción da exactamente las mismas predicciones', () => {
     const run = runVariant(identity, data);
     expect(run.rows.size).toBe(base.rows.size);
-    for (const [id, b] of base.rows) expect(run.rows.get(id)).toEqual(b);
+    let withProps = 0;
+    for (const [id, b] of base.rows) {
+      expect(run.rows.get(id)).toEqual(b);
+      if (b.pl?.length && b.fouls && b.cards?.home) withProps++;
+    }
+    expect(withProps).toBeGreaterThan(100);
+    expect(isEmptyVariant({ name: 'x', description: 'y', players: {} })).toBe(false);
   });
 
   it('predictMatch con la variante vacía en el contexto es idéntico a producción', () => {
@@ -211,6 +303,71 @@ describe('ganchos', () => {
     expect(predictMatch(m, wfContext(ctx, m)).quick.p.home).toBeCloseTo(wf.p.home, 4);
   });
 
+  it('stats.adjust: los multiplicadores cambian las proyecciones (nunca reutiliza las de la base) y llegan a las props de tarjeta', () => {
+    const base = runVariant(PRODUCTION_VARIANT, data);
+    const cards: ModelVariant = { name: 'mas-tarjetas', description: '+30 % de tarjetas', stats: { adjust: () => ({ cards: { home: 1.3, away: 1.3 } }) } };
+    const run = runVariant(cards, data, { reuse: base });
+    let n = 0;
+    let props = 0;
+    for (const [id, b] of base.rows) {
+      const v = run.rows.get(id)!;
+      if (!b.cards) continue;
+      n++;
+      expect(v.cards!.exp).toBeGreaterThan(b.cards.exp * 1.25);
+      expect(v.corners).toEqual(b.corners);
+      for (const p of v.pl ?? []) {
+        const q = b.pl!.find((x) => x.id === p.id)!;
+        expect(p.g).toBe(q.g);
+        if (p.c > q.c) props++;
+      }
+    }
+    expect(n).toBeGreaterThan(100);
+    expect(props).toBeGreaterThan(100);
+    const bad: ModelVariant = { name: 'mala', description: 'multiplicador 0', stats: { adjust: () => ({ cards: { home: 0, away: 1 } }) } };
+    expect(() => runVariant(bad, data, { reuse: base })).toThrow(/stats.adjust/);
+  });
+
+  it('players: vida media de las tasas y factor de minutos (bajas) cambian las props publicadas', () => {
+    const base = runVariant(PRODUCTION_VARIANT, data);
+    const recency = runVariant({ name: 'recencia', description: 'vida media 30 días', players: { rateHalfLifeDays: 30 } }, data, { reuse: base });
+    const out: ModelVariant = {
+      name: 'bajas',
+      description: 'el portero no juega',
+      players: { adjust: ({ teamId }) => ({ minutesFactor: { [`${teamId}p0`]: 0 } }) },
+    };
+    const sinPortero = runVariant(out, data, { reuse: base });
+    let changed = 0;
+    let rows = 0;
+    for (const [id, b] of base.rows) {
+      if (!b.pl) continue;
+      rows++;
+      const r = recency.rows.get(id)!;
+      if (r.pl!.some((p, k) => p.g !== b.pl![k]?.g || p.c !== b.pl![k]?.c)) changed++;
+      expect(sinPortero.rows.get(id)!.pl!.some((p) => p.id.endsWith('p0'))).toBe(false);
+      expect([r.lh, r.p]).toEqual([b.lh, b.p]);
+    }
+    expect(rows).toBeGreaterThan(100);
+    expect(changed).toBeGreaterThan(rows / 2);
+  });
+
+  it('HistoryView: líneas de jugador y partidos del árbitro estrictamente anteriores al corte, cronológicos', () => {
+    const ctx = createContext({ stores, configs: CONFIGS, now: data.now });
+    const cut = Date.parse('2026-07-01T00:00:00Z');
+    const v = historyView(ctx.history, cut);
+    const ls = v.playerLines('X3');
+    expect(ls.length).toBeGreaterThan(100);
+    expect(ls.every((l) => Date.parse(l.date) < cut && l.teamId === 'X3')).toBe(true);
+    for (let k = 1; k < ls.length; k++) expect(Date.parse(ls[k].date)).toBeGreaterThanOrEqual(Date.parse(ls[k - 1].date));
+    const rm = v.refereeMatches('R1');
+    expect(rm.length).toBeGreaterThan(20);
+    expect(rm.every((m) => m.referee?.id === 'R1' && m.status === 'finished' && Date.parse(m.date) < cut)).toBe(true);
+    expect(v.refereeMatches('nadie')).toEqual([]);
+    // la vista pre-partido conserva el árbitro y quita la contabilidad de su descarga
+    const pm = preMatchView({ ...rm[0], refereeChecks: 2, refereeRetryAt: '2026-01-01T00:00:00Z' });
+    expect(pm.referee).toEqual(rm[0].referee);
+    expect('refereeChecks' in pm || 'refereeRetryAt' in pm).toBe(false);
+  });
+
   it('refitBoundaries: día 1 de cada mes o cada N días', () => {
     const b = refitBoundaries(Date.parse('2026-06-03T10:00:00Z'), Date.parse('2026-08-02T00:00:00Z'));
     expect(b.map((t) => new Date(t).toISOString().slice(0, 10))).toEqual(['2026-06-01', '2026-07-01', '2026-08-01']);
@@ -258,6 +415,67 @@ describe('comprobación de fuga (partidos «del futuro» envenenados)', () => {
     expect(leakCheck(example, data, run, days).ok).toBe(true);
   });
 
+  it('ganchos legítimos de árbitro (stats.adjust) y de jugadores (players.adjust) pasan, también en un día de prev', () => {
+    const referee: ModelVariant = {
+      name: 'arbitro',
+      description: 'tarjetas según el historial del árbitro',
+      stats: {
+        adjust: ({ match, history }) => {
+          const ms = match.referee ? history.refereeMatches(match.referee.id) : [];
+          const avg = ms.length ? ms.reduce((t, m) => t + (m.stats?.home.yellow ?? 0) + (m.stats?.away.yellow ?? 0), 0) / ms.length : 4;
+          return { cards: { home: avg / 4, away: avg / 4 } };
+        },
+      },
+      players: {
+        rateHalfLifeDays: 60,
+        adjust: ({ history, teamId }) => {
+          const ls = history.playerLines(teamId);
+          const last = ls[ls.length - 1]?.matchId;
+          return { minutesFactor: Object.fromEntries(ls.filter((l) => l.matchId === last && l.yellow > 0).map((l) => [l.playerId, 0.9])) };
+        },
+      },
+    };
+    const run = runVariant(referee, data, { reuse: base });
+    const prevDay = busiestDay(infos, 'prev', base.rows)!;
+    const r = leakCheck(referee, data, run, [...days, prevDay]);
+    expect(r.days.length).toBe(3);
+    expect(r.ok).toBe(true);
+  });
+
+  it('un gancho de árbitro o de jugadores con estado global se detecta (el veneno lleva el árbitro y líneas de jugador)', () => {
+    const maxSeen = new Map<string, number>();
+    const leakyRef: ModelVariant = {
+      name: 'tramposa-arbitro',
+      description: 'recuerda el máximo de partidos vistos de cada árbitro en CUALQUIER llamada',
+      stats: {
+        adjust: ({ match, history }) => {
+          if (!match.referee) return {};
+          const id = match.referee.id;
+          maxSeen.set(id, Math.max(maxSeen.get(id) ?? 0, history.refereeMatches(id).length));
+          return { cards: { home: 1 + maxSeen.get(id)! / 1000, away: 1 } };
+        },
+      },
+    };
+    const run = runVariant(leakyRef, data, { reuse: base });
+    maxSeen.clear();
+    expect(leakCheck(leakyRef, data, run, days).ok).toBe(false);
+    const seen = new Set<string>();
+    const leakyPlayers: ModelVariant = {
+      name: 'tramposa-jugadores',
+      description: 'cuenta las líneas vistas de cada jugador en CUALQUIER llamada (también las de partidos posteriores)',
+      players: {
+        adjust: ({ history, teamId }) => {
+          for (const l of history.playerLines(teamId)) seen.add(`${l.playerId}|${l.matchId}`);
+          const count = (pid: string) => [...seen].filter((k) => k.startsWith(`${pid}|`)).length;
+          return { minutesFactor: Object.fromEntries(Array.from({ length: 13 }, (_, k) => [`${teamId}p${k}`, 1 - count(`${teamId}p${k}`) / 1000])) };
+        },
+      },
+    };
+    const run2 = runVariant(leakyPlayers, data, { reuse: base });
+    seen.clear();
+    expect(leakCheck(leakyPlayers, data, run2, days).ok).toBe(false);
+  });
+
   it('un gancho que acumula estado global (y así ve partidos posteriores) se detecta', () => {
     const seen = new Map<string, MatchRecord>();
     const leaky: ModelVariant = {
@@ -303,12 +521,17 @@ describe('carga de variantes y protección del holdout', () => {
     expect(() => validateVariant({ name: 'a', description: 'b', stats: { dispersion: 'rara' } }, 't')).toThrow(/dispersion/);
     expect(() => validateVariant({ name: 'a', description: 'b', eloProbs: { homeAdv: { 'XX-league': 50 } } }, 't')).toThrow(/grupo/);
     expect(validateVariant({ name: 'a', description: 'b', eloProbs: { homeAdv: { 'EU-league': 50 } } }, 't').name).toBe('a');
+    expect(() => validateVariant({ name: 'a', description: 'b', stats: { adjust: 3 } }, 't')).toThrow(/stats.adjust/);
+    expect(() => validateVariant({ name: 'a', description: 'b', players: { rateHalfLifeDays: -5 } }, 't')).toThrow(/rateHalfLifeDays/);
+    expect(() => validateVariant({ name: 'a', description: 'b', players: { adjust: 'x' } }, 't')).toThrow(/players.adjust/);
+    expect(validateVariant({ name: 'a', description: 'b', players: { rateHalfLifeDays: 90, adjust: () => ({}) } }, 't').name).toBe('a');
   });
 
   it('sin --final el holdout se niega y no se registra ninguna mirada', async () => {
     const before = fs.existsSync(HOLDOUT_LOG) ? fs.readFileSync(HOLDOUT_LOG, 'utf8') : undefined;
     expect(await evalMain(['--variant=baseline', '--window=holdout'])).toBe(1);
     expect(await evalMain(['--variant=baseline', '--final', '--window=tuning'])).toBe(1);
+    expect(await evalMain(['--variant=baseline', '--final', '--window=prev'])).toBe(1);
     const after = fs.existsSync(HOLDOUT_LOG) ? fs.readFileSync(HOLDOUT_LOG, 'utf8') : undefined;
     expect(after).toBe(before);
   });

@@ -3,7 +3,7 @@
  * la versión de producción ANTERIOR al 22-nov-2026) con predicciones walk-forward SIN fuga de todos los partidos
  * terminados de la temporada actual. "production" es la producción actual (variante vacía).
  *
- *   npx tsx scripts/eval-model.ts --variant=<nombre>[,<nombre>…] [--window=tuning|T1|T2|pre] [--final]
+ *   npx tsx scripts/eval-model.ts --variant=<nombre>[,<nombre>…] [--window=tuning|T1|T2|pre|prev|pooled] [--final]
  *                                 [--no-leak-check] [--no-cache]
  *
  *   --variant        variantes a evaluar (archivos de pipeline/experiments; 'production' = producción actual,
@@ -11,6 +11,9 @@
  *   --window         ventana del informe: tuning (2026-06-01 → 2026-09-15, por defecto), T1 (06-01 → 07-31) o
  *                    T2 (08-01 → 09-15). Una mejora debe aparecer en T1 Y en T2. Auxiliar: pre (2026-01-01 →
  *                    05-31, anterior al ajuste; casi todo sin cuotas: para ideas del segmento sin cuotas).
+ *                    Confirmatoria: prev (partidos de temporadas PASADAS del 2026-01-01 al 05-31: ligas europeas
+ *                    2025-26, eliminatorias UEFA, copas…; regla de decisión pre-registrada en el README) y pooled
+ *                    (tuning + prev juntas).
  *   --final          HOLDOUT (2026-09-16 en adelante). Solo el agente de combinación, UNA vez. Cada ejecución queda
  *                    registrada en .cache/holdout-looks.log. Sin --final el holdout no se muestra nunca.
  *   --no-leak-check  omite la comprobación de fuga (envenenamiento del futuro); no lo uses para decidir nada
@@ -18,9 +21,14 @@
  *
  * Métricas (ventana pedida): 1X2 RPS/log-loss/Brier/acierto; más/menos 2,5 y ambos marcan Brier/log-loss/acierto;
  * deviance Poisson de los goles de cada equipo; córners (Brier de 8,5/9,5/10,5, MAE del total, log-verosimilitud del
- * total exacto) y tarjetas (3,5/4,5); segmentos (con/sin cuotas, ligas/copas/continentales, top/resto); diferencia
- * con la base e intervalo bootstrap por día (1.000 réplicas). Resultado a 90 minutos (prórrogas reconstruidas con los
- * eventos de gol; córners y tarjetas de partidos con prórroga excluidos; 0 tarjetas = dato ausente).
+ * total exacto), tarjetas (3,5/4,5), faltas (20,5/22,5/24,5), tiros (22,5/24,5/26,5) y tiros a puerta (7,5/8,5/9,5);
+ * por equipo: goles más de 0,5/1,5 (Poisson de los λ finales), tarjetas 1,5/2,5 y córners 3,5/4,5/5,5; props de
+ * jugadores (goleador, >= 1 tiro a puerta, >= 2 tiros, tarjeta: Brier y log-loss de los pares partido-jugador que
+ * publican la base y la variante; quien no jugó cuenta como 0); segmentos (con/sin cuotas, ligas/copas/continentales,
+ * top/resto, árbitro conocido, vuelta de eliminatoria, final de liga, falta un habitual) con las métricas principales;
+ * diferencia con la base e intervalo bootstrap por día (1.000 réplicas). Resultado a 90 minutos (prórrogas
+ * reconstruidas con los eventos de gol; estadísticas y props de partidos con prórroga excluidas; 0 tarjetas = dato
+ * ausente).
  *
  * Salida: informe en consola y JSON en .cache/eval/<variante>-<ventana>.json.
  */
@@ -32,6 +40,12 @@ import {
   CACHE_DIR,
   CARD_LINES,
   CORNER_LINES,
+  FOUL_LINES,
+  SHOT_LINES,
+  SOT_LINES,
+  TEAM_CARD_LINES,
+  TEAM_CORNER_LINES,
+  TEAM_GOAL_LINES,
   WINDOWS,
   busiestDay,
   compare,
@@ -79,6 +93,14 @@ function line(label: string, b: number | undefined, v: number | undefined, opts:
   return `  ${label.padEnd(30)} ${fb.padStart(10)} ${fv.padStart(10)} ${delta.padStart(10)}   ${ciTxt(opts.ci, d + 1)}`;
 }
 
+function teamBlock(title: string, lines: number[], b: Metrics['teamGoals'], v: Metrics['teamGoals'], ci: DiffCI | undefined): string[] {
+  if (!b || !v) return [`${title}: sin datos en la ventana`];
+  const out = [`${title} (n = ${int(v.n)} partidos, local y visitante)`];
+  lines.forEach((l, i) => out.push(line(`Brier más de ${String(l).replace('.', ',')}`, b.brier[i], v.brier[i])));
+  out.push(line('Brier medio de las líneas', b.brierMean, v.brierMean, { ci }));
+  return out;
+}
+
 function statBlock(title: string, lines: number[], b: Metrics['corners'], v: Metrics['corners'], ci: DiffCI | undefined): string[] {
   if (!b || !v) return [`${title}: sin datos en la ventana`];
   const out = [`${title} (n = ${int(v.n)})`];
@@ -117,8 +139,23 @@ export function formatReport(r: EvalReport): string {
   out.push(line('Acierto', b.btts.accuracy, v.btts.accuracy, { percent: true }));
   out.push('Goles por equipo');
   out.push(line('Deviance Poisson', b.goalsDeviance, v.goalsDeviance, { ci: r.ci.deviance }));
+  out.push(...teamBlock('Goles por equipo (Poisson de los λ finales)', TEAM_GOAL_LINES, b.teamGoals, v.teamGoals, r.ci.teamGoals));
   out.push(...statBlock('Córners', CORNER_LINES, b.corners, v.corners, r.ci.corners));
+  out.push(...teamBlock('Córners por equipo', TEAM_CORNER_LINES, b.teamCorners, v.teamCorners, r.ci.teamCorners));
   out.push(...statBlock('Tarjetas', CARD_LINES, b.cards, v.cards, r.ci.cards));
+  out.push(...teamBlock('Tarjetas por equipo', TEAM_CARD_LINES, b.teamCards, v.teamCards, r.ci.teamCards));
+  out.push(...statBlock('Faltas', FOUL_LINES, b.fouls, v.fouls, r.ci.fouls));
+  out.push(...statBlock('Tiros', SHOT_LINES, b.shots, v.shots, r.ci.shots));
+  out.push(...statBlock('Tiros a puerta', SOT_LINES, b.sot, v.sot, r.ci.sot));
+  const props = r.main.filter((m) => m.key.startsWith('p'));
+  if (props.length && r.playerSets) {
+    const ps = r.playerSets;
+    out.push(
+      `Props de jugadores (${int(ps.matches)} partidos; ${int(ps.common)} pares en ambas; solo base ${int(ps.onlyBaseline)} (jugaron ${int(ps.onlyBaselinePlayed)}); solo variante ${int(ps.onlyVariant)} (jugaron ${int(ps.onlyVariantPlayed)}))`,
+    );
+    for (const m of props) out.push(line(m.label, m.baseline, m.variant, { ci: m.ci }));
+  } else out.push('Props de jugadores: sin partidos con líneas de jugador en la ventana');
+  out.push(`Composición: ${Object.entries(r.composition).map(([c, n]) => `${c} ${n}`).join(', ')}`);
   out.push('Segmentos (1X2)');
   out.push(`  ${'segmento'.padEnd(20)} ${'n'.padStart(6)} ${'RPS base'.padStart(9)} ${'RPS var'.padStart(9)} ${'Δ RPS'.padStart(9)}  ${'acierto b/v'.padStart(15)}   IC 95 % de Δ RPS`);
   for (const s of r.segments) {
@@ -129,6 +166,15 @@ export function formatReport(r: EvalReport): string {
     out.push(
       `  ${s.label.padEnd(20)} ${int(s.n).padStart(6)} ${num(s.baseline.rps).padStart(9)} ${num(s.variant.rps).padStart(9)} ${signed(s.variant.rps - s.baseline.rps, 5).padStart(9)}  ${`${pct(s.baseline.accuracy, 1)}/${pct(s.variant.accuracy, 1)}`.padStart(15)}   ${ciTxt(s.rps, 5)}`,
     );
+  }
+  out.push('Segmentos (métricas principales: n · base → variante · Δ [IC 95 %])');
+  const SEG_KEYS = ['ouBrier', 'teamGoals', 'corners', 'cards', 'teamCards', 'fouls', 'pScorer', 'pCard'];
+  for (const s of r.segments) {
+    if (!s.n) continue;
+    const parts = s.main
+      .filter((m) => SEG_KEYS.includes(m.key))
+      .map((m) => `${m.key} ${int(m.n)}: ${num(m.baseline)}→${num(m.variant)} ${signed(m.ci.diff, 5)} [${signed(m.ci.lo, 5)}; ${signed(m.ci.hi, 5)}]`);
+    out.push(`  ${s.label.padEnd(20)} ${parts.join(' · ')}`);
   }
   const rb = r.references.baseline;
   const rv = r.references.variant;
@@ -191,7 +237,7 @@ export async function main(args: string[]): Promise<number> {
     .map((s) => s.trim())
     .filter(Boolean);
   if (!names.length) {
-    console.error('Uso: npx tsx scripts/eval-model.ts --variant=<nombre>[,<nombre>…] [--window=tuning|T1|T2|pre] [--final]');
+    console.error('Uso: npx tsx scripts/eval-model.ts --variant=<nombre>[,<nombre>…] [--window=tuning|T1|T2|pre|prev|pooled] [--final]');
     return 1;
   }
   const final = argValue(args, 'final') !== undefined;
@@ -210,8 +256,8 @@ export async function main(args: string[]): Promise<number> {
       );
       return 1;
     }
-    if (winArg && !['tuning', 'T1', 'T2', 'pre'].includes(winArg)) {
-      console.error(`--window debe ser tuning, T1, T2 o pre (recibido: ${winArg})`);
+    if (winArg && !['tuning', 'T1', 'T2', 'pre', 'prev', 'pooled'].includes(winArg)) {
+      console.error(`--window debe ser tuning, T1, T2, pre, prev o pooled (recibido: ${winArg})`);
       return 1;
     }
     window = (winArg || 'tuning') as WindowName;
@@ -245,7 +291,9 @@ export async function main(args: string[]): Promise<number> {
     // también para 'production' (variante vacía): el núcleo actual debe pasar la misma comprobación
     if (leakCheckOn && !isBase) {
       const tl = performance.now();
-      const days = (['T1', 'T2'] as WindowName[]).map((w) => busiestDay(infos, w, run.rows)).filter((d): d is string => !!d);
+      // T1 y T2 siempre; con pre o prev, también el día con más partidos de esa ventana (otro tipo de partidos)
+      const leakWindows: WindowName[] = window === 'pre' || window === 'prev' ? ['T1', 'T2', window] : window === 'pooled' ? ['T1', 'T2', 'prev'] : ['T1', 'T2'];
+      const days = [...new Set(leakWindows.map((w) => busiestDay(infos, w, run.rows)).filter((d): d is string => !!d))];
       report.leak = leakCheck(variant, data, run, days);
       report.seconds.leak = (performance.now() - tl) / 1000;
       if (!report.leak.ok) exit = 2;

@@ -77,6 +77,15 @@ export interface MatchRecord {
    * the score, stats, events and summary of a match.
    */
   downgradeSeen?: number;
+  /**
+   * árbitro principal según ESPN (endpoint core `/officials` o `gameInfo.officials` del resumen). Es información
+   * previa al partido (se publica antes del inicio cuando ESPN la tiene), así que la vista pre-partido la conserva.
+   */
+  referee?: { id: string; name: string };
+  /** consultas a `/officials` de un partido terminado que volvieron sin árbitro (cada una en una ejecución distinta) */
+  refereeChecks?: number;
+  /** ISO: no volver a consultar `/officials` de este partido antes de este instante (espera creciente) */
+  refereeRetryAt?: string;
 }
 
 export interface PlayerLine {

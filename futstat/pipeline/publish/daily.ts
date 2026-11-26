@@ -205,8 +205,8 @@ function matchTexts(ctx: BuildContext, m: MatchRecord, withSeason: boolean, pred
     fp,
     proj: new Map(fp.projections.map((p) => [p.key, p])),
     props: {
-      home: propsFor(ctx, m.home.id, m.away.id, 'home', fp.result.lambdaHome, fp.projections, before),
-      away: propsFor(ctx, m.away.id, m.home.id, 'away', fp.result.lambdaAway, fp.projections, before),
+      home: propsFor(ctx, m.home.id, m.away.id, 'home', fp.result.lambdaHome, fp.projections, before, m),
+      away: propsFor(ctx, m.away.id, m.home.id, 'away', fp.result.lambdaAway, fp.projections, before, m),
     },
     before,
   };

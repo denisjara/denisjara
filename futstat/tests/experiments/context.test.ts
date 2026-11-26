@@ -55,6 +55,8 @@ function viewOf(all: MatchRecord[], cutoff: number): HistoryView {
     teamMatches: (id) => past.filter((m) => m.home.id === id || m.away.id === id),
     compMatches: (id) => past.filter((m) => m.compId === id),
     eloBefore: () => undefined,
+    playerLines: () => [],
+    refereeMatches: (id) => past.filter((m) => m.referee?.id === id),
   };
 }
 

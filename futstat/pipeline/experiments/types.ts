@@ -17,7 +17,9 @@
 import type { DCModel } from '../../src/lib/models';
 import type { CompetitionKind, Prob1X2 } from '../../src/types/data';
 import type { CompetitionConfig, HomeAdvGroup } from '../config';
-import type { MatchRecord } from '../types';
+import type { MatchRecord, PlayerLine } from '../types';
+import type { StatKey } from '../analytics/projections';
+import type { PlayerPropsInput } from '../analytics/players';
 
 /** Rasgos numéricos de un partido (calculados solo con información anterior a su inicio). */
 export type Features = Record<string, number>;
@@ -25,7 +27,19 @@ export type Features = Record<string, number>;
 /** Partido a predecir tal y como se conocía ANTES de empezar: sin marcador, estadísticas, eventos ni forma de ESPN. */
 export type PreMatch = Omit<
   MatchRecord,
-  'score' | 'stats' | 'events' | 'statusDetail' | 'summaryFetched' | 'summaryAttempts' | 'summaryRetryAt' | 'downgradeSeen' | 'homeForm' | 'awayForm'
+  | 'score'
+  | 'stats'
+  | 'events'
+  | 'statusDetail'
+  | 'summaryFetched'
+  | 'summaryAttempts'
+  | 'summaryRetryAt'
+  | 'downgradeSeen'
+  | 'homeForm'
+  | 'awayForm'
+  // contabilidad de la descarga de árbitros (el árbitro en sí, `referee`, sí es información previa y se conserva)
+  | 'refereeChecks'
+  | 'refereeRetryAt'
 >;
 
 /**
@@ -43,6 +57,13 @@ export interface HistoryView {
   compMatches(compId: string): readonly MatchRecord[];
   /** rating Elo del equipo justo antes del corte (undefined si aún no había jugado ningún partido) */
   eloBefore(teamId: string): number | undefined;
+  /**
+   * líneas de jugador del equipo (todas las competiciones) de partidos con inicio anterior al corte, cronológicas.
+   * Solo existen para partidos con resumen de ESPN (desde mayo de 2026; nunca en la Nations League).
+   */
+  playerLines(teamId: string): readonly PlayerLine[];
+  /** partidos terminados (todas las competiciones) anteriores al corte dirigidos por ese árbitro (`MatchRecord.referee.id`) */
+  refereeMatches(refereeId: string): readonly MatchRecord[];
 }
 
 /** Contexto no temporal que reciben los rasgos. */
@@ -172,7 +193,8 @@ export interface CombineHooks {
   /**
    * reajuste del combinador con filas de partidos terminados ESTRICTAMENTE anteriores a `asOf` (ISO). Se llama en
    * cada fecha de reajuste del walk-forward y, al final del build, con todas las filas (predicciones de próximos).
-   * Las filas solo existen para la temporada actual (el walk-forward empieza en su primer partido).
+   * Las filas son de la temporada actual (el walk-forward empieza en su primer partido) y, solo en el banco, también
+   * de las temporadas pasadas desde WINDOWS.prev.from (ventana prev).
    */
   prepare?(rows: readonly WalkForwardRow[], asOf: string): void;
   /** probabilidades 1X2 finales (y, opcionalmente, P(más de 2,5) objetivo) a partir de los componentes */
@@ -211,6 +233,19 @@ export interface TotalsHooks {
  */
 export type DispersionMode = 'pooled' | 'global' | 'team' | 'poisson' | number;
 
+/** Medias esperadas (o multiplicadores) por equipo de cada estadística proyectada. */
+export type StatPairs = Partial<Record<StatKey, { home: number; away: number }>>;
+
+export interface StatAdjustInput {
+  ctx: FeatureContext;
+  /** partido tal y como se conocía antes de empezar (con el árbitro designado, si ESPN lo tiene) */
+  match: PreMatch;
+  /** pasado estrictamente anterior al inicio del partido */
+  history: HistoryView;
+  /** medias esperadas de producción (expectedPair) de las estadísticas que se van a proyectar */
+  base: StatPairs;
+}
+
 export interface StatHooks {
   /** partidos ficticios de la contracción de las tasas de equipo (producción 40; hasta el 22-nov-2026, 6) */
   priorN?: number;
@@ -219,6 +254,38 @@ export interface StatHooks {
   dispersion?: DispersionMode;
   /** partidos ficticios de la media de la competición hacia los valores por defecto (producción 20) */
   leaguePriorN?: number;
+  /**
+   * ajuste por partido de las medias proyectadas (árbitro, necesidad de marcar…): devuelve MULTIPLICADORES (> 0) de la
+   * media de cada equipo, que se aplican justo después de expectedPair (la dispersión no cambia). Una estadística
+   * ausente = 1. Se aplica en TODAS las proyecciones (fichas, pronósticos del día, cuota alta, banco) a través de
+   * projectStatsFor (publish/context.ts); los multiplicadores de tarjetas llegan también a las props de tarjeta de los
+   * jugadores (cardsFactor = proyección / media del equipo).
+   */
+  adjust?(input: StatAdjustInput): StatPairs;
+}
+
+export interface PlayerAdjustInput {
+  ctx: FeatureContext;
+  match: PreMatch;
+  teamId: string;
+  side: 'home' | 'away';
+  history: HistoryView;
+  /** entrada de producción de buildPlayerProps (líneas del equipo anteriores al partido, λ y factores del rival) */
+  base: PlayerPropsInput;
+}
+
+export interface PlayerHooks {
+  /**
+   * vida media (días) de la ponderación temporal de las tasas por 90 de cada jugador (goles, tiros, tarjetas…), con
+   * referencia en el inicio del partido. Producción: sin ponderación (todas las líneas de la ventana de 365 días pesan
+   * igual). Los minutos esperados y los totales publicados (minutos, goles) no cambian.
+   */
+  rateHalfLifeDays?: number;
+  /**
+   * cambios de la entrada de las props de un equipo (se mezclan sobre `base`): p. ej. `minutesFactor` para bajas o
+   * rotaciones, `cardsFactor`… Se llama en propsFor (fichas y pronósticos del día) y en el banco.
+   */
+  adjust?(input: PlayerAdjustInput): Partial<PlayerPropsInput>;
 }
 
 /** Variante de modelo: ganchos opcionales; sin ganchos = producción. */
@@ -238,6 +305,8 @@ export interface ModelVariant {
   combine?: CombineHooks;
   totals?: TotalsHooks;
   stats?: StatHooks;
+  /** props de jugadores (tasas ponderadas por recencia, disponibilidad) */
+  players?: PlayerHooks;
 }
 
 /** La variante de producción (vacía: ningún gancho). */
@@ -262,10 +331,10 @@ export const BASELINE_VARIANT: ModelVariant = {
 /** true si la variante no tiene ningún gancho (se comporta exactamente como producción). */
 export function isEmptyVariant(v: ModelVariant | undefined): boolean {
   if (!v) return true;
-  return !v.dc && !v.elo && !v.eloProbs && !v.features && !v.lambdaAdjust && !v.combine && !v.totals && !v.stats;
+  return !v.dc && !v.elo && !v.eloProbs && !v.features && !v.lambdaAdjust && !v.combine && !v.totals && !v.stats && !v.players;
 }
 
-/** Vista pre-partido de un registro: sin resultado, estadísticas, eventos ni forma (status 'scheduled'). */
+/** Vista pre-partido de un registro: sin resultado, estadísticas, eventos ni forma (status 'scheduled'); conserva el árbitro. */
 export function preMatchView(m: MatchRecord): PreMatch {
   const {
     score: _s,
@@ -278,6 +347,8 @@ export function preMatchView(m: MatchRecord): PreMatch {
     downgradeSeen: _dg,
     homeForm: _hf,
     awayForm: _af,
+    refereeChecks: _rc,
+    refereeRetryAt: _rr,
     ...rest
   } = m;
   return { ...rest, status: 'scheduled' };

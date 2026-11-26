@@ -4,7 +4,7 @@
  * las corta por búsqueda binaria.
  */
 import type { Elo } from '../../src/lib/models';
-import type { MatchRecord } from '../types';
+import type { MatchRecord, PlayerLine } from '../types';
 import type { HistoryView } from './types';
 
 /** Fuente de datos de las vistas (listas cronológicas de cualquier estado; se filtran aquí). */
@@ -12,9 +12,15 @@ export interface HistorySource {
   matchesByTeam: ReadonlyMap<string, readonly MatchRecord[]>;
   matchesByComp: ReadonlyMap<string, readonly MatchRecord[]>;
   elo: Elo;
+  /** líneas de jugador por equipo (cronológicas); sin ellas, playerLines devuelve [] */
+  linesByTeam?: ReadonlyMap<string, readonly PlayerLine[]>;
+  /** partidos por árbitro (cualquier estado); sin ellos, refereeMatches devuelve [] */
+  matchesByReferee?: ReadonlyMap<string, readonly MatchRecord[]>;
   /** cachés internas (perezosas) */
   _team?: Map<string, { t: Float64Array; ms: MatchRecord[] }>;
   _comp?: Map<string, { t: Float64Array; ms: MatchRecord[] }>;
+  _ref?: Map<string, { t: Float64Array; ms: MatchRecord[] }>;
+  _lines?: Map<string, { t: Float64Array; ls: PlayerLine[] }>;
   _elo?: Map<string, { t: Float64Array; r: Float64Array }>;
 }
 
@@ -49,6 +55,8 @@ function lowerBound(t: Float64Array, x: number): number {
 export function historyView(src: HistorySource, cutoff: number): HistoryView {
   const team = (src._team ??= new Map());
   const comp = (src._comp ??= new Map());
+  const ref = (src._ref ??= new Map());
+  const lines = (src._lines ??= new Map());
   const elo = (src._elo ??= new Map());
   const cut = (cache: Map<string, { t: Float64Array; ms: MatchRecord[] }>, key: string, list: readonly MatchRecord[] | undefined) => {
     let e = cache.get(key);
@@ -63,6 +71,17 @@ export function historyView(src: HistorySource, cutoff: number): HistoryView {
     cutoffIso: new Date(cutoff).toISOString(),
     teamMatches: (id) => cut(team, id, src.matchesByTeam.get(id)),
     compMatches: (id) => cut(comp, id, src.matchesByComp.get(id)),
+    refereeMatches: (id) => cut(ref, id, src.matchesByReferee?.get(id)),
+    playerLines: (id) => {
+      let e = lines.get(id);
+      if (!e) {
+        const ls = (src.linesByTeam?.get(id) ?? []).filter((l) => Number.isFinite(Date.parse(l.date)));
+        ls.sort((a, b) => Date.parse(a.date) - Date.parse(b.date) || (a.matchId < b.matchId ? -1 : a.matchId > b.matchId ? 1 : 0));
+        e = { t: Float64Array.from(ls.map((l) => Date.parse(l.date))), ls };
+        lines.set(id, e);
+      }
+      return e.ls.slice(0, lowerBound(e.t, cutoff));
+    },
     eloBefore: (id) => {
       let e = elo.get(id);
       if (!e) {

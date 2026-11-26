@@ -13,10 +13,12 @@
  *    further request of that kind fails fast with `CircuitOpenError`. A /summary outage (429, maintenance) therefore
  *    only postpones summaries: scoreboards and standings of the remaining competitions are still refreshed. With the
  *    network fully down the 'core' circuit opens too and the run ends quickly with the existing data-store.
+ *  - 'officials' (árbitros, API core sports.core.api.espn.com) tiene su propio circuito: si cae, solo se aplaza esa
+ *    descarga.
  *  - the circuit and an optional `deadline` are checked again right before EVERY attempt (also after waiting in the
  *    concurrency queue and before each retry), so queued requests never outlive a broken endpoint or the time budget.
  */
-import { ESPN_SITE_API, ESPN_STANDINGS_API, FETCH_CONCURRENCY, FETCH_RETRIES } from '../config';
+import { ESPN_CORE_API, ESPN_SITE_API, ESPN_STANDINGS_API, FETCH_CONCURRENCY, FETCH_RETRIES } from '../config';
 
 const USER_AGENT = 'FutStatLab/1.0';
 const TIMEOUT_MS = 30_000;
@@ -81,11 +83,15 @@ export const httpStats = { requests: 0, retries: 0, failures: 0, invalid: 0 };
 // ---------------------------------------------------------------------------
 // Circuit breakers (one per endpoint kind)
 // ---------------------------------------------------------------------------
-/** 'core' = scoreboard + standings (what keeps fixtures and tables fresh); 'summary' = per-match summaries. */
-export type CircuitKind = 'core' | 'summary';
+/**
+ * 'core' = scoreboard + standings (what keeps fixtures and tables fresh); 'summary' = per-match summaries;
+ * 'officials' = árbitros de cada partido (endpoint core /officials).
+ */
+export type CircuitKind = 'core' | 'summary' | 'officials';
 const circuits: Record<CircuitKind, { failures: number; open: boolean }> = {
   core: { failures: 0, open: false },
   summary: { failures: 0, open: false },
+  officials: { failures: 0, open: false },
 };
 
 /** true once that kind of ESPN endpoint looks unreachable (many consecutive requests failed even after retries). */
@@ -370,4 +376,15 @@ export function getSummary(slug: string, eventId: string, opts: { deadline?: num
 
 export function getStandings(slug: string): Promise<unknown> {
   return fetchJson(standingsUrl(slug), { circuit: 'core' });
+}
+
+/** Árbitros de un partido (API core; en fútbol el id de la competición coincide con el del evento). */
+export function officialsUrl(slug: string, eventId: string): string {
+  if (!/^[A-Za-z0-9_-]{1,40}$/.test(eventId)) throw new Error(`Id de partido no válido: ${eventId}`);
+  return `${ESPN_CORE_API}/${safeSlug(slug)}/events/${eventId}/competitions/${eventId}/officials`;
+}
+
+/** Árbitros de un partido. Cuenta contra su propio circuito ('officials'); `deadline` como en getSummary. */
+export function getOfficials(slug: string, eventId: string, opts: { deadline?: number } = {}): Promise<unknown> {
+  return fetchJson(officialsUrl(slug, eventId), { circuit: 'officials', deadline: opts.deadline });
 }

@@ -55,6 +55,14 @@ export function validateVariant(v: unknown, source: string): ModelVariant {
   }
   fnOrUndef(x.totals, 'adjustTotal', 'totals');
   for (const k of ['priorN', 'halfLifeDays', 'leaguePriorN']) numOrUndef(x.stats, k, 'stats');
+  fnOrUndef(x.stats, 'adjust', 'stats');
+  if (x.players !== undefined) {
+    if (!x.players || typeof x.players !== 'object') fail('players debe ser un objeto { rateHalfLifeDays?, adjust? }');
+    numOrUndef(x.players, 'rateHalfLifeDays', 'players');
+    const hl = (x.players as Record<string, unknown>).rateHalfLifeDays;
+    if (hl !== undefined && !((hl as number) > 0)) fail('players.rateHalfLifeDays debe ser > 0');
+    fnOrUndef(x.players, 'adjust', 'players');
+  }
   const disp = (x.stats as Record<string, unknown> | undefined)?.dispersion;
   if (disp !== undefined && !['pooled', 'global', 'team', 'poisson'].includes(disp as string) && !(typeof disp === 'number' && disp > 0)) {
     fail("stats.dispersion debe ser 'pooled' | 'global' | 'team' | 'poisson' o un número > 0");

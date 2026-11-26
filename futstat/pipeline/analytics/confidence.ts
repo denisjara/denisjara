@@ -80,8 +80,8 @@ import type { OddsSnapshot, Prob1X2, StatProjection } from '../../src/types/data
 import { bttsProb, fairOdds, goalDiffDist, marginals, overUnderFromDist, totalGoalsDist } from '../../src/lib/models';
 import { isPlausibleMargin, overroundOf } from '../config';
 import { eloGamesBefore, predictMatch, type PredictionResult } from './predict';
-import { projectMatchStats, type StatContext } from './projections';
-import { computeWalkForward, isFinishedRecord, statContext, wfContext, type BuildContext } from '../publish/context';
+import type { StatContext } from './projections';
+import { computeWalkForward, isFinishedRecord, projectStatsFor, statContext, wfContext, type BuildContext } from '../publish/context';
 import { settleDataOf, wentBeyond90, type SettleData } from './settle';
 
 export { score90FromEvents, settleDataOf, wentBeyond90, type SettleData } from './settle';
@@ -682,7 +682,7 @@ export function walkForwardInput(ctx: BuildContext, m: MatchRecord): CandidateIn
   if (!pre || t < pre.cutoff) return undefined;
   const pctx = wfContext(ctx, m);
   const sc = statContext(ctx, comp.id, t);
-  const projections = projectMatchStats(m.home.id, m.away.id, sc);
+  const projections = projectStatsFor(ctx, m, t);
   // la forma de ESPN solo afecta al texto explicativo, no a las probabilidades
   const pred = predictMatch(m, pctx, { projections });
   if (![pred.quick.p.home, pred.quick.p.draw, pred.quick.p.away, pred.lambdaHome, pred.lambdaAway].every(Number.isFinite)) return undefined;

@@ -2,10 +2,12 @@
  * CLI: download / refresh data-store/<compId>.json from ESPN.
  *
  *   npx tsx pipeline/fetch.ts [--only=laliga,premier] [--no-summaries] [--max-summaries=N] [--concurrency=N] [--budget-minutes=N]
+ *                             [--no-officials] [--officials-only] [--max-officials=N]
  *
  * Per competition: scoreboards for {year-1, year} (+ year+1 in December or when the current season ends next
  * year, e.g. Aug→May leagues) -> normalize -> merge -> standings -> summaries of finished matches not yet
- * summarised within SUMMARY_LOOKBACK_DAYS (most recent first; `--max-summaries` caps them per competition) -> save.
+ * summarised within SUMMARY_LOOKBACK_DAYS (most recent first; `--max-summaries` caps them per competition) ->
+ * árbitros (/officials, ver updateOfficials) -> save. `--officials-only` solo hace el paso de árbitros sobre el almacén.
  *
  * Robustness: a failure in one competition is logged and the run continues; stores are written atomically with a
  * backup; incomplete ESPN answers never wipe stored fixtures/standings; summaries stop when the data-store exceeds
@@ -13,11 +15,36 @@
  * when a previous data-store exists) so the build can go on with the cached data.
  */
 import { pathToFileURL } from 'node:url';
-import { COMPETITIONS, COMPETITION_BY_ID, FETCH_CONCURRENCY, STORE_DIR, SUMMARY_LOOKBACK_DAYS, UPCOMING_DAYS } from './config';
+import {
+  COMPETITIONS,
+  COMPETITION_BY_ID,
+  FETCH_CONCURRENCY,
+  OFFICIALS_MAX_AGE_DAYS,
+  OFFICIALS_MAX_CHECKS,
+  OFFICIALS_MAX_PER_RUN,
+  OFFICIALS_RETRY_DAYS,
+  OFFICIALS_SINCE,
+  OFFICIALS_UPCOMING_HOURS,
+  STORE_DIR,
+  SUMMARY_LOOKBACK_DAYS,
+  UPCOMING_DAYS,
+} from './config';
 import { LockedError, acquireLock } from './publish/util';
 import type { CompetitionConfig } from './config';
-import { CircuitOpenError, DeadlineError, HttpError, getConcurrency, getScoreboard, getStandings, getSummary, httpStats, isCircuitOpen, setConcurrency } from './espn/client';
-import { leagueInfo, normalizeScoreboard, normalizeStandings, normalizeSummary, summaryHasContent, takeNormalizeWarnings } from './espn/normalize';
+import {
+  CircuitOpenError,
+  DeadlineError,
+  HttpError,
+  getConcurrency,
+  getOfficials,
+  getScoreboard,
+  getStandings,
+  getSummary,
+  httpStats,
+  isCircuitOpen,
+  setConcurrency,
+} from './espn/client';
+import { leagueInfo, normalizeScoreboard, normalizeStandings, normalizeSummary, parseOfficialsResponse, summaryHasContent, takeNormalizeWarnings } from './espn/normalize';
 import type { SummaryResult } from './espn/normalize';
 import {
   STORE_MAX_BYTES,
@@ -65,6 +92,13 @@ export interface FetchOptions {
   maxStoreBytes?: number;
   /** data-store directory (tests) */
   storeDir?: string;
+  /** consultar árbitros (/officials). Por defecto NO (tests); la CLI lo activa salvo `--no-officials` */
+  officials?: boolean;
+  /**
+   * consultas a /officials de partidos terminados que quedan en esta ejecución, compartido entre competiciones
+   * (se descuenta en cada una). Sin él: OFFICIALS_MAX_PER_RUN por competición.
+   */
+  officialsBudget?: { left: number };
 }
 
 export interface CompetitionReport {
@@ -82,6 +116,9 @@ export interface CompetitionReport {
   summariesFailed: number;
   /** summaries left for a later run (disk guard, time budget or ESPN down) */
   summariesSkipped?: number;
+  /** paso de árbitros: consultas hechas y árbitros nuevos encontrados */
+  officialsChecked?: number;
+  refereesFound?: number;
   seconds: number;
 }
 
@@ -137,7 +174,33 @@ export function noteEmptySummary(m: MatchRecord, ageDays: number, nowMs: number)
   m.summaryRetryAt = new Date(nowMs + waitH * 3_600_000).toISOString();
 }
 
-function applySummary(m: MatchRecord, res: SummaryResult): void {
+/**
+ * Índice nombre (en minúsculas) → id de ESPN de los árbitros ya guardados. Un nombre con dos ids distintos queda
+ * como ambiguo (null) y no se usa.
+ */
+export function refereeIdsByName(matches: MatchRecord[]): Map<string, string | null> {
+  const out = new Map<string, string | null>();
+  for (const m of matches) {
+    if (!m.referee) continue;
+    const k = m.referee.name.toLowerCase();
+    const prev = out.get(k);
+    if (prev === undefined) out.set(k, m.referee.id);
+    else if (prev !== m.referee.id) out.set(k, null);
+  }
+  return out;
+}
+
+function applySummary(m: MatchRecord, res: SummaryResult, refIds?: Map<string, string | null>): void {
+  // árbitro del resumen solo si aún no hay uno; el resumen no trae id: se toma del índice por nombre y, si no se
+  // conoce, se deja para el paso de /officials (los ids deben ser los de ESPN para agrupar por árbitro)
+  if (!m.referee && res.referee) {
+    const id = res.referee.id ?? refIds?.get(res.referee.name.toLowerCase()) ?? undefined;
+    if (id) {
+      m.referee = { id, name: res.referee.name };
+      delete m.refereeChecks;
+      delete m.refereeRetryAt;
+    }
+  }
   if (res.stats) {
     m.stats = {
       home: { ...m.stats?.home, ...res.stats.home, goals: m.score?.home ?? res.stats.home.goals },
@@ -158,6 +221,112 @@ function applySummary(m: MatchRecord, res: SummaryResult): void {
   }
   // ESPN reports neutralSite=false even for finals: only trust a positive flag
   if (res.neutral === true) m.neutral = true;
+}
+
+/**
+ * ¿Toca consultar /officials para este partido? 'scheduled' = empieza dentro de OFFICIALS_UPCOMING_HOURS (se consulta
+ * en cada ejecución, sin espera); 'finished' = terminado desde OFFICIALS_SINCE, sin árbitro, con menos de
+ * OFFICIALS_MAX_CHECKS consultas vacías, pasada la espera, y sin consulta previa si tiene más de OFFICIALS_MAX_AGE_DAYS
+ * días (los antiguos se consultan una sola vez: si ESPN no lo publicó entonces, ya no lo hará).
+ */
+export function officialsDue(m: MatchRecord, nowMs: number): 'scheduled' | 'finished' | undefined {
+  if (m.referee) return undefined;
+  const t = Date.parse(m.date);
+  if (!Number.isFinite(t)) return undefined;
+  if (m.status === 'scheduled') return t >= nowMs && t <= nowMs + OFFICIALS_UPCOMING_HOURS * 3_600_000 ? 'scheduled' : undefined;
+  if (m.status !== 'finished' || t < Date.parse(OFFICIALS_SINCE) || t > nowMs) return undefined;
+  const checks = m.refereeChecks ?? 0;
+  if (checks >= OFFICIALS_MAX_CHECKS) return undefined;
+  if (checks >= 1 && (nowMs - t) / DAY_MS > OFFICIALS_MAX_AGE_DAYS) return undefined;
+  const retryAt = m.refereeRetryAt ? Date.parse(m.refereeRetryAt) : NaN;
+  return retryAt > nowMs ? undefined : 'finished';
+}
+
+/** Consulta vacía de un partido terminado: una más y espera creciente (OFFICIALS_RETRY_DAYS) hasta la siguiente. */
+export function noteEmptyOfficials(m: MatchRecord, nowMs: number): void {
+  const checks = (m.refereeChecks ?? 0) + 1;
+  m.refereeChecks = checks;
+  if (checks >= OFFICIALS_MAX_CHECKS) {
+    delete m.refereeRetryAt;
+    return;
+  }
+  const days = OFFICIALS_RETRY_DAYS[Math.min(checks - 1, OFFICIALS_RETRY_DAYS.length - 1)];
+  m.refereeRetryAt = new Date(nowMs + days * DAY_MS).toISOString();
+}
+
+/** Árbitros guardados cada tantas consultas (relleno largo interrumpido: no se pierde lo descargado). */
+const OFFICIALS_SAVE_EVERY = 500;
+
+/**
+ * Paso de árbitros de una competición (ver officialsDue): primero los programados próximos (no cuentan contra el
+ * límite), luego los terminados del más reciente al más antiguo hasta agotar `opts.officialsBudget`. Respeta el
+ * presupuesto de tiempo y los circuitos 'officials'/'core'. NUNCA lanza: los errores se registran y se omiten.
+ */
+export async function updateOfficials(
+  comp: CompetitionConfig,
+  store: CompetitionStore,
+  opts: FetchOptions,
+  save?: () => void,
+): Promise<{ checked: number; found: number; failed: number; skipped: number }> {
+  const out = { checked: 0, found: 0, failed: 0, skipped: 0 };
+  try {
+    const nowMs = opts.now.getTime();
+    const budget = opts.officialsBudget ?? { left: OFFICIALS_MAX_PER_RUN };
+    const upcoming: MatchRecord[] = [];
+    const finished: MatchRecord[] = [];
+    for (const m of store.matches) {
+      const due = officialsDue(m, nowMs);
+      if (due === 'scheduled') upcoming.push(m);
+      else if (due === 'finished') finished.push(m);
+    }
+    finished.sort((a, b) => b.date.localeCompare(a.date));
+    const take = Math.max(0, Math.min(finished.length, Math.floor(budget.left)));
+    budget.left -= take;
+    const queue = [...upcoming.sort((a, b) => a.date.localeCompare(b.date)), ...finished.slice(0, take)];
+    if (!queue.length) return out;
+    log(comp.id, `árbitros pendientes: ${upcoming.length} próximos + ${take} terminados${finished.length > take ? ` (${finished.length - take} para otra ejecución)` : ''}`);
+    const stop = () => (opts.deadline !== undefined && Date.now() > opts.deadline) || isCircuitOpen('officials') || isCircuitOpen('core');
+    let done = 0;
+    const worker = async () => {
+      for (let m = queue.shift(); m; m = queue.shift()) {
+        if (stop()) {
+          out.skipped++;
+          continue;
+        }
+        const isFinished = m.status === 'finished';
+        try {
+          const res = parseOfficialsResponse(await getOfficials(comp.slug, m.id, { deadline: opts.deadline }));
+          out.checked++;
+          if (res.kind === 'referee') {
+            m.referee = res.referee;
+            delete m.refereeChecks;
+            delete m.refereeRetryAt;
+            out.found++;
+          } else if (isFinished) noteEmptyOfficials(m, nowMs);
+        } catch (e) {
+          if (e instanceof CircuitOpenError || e instanceof DeadlineError) {
+            out.skipped++;
+            continue;
+          }
+          // 404: ESPN no tiene oficiales para ese partido → cuenta como consulta vacía (reintentos acotados)
+          if (e instanceof HttpError && e.status === 404) {
+            out.checked++;
+            if (isFinished) noteEmptyOfficials(m, nowMs);
+          } else {
+            out.failed++;
+            if (out.failed <= 3) log(comp.id, `aviso: árbitros de ${m.id} fallaron: ${(e as Error).message}`);
+          }
+        }
+        done++;
+        if (save && done % OFFICIALS_SAVE_EVERY === 0) save();
+      }
+    };
+    await Promise.all(Array.from({ length: Math.max(1, Math.min(getConcurrency(), queue.length)) }, worker));
+    log(comp.id, `árbitros: ${out.checked} consultas, ${out.found} encontrados${out.failed ? `, ${out.failed} fallidas` : ''}${out.skipped ? `, ${out.skipped} aplazadas` : ''}`);
+  } catch (e) {
+    log(comp.id, `aviso: paso de árbitros interrumpido: ${(e as Error)?.message ?? e}`);
+  }
+  return out;
 }
 
 /** Add cosmetic fields (colour, logo, short name) from the scoreboard team refs to standings rows. */
@@ -323,6 +492,7 @@ export async function updateCompetition(comp: CompetitionConfig, opts: FetchOpti
 
     if (candidates.length) {
       log(comp.id, `resúmenes pendientes: ${candidates.length}`);
+      const refIds = refereeIdsByName(store.matches);
       let pending: PlayerLine[] = [];
       let done = 0;
       const flush = () => {
@@ -345,7 +515,7 @@ export async function updateCompetition(comp: CompetitionConfig, opts: FetchOpti
           try {
             const raw = await getSummary(comp.slug, m.id, { deadline: opts.deadline });
             const res = normalizeSummary(raw, m);
-            applySummary(m, res);
+            applySummary(m, res, refIds);
             pending.push(...res.players);
             if (summaryHasContent(res)) {
               m.summaryFetched = true;
@@ -375,6 +545,9 @@ export async function updateCompetition(comp: CompetitionConfig, opts: FetchOpti
     }
   }
 
+  // 4) árbitros (/officials): nunca hace fallar la competición
+  const off = opts.officials ? await updateOfficials(comp, store, opts, () => saveStore(store, dir)) : undefined;
+
   inferUnknownPositions(store.players);
   saveStore(store, dir);
   const report: CompetitionReport = {
@@ -385,7 +558,28 @@ export async function updateCompetition(comp: CompetitionConfig, opts: FetchOpti
     seconds: Math.round((Date.now() - started) / 100) / 10,
   };
   if (skipped) report.summariesSkipped = skipped;
+  if (off) {
+    report.officialsChecked = off.checked;
+    report.refereesFound = off.found;
+  }
   return report;
+}
+
+/** `--officials-only`: solo el paso de árbitros sobre el almacén guardado (sin scoreboard, clasificación ni resúmenes). */
+export async function updateCompetitionOfficials(comp: CompetitionConfig, opts: FetchOptions): Promise<CompetitionReport> {
+  const started = Date.now();
+  const store = loadStore(comp.id, opts.storeDir);
+  const off = await updateOfficials(comp, store, opts, () => saveStore(store, opts.storeDir));
+  if (off.checked) saveStore(store, opts.storeDir);
+  return {
+    ...reportFor(store, opts.now),
+    ok: true,
+    summariesFetched: 0,
+    summariesFailed: 0,
+    officialsChecked: off.checked,
+    refereesFound: off.found,
+    seconds: Math.round((Date.now() - started) / 100) / 10,
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -398,11 +592,26 @@ export interface FetchArgs {
   concurrency: number;
   /** soft time budget in minutes (no new summaries after it) */
   budgetMinutes?: number;
+  /** paso de árbitros (/officials); `--no-officials` lo desactiva */
+  officials: boolean;
+  /** solo el paso de árbitros sobre el almacén guardado */
+  officialsOnly: boolean;
+  /** máximo de consultas de árbitros de partidos terminados en esta ejecución (OFFICIALS_MAX_PER_RUN) */
+  maxOfficials: number;
   help: boolean;
 }
 
 export function parseArgs(argv: string[]): FetchArgs {
-  const out: FetchArgs = { only: undefined, summaries: true, maxSummaries: Infinity, concurrency: FETCH_CONCURRENCY, help: false };
+  const out: FetchArgs = {
+    only: undefined,
+    summaries: true,
+    maxSummaries: Infinity,
+    concurrency: FETCH_CONCURRENCY,
+    officials: true,
+    officialsOnly: false,
+    maxOfficials: OFFICIALS_MAX_PER_RUN,
+    help: false,
+  };
   for (const a of argv) {
     const [k, v] = a.split('=', 2);
     if (k === '--only') out.only = (v ?? '').split(',').map((s) => s.trim()).filter(Boolean);
@@ -410,12 +619,17 @@ export function parseArgs(argv: string[]): FetchArgs {
     else if (k === '--max-summaries') out.maxSummaries = Math.max(0, Number(v));
     else if (k === '--concurrency') out.concurrency = Math.max(1, Math.min(16, Number(v)));
     else if (k === '--budget-minutes') out.budgetMinutes = Number(v);
+    else if (k === '--no-officials') out.officials = false;
+    else if (k === '--officials-only') out.officialsOnly = true;
+    else if (k === '--max-officials') out.maxOfficials = Math.max(0, Number(v));
     else if (k === '--help' || k === '-h') out.help = true;
     else throw new Error(`Argumento desconocido: ${a}`);
   }
   if (!Number.isFinite(out.concurrency)) throw new Error('--concurrency debe ser un número');
   if (Number.isNaN(out.maxSummaries)) throw new Error('--max-summaries debe ser un número');
   if (out.budgetMinutes !== undefined && !(out.budgetMinutes > 0)) throw new Error('--budget-minutes debe ser un número positivo');
+  if (Number.isNaN(out.maxOfficials)) throw new Error('--max-officials debe ser un número');
+  if (out.officialsOnly && !out.officials) throw new Error('--officials-only y --no-officials son incompatibles');
   if (out.budgetMinutes === undefined) delete out.budgetMinutes;
   return out;
 }
@@ -457,7 +671,9 @@ function ciWarning(title: string, msg: string): void {
 export async function main(argv: string[]): Promise<number> {
   const args = parseArgs(argv);
   if (args.help) {
-    console.log('Uso: npx tsx pipeline/fetch.ts [--only=laliga,premier] [--no-summaries] [--max-summaries=N] [--concurrency=N] [--budget-minutes=N]');
+    console.log(
+      'Uso: npx tsx pipeline/fetch.ts [--only=laliga,premier] [--no-summaries] [--max-summaries=N] [--concurrency=N] [--budget-minutes=N] [--no-officials] [--officials-only] [--max-officials=N]',
+    );
     return 0;
   }
   let comps = COMPETITIONS;
@@ -490,10 +706,24 @@ async function runFetch(comps: CompetitionConfig[], args: FetchArgs): Promise<nu
   if (stale.length) console.log(`Temporales huérfanos eliminados de data-store/: ${stale.join(', ')}`);
   const now = new Date();
   const budget = args.budgetMinutes ?? DEFAULT_BUDGET_MINUTES;
-  const opts: FetchOptions = { summaries: args.summaries, maxSummaries: args.maxSummaries, now, deadline: now.getTime() + budget * 60_000 };
+  const opts: FetchOptions = {
+    summaries: args.summaries,
+    maxSummaries: args.maxSummaries,
+    now,
+    deadline: now.getTime() + budget * 60_000,
+    officials: args.officials,
+    officialsBudget: { left: args.maxOfficials },
+  };
   console.log(
     `FutStat Lab · descarga ESPN · ${now.toISOString()} · ${comps.length} competiciones · concurrencia ${args.concurrency}` +
-      (args.summaries ? (Number.isFinite(args.maxSummaries) ? ` · máx. ${args.maxSummaries} resúmenes/competición` : '') : ' · sin resúmenes'),
+      (args.officialsOnly
+        ? ' · solo árbitros'
+        : args.summaries
+          ? Number.isFinite(args.maxSummaries)
+            ? ` · máx. ${args.maxSummaries} resúmenes/competición`
+            : ''
+          : ' · sin resúmenes') +
+      (args.officials ? ` · máx. ${args.maxOfficials} árbitros de partidos terminados` : ' · sin árbitros'),
   );
 
   const reports: CompetitionReport[] = [];
@@ -503,7 +733,7 @@ async function runFetch(comps: CompetitionConfig[], args: FetchArgs): Promise<nu
       // ESPN scoreboards/standings considered down: do not wait for every competition to time out, keep the stored
       // data. (A /summary-only outage opens just the 'summary' circuit: the remaining competitions are still refreshed.)
       if (isCircuitOpen('core')) throw new Error('ESPN no responde: se conserva el almacén anterior');
-      reports.push(await updateCompetition(comp, opts));
+      reports.push(await (args.officialsOnly ? updateCompetitionOfficials(comp, opts) : updateCompetition(comp, opts)));
     } catch (e) {
       const msg = (e as Error)?.message ?? String(e);
       log(comp.id, `ERROR: ${msg}`);
@@ -517,6 +747,11 @@ async function runFetch(comps: CompetitionConfig[], args: FetchArgs): Promise<nu
     }
   }
   printTable(reports);
+  if (args.officials) {
+    const checked = reports.reduce((n, r) => n + (r.officialsChecked ?? 0), 0);
+    const found = reports.reduce((n, r) => n + (r.refereesFound ?? 0), 0);
+    console.log(`\nÁrbitros: ${checked} consultas a /officials · ${found} encontrados`);
+  }
   console.log(`\nPeticiones HTTP: ${httpStats.requests} · reintentos: ${httpStats.retries} · fallos: ${httpStats.failures} · respuestas no válidas: ${httpStats.invalid}`);
   const warnings = takeNormalizeWarnings();
   if (warnings.length) {

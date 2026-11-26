@@ -39,9 +39,8 @@ import {
   type LongshotWalkForward,
 } from '../analytics/longshots';
 import { eloGamesBefore, predictMatch } from '../analytics/predict';
-import { projectMatchStats } from '../analytics/projections';
 import { eligibleProps, preMatchRecord, type DailyHistoryOptions } from '../analytics/daily';
-import { baseContext, isFinishedRecord, statContext, type BuildContext } from './context';
+import { baseContext, isFinishedRecord, projectStatsFor, type BuildContext } from './context';
 import { cleanOdds, fullPrediction } from './matches';
 import { lcFirst, localDay } from './util';
 
@@ -187,7 +186,7 @@ export function upcomingLongshotInput(ctx: BuildContext, m: MatchRecord): Longsh
 export function liveLongshotInput(ctx: BuildContext, m: MatchRecord): LongshotInput {
   const rec = preMatchRecord(m);
   const comp = ctx.configById.get(rec.compId)!;
-  const projections = projectMatchStats(rec.home.id, rec.away.id, statContext(ctx, comp.id));
+  const projections = projectStatsFor(ctx, rec);
   const result = predictMatch(rec, baseContext(ctx, comp), { projections });
   const t = Date.parse(rec.date);
   const before = Number.isFinite(t) ? t : ctx.now;

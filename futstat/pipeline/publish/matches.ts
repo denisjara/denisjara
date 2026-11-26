@@ -23,18 +23,20 @@ import { isPlausibleMargin, overroundOf, type CompetitionConfig } from '../confi
 import { hasAnyPrice, stripImplausibleOdds } from '../oddsGuard';
 import type { MatchRecord, PlayerLine, TeamMatchStats } from '../types';
 import { predictMatch, type PredictionResult } from '../analytics/predict';
-import { projectMatchStats } from '../analytics/projections';
 import { toMatchSummary } from '../analytics/summary';
 import { buildComparison, buildFormBlock, buildH2H } from '../analytics/form';
-import { buildPlayerProps } from '../analytics/players';
+import { buildPlayerProps, type PlayerPropsInput } from '../analytics/players';
+import { historyView } from '../experiments/history';
+import { preMatchView } from '../experiments/types';
 import { popularityScore } from '../analytics/popularity';
 import { computeLeagueAverages, computeTeamSeasonStats, formStringOf, teamView, type TeamView } from '../analytics/teamStats';
 import {
   baseContext,
   currentFinished,
+  homeLeagueFor,
   isFinishedRecord,
+  projectStatsFor,
   resultsFrom,
-  statContext,
   teamRef,
   TEAM_WINDOW_DAYS,
   wfContext,
@@ -62,9 +64,7 @@ export function fullPrediction(ctx: BuildContext, m: MatchRecord, withProjection
   const comp = compOf(ctx, m);
   const finished = isFinishedRecord(m);
   const pctx = finished ? wfContext(ctx, m) : baseContext(ctx, comp);
-  const projections = withProjections
-    ? projectMatchStats(m.home.id, m.away.id, statContext(ctx, comp.id, finished ? Date.parse(m.date) : undefined))
-    : [];
+  const projections = withProjections ? projectStatsFor(ctx, m, finished ? Date.parse(m.date) : undefined) : [];
   // ESPN solo da la forma en partidos programados: en el resto se calcula con nuestros datos (antes del partido)
   const t = Date.parse(m.date);
   const rec: MatchRecord = {
@@ -287,7 +287,9 @@ function cardsOfStats(s: TeamMatchStats | undefined): number | undefined {
 
 /**
  * Props de los jugadores de un equipo para un partido con datos ANTERIORES a `before`: líneas de jugador previas, λ del
- * equipo y factores del rival de las proyecciones dadas. La usan la ficha del partido y el apartado diario (walk-forward).
+ * equipo y factores del rival de las proyecciones dadas. La usan la ficha del partido, el apartado diario
+ * (walk-forward) y el banco de pruebas. `match`: el partido, para el gancho `players` de una variante (sin variante o
+ * sin partido, producción).
  */
 export function propsFor(
   ctx: BuildContext,
@@ -297,6 +299,7 @@ export function propsFor(
   lambda: number,
   projections: StatProjection[],
   before: number,
+  match?: MatchRecord,
 ): PlayerProp[] {
   const from = before - TEAM_WINDOW_DAYS * DAY_MS;
   const lines: PlayerLine[] = (ctx.linesByTeam.get(teamId) ?? []).filter((l) => {
@@ -328,7 +331,7 @@ export function propsFor(
     if (!p || hist.length < 3 || !(avg > 0)) return 1;
     return p[side] / avg;
   };
-  return buildPlayerProps({
+  const input: PlayerPropsInput = {
     teamId,
     opponentId,
     lines,
@@ -338,7 +341,28 @@ export function propsFor(
     oppSotFactor: factor('shotsOnTarget', sot),
     cardsFactor: factor('cards', cards),
     foulsFactor: factor('fouls', fouls),
-  });
+  };
+  return buildPlayerProps(match ? withPlayerHooks(ctx, input, match, side, before) : input);
+}
+
+/** Entrada de las props con el gancho `players` de la variante (sin gancho, la misma entrada). */
+function withPlayerHooks(ctx: BuildContext, base: PlayerPropsInput, match: MatchRecord, side: 'home' | 'away', before: number): PlayerPropsInput {
+  const hooks = ctx.variant?.players;
+  if (!hooks) return base;
+  let input: PlayerPropsInput = hooks.rateHalfLifeDays !== undefined ? { ...base, rateHalfLifeDays: hooks.rateHalfLifeDays, asOf: before } : base;
+  const comp = ctx.configById.get(match.compId);
+  if (hooks.adjust && comp) {
+    const adj = hooks.adjust({
+      ctx: { comp, configs: ctx.configById, homeLeague: homeLeagueFor(ctx, match) },
+      match: preMatchView(match),
+      teamId: base.teamId,
+      side,
+      history: historyView(ctx.history, before),
+      base: input,
+    });
+    input = { ...input, ...adj, teamId: base.teamId, opponentId: base.opponentId };
+  }
+  return input;
 }
 
 // ---------------------------------------------------------------------------
@@ -448,8 +472,8 @@ export function buildMatchFile(ctx: BuildContext, m: MatchRecord): MatchFile {
     h2h,
     comparison,
     players: {
-      home: propsFor(ctx, m.home.id, m.away.id, 'home', result.lambdaHome, projections, t),
-      away: propsFor(ctx, m.away.id, m.home.id, 'away', result.lambdaAway, projections, t),
+      home: propsFor(ctx, m.home.id, m.away.id, 'home', result.lambdaHome, projections, t, m),
+      away: propsFor(ctx, m.away.id, m.home.id, 'away', result.lambdaAway, projections, t, m),
     },
     valueBets: result.valueBets,
   };

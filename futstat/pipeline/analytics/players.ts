@@ -338,6 +338,32 @@ export interface PlayerPropsInput {
   /** multiplicador de tarjetas esperado para el partido (árbitro/rivalidad/λ de tarjetas del equipo) */
   cardsFactor: number;
   foulsFactor: number;
+  /**
+   * (variantes del banco; producción sin ellos) vida media en días de la ponderación temporal de las tasas por 90, con
+   * referencia `asOf` (ms; por defecto, la última línea). Los minutos esperados y los totales publicados no cambian.
+   */
+  rateHalfLifeDays?: number;
+  asOf?: number;
+  /** (variantes del banco) multiplicador de los minutos esperados por jugador (0 = no juega: baja, sanción…) */
+  minutesFactor?: Readonly<Record<string, number>>;
+}
+
+/** Totales ponderados por recencia de las líneas de un jugador (peso 0,5^(días antes de asOf / vida media)). */
+function weightedTotals(lines: PlayerLine[], halfLifeDays: number, asOf: number): Pick<Aggregate, 'minutes' | 'goals' | 'assists' | 'shots' | 'shotsOnTarget' | 'yellow' | 'red' | 'foulsCommitted'> {
+  const out = { minutes: 0, goals: 0, assists: 0, shots: 0, shotsOnTarget: 0, yellow: 0, red: 0, foulsCommitted: 0 };
+  for (const l of lines) {
+    const days = Math.max(0, (asOf - Date.parse(l.date)) / 86_400_000);
+    const w = Number.isFinite(days) ? 0.5 ** (days / halfLifeDays) : 0;
+    out.minutes += w * l.minutes;
+    out.goals += w * l.goals;
+    out.assists += w * l.assists;
+    out.shots += w * l.shots;
+    out.shotsOnTarget += w * l.shotsOnTarget;
+    out.yellow += w * l.yellow;
+    out.red += w * l.red;
+    out.foulsCommitted += w * l.foulsCommitted;
+  }
+  return out;
 }
 
 const pAtLeast1 = (l: number) => 1 - Math.exp(-l);
@@ -363,6 +389,8 @@ export function buildPlayerProps(input: PlayerPropsInput): PlayerProp[] {
   const cardsF = safeFactor(input.cardsFactor);
   const foulsF = safeFactor(input.foulsFactor);
 
+  const hl = input.rateHalfLifeDays;
+  const asOf = input.asOf ?? lines.reduce((t, l) => Math.max(t, Date.parse(l.date) || 0), 0);
   const props: PlayerProp[] = [];
   for (const a of aggregate(lines).values()) {
     if (![...last3].some((id) => a.byMatch.has(id))) continue;
@@ -371,21 +399,24 @@ export function buildPlayerProps(input: PlayerPropsInput): PlayerProp[] {
       const l = a.byMatch.get(g.matchId);
       return l ? matchRating(l) : 0;
     });
-    const expMin = expectedMinutes(mins);
+    const mf = input.minutesFactor?.[a.ref.id];
+    const expMin = expectedMinutes(mins) * (mf !== undefined && Number.isFinite(mf) ? clamp(mf, 0, 1.5) : 1);
     if (expMin < 1) continue;
     const prior = POSITION_PRIORS[a.ref.position] ?? POSITION_PRIORS['?'];
-    const n90 = a.minutes / 90;
-    const s90 = shrink(per90(a.shots, a.minutes), n90, prior.shots, PRIOR_N_RATES);
-    const t90 = shrink(per90(a.shotsOnTarget, a.minutes), n90, prior.sot, PRIOR_N_RATES);
+    // tasas por 90: totales del jugador (producción) o ponderados por recencia (gancho players.rateHalfLifeDays)
+    const r = hl !== undefined && hl > 0 ? weightedTotals(a.lines, hl, asOf) : a;
+    const n90 = r.minutes / 90;
+    const s90 = shrink(per90(r.shots, r.minutes), n90, prior.shots, PRIOR_N_RATES);
+    const t90 = shrink(per90(r.shotsOnTarget, r.minutes), n90, prior.sot, PRIOR_N_RATES);
     const xg90 = XG_PROXY_CALIBRATION * (XG_PER_SHOT * s90 + XG_PER_SOT * t90);
     // ESPN sometimes credits goalkeepers with "goals" that are really goals conceded (Koeman, Telstar: goals 2 with 0
     // shots → pGoal 14.6 %). For keepers only goals backed by shots count; outfield players keep theirs (some leagues
     // have no player shot data at all).
-    const goalsForModel = a.ref.position === 'G' ? Math.min(a.goals, a.shots) : a.goals;
-    const g90 = shrink(per90(goalsForModel, a.minutes), n90, xg90, PRIOR_N_GOALS);
-    const a90 = shrink(per90(a.assists, a.minutes), n90, prior.assists, PRIOR_N_GOALS);
-    const c90 = shrink(per90(a.yellow + a.red, a.minutes), n90, prior.cards, PRIOR_N_CARDS);
-    const f90 = shrink(per90(a.foulsCommitted, a.minutes), n90, prior.fouls, PRIOR_N_RATES);
+    const goalsForModel = a.ref.position === 'G' ? Math.min(r.goals, r.shots) : r.goals;
+    const g90 = shrink(per90(goalsForModel, r.minutes), n90, xg90, PRIOR_N_GOALS);
+    const a90 = shrink(per90(r.assists, r.minutes), n90, prior.assists, PRIOR_N_GOALS);
+    const c90 = shrink(per90(r.yellow + r.red, r.minutes), n90, prior.cards, PRIOR_N_CARDS);
+    const f90 = shrink(per90(r.foulsCommitted, r.minutes), n90, prior.fouls, PRIOR_N_RATES);
     const share = expMin / 90;
     const lGoal = g90 * share * teamFactor;
     const lAssist = a90 * share * teamFactor;

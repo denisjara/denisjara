@@ -1,10 +1,11 @@
 /**
  * Motor del banco de pruebas: predicciones walk-forward de una variante para todos los partidos terminados de la
- * temporada actual, métricas por ventana y segmento frente a la línea base (producción), intervalo bootstrap por día y
- * comprobación de fuga por envenenamiento del futuro. La CLI está en scripts/eval-model.ts.
+ * temporada actual (y de las temporadas pasadas desde WINDOWS.prev.from: ventana `prev`), métricas por ventana y
+ * segmento frente a la línea base, intervalo bootstrap por día y comprobación de fuga por envenenamiento del futuro.
+ * La CLI está en scripts/eval-model.ts.
  *
- * Todas las predicciones salen del mismo código que el build (createContext + walk-forward de publish/context.ts y
- * projectMatchStats): una variante solo cambia lo que sus ganchos cambian.
+ * Todas las predicciones salen del mismo código que el build (createContext + walk-forward de publish/context.ts,
+ * projectStatsFor y propsFor): una variante solo cambia lo que sus ganchos cambian.
  */
 import crypto from 'node:crypto';
 import fs from 'node:fs';
@@ -13,11 +14,22 @@ import type { DCModel } from '../../src/lib/models';
 import { logLoss3, mulberry32, rps3, brier3 } from '../../src/lib/models';
 import type { Prob1X2 } from '../../src/types/data';
 import { ROOT_DIR, STORE_DIR, type CompetitionConfig } from '../config';
-import type { CompetitionStore, MatchRecord } from '../types';
-import { projectMatchStats } from '../analytics/projections';
+import type { CompetitionStore, MatchRecord, PlayerLine } from '../types';
+import type { StatKey, TeamStatDists } from '../analytics/projections';
 import { settleDataOf } from '../analytics/settle';
-import { createContext, fitWalkForwardModels, predictWalkForward, statContext, type BuildContext } from '../publish/context';
+import { extraSettleDataOf, PLAYER_MIN_LINES_PER_TEAM } from '../analytics/daily';
+import { teamGamesFromLines } from '../analytics/players';
+import {
+  createContext,
+  fitWalkForwardModels,
+  isPastSeasonTarget,
+  predictWalkForward,
+  projectStatsFor,
+  type BuildContext,
+} from '../publish/context';
+import { propsFor } from '../publish/matches';
 import type { ModelSuite } from '../analytics/ratings';
+import { historyView } from './history';
 import { BASELINE_VARIANT, isEmptyVariant, type ModelVariant } from './types';
 
 const DAY_MS = 86_400_000;
@@ -26,7 +38,10 @@ const DAY_MS = 86_400_000;
 // Ventanas (protocolo)
 // ---------------------------------------------------------------------------
 
-/** Ventanas del protocolo (fechas de inicio del partido, UTC, ambos extremos incluidos). */
+/**
+ * Ventanas del protocolo (fechas de inicio del partido, UTC, ambos extremos incluidos). `season`: partidos de la
+ * temporada actual de su competición ('current') o de una temporada pasada ('past', solo la ventana prev).
+ */
 export const WINDOWS = {
   /**
    * AUXILIAR (anterior al ajuste): temporada actual antes de junio. Casi todo SIN cuotas (ESPN solo da cuotas de cierre
@@ -34,14 +49,33 @@ export const WINDOWS = {
    * Argentina, MLS, Chile, Libertadores, Sudamericana…). Sirve para medir ideas del segmento sin cuotas; la decisión
    * sigue siendo T1 y T2.
    */
-  pre: { from: '2026-01-01', to: '2026-05-31', label: 'auxiliar pre-ajuste (ene–may, casi sin cuotas)' },
-  tuning: { from: '2026-06-01', to: '2026-09-15', label: 'ajuste (tuning)' },
-  T1: { from: '2026-06-01', to: '2026-07-31', label: 'sub-ventana T1' },
-  T2: { from: '2026-08-01', to: '2026-09-15', label: 'sub-ventana T2' },
-  holdout: { from: '2026-09-16', to: '2100-12-31', label: 'HOLDOUT' },
+  pre: { from: '2026-01-01', to: '2026-05-31', label: 'auxiliar pre-ajuste (ene–may, casi sin cuotas)', season: 'current' },
+  tuning: { from: '2026-06-01', to: '2026-09-15', label: 'ajuste (tuning)', season: 'current' },
+  T1: { from: '2026-06-01', to: '2026-07-31', label: 'sub-ventana T1', season: 'current' },
+  T2: { from: '2026-08-01', to: '2026-09-15', label: 'sub-ventana T2', season: 'current' },
+  /**
+   * CONFIRMATORIA (pre-registrada el 2026-11-26, ver README): partidos de temporadas PASADAS (currentSeason = false)
+   * del 2026-01-01 al 2026-05-31: segundas vueltas de las ligas europeas 2025-26, eliminatorias de la UEFA, copas,
+   * Saudí y la Clausura de la Liga MX. Nunca evaluada antes. Casi sin cuotas ni líneas de jugador (estas empiezan el
+   * 2026-05-07).
+   */
+  prev: { from: '2026-01-01', to: '2026-05-31', label: 'confirmatoria temporadas pasadas (ene–may)', season: 'past' },
+  /** unión de tuning y prev (criterio «conjunto» de la regla de decisión pre-registrada) */
+  pooled: { from: '2026-01-01', to: '2026-09-15', label: 'conjunta tuning + prev', season: 'pooled' },
+  holdout: { from: '2026-09-16', to: '2100-12-31', label: 'HOLDOUT', season: 'current' },
 } as const;
 export type WindowName = keyof typeof WINDOWS;
 export const WINDOW_NAMES = Object.keys(WINDOWS) as WindowName[];
+
+/** El banco predice también los partidos terminados de temporadas pasadas desde esta fecha (ventana prev). */
+export const PAST_SEASONS_FROM = `${WINDOWS.prev.from}T00:00:00Z`;
+
+/** El partido pertenece a la ventana (fechas y temporada actual/pasada). */
+export function inWindow(i: Pick<MatchInfo, 't' | 'currentSeason'>, w: WindowName): boolean {
+  if (WINDOWS[w].season === 'pooled') return inWindow(i, 'tuning') || inWindow(i, 'prev');
+  const { from, to } = windowRange(w);
+  return i.t >= from && i.t < to && i.currentSeason === (WINDOWS[w].season === 'current');
+}
 
 export function windowRange(w: WindowName): { from: number; to: number } {
   const def = WINDOWS[w];
@@ -50,7 +84,7 @@ export function windowRange(w: WindowName): { from: number; to: number } {
 
 /** Sub-ventanas de estabilidad de una ventana (para elegir los días de la comprobación de fuga). */
 export function subWindows(w: WindowName): WindowName[] {
-  return w === 'tuning' ? ['T1', 'T2'] : [w];
+  return w === 'tuning' ? ['T1', 'T2'] : w === 'pooled' ? ['T1', 'T2', 'prev'] : [w];
 }
 
 /** Línea de corte top/resto: competiciones con tier >= TOP_TIER (top 5 ligas de Europa salvo… ver README). */
@@ -58,6 +92,20 @@ export const TOP_TIER = 8;
 /** Líneas evaluadas de córners y tarjetas. */
 export const CORNER_LINES = [8.5, 9.5, 10.5];
 export const CARD_LINES = [3.5, 4.5];
+/** Líneas evaluadas de faltas, tiros y tiros a puerta (totales del partido). */
+export const FOUL_LINES = [20.5, 22.5, 24.5];
+export const SHOT_LINES = [22.5, 24.5, 26.5];
+export const SOT_LINES = [7.5, 8.5, 9.5];
+/** Líneas por equipo: goles (Poisson de los λ finales), tarjetas y córners (binomial negativa de la proyección). */
+export const TEAM_GOAL_LINES = [0.5, 1.5];
+export const TEAM_CARD_LINES = [1.5, 2.5];
+export const TEAM_CORNER_LINES = [3.5, 4.5, 5.5];
+/** Estadísticas que proyecta el banco (las mismas proyecciones que publica la ficha para estas claves). */
+export const BENCH_STAT_KEYS: StatKey[] = ['corners', 'cards', 'fouls', 'shots', 'shotsOnTarget'];
+/** Segmento «árbitro conocido»: partidos anteriores dirigidos por el árbitro designado. */
+export const REFEREE_KNOWN_MIN = 5;
+/** Segmento «final de liga»: fracción de la fase regular ya jugada antes del partido. */
+export const LATE_SEASON_FRACTION = 0.75;
 
 // ---------------------------------------------------------------------------
 // Datos
@@ -122,6 +170,30 @@ export function codeFingerprint(): string {
 // Resultado real y segmentos
 // ---------------------------------------------------------------------------
 
+/** Resultado de las props de un jugador (no jugó = todo 0: las probabilidades publicadas incluyen no jugar). */
+export interface PlayerOutcome {
+  /** marcó (gol, sin autogoles) */
+  g: 0 | 1;
+  /** >= 1 tiro a puerta */
+  s1: 0 | 1;
+  /** >= 2 tiros */
+  sh2: 0 | 1;
+  /** >= 1 tarjeta (amarilla o roja) */
+  c: 0 | 1;
+}
+
+/** Segmentos definidos SOLO con información previa al partido (walk-forward). */
+export interface SegmentFlags {
+  /** árbitro designado con >= REFEREE_KNOWN_MIN partidos anteriores dirigidos (todas las competiciones) */
+  refereeKnown: boolean;
+  /** vuelta de una eliminatoria a doble partido («· Vuelta» en la ronda) */
+  secondLeg: boolean;
+  /** partido de liga (fase regular) con >= LATE_SEASON_FRACTION de su fase ya jugada antes del inicio */
+  lateSeason: boolean;
+  /** algún equipo tiene un habitual (>= 60 % de los minutos en sus 5 últimos partidos) que no jugó el último */
+  missingRegular: boolean;
+}
+
 export interface MatchInfo {
   id: string;
   date: string;
@@ -131,25 +203,88 @@ export interface MatchInfo {
   compId: string;
   kind: CompetitionConfig['kind'];
   tier: number;
+  /** temporada actual de su competición (false: temporada pasada, solo ventana prev) */
+  currentSeason: boolean;
   outcome: 0 | 1 | 2;
   /** marcador a 90' (prórrogas reconstruidas con los eventos de gol) */
   hg: number;
   ag: number;
-  /** córners/tarjetas totales (nunca con prórroga; 0 tarjetas = ausente) */
+  /** córners/tarjetas totales (nunca con prórroga; 0 tarjetas = ausente) y por equipo [local, visitante] */
   corners?: number;
   cards?: number;
+  teamCorners?: [number, number];
+  teamCards?: [number, number];
+  /** faltas, tiros y tiros a puerta totales (mismos criterios que los pronósticos del día: extraSettleDataOf) */
+  fouls?: number;
+  shots?: number;
+  sot?: number;
+  /**
+   * resultado de las props por jugador (solo partidos con líneas de jugador válidas; sin prórroga), con clave
+   * playerKey(id, lado): un jugador puede tener props en los DOS equipos (líneas previas con ambos tras un traspaso)
+   */
+  players?: Map<string, PlayerOutcome>;
+  seg: SegmentFlags;
 }
 
-/** Resultado real de los partidos terminados de la temporada actual (a 90'; sin resolver ⇒ excluido). */
+/** Clave de un jugador en un partido: id y lado ('h' local, 'a' visitante). */
+export function playerKey(id: string, side: 'h' | 'a'): string {
+  return `${id}|${side}`;
+}
+
+/** Fase regular de liga de un partido (clave) o undefined (copa, continental, eliminatoria o playoff). */
+function leaguePhase(m: MatchRecord, comp: CompetitionConfig): string | undefined {
+  if (comp.kind !== 'league') return undefined;
+  const r = m.round ?? '';
+  if (r.includes(' · ')) return undefined; // «Apertura · Final», «Playoff de ascenso · …»
+  if (/playoff|play-in|final/i.test(r)) return undefined;
+  return `${m.compId}|${m.season}|${m.currentSeason ? 'a' : 'p'}|${r}`;
+}
+
+/** ¿Algún habitual del equipo (>= 60 % de los minutos en sus 5 últimos partidos) no jugó su último partido? */
+function missingRegularOf(lines: readonly PlayerLine[], teamId: string): boolean {
+  const games = (teamGamesFromLines([...lines]).get(teamId) ?? []).slice(-5);
+  if (games.length < 5) return false;
+  const ids = new Set(games.map((g) => g.matchId));
+  const last = games[games.length - 1].matchId;
+  const minutes = new Map<string, number>();
+  const playedLast = new Set<string>();
+  for (const l of lines) {
+    if (!ids.has(l.matchId) || !(l.minutes > 0)) continue;
+    minutes.set(l.playerId, (minutes.get(l.playerId) ?? 0) + Math.min(l.minutes, 90));
+    if (l.matchId === last) playedLast.add(l.playerId);
+  }
+  for (const [pid, min] of minutes) if (min >= 0.6 * 90 * games.length && !playedLast.has(pid)) return true;
+  return false;
+}
+
+/**
+ * Resultado real de los partidos terminados que predice el banco: temporada actual y, si el contexto las incluye
+ * (pastSeasonsFrom), temporadas pasadas desde esa fecha. A 90'; sin resolver ⇒ excluido. Los segmentos se calculan
+ * solo con información anterior al inicio de cada partido.
+ */
 export function matchInfos(ctx: BuildContext): Map<string, MatchInfo> {
   const out = new Map<string, MatchInfo>();
+  // fixtures de cada fase regular de liga (calendario conocido antes de la temporada) y partidos terminados por fase
+  const phaseTotal = new Map<string, number>();
+  const phaseDone = new Map<string, number[]>();
   for (const m of ctx.allMatches) {
-    if (!m.currentSeason) continue;
+    const comp = ctx.configById.get(m.compId);
+    const ph = comp && m.status !== 'cancelled' ? leaguePhase(m, comp) : undefined;
+    if (!ph) continue;
+    phaseTotal.set(ph, (phaseTotal.get(ph) ?? 0) + 1);
+    if (m.status === 'finished' && m.score) (phaseDone.get(ph) ?? phaseDone.set(ph, []).get(ph)!).push(Date.parse(m.date));
+  }
+  for (const m of ctx.allMatches) {
+    if (!m.currentSeason && !isPastSeasonTarget(ctx, m)) continue;
     const comp = ctx.configById.get(m.compId);
     if (!comp) continue;
     const d = settleDataOf(m);
     if (!d) continue;
     const t = Date.parse(m.date);
+    const view = historyView(ctx.history, t);
+    const ph = leaguePhase(m, comp);
+    const total = ph ? (phaseTotal.get(ph) ?? 0) : 0;
+    const done = ph ? (phaseDone.get(ph) ?? []).filter((x) => x < t).length : 0;
     const info: MatchInfo = {
       id: m.id,
       date: m.date,
@@ -158,12 +293,40 @@ export function matchInfos(ctx: BuildContext): Map<string, MatchInfo> {
       compId: m.compId,
       kind: comp.kind,
       tier: comp.tier,
+      currentSeason: m.currentSeason,
       outcome: d.hg > d.ag ? 0 : d.hg === d.ag ? 1 : 2,
       hg: d.hg,
       ag: d.ag,
+      seg: {
+        refereeKnown: !!m.referee?.id && view.refereeMatches(m.referee.id).length >= REFEREE_KNOWN_MIN,
+        secondLeg: /·\s*Vuelta\b/.test(m.round ?? ''),
+        lateSeason: total > 0 && done / total >= LATE_SEASON_FRACTION,
+        missingRegular: missingRegularOf(view.playerLines(m.home.id), m.home.id) || missingRegularOf(view.playerLines(m.away.id), m.away.id),
+      },
     };
-    if (d.corners !== undefined) info.corners = d.corners;
-    if (d.cards !== undefined) info.cards = d.cards;
+    const sh = m.stats?.home;
+    const sa = m.stats?.away;
+    if (d.corners !== undefined) {
+      info.corners = d.corners;
+      info.teamCorners = [sh!.corners!, sa!.corners!];
+    }
+    if (d.cards !== undefined) {
+      info.cards = d.cards;
+      info.teamCards = [sh!.yellow! + (sh!.red ?? 0), sa!.yellow! + (sa!.red ?? 0)];
+    }
+    const ed = extraSettleDataOf(ctx, m, d);
+    if (ed.fouls) info.fouls = ed.fouls.home + ed.fouls.away;
+    if (ed.shots) info.shots = ed.shots.home + ed.shots.away;
+    if (ed.shotsOnTarget) info.sot = ed.shotsOnTarget.home + ed.shotsOnTarget.away;
+    // props: mismas condiciones que los pronósticos del día (sin prórroga, >= 7 jugadores por equipo, algún tiro)
+    if (ed.players) {
+      const players = new Map<string, PlayerOutcome>();
+      for (const l of ctx.linesByMatch.get(m.id) ?? []) {
+        if (!(l.minutes > 0) || (l.teamId !== m.home.id && l.teamId !== m.away.id)) continue;
+        players.set(playerKey(l.playerId, l.teamId === m.home.id ? 'h' : 'a'), { g: l.goals > 0 ? 1 : 0, s1: l.shotsOnTarget > 0 ? 1 : 0, sh2: l.shots >= 2 ? 1 : 0, c: l.yellow + l.red > 0 ? 1 : 0 });
+      }
+      if (players.size >= 2 * PLAYER_MIN_LINES_PER_TEAM) info.players = players;
+    }
     out.set(m.id, info);
   }
   return out;
@@ -176,10 +339,28 @@ export function matchInfos(ctx: BuildContext): Map<string, MatchInfo> {
 export interface StatPred {
   /** total esperado */
   exp: number;
-  /** P(más de la línea) en CORNER_LINES / CARD_LINES */
+  /** P(más de la línea) en las líneas del total (CORNER_LINES, CARD_LINES, FOUL_LINES…) */
   over: number[];
   /** distribución del total (5 decimales, cola plegada) */
   dist: number[];
+  /** P(más de la línea) de cada equipo en las líneas por equipo (córners y tarjetas) */
+  home?: number[];
+  away?: number[];
+}
+
+/** Props publicadas de un jugador (las que daría propsFor: ficha del partido y pronósticos del día). */
+export interface PlayerPred {
+  id: string;
+  /** lado del equipo para el que se publica ('h' local, 'a' visitante) */
+  s: 'h' | 'a';
+  /** P(marca) */
+  g: number;
+  /** P(>= 1 tiro a puerta) */
+  s1: number;
+  /** P(>= 2 tiros) */
+  sh2: number;
+  /** P(>= 1 tarjeta) */
+  c: number;
 }
 
 export interface PredRow {
@@ -197,14 +378,21 @@ export interface PredRow {
   mp?: [number, number, number];
   corners?: StatPred;
   cards?: StatPred;
+  fouls?: StatPred;
+  shots?: StatPred;
+  sot?: StatPred;
+  /** props de los jugadores de ambos equipos (solo partidos con líneas de jugador válidas) */
+  pl?: PlayerPred[];
 }
 
 const tri = (p: Prob1X2): [number, number, number] => [p.home, p.draw, p.away];
 
-/** DC walk-forward serializable (caché). */
+/** DC walk-forward serializable (caché); `past`: el adicional de temporadas pasadas (BuildContext.wfPast). */
 interface DcCache {
-  leagues: { id: string; models: DCModel[]; byMatch: [string, number][]; timeline: [number, number][] }[];
+  leagues: DcLeagues;
+  past?: { before: number; leagues: DcLeagues };
 }
+type DcLeagues = { id: string; models: DCModel[]; byMatch: [string, number][]; timeline: [number, number][] }[];
 
 export interface VariantRun {
   variant: ModelVariant;
@@ -216,8 +404,14 @@ export interface VariantRun {
 }
 
 function serializeDc(ctx: BuildContext): DcCache {
-  const leagues: DcCache['leagues'] = [];
-  for (const [id, byMatch] of ctx.wfModels) {
+  const out: DcCache = { leagues: serializeLeagues(ctx.wfModels, ctx.wfTimeline) };
+  if (ctx.wfPast) out.past = { before: ctx.wfPast.before, leagues: serializeLeagues(ctx.wfPast.models, ctx.wfPast.timeline) };
+  return out;
+}
+
+function serializeLeagues(wfModels: BuildContext['wfModels'], wfTimeline: BuildContext['wfTimeline']): DcLeagues {
+  const leagues: DcLeagues = [];
+  for (const [id, byMatch] of wfModels) {
     const idx = new Map<DCModel, number>();
     const models: DCModel[] = [];
     const add = (m: DCModel) => {
@@ -230,10 +424,10 @@ function serializeDc(ctx: BuildContext): DcCache {
       return i;
     };
     const pairs: [string, number][] = [...byMatch].map(([mid, m]) => [mid, add(m)]);
-    const timeline: [number, number][] = (ctx.wfTimeline.get(id) ?? []).map((e) => [e.t, add(e.model)]);
+    const timeline: [number, number][] = (wfTimeline.get(id) ?? []).map((e) => [e.t, add(e.model)]);
     leagues.push({ id, models, byMatch: pairs, timeline });
   }
-  return { leagues };
+  return leagues;
 }
 
 function restoreDc(ctx: BuildContext, c: DcCache): void {
@@ -241,14 +435,41 @@ function restoreDc(ctx: BuildContext, c: DcCache): void {
     ctx.wfModels.set(l.id, new Map(l.byMatch.map(([mid, i]) => [mid, l.models[i]])));
     ctx.wfTimeline.set(l.id, l.timeline.map(([t, i]) => ({ t, model: l.models[i] })));
   }
+  if (c.past) {
+    const past: NonNullable<BuildContext['wfPast']> = { before: c.past.before, models: new Map(), timeline: new Map() };
+    for (const l of c.past.leagues) {
+      past.models.set(l.id, new Map(l.byMatch.map(([mid, i]) => [mid, l.models[i]])));
+      past.timeline.set(l.id, l.timeline.map(([t, i]) => ({ t, model: l.models[i] })));
+    }
+    ctx.wfPast = past;
+  }
 }
 
-function statPred(p: { total: number; totalDist: number[]; lines: { line: number; over: number }[] } | undefined, lines: number[]): StatPred | undefined {
-  if (!p) return undefined;
-  const over = lines.map((l) => p.lines.find((x) => Math.abs(x.line - l) < 1e-9)?.over ?? NaN);
-  if (!over.every(Number.isFinite)) return undefined;
-  return { exp: p.total, over, dist: p.totalDist };
+/** P(X > línea) de una distribución discreta (masa en 0..n). */
+function overOf(dist: readonly number[], line: number): number {
+  let s = 0;
+  for (let k = Math.floor(line) + 1; k < dist.length; k++) s += dist[k];
+  return Math.min(1, Math.max(0, s));
 }
+
+function statPred(
+  p: { total: number; totalDist: number[]; lines: { line: number; over: number }[] } | undefined,
+  lines: number[],
+  team?: { dists: { home: number[]; away: number[] } | undefined; lines: number[] },
+): StatPred | undefined {
+  if (!p) return undefined;
+  // líneas publicadas de la proyección (exactas); si la línea no se publica, de la distribución del total
+  const over = lines.map((l) => p.lines.find((x) => Math.abs(x.line - l) < 1e-9)?.over ?? overOf(p.totalDist, l));
+  if (!over.every(Number.isFinite)) return undefined;
+  const out: StatPred = { exp: p.total, over, dist: p.totalDist };
+  if (team?.dists) {
+    out.home = team.lines.map((l) => round6(overOf(team.dists!.home, l)));
+    out.away = team.lines.map((l) => round6(overOf(team.dists!.away, l)));
+  }
+  return out;
+}
+
+const round6 = (x: number) => Math.round(x * 1e6) / 1e6;
 
 export interface RunOptions {
   /**
@@ -267,8 +488,13 @@ export interface RunOptions {
   log?: (msg: string) => void;
 }
 
-/** Mismos ganchos de estadísticas (valores simples: comparación por contenido). */
+/**
+ * Mismos ganchos de estadísticas. Los valores simples se comparan por contenido; con una función (stats.adjust) solo
+ * el MISMO objeto cuenta como igual (JSON.stringify omite las funciones: una variante con adjust reutilizaría las
+ * proyecciones de la base).
+ */
 function sameStats(a: ModelVariant['stats'], b: ModelVariant['stats']): boolean {
+  if (a?.adjust || b?.adjust) return a === b;
   return JSON.stringify(a ?? {}) === JSON.stringify(b ?? {});
 }
 
@@ -286,6 +512,7 @@ export function runVariant(variant: ModelVariant, data: EvalData, opts: RunOptio
     now: data.now,
     variant: empty ? undefined : variant,
     suite: reuseSuite,
+    pastSeasonsFrom: PAST_SEASONS_FROM,
   });
   const dc = opts.dc ?? (reuse && variant.dc === reuse.variant.dc ? reuse.dc : undefined);
   if (dc) restoreDc(ctx, dc);
@@ -308,25 +535,51 @@ export function runVariant(variant: ModelVariant, data: EvalData, opts: RunOptio
       ...(wf.sources.market ? { mp: tri(wf.sources.market) } : {}),
     });
   }
-  // córners y tarjetas: solo dependen de los ganchos `stats`; solo partidos con el dato real
+  // estadísticas: solo dependen de los ganchos `stats`; props de jugadores: de `stats`, `players` y los λ finales.
+  // Solo partidos con el dato real (o con líneas de jugador).
   const infos = opts.infos ?? matchInfos(ctx);
   const reuseStats = !!reuse && sameStats(variant.stats, reuse.variant.stats);
+  const reusePlayers = reuseStats && variant.players === reuse!.variant.players;
   for (const row of rows.values()) {
-    if (reuseStats) {
-      const b = reuse!.rows.get(row.id);
-      if (b?.corners) row.corners = b.corners;
-      if (b?.cards) row.cards = b.cards;
-      continue;
-    }
     const info = infos.get(row.id);
-    if (!info || (info.corners === undefined && info.cards === undefined)) continue;
+    if (!info) continue;
+    const b = reuse?.rows.get(row.id);
+    if (reuseStats) {
+      for (const k of ['corners', 'cards', 'fouls', 'shots', 'sot'] as const) if (b?.[k]) row[k] = b[k];
+    }
+    const wantPlayers = !!info.players;
+    const playersDone = wantPlayers && reusePlayers && !!b && b.lh === row.lh && b.la === row.la;
+    if (playersDone && b.pl) row.pl = b.pl;
+    const wantStats = !reuseStats && [info.corners, info.cards, info.fouls, info.shots, info.sot].some((x) => x !== undefined);
+    if (!wantStats && (!wantPlayers || playersDone)) continue;
     const m = ctx.matchById.get(row.id)!;
-    const sc = statContext(ctx, m.compId, Date.parse(m.date), { keys: ['corners', 'cards'] });
-    const projs = projectMatchStats(m.home.id, m.away.id, sc);
-    const c = statPred(projs.find((p) => p.key === 'corners'), CORNER_LINES);
-    const k = statPred(projs.find((p) => p.key === 'cards'), CARD_LINES);
-    if (c) row.corners = c;
-    if (k) row.cards = k;
+    const t = Date.parse(m.date);
+    const dists: TeamStatDists = new Map();
+    const projs = projectStatsFor(ctx, m, t, { keys: BENCH_STAT_KEYS, teamDists: dists });
+    if (wantStats) {
+      const get = (k: StatKey) => projs.find((p) => p.key === k);
+      const c = statPred(get('corners'), CORNER_LINES, { dists: dists.get('corners'), lines: TEAM_CORNER_LINES });
+      const k = statPred(get('cards'), CARD_LINES, { dists: dists.get('cards'), lines: TEAM_CARD_LINES });
+      const f = statPred(get('fouls'), FOUL_LINES);
+      const sh = statPred(get('shots'), SHOT_LINES);
+      const so = statPred(get('shotsOnTarget'), SOT_LINES);
+      if (c && info.corners !== undefined) row.corners = c;
+      if (k && info.cards !== undefined) row.cards = k;
+      if (f && info.fouls !== undefined) row.fouls = f;
+      if (sh && info.shots !== undefined) row.shots = sh;
+      if (so && info.sot !== undefined) row.sot = so;
+    }
+    if (wantPlayers && !playersDone) {
+      // el mismo camino que la ficha del partido (propsFor con el gancho `players` de la variante)
+      const pl: PlayerPred[] = [];
+      for (const [team, opp, side, lambda] of [
+        [m.home.id, m.away.id, 'home', row.lh],
+        [m.away.id, m.home.id, 'away', row.la],
+      ] as const) {
+        for (const p of propsFor(ctx, team, opp, side, lambda, projs, t, m)) pl.push({ id: p.player.id, s: side === 'home' ? 'h' : 'a', g: p.pGoal, s1: p.pSot1, sh2: p.pShots2, c: p.pCard });
+      }
+      if (pl.length) row.pl = pl;
+    }
   }
   return { variant, rows, ctx, dc: dc ?? serializeDc(ctx), seconds: (performance.now() - t0) / 1000 };
 }
@@ -338,7 +591,8 @@ export function runVariant(variant: ModelVariant, data: EvalData, opts: RunOptio
 export const CACHE_DIR = path.join(ROOT_DIR, '.cache', 'eval');
 
 interface BaselineCacheFile {
-  version: 3;
+  /** 4: ventana prev (temporadas pasadas), faltas/tiros/tiros a puerta, líneas por equipo y props de jugadores */
+  version: 4;
   key: string;
   rows: PredRow[];
   dc: DcCache;
@@ -359,9 +613,9 @@ export function runBaseline(data: EvalData, opts: { infos?: Map<string, MatchInf
     const t0 = performance.now();
     try {
       const c = JSON.parse(fs.readFileSync(file, 'utf8')) as BaselineCacheFile;
-      if (c.version === 3) {
+      if (c.version === 4) {
         // contexto ligero (índices y modelos actuales) para reutilizar en las variantes
-        const ctx = createContext({ stores: data.stores, configs: data.configs, now: data.now });
+        const ctx = createContext({ stores: data.stores, configs: data.configs, now: data.now, pastSeasonsFrom: PAST_SEASONS_FROM });
         return { variant, rows: new Map(c.rows.map((r) => [r.id, r])), ctx, dc: c.dc, seconds: (performance.now() - t0) / 1000, fromCache: true };
       }
     } catch {
@@ -373,7 +627,7 @@ export function runBaseline(data: EvalData, opts: { infos?: Map<string, MatchInf
     fs.mkdirSync(path.dirname(file), { recursive: true });
     // las cachés viejas de la línea base se borran (cambian con cada descarga o cambio del núcleo)
     for (const f of fs.readdirSync(path.dirname(file))) if (f.startsWith('baseline-') && path.join(path.dirname(file), f) !== file) fs.rmSync(path.join(path.dirname(file), f), { force: true });
-    const out: BaselineCacheFile = { version: 3, key: path.basename(file), rows: [...run.rows.values()], dc: run.dc! };
+    const out: BaselineCacheFile = { version: 4, key: path.basename(file), rows: [...run.rows.values()], dc: run.dc! };
     fs.writeFileSync(file, JSON.stringify(out));
   } catch {
     // sin caché en disco: no es un error
@@ -388,6 +642,19 @@ export function runBaseline(data: EvalData, opts: { infos?: Map<string, MatchInf
 const EPS = 1e-12;
 const probOf = (p: [number, number, number]): Prob1X2 => ({ home: p[0], draw: p[1], away: p[2] });
 
+export interface StatLoss {
+  brier: number[];
+  brierMean: number;
+  ae: number;
+  nll: number;
+}
+
+/** Brier por equipo: media de local y visitante en cada línea. */
+export interface TeamLoss {
+  brier: number[];
+  brierMean: number;
+}
+
 export interface Losses {
   rps: number;
   logLoss: number;
@@ -401,8 +668,15 @@ export interface Losses {
   bttsHit: number;
   /** deviance Poisson media de los dos equipos */
   deviance: number;
-  corners?: { brier: number[]; brierMean: number; ae: number; nll: number };
-  cards?: { brier: number[]; brierMean: number; ae: number; nll: number };
+  corners?: StatLoss;
+  cards?: StatLoss;
+  fouls?: StatLoss;
+  shots?: StatLoss;
+  sot?: StatLoss;
+  /** goles por equipo más de 0,5/1,5: Poisson con los λ finales (ignora la corrección τ de Dixon-Coles) */
+  teamGoals: TeamLoss;
+  teamCards?: TeamLoss;
+  teamCorners?: TeamLoss;
 }
 
 function binLoss(p: number, y: 0 | 1): { brier: number; logLoss: number; hit: number } {
@@ -415,12 +689,30 @@ function poissonDeviance(y: number, mu: number): number {
   return 2 * ((y > 0 ? y * Math.log(y / m) : 0) - (y - m));
 }
 
-function statLoss(pred: StatPred | undefined, actual: number | undefined, lines: number[]): Losses['corners'] {
+function statLoss(pred: StatPred | undefined, actual: number | undefined, lines: number[]): StatLoss | undefined {
   if (!pred || actual === undefined) return undefined;
   const brier = lines.map((l, i) => (pred.over[i] - (actual > l ? 1 : 0)) ** 2);
   const k = Math.min(actual, pred.dist.length - 1);
   const pk = actual > pred.dist.length - 1 ? pred.dist[pred.dist.length - 1] : pred.dist[k];
   return { brier, brierMean: brier.reduce((s, x) => s + x, 0) / brier.length, ae: Math.abs(pred.exp - actual), nll: -Math.log(Math.max(1e-6, pk)) };
+}
+
+function teamLoss(home: number[] | undefined, away: number[] | undefined, actual: [number, number] | undefined, lines: number[]): TeamLoss | undefined {
+  if (!home || !away || !actual) return undefined;
+  const brier = lines.map((l, i) => ((home[i] - (actual[0] > l ? 1 : 0)) ** 2 + (away[i] - (actual[1] > l ? 1 : 0)) ** 2) / 2);
+  return { brier, brierMean: brier.reduce((s, x) => s + x, 0) / brier.length };
+}
+
+/** P(Poisson(λ) > línea). */
+function poissonOver(lambda: number, line: number): number {
+  const l = Math.max(lambda, 1e-9);
+  let term = Math.exp(-l);
+  let cdf = term;
+  for (let k = 1; k <= Math.floor(line); k++) {
+    term *= l / k;
+    cdf += term;
+  }
+  return Math.min(1, Math.max(0, 1 - cdf));
 }
 
 /** Pérdidas por partido de una predicción frente al resultado real. */
@@ -444,17 +736,35 @@ export function lossesOf(r: PredRow, info: MatchInfo): Losses {
     deviance: (poissonDeviance(info.hg, r.lh) + poissonDeviance(info.ag, r.la)) / 2,
     corners: statLoss(r.corners, info.corners, CORNER_LINES),
     cards: statLoss(r.cards, info.cards, CARD_LINES),
+    fouls: statLoss(r.fouls, info.fouls, FOUL_LINES),
+    shots: statLoss(r.shots, info.shots, SHOT_LINES),
+    sot: statLoss(r.sot, info.sot, SOT_LINES),
+    teamGoals: teamLoss(
+      TEAM_GOAL_LINES.map((l) => poissonOver(r.lh, l)),
+      TEAM_GOAL_LINES.map((l) => poissonOver(r.la, l)),
+      [info.hg, info.ag],
+      TEAM_GOAL_LINES,
+    )!,
+    teamCards: teamLoss(r.cards?.home, r.cards?.away, info.teamCards, TEAM_CARD_LINES),
+    teamCorners: teamLoss(r.corners?.home, r.corners?.away, info.teamCorners, TEAM_CORNER_LINES),
   };
 }
 
 export interface StatMetrics {
   n: number;
-  /** Brier por línea (CORNER_LINES / CARD_LINES) */
+  /** Brier por línea (CORNER_LINES / CARD_LINES…) */
   brier: number[];
   brierMean: number;
   mae: number;
   /** log-verosimilitud negativa media del total exacto */
   nll: number;
+}
+
+export interface TeamMetrics {
+  n: number;
+  /** Brier por línea (media de local y visitante) */
+  brier: number[];
+  brierMean: number;
 }
 
 export interface Metrics {
@@ -465,14 +775,20 @@ export interface Metrics {
   goalsDeviance: number;
   corners?: StatMetrics;
   cards?: StatMetrics;
+  fouls?: StatMetrics;
+  shots?: StatMetrics;
+  sot?: StatMetrics;
+  teamGoals?: TeamMetrics;
+  teamCards?: TeamMetrics;
+  teamCorners?: TeamMetrics;
 }
 
 function mean(xs: number[]): number {
   return xs.length ? xs.reduce((s, x) => s + x, 0) / xs.length : NaN;
 }
 
-function statMetrics(ls: (Losses['corners'] | undefined)[]): StatMetrics | undefined {
-  const xs = ls.filter((x): x is NonNullable<Losses['corners']> => !!x);
+function statMetrics(ls: (StatLoss | undefined)[]): StatMetrics | undefined {
+  const xs = ls.filter((x): x is StatLoss => !!x);
   if (!xs.length) return undefined;
   const k = xs[0].brier.length;
   return {
@@ -484,6 +800,13 @@ function statMetrics(ls: (Losses['corners'] | undefined)[]): StatMetrics | undef
   };
 }
 
+function teamMetrics(ls: (TeamLoss | undefined)[]): TeamMetrics | undefined {
+  const xs = ls.filter((x): x is TeamLoss => !!x);
+  if (!xs.length) return undefined;
+  const k = xs[0].brier.length;
+  return { n: xs.length, brier: Array.from({ length: k }, (_, i) => mean(xs.map((x) => x.brier[i]))), brierMean: mean(xs.map((x) => x.brierMean)) };
+}
+
 export function metricsOf(ls: Losses[]): Metrics {
   return {
     n: ls.length,
@@ -493,7 +816,61 @@ export function metricsOf(ls: Losses[]): Metrics {
     goalsDeviance: mean(ls.map((l) => l.deviance)),
     corners: statMetrics(ls.map((l) => l.corners)),
     cards: statMetrics(ls.map((l) => l.cards)),
+    fouls: statMetrics(ls.map((l) => l.fouls)),
+    shots: statMetrics(ls.map((l) => l.shots)),
+    sot: statMetrics(ls.map((l) => l.sot)),
+    teamGoals: teamMetrics(ls.map((l) => l.teamGoals)),
+    teamCards: teamMetrics(ls.map((l) => l.teamCards)),
+    teamCorners: teamMetrics(ls.map((l) => l.teamCorners)),
   };
+}
+
+/** Pérdidas de una prop de jugador: Brier y log-loss (probabilidad recortada a [0,001; 0,999]). */
+function propLoss(p: number, y: 0 | 1): { brier: number; logLoss: number } {
+  const q = Math.min(0.999, Math.max(0.001, p));
+  return { brier: (p - y) ** 2, logLoss: -(y ? Math.log(q) : Math.log(1 - q)) };
+}
+
+/** Métricas principales: las del informe, por ventana y por segmento, con IC bootstrap por día de la diferencia. */
+export const MAIN_METRICS = [
+  { key: 'rps', label: '1X2 RPS', get: (l: Losses) => l.rps },
+  { key: 'logLoss', label: '1X2 log-loss', get: (l: Losses) => l.logLoss },
+  { key: 'brier', label: '1X2 Brier', get: (l: Losses) => l.brier },
+  { key: 'ouBrier', label: 'Más/menos 2,5 Brier', get: (l: Losses) => l.ouBrier },
+  { key: 'bttsBrier', label: 'Ambos marcan Brier', get: (l: Losses) => l.bttsBrier },
+  { key: 'deviance', label: 'Goles deviance', get: (l: Losses) => l.deviance },
+  { key: 'teamGoals', label: 'Goles equipo Brier (0,5/1,5)', get: (l: Losses) => l.teamGoals.brierMean },
+  { key: 'corners', label: 'Córners Brier', get: (l: Losses) => l.corners?.brierMean },
+  { key: 'teamCorners', label: 'Córners equipo Brier', get: (l: Losses) => l.teamCorners?.brierMean },
+  { key: 'cards', label: 'Tarjetas Brier', get: (l: Losses) => l.cards?.brierMean },
+  { key: 'teamCards', label: 'Tarjetas equipo Brier', get: (l: Losses) => l.teamCards?.brierMean },
+  { key: 'fouls', label: 'Faltas Brier', get: (l: Losses) => l.fouls?.brierMean },
+  { key: 'shots', label: 'Tiros Brier', get: (l: Losses) => l.shots?.brierMean },
+  { key: 'sot', label: 'Tiros a puerta Brier', get: (l: Losses) => l.sot?.brierMean },
+] as const;
+
+/** Props de jugadores (pares partido-jugador publicados por la base y la variante). */
+export const PLAYER_METRICS = [
+  { key: 'pScorer', label: 'Goleador Brier', field: 'g', loss: 'brier' },
+  { key: 'pScorerLL', label: 'Goleador log-loss', field: 'g', loss: 'logLoss' },
+  { key: 'pSot1', label: '>= 1 tiro a puerta Brier', field: 's1', loss: 'brier' },
+  { key: 'pSot1LL', label: '>= 1 tiro a puerta log-loss', field: 's1', loss: 'logLoss' },
+  { key: 'pShots2', label: '>= 2 tiros Brier', field: 'sh2', loss: 'brier' },
+  { key: 'pShots2LL', label: '>= 2 tiros log-loss', field: 'sh2', loss: 'logLoss' },
+  { key: 'pCard', label: 'Tarjeta Brier', field: 'c', loss: 'brier' },
+  { key: 'pCardLL', label: 'Tarjeta log-loss', field: 'c', loss: 'logLoss' },
+] as const;
+
+export type MainKey = (typeof MAIN_METRICS)[number]['key'] | (typeof PLAYER_METRICS)[number]['key'];
+
+export interface MainMetric {
+  key: MainKey;
+  label: string;
+  /** partidos (o pares partido-jugador en las props) con el dato en ambas */
+  n: number;
+  baseline: number;
+  variant: number;
+  ci: DiffCI;
 }
 
 // ---------------------------------------------------------------------------
@@ -553,6 +930,11 @@ export const SEGMENTS: { id: string; label: string; test: (i: MatchInfo, b: Pred
   { id: 'continentales', label: 'Continentales', test: (i) => i.kind === 'continental' },
   { id: 'top', label: `Top (tier >= ${TOP_TIER})`, test: (i) => i.tier >= TOP_TIER },
   { id: 'resto', label: 'Resto', test: (i) => i.tier < TOP_TIER },
+  // definidos SOLO con información previa al partido (ver SegmentFlags)
+  { id: 'arbitro-conocido', label: `Árbitro >= ${REFEREE_KNOWN_MIN} previos`, test: (i) => i.seg.refereeKnown },
+  { id: 'vuelta', label: 'Vuelta de eliminatoria', test: (i) => i.seg.secondLeg },
+  { id: 'final-de-liga', label: 'Liga: último 25 %', test: (i) => i.seg.lateSeason },
+  { id: 'falta-habitual', label: 'Falta un habitual', test: (i) => i.seg.missingRegular },
 ];
 
 export interface SegmentReport {
@@ -562,6 +944,8 @@ export interface SegmentReport {
   baseline: Metrics['x12'];
   variant: Metrics['x12'];
   rps: DiffCI;
+  /** métricas principales del segmento (las que tienen dato), con su n */
+  main: MainMetric[];
 }
 
 /** RPS/log-loss/Brier/acierto de cada fuente sola (contexto: cuánto aporta cada pieza). */
@@ -597,6 +981,17 @@ function referencesOf(pairs: { i: MatchInfo; r: PredRow }[]): References {
   return out;
 }
 
+/** Conjuntos de props comparados: pares publicados por ambas y por solo una (con cuántos de esos jugadores jugaron). */
+export interface PlayerSets {
+  /** partidos con líneas de jugador válidas */
+  matches: number;
+  common: number;
+  onlyBaseline: number;
+  onlyBaselinePlayed: number;
+  onlyVariant: number;
+  onlyVariantPlayed: number;
+}
+
 export interface EvalReport {
   variant: string;
   description: string;
@@ -610,23 +1005,73 @@ export interface EvalReport {
   days: number;
   /** partidos de la ventana sin predicción de la variante (la base sí) */
   missing: number;
+  /** partidos por competición */
+  composition: Record<string, number>;
   baseline: Metrics;
   model: Metrics;
-  ci: {
-    rps: DiffCI;
-    logLoss: DiffCI;
-    brier: DiffCI;
-    ouBrier: DiffCI;
-    bttsBrier: DiffCI;
-    deviance: DiffCI;
-    corners?: DiffCI;
-    cards?: DiffCI;
-  };
+  ci: { rps: DiffCI; logLoss: DiffCI; brier: DiffCI; ouBrier: DiffCI; bttsBrier: DiffCI; deviance: DiffCI } & Partial<Record<MainKey, DiffCI>>;
+  /** todas las métricas principales con dato (incluidas las props de jugadores) */
+  main: MainMetric[];
+  /** props de jugadores: pares (partido, jugador) publicados por ambas; si el jugador no jugó, todo 0 */
+  playerSets?: PlayerSets;
   segments: SegmentReport[];
   /** cada fuente sola, en la base y en la variante (mismos partidos) */
   references: { baseline: References; variant: References };
   leak?: LeakReport;
   seconds: { baseline: number; variant: number; leak?: number };
+}
+
+interface PlayerPair {
+  y: PlayerOutcome;
+  b: PlayerPred;
+  v: PlayerPred;
+}
+
+interface Pair {
+  i: MatchInfo;
+  b: PredRow;
+  v: PredRow;
+  lb: Losses;
+  lv: Losses;
+  /** props publicadas por ambas (solo partidos con líneas de jugador válidas) */
+  pl: PlayerPair[];
+}
+
+const NO_PLAY: PlayerOutcome = { g: 0, s1: 0, sh2: 0, c: 0 };
+
+/** Métricas principales de un conjunto de pares (sin las que no tienen dato). */
+function mainMetricsOf(pairs: Pair[]): MainMetric[] {
+  const out: MainMetric[] = [];
+  const push = (key: MainKey, label: string, items: { day: string; b: number; v: number }[]) => {
+    if (!items.length) return;
+    out.push({
+      key,
+      label,
+      n: items.length,
+      baseline: mean(items.map((x) => x.b)),
+      variant: mean(items.map((x) => x.v)),
+      ci: bootstrapByDay(items.map((x) => ({ day: x.day, diff: x.v - x.b }))),
+    });
+  };
+  for (const d of MAIN_METRICS) {
+    push(
+      d.key,
+      d.label,
+      pairs.flatMap((x) => {
+        const b = d.get(x.lb);
+        const v = d.get(x.lv);
+        return b === undefined || v === undefined ? [] : [{ day: x.i.day, b, v }];
+      }),
+    );
+  }
+  for (const d of PLAYER_METRICS) {
+    push(
+      d.key,
+      d.label,
+      pairs.flatMap((x) => x.pl.map((p) => ({ day: x.i.day, b: propLoss(p.b[d.field], p.y[d.field])[d.loss], v: propLoss(p.v[d.field], p.y[d.field])[d.loss] }))),
+    );
+  }
+  return out;
 }
 
 /** Compara una variante con la base en una ventana. */
@@ -637,11 +1082,11 @@ export function compare(
   window: WindowName,
   data: EvalData,
 ): EvalReport {
-  const { from, to } = windowRange(window);
-  const pairs: { i: MatchInfo; b: PredRow; v: PredRow; lb: Losses; lv: Losses }[] = [];
+  const pairs: Pair[] = [];
+  const sets: PlayerSets = { matches: 0, common: 0, onlyBaseline: 0, onlyBaselinePlayed: 0, onlyVariant: 0, onlyVariantPlayed: 0 };
   let missing = 0;
   for (const i of [...infos.values()].sort((a, b) => a.t - b.t || a.id.localeCompare(b.id))) {
-    if (i.t < from || i.t >= to) continue;
+    if (!inWindow(i, window)) continue;
     const b = base.rows.get(i.id);
     if (!b) continue;
     const v = run.rows.get(i.id);
@@ -649,16 +1094,31 @@ export function compare(
       missing++;
       continue;
     }
-    pairs.push({ i, b, v, lb: lossesOf(b, i), lv: lossesOf(v, i) });
+    const pl: PlayerPair[] = [];
+    if (i.players && (b.pl || v.pl)) {
+      sets.matches++;
+      const key = (p: PlayerPred) => playerKey(p.id, p.s);
+      const vm = new Map((v.pl ?? []).map((p) => [key(p), p]));
+      const bm = new Map((b.pl ?? []).map((p) => [key(p), p]));
+      for (const pb of b.pl ?? []) {
+        const pv = vm.get(key(pb));
+        if (pv) pl.push({ y: i.players.get(key(pb)) ?? NO_PLAY, b: pb, v: pv });
+        else {
+          sets.onlyBaseline++;
+          if (i.players.has(key(pb))) sets.onlyBaselinePlayed++;
+        }
+      }
+      for (const pv of v.pl ?? []) {
+        if (bm.has(key(pv))) continue;
+        sets.onlyVariant++;
+        if (i.players.has(key(pv))) sets.onlyVariantPlayed++;
+      }
+      sets.common += pl.length;
+    }
+    pairs.push({ i, b, v, lb: lossesOf(b, i), lv: lossesOf(v, i), pl });
   }
-  const ci = (get: (l: Losses) => number | undefined) =>
-    bootstrapByDay(
-      pairs.flatMap((x) => {
-        const a = get(x.lv);
-        const c = get(x.lb);
-        return a === undefined || c === undefined ? [] : [{ day: x.i.day, diff: a - c }];
-      }),
-    );
+  const main = mainMetricsOf(pairs);
+  const ciOf = (k: MainKey) => main.find((x) => x.key === k)?.ci ?? bootstrapByDay([]);
   const segments: SegmentReport[] = SEGMENTS.map((s) => {
     const sel = pairs.filter((x) => s.test(x.i, x.b));
     return {
@@ -668,10 +1128,20 @@ export function compare(
       baseline: metricsOf(sel.map((x) => x.lb)).x12,
       variant: metricsOf(sel.map((x) => x.lv)).x12,
       rps: bootstrapByDay(sel.map((x) => ({ day: x.i.day, diff: x.lv.rps - x.lb.rps }))),
+      main: mainMetricsOf(sel),
     };
   });
-  const hasCorners = pairs.some((x) => x.lb.corners && x.lv.corners);
-  const hasCards = pairs.some((x) => x.lb.cards && x.lv.cards);
+  const composition: Record<string, number> = {};
+  for (const x of pairs) composition[x.i.compId] = (composition[x.i.compId] ?? 0) + 1;
+  const ci: EvalReport['ci'] = {
+    rps: ciOf('rps'),
+    logLoss: ciOf('logLoss'),
+    brier: ciOf('brier'),
+    ouBrier: ciOf('ouBrier'),
+    bttsBrier: ciOf('bttsBrier'),
+    deviance: ciOf('deviance'),
+  };
+  for (const m of main) ci[m.key] = m.ci;
   const report: EvalReport = {
     variant: run.variant.name,
     description: run.variant.description,
@@ -683,22 +1153,16 @@ export function compare(
     n: pairs.length,
     days: new Set(pairs.map((x) => x.i.day)).size,
     missing,
+    composition: Object.fromEntries(Object.entries(composition).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))),
     baseline: metricsOf(pairs.map((x) => x.lb)),
     model: metricsOf(pairs.map((x) => x.lv)),
-    ci: {
-      rps: ci((l) => l.rps),
-      logLoss: ci((l) => l.logLoss),
-      brier: ci((l) => l.brier),
-      ouBrier: ci((l) => l.ouBrier),
-      bttsBrier: ci((l) => l.bttsBrier),
-      deviance: ci((l) => l.deviance),
-    },
+    ci,
+    main,
     segments,
     references: { baseline: referencesOf(pairs.map((x) => ({ i: x.i, r: x.b }))), variant: referencesOf(pairs.map((x) => ({ i: x.i, r: x.v }))) },
     seconds: { baseline: base.seconds, variant: run.seconds },
   };
-  if (hasCorners) report.ci.corners = ci((l) => l.corners?.brierMean);
-  if (hasCards) report.ci.cards = ci((l) => l.cards?.brierMean);
+  if (sets.matches) report.playerSets = sets;
   return report;
 }
 
@@ -735,10 +1199,9 @@ export const LEAK_COMP: CompetitionConfig = {
 
 /** Día (UTC) con más partidos de una ventana (determinista; a igualdad, el más antiguo). */
 export function busiestDay(infos: Map<string, MatchInfo>, w: WindowName, rows?: Map<string, PredRow>): string | undefined {
-  const { from, to } = windowRange(w);
   const count = new Map<string, number>();
   for (const i of infos.values()) {
-    if (i.t < from || i.t >= to || (rows && !rows.has(i.id))) continue;
+    if (!inWindow(i, w) || (rows && !rows.has(i.id))) continue;
     count.set(i.day, (count.get(i.day) ?? 0) + 1);
   }
   let best: string | undefined;
@@ -754,18 +1217,61 @@ export function busiestDay(infos: Map<string, MatchInfo>, w: WindowName, rows?: 
 
 /**
  * Partidos "del futuro" envenenados: para cada partido del día `day`, un partido terminado entre los mismos equipos
- * al día siguiente (01:00 UTC) en una copa ficticia, con marcador y estadísticas extremos y cuotas.
+ * al día siguiente (01:00 UTC) en una copa ficticia, con marcador y estadísticas extremos, cuotas, el MISMO árbitro y
+ * líneas de jugador extremas de los jugadores del último partido de cada equipo (`lines`: líneas por equipo), para
+ * que una fuga por HistoryView.refereeMatches/playerLines o por las props también se detecte.
  */
-export function poisonStores(stores: CompetitionStore[], targets: MatchRecord[], day: string): CompetitionStore[] {
+export function poisonStores(
+  stores: CompetitionStore[],
+  targets: MatchRecord[],
+  day: string,
+  lines?: ReadonlyMap<string, readonly PlayerLine[]>,
+): CompetitionStore[] {
   const t0 = Date.parse(`${day}T00:00:00Z`) + DAY_MS + 3_600_000;
+  const players: PlayerLine[] = [];
   const matches: MatchRecord[] = targets.map((m, k) => {
     const flip = k % 2 === 1;
+    const id = `L${m.id}`.slice(0, 32);
+    const date = new Date(t0 + k * 60_000).toISOString();
+    for (const [team, opp, isHome] of [
+      [m.home.id, m.away.id, true],
+      [m.away.id, m.home.id, false],
+    ] as const) {
+      const own = (lines?.get(team) ?? []).filter((l) => Date.parse(l.date) < t0);
+      const lastMatch = own[own.length - 1]?.matchId;
+      for (const l of own.filter((x) => x.matchId === lastMatch)) {
+        const big = (isHome ? !flip : flip) ? 1 : 0;
+        players.push({
+          ...l,
+          matchId: id,
+          compId: LEAK_COMP.id,
+          date,
+          teamId: team,
+          opponentId: opp,
+          isHome,
+          starter: true,
+          minutes: 90,
+          goals: 3 * big,
+          assists: 2 * big,
+          shots: 9 * big,
+          shotsOnTarget: 6 * big,
+          yellow: 1 - big,
+          red: 1 - big,
+          foulsCommitted: 6,
+          foulsSuffered: 0,
+          offsides: 0,
+          ownGoals: 0,
+        });
+      }
+    }
     return {
-      id: `L${m.id}`.slice(0, 32),
+      id,
       compId: LEAK_COMP.id,
       season: m.season,
-      currentSeason: true,
-      date: new Date(t0 + k * 60_000).toISOString(),
+      // misma temporada actual/pasada que el objetivo: el inicio del walk-forward (y su calendario de reajustes) no cambia
+      currentSeason: m.currentSeason,
+      date,
+      ...(m.referee ? { referee: m.referee } : {}),
       status: 'finished',
       home: m.home,
       away: m.away,
@@ -777,7 +1283,7 @@ export function poisonStores(stores: CompetitionStore[], targets: MatchRecord[],
       odds: { provider: 'Veneno', home: 1.05, draw: 15, away: 30, totalLine: 2.5, over: 1.1, under: 7 },
     };
   });
-  return [...stores, { compId: LEAK_COMP.id, slug: LEAK_COMP.slug, updatedAt: new Date(t0).toISOString(), matches, players: [], standings: [] }];
+  return [...stores, { compId: LEAK_COMP.id, slug: LEAK_COMP.slug, updatedAt: new Date(t0).toISOString(), matches, players, standings: [] }];
 }
 
 function rowDiff(a: PredRow, b: PredRow): { d: number; field: string } {
@@ -800,6 +1306,21 @@ function rowDiff(a: PredRow, b: PredRow): { d: number; field: string } {
   a.corners?.over.forEach((x, i) => cmp(x, b.corners?.over[i], `corners.over[${i}]`));
   cmp(a.cards?.exp, b.cards?.exp, 'cards.exp');
   a.cards?.over.forEach((x, i) => cmp(x, b.cards?.over[i], `cards.over[${i}]`));
+  for (const k of ['corners', 'cards'] as const) {
+    a[k]?.home?.forEach((x, i) => cmp(x, b[k]?.home?.[i], `${k}.home[${i}]`));
+    a[k]?.away?.forEach((x, i) => cmp(x, b[k]?.away?.[i], `${k}.away[${i}]`));
+  }
+  for (const k of ['fouls', 'shots', 'sot'] as const) {
+    cmp(a[k]?.exp, b[k]?.exp, `${k}.exp`);
+    a[k]?.over.forEach((x, i) => cmp(x, b[k]?.over[i], `${k}.over[${i}]`));
+  }
+  // props: mismos jugadores con las mismas probabilidades
+  const bp = new Map((b.pl ?? []).map((p) => [playerKey(p.id, p.s), p]));
+  if ((a.pl?.length ?? 0) !== (b.pl?.length ?? 0)) cmp(a.pl?.length ?? 0, b.pl?.length ?? 0, 'pl.length');
+  for (const p of a.pl ?? []) {
+    const q = bp.get(playerKey(p.id, p.s));
+    for (const f of ['g', 's1', 'sh2', 'c'] as const) cmp(p[f], q?.[f], `pl[${p.id}|${p.s}].${f}`);
+  }
   return { d, field };
 }
 
@@ -816,7 +1337,7 @@ export function leakCheck(variant: ModelVariant, data: EvalData, run: VariantRun
       .map((id) => ctx.matchById.get(id))
       .filter((m): m is MatchRecord => !!m && new Date(Date.parse(m.date)).toISOString().slice(0, 10) === day);
     if (!targets.length) continue;
-    const poisoned: EvalData = { ...data, stores: poisonStores(data.stores, targets, day), configs: [...data.configs, LEAK_COMP] };
+    const poisoned: EvalData = { ...data, stores: poisonStores(data.stores, targets, day, ctx.linesByTeam), configs: [...data.configs, LEAK_COMP] };
     const ids = new Set(targets.map((m) => m.id));
     // el veneno está en una copa ficticia: el DC de liga no cambia y se reutiliza salvo con ganchos dc con funciones
     // (podrían leer estado externo); Elo, parámetros, rasgos, combinador y córners/tarjetas se recalculan siempre
@@ -833,8 +1354,7 @@ export function leakCheck(variant: ModelVariant, data: EvalData, run: VariantRun
         continue;
       }
       const bb: PredRow = { ...b };
-      if (!a.corners) delete bb.corners;
-      if (!a.cards) delete bb.cards;
+      for (const k of ['corners', 'cards', 'fouls', 'shots', 'sot', 'pl'] as const) if (!a[k]) delete bb[k];
       const r = rowDiff(a, bb);
       if (r.d > maxDiff) {
         maxDiff = r.d;

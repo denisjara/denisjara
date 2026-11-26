@@ -42,7 +42,7 @@ import type { PlayerProp, StatProjection } from '../../src/types/data';
 import { fairOdds, nbPmfArray, overUnderFromDist } from '../../src/lib/models';
 import type { MatchRecord } from '../types';
 import { predictMatch } from './predict';
-import { dispersionFromProjection, projectMatchStats, STAT_DEF_BY_KEY, type StatContext } from './projections';
+import { dispersionFromProjection, STAT_DEF_BY_KEY, type StatContext } from './projections';
 import {
   candidatesFromPrediction,
   teamHistoryBefore,
@@ -87,7 +87,7 @@ import {
   DEFAULT_MIN_STAT_GAMES,
 } from './confidence';
 import type { SettleData } from './settle';
-import { baseContext, statContext, TEAM_WINDOW_DAYS, type BuildContext, type FullPrediction } from '../publish/context';
+import { baseContext, projectStatsFor, statContext, TEAM_WINDOW_DAYS, type BuildContext, type FullPrediction } from '../publish/context';
 import { fullPrediction, propsFor } from '../publish/matches';
 import { localDay } from '../publish/util';
 
@@ -312,6 +312,12 @@ export function recentPlayers(ctx: BuildContext, teamId: string, before: number,
   return out;
 }
 
+/** El partido es un registro completo (con id, competición y fecha), no solo los equipos. */
+function isMatchRecord(m: Pick<MatchRecord, 'home' | 'away'>): m is MatchRecord {
+  const r = m as Partial<MatchRecord>;
+  return typeof r.id === 'string' && typeof r.compId === 'string' && typeof r.date === 'string';
+}
+
 /**
  * Props de los jugadores ELEGIBLES de un equipo con datos anteriores a `before`: minutos esperados >= 60, jugó alguno
  * de los 2 últimos partidos del equipo y >= 270 minutos en la ventana.
@@ -326,7 +332,8 @@ export function eligibleProps(
 ): PlayerProp[] {
   const teamId = side === 'home' ? m.home.id : m.away.id;
   const oppId = side === 'home' ? m.away.id : m.home.id;
-  const props = propsFor(ctx, teamId, oppId, side, lambda, projections, before);
+  // con el registro completo, el gancho `players` de una variante llega también al apartado diario
+  const props = propsFor(ctx, teamId, oppId, side, lambda, projections, before, isMatchRecord(m) ? m : undefined);
   if (!props.length) return [];
   const recent = recentPlayers(ctx, teamId, before);
   return props.filter((p) => p.expMinutes >= PLAYER_MIN_EXP_MINUTES && p.minutes >= PLAYER_MIN_MINUTES && recent.has(p.player.id));
@@ -406,7 +413,7 @@ export function preMatchCandidates(ctx: BuildContext, m: MatchRecord, opts: Extr
   const rec = preMatchRecord(m);
   const comp = ctx.configById.get(rec.compId)!;
   const sc = statContext(ctx, comp.id);
-  const projections = projectMatchStats(rec.home.id, rec.away.id, sc);
+  const projections = projectStatsFor(ctx, rec);
   const result = predictMatch(rec, baseContext(ctx, comp), { projections });
   const t = Date.parse(rec.date);
   const before = Number.isFinite(t) ? t : ctx.now;

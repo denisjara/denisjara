@@ -427,18 +427,51 @@ function trimDist(dist: number[], eps = 1e-4): number[] {
   return out;
 }
 
-/** Proyecciones de todas las estadísticas con datos para un partido. Equipos sin datos ⇒ media de la competición. */
-export function projectMatchStats(homeId: string, awayId: string, statCtx: StatContext): StatProjection[] {
-  const out: StatProjection[] = [];
-  for (const def of STAT_DEFS) {
+/** Estadísticas que projectMatchStats proyecta para un partido (con media de la competición o datos de algún equipo). */
+function projectedDefs(homeId: string, awayId: string, statCtx: StatContext): StatDef[] {
+  return STAT_DEFS.filter((def) => {
     const L = statCtx.league[def.key];
-    if (!L) continue;
+    if (!L) return false;
     const hasTeamData = (statCtx.teams.get(homeId)?.[def.key]?.n ?? 0) + (statCtx.teams.get(awayId)?.[def.key]?.n ?? 0) > 0;
-    if (L.n === 0 && !hasTeamData) continue; // sin ningún dato de esta estadística
+    return !(L.n === 0 && !hasTeamData); // sin ningún dato de esta estadística
+  });
+}
+
+/** Medias esperadas (expectedPair) de las estadísticas que se proyectarían para un partido (entrada de stats.adjust). */
+export function expectedPairs(homeId: string, awayId: string, statCtx: StatContext): Partial<Record<StatKey, { home: number; away: number }>> {
+  const out: Partial<Record<StatKey, { home: number; away: number }>> = {};
+  for (const def of projectedDefs(homeId, awayId, statCtx)) out[def.key] = expectedPair(statCtx, def.key, homeId, awayId);
+  return out;
+}
+
+/** Distribuciones (binomial negativa) de cada equipo de las estadísticas proyectadas, para quien las pida (banco). */
+export type TeamStatDists = Map<StatKey, { home: number[]; away: number[] }>;
+
+/**
+ * Proyecciones de todas las estadísticas con datos para un partido. Equipos sin datos ⇒ media de la competición.
+ * `mult`: multiplicadores por equipo de la media de cada estadística (gancho stats.adjust de las variantes; sin él,
+ * producción). `teamDists`: si se da, recibe la distribución de cada equipo (sin redondear).
+ */
+export function projectMatchStats(
+  homeId: string,
+  awayId: string,
+  statCtx: StatContext,
+  mult?: Partial<Record<StatKey, { home: number; away: number }>>,
+  teamDists?: TeamStatDists,
+): StatProjection[] {
+  const out: StatProjection[] = [];
+  for (const def of projectedDefs(homeId, awayId, statCtx)) {
+    const L = statCtx.league[def.key]!;
     const e = expectedPair(statCtx, def.key, homeId, awayId);
+    const f = mult?.[def.key];
+    if (f) {
+      e.home *= f.home;
+      e.away *= f.away;
+    }
     const r = statCtx.dispersion[def.key];
     const hd = nbPmfArray(e.home, statCtx.teamDispersion?.get(homeId)?.[def.key] ?? r, def.maxK);
     const ad = nbPmfArray(e.away, statCtx.teamDispersion?.get(awayId)?.[def.key] ?? r, def.maxK);
+    teamDists?.set(def.key, { home: hd, away: ad });
     const total = convolve(hd, ad, def.maxK * 2);
     const most = compareDists(hd, ad);
     out.push({

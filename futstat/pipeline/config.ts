@@ -128,6 +128,25 @@ export const FETCH_CONCURRENCY = 6;
 export const FETCH_RETRIES = 4;
 /** Only fetch per-match summaries for finished matches newer than this many days. */
 export const SUMMARY_LOOKBACK_DAYS = 180;
+/**
+ * Árbitros: endpoint core de ESPN `.../leagues/<slug>/events/<id>/competitions/<id>/officials` (~400 bytes). ESPN lo
+ * rellena para partidos terminados desde 2025 hasta ~sep-2026; para los posteriores y los programados suele llegar
+ * vacío (`count: 0`), quizá porque lo publica más tarde: de ahí los reintentos espaciados.
+ */
+export const ESPN_CORE_API = 'https://sports.core.api.espn.com/v2/sports/soccer/leagues';
+/** Máximo de consultas a /officials de partidos TERMINADOS por ejecución (todas las competiciones; los más recientes
+ * primero). Acota el relleno histórico (~14 000 partidos) a unos minutos por ejecución de CI; se completa en varias. */
+export const OFFICIALS_MAX_PER_RUN = 4000;
+/** Solo se buscan árbitros de partidos terminados desde esta fecha (ISO). */
+export const OFFICIALS_SINCE = '2025-01-01T00:00:00Z';
+/** Partidos programados que empiezan dentro de estas horas: se consultan en cada ejecución (sin espera) hasta tener árbitro. */
+export const OFFICIALS_UPCOMING_HOURS = 72;
+/** Espera (días) tras la 1.ª, 2.ª… consulta vacía de un partido terminado; la última se repite si hiciera falta. */
+export const OFFICIALS_RETRY_DAYS = [1, 3, 7, 14, 30];
+/** Consultas vacías tras las que se deja de buscar el árbitro de un partido terminado. */
+export const OFFICIALS_MAX_CHECKS = 6;
+/** Pasados estos días desde el partido no se repite una consulta vacía (los antiguos se consultan una sola vez). */
+export const OFFICIALS_MAX_AGE_DAYS = 120;
 /** Upcoming window published (days). */
 export const UPCOMING_DAYS = 14;
 /** Recent results window published (days). */
