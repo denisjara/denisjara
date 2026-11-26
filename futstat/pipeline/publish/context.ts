@@ -5,9 +5,11 @@
  *
  * Sin fuga de información en el backtest: Elo pre-partido, Dixon-Coles re-ajustado cada semana con partidos
  * anteriores y, por competición, parámetros de empate del Elo, coeficientes Elo→goles y medias de goles ajustados
- * SOLO con partidos anteriores al inicio de la temporada evaluada (ctx.preSeason). Lo único que usa información
- * posterior es la asignación de liga doméstica de cada equipo (homeLeague), que solo decide qué modelo se usa (en
- * las temporadas pasadas del banco, ni eso: se usa la de esa temporada, homeLeagueFor).
+ * SOLO con partidos anteriores al inicio de la temporada evaluada (ctx.preSeason; con menos de PRESEASON_MIN_SAMPLES
+ * partidos previos, valores por defecto y medias de goles con corte, nunca los ajustados a la fecha del build). Un
+ * partido terminado sin parámetros de su temporada (temporadas pasadas fuera del banco) usa los de corte en su día.
+ * Lo único que usa información posterior es la asignación de liga doméstica de cada equipo (homeLeague), que solo
+ * decide qué modelo se usa (en las temporadas pasadas del banco, ni eso: se usa la de esa temporada, homeLeagueFor).
  */
 import type {
   ConfidencePick,
@@ -19,10 +21,12 @@ import type {
   TeamRef,
   TeamSeasonStats,
 } from '../../src/types/data';
-import { fitEloDrawParams, type DCModel } from '../../src/lib/models';
+import { DEFAULT_DRAW_BASE, DEFAULT_DRAW_SCALE, fitEloDrawParams, type DCModel } from '../../src/lib/models';
 import { MODEL, RESULTS_DAYS, UPCOMING_DAYS, type CompetitionConfig } from '../config';
 import type { CompetitionStore, MatchRecord, PlayerLine } from '../types';
 import {
+  DEFAULT_AVG_GOALS,
+  DEFAULT_ELO_GOAL,
   buildModelSuite,
   fitEloGoalModel,
   isNationalTeamComp,
@@ -109,10 +113,20 @@ export interface PreSeasonParams {
   leagueAvgGoals: Map<string, number>;
   /** partidos terminados anteriores al corte usados en el ajuste */
   samples: number;
+  /**
+   * true: empates del Elo y Elo→goles ajustados con los partidos anteriores al corte (>= PRESEASON_MIN_SAMPLES);
+   * false: valores por defecto (cutoffParams). Las medias de goles siempre son las anteriores al corte.
+   */
+  fitted: boolean;
 }
 
-/** Partidos mínimos anteriores al corte para ajustar parámetros propios (si no, se usan los actuales). */
+/**
+ * Partidos mínimos anteriores al corte para ajustar parámetros propios. Con menos, el walk-forward usa valores por
+ * defecto (cutoffParams), NUNCA los ajustados a la fecha del build (antes del 26-nov-2026 sí: fuga de ~0,2 % en λ).
+ */
 export const PRESEASON_MIN_SAMPLES = 300;
+/** Partidos previos mínimos para usar su media de goles como respaldo global del modelo Elo→goles (como fitEloGoalModel). */
+const PRIOR_AVG_MIN_SAMPLES = 30;
 
 export interface BuildContext {
   now: number;
@@ -147,6 +161,11 @@ export interface BuildContext {
   eloP90: number;
   /** competición → parámetros ajustados antes del inicio de su temporada actual (backtest sin fuga) */
   preSeason: Map<string, PreSeasonParams>;
+  /**
+   * parámetros sin fuga por «día de corte|liga doméstica usada» (paramsAt): pretemporada de cada competición y respaldo
+   * de los partidos terminados sin parámetros de su temporada
+   */
+  cutParams: Map<string, PreSeasonParams>;
   /** liga → (id de partido → modelo DC walk-forward) */
   wfModels: Map<string, Map<string, DCModel>>;
   /** liga → modelos walk-forward en orden cronológico (fecha del primer partido que lo usó) */
@@ -399,6 +418,7 @@ export function createContext(opts: BuildOptions): BuildContext {
     rankPool: { clubs: clubs.length, national: nationals.length },
     eloP90: eloPercentile(clubs.map(([, r]) => r), 0.9),
     preSeason: new Map(),
+    cutParams: new Map(),
     wfModels: new Map(),
     wfTimeline: new Map(),
     wf: new Map(),
@@ -479,33 +499,70 @@ export function wfContext(ctx: BuildContext, m: MatchRecord): PredictContext {
     if (mod) dc.set(lg, mod);
   }
   const pre = m.currentSeason ? ctx.preSeason.get(comp.id) : ctx.pastSeasonsFrom !== undefined ? ctx.pastPreSeason.get(pastKey(m)) : undefined;
-  const out: PredictContext =
+  // sin parámetros de su temporada (temporadas pasadas fuera del banco): corte en el día del partido. NUNCA los del
+  // contexto base: están ajustados a la fecha del build, con partidos posteriores a este
+  const params =
     pre && t >= pre.cutoff
-      ? { ...base, homeLeague, dcModels: dc, drawParams: pre.drawParams, eloGoal: pre.eloGoal, leagueAvgGoals: pre.leagueAvgGoals }
-      : { ...base, homeLeague, dcModels: dc };
+      ? pre
+      : paramsAt(ctx, Math.floor(t / DAY_MS) * DAY_MS, homeLeague, homeLeague === ctx.suite.eloBuild.homeLeague ? 'actual' : `temporada ${m.season}`);
+  const out: PredictContext = { ...base, homeLeague, dcModels: dc, drawParams: params.drawParams, eloGoal: params.eloGoal, leagueAvgGoals: params.leagueAvgGoals };
   const combined = ctx.wfCombined.get(m.id);
   if (combined) out.precombined = combined;
   return out;
 }
 
 /**
- * Parámetros "de pretemporada" a un instante de corte: empates del Elo (fitEloDrawParams), medias de goles por
- * competición y modelo Elo→goles (con los Dixon-Coles walk-forward vigentes en el corte), usando solo partidos
- * anteriores al corte. undefined si hay menos de PRESEASON_MIN_SAMPLES partidos.
+ * Parámetros a un instante de corte usando solo partidos anteriores: medias de goles por competición y, con al menos
+ * PRESEASON_MIN_SAMPLES partidos, empates del Elo (fitEloDrawParams) y modelo Elo→goles (con los Dixon-Coles
+ * walk-forward vigentes en el corte) ajustados (`fitted`). Con menos, valores por defecto: DEFAULT_DRAW_BASE/SCALE y
+ * DEFAULT_ELO_GOAL (respaldo global = media de goles de los partidos previos si hay al menos 30).
  */
-export function preSeasonParams(ctx: BuildContext, cutoff: number, homeLeague = ctx.suite.eloBuild.homeLeague): PreSeasonParams | undefined {
+export function cutoffParams(ctx: BuildContext, cutoff: number, homeLeague = ctx.suite.eloBuild.homeLeague): PreSeasonParams {
   const samples = ctx.suite.eloBuild.samples.filter((s) => Date.parse(s.date) < cutoff);
-  if (samples.length < PRESEASON_MIN_SAMPLES) return undefined;
+  const leagueAvgGoals = leagueAverageGoals([...ctx.stores.values()], new Date(cutoff).toISOString());
+  if (samples.length < PRESEASON_MIN_SAMPLES) {
+    const globalAvgGoals = samples.length >= PRIOR_AVG_MIN_SAMPLES ? samples.reduce((t, s) => t + s.hg + s.ag, 0) / samples.length : DEFAULT_AVG_GOALS;
+    return {
+      cutoff,
+      drawParams: { drawBase: DEFAULT_DRAW_BASE, drawScale: DEFAULT_DRAW_SCALE },
+      eloGoal: { ...DEFAULT_ELO_GOAL, globalAvgGoals },
+      leagueAvgGoals,
+      samples: samples.length,
+      fitted: false,
+    };
+  }
   const calib = samples.filter((s) => s.calibrated);
   const drawParams = fitEloDrawParams((calib.length >= 200 ? calib : samples).map((s) => ({ diff: s.diff, outcome: s.outcome })));
-  const leagueAvgGoals = leagueAverageGoals([...ctx.stores.values()], new Date(cutoff).toISOString());
   const dcAt = new Map<string, DCModel>();
   for (const lg of ctx.wfTimeline.keys()) {
     const mod = wfModelAt(ctx, lg, cutoff);
     if (mod) dcAt.set(lg, mod);
   }
   const eloGoal = fitEloGoalModel(samples, homeLeague, leagueAvgGoals, dcAt);
-  return { cutoff, drawParams, eloGoal, leagueAvgGoals, samples: samples.length };
+  return { cutoff, drawParams, eloGoal, leagueAvgGoals, samples: samples.length, fitted: true };
+}
+
+/**
+ * Parámetros "de pretemporada" AJUSTADOS a un instante de corte (cutoffParams); undefined si hay menos de
+ * PRESEASON_MIN_SAMPLES partidos anteriores (el banco no predice esas temporadas pasadas).
+ */
+export function preSeasonParams(ctx: BuildContext, cutoff: number, homeLeague = ctx.suite.eloBuild.homeLeague): PreSeasonParams | undefined {
+  const p = cutoffParams(ctx, cutoff, homeLeague);
+  return p.fitted ? p : undefined;
+}
+
+/**
+ * cutoffParams cacheados en ctx.cutParams por día de corte y liga doméstica usada (`leagueKey`: 'actual' para la de
+ * producción; otra clave por cada asignación distinta, p. ej. la de una temporada pasada del banco).
+ */
+export function paramsAt(ctx: BuildContext, cutoff: number, homeLeague = ctx.suite.eloBuild.homeLeague, leagueKey = 'actual'): PreSeasonParams {
+  const key = `${cutoff}|${leagueKey}`;
+  let p = ctx.cutParams.get(key);
+  if (!p) {
+    p = cutoffParams(ctx, cutoff, homeLeague);
+    ctx.cutParams.set(key, p);
+  }
+  return p;
 }
 
 /** Clave de la temporada pasada de un partido (parámetros de pretemporada y estadísticas del banco). */
@@ -631,18 +688,17 @@ export function fitWalkForwardModels(ctx: BuildContext): { refits: number } {
   return { refits };
 }
 
-/** Parámetros sin fuga por competición: corte = primer partido terminado de su temporada actual (por día). */
+/**
+ * Parámetros sin fuga por competición: corte = primer partido terminado de su temporada actual (por día). Ajustados con
+ * los partidos anteriores o, si hay menos de PRESEASON_MIN_SAMPLES, valores por defecto (cutoffParams).
+ */
 function computePreSeason(ctx: BuildContext): void {
-  const byCutoff = new Map<number, PreSeasonParams | undefined>();
   for (const [compId, list] of ctx.matchesByComp) {
     if (!ctx.configById.has(compId)) continue;
     let first = Infinity;
     for (const m of list) if (m.currentSeason && isFinishedRecord(m)) first = Math.min(first, Date.parse(m.date));
     if (!Number.isFinite(first)) continue;
-    const day = Math.floor(first / DAY_MS) * DAY_MS;
-    if (!byCutoff.has(day)) byCutoff.set(day, preSeasonParams(ctx, day));
-    const p = byCutoff.get(day);
-    if (p) ctx.preSeason.set(compId, p);
+    ctx.preSeason.set(compId, paramsAt(ctx, Math.floor(first / DAY_MS) * DAY_MS));
   }
 }
 

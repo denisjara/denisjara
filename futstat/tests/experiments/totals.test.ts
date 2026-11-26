@@ -26,9 +26,9 @@ const CONFIGS = [LIGA, COPA];
 /**
  * Liga de 10 equipos (2024-01 → 2026-10) con un tercio de partidos sin cuotas, un tercio con 1X2 y línea de goles y un
  * tercio con 1X2 sin línea de goles; copa sin cuotas los miércoles desde 2026-06. Córners y tarjetas en casi todos.
- * Empieza en 2024 para que haya >= PRESEASON_MIN_SAMPLES (300) partidos antes de la temporada 2026: con menos, el
- * núcleo usa los parámetros de empate del Elo ajustados con todos los datos (también los futuros) y la comprobación de
- * fuga falla incluso con producción.
+ * Empieza en 2024 para que haya >= PRESEASON_MIN_SAMPLES (300) partidos antes de la temporada 2026 y el núcleo use
+ * parámetros de pretemporada ajustados (con menos usa valores por defecto; hasta el 26-nov-2026 usaba los ajustados con
+ * todos los datos, también los futuros, y la comprobación de fuga fallaba incluso con producción).
  */
 function world(seed = 21): CompetitionStore[] {
   const rng = mulberry32(seed);

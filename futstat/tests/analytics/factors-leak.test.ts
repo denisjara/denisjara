@@ -264,13 +264,12 @@ describe('factores del partido por el camino del build: sin fuga con veneno en l
     const later = ['P-2D', 'P-5D'];
     const pf = fileFor(p, target.id, later);
     expect(pf.factors).toEqual(clean.factors);
-    // props: mismos jugadores con los mismos minutos esperados y probabilidades de tiros, tiros a puerta, tarjetas y
-    // faltas (bajas probables y factores del rival). Los mercados de gol/asistencia dependen del λ del 1X2, que no es
-    // de esta ronda: en este mundo sintético el λ walk-forward de un partido terminado se mueve ~0,2 % con partidos
-    // posteriores (también con la línea base anterior al 26-nov); ver el informe de la revisión.
-    const slim = (f: typeof clean) =>
-      (['home', 'away'] as const).map((s) => f.players[s].map(({ pGoal: _g, pAssist: _a, pGoalOrAssist: _ga, ...rest }) => rest));
-    expect(slim(pf)).toEqual(slim(clean));
+    // props: mismos jugadores con los mismos minutos esperados y probabilidades de tiros, tiros a puerta, tarjetas,
+    // faltas (bajas probables y factores del rival) y también gol/asistencia, que dependen del λ walk-forward del
+    // partido (hasta el 26-nov-2026 se excluían: en este mundo, con < 300 partidos antes del corte de pretemporada, el λ
+    // usaba parámetros ajustados a la fecha del build y se movía ~0,2 %; ver tests/analytics/walkforward-leak.test.ts)
+    expect(pf.players).toEqual(clean.players);
+    expect(pf.model).toEqual(clean.model);
     // tarjetas y faltas proyectadas (multiplicador del árbitro) tampoco
     const pick = (f: typeof clean) => f.projections.filter((x) => x.key === 'cards' || x.key === 'fouls');
     expect(pick(clean)).toHaveLength(2);

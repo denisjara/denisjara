@@ -678,8 +678,10 @@ export function walkForwardInput(ctx: BuildContext, m: MatchRecord): CandidateIn
   const t = Date.parse(m.date);
   if (!Number.isFinite(t)) return undefined;
   if (!ctx.suite.eloBuild.preMatch.has(m.id)) return undefined;
+  // solo con parámetros de pretemporada AJUSTADOS (>= PRESEASON_MIN_SAMPLES partidos previos), como las reglas
+  // validadas; con menos, el walk-forward usa valores por defecto (sin fuga) pero aquí no se reconstruyen picks
   const pre = ctx.preSeason.get(m.compId);
-  if (!pre || t < pre.cutoff) return undefined;
+  if (!pre?.fitted || t < pre.cutoff) return undefined;
   const pctx = wfContext(ctx, m);
   const sc = statContext(ctx, comp.id, t);
   const projections = projectStatsFor(ctx, m, t);
