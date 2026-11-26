@@ -16,6 +16,11 @@
  */
 import type {
   BacktestSummary,
+  Combo6Combo,
+  Combo6Day,
+  Combo6File,
+  Combo6History,
+  Combo6Leg,
   CompetitionFile,
   CompetitionMeta,
   ConfidenceFile,
@@ -62,6 +67,16 @@ import type {
 import { safeImageUrl } from './safeUrl';
 import { DAILY_CATEGORIES, DAILY_CATEGORY_LABEL, inferDailyCategory, isDailyCategory } from './daily';
 import { LONGSHOT_DEFAULT_MIN_ODDS, LONGSHOT_KINDS, LONGSHOT_KIND_LABEL, isLongshotKind, oneIn } from './longshots';
+import {
+  COMBO6_CATEGORIES,
+  COMBO6_CATEGORY_LABEL,
+  COMBO6_DEFAULT_RULE,
+  COMBO6_SCOPE_ALL,
+  combo6Result,
+  combo6Totals,
+  isCombo6Category,
+  isCombo6OddsSource,
+} from './combo6';
 
 type Obj = Record<string, unknown>;
 
@@ -502,6 +517,7 @@ function normHome(v: Obj): HomeFile {
     confidenceHeadline: normConfidenceHeadline(v.confidenceHeadline),
     daily: normHomeDaily(v.daily),
     longshot: normHomeLongshot(v.longshot),
+    combo6: normHomeCombo6(v.combo6),
   } as unknown as HomeFile;
 }
 
@@ -1482,6 +1498,230 @@ function normHomeLongshot(x: unknown): HomeFile['longshot'] {
   return { date, bets: Math.max(1, Math.round(bets !== undefined && bets >= 0 && bets <= 1000 ? bets : 1)), best };
 }
 
+// ---------------------------------------------------------------------------
+// Combinada 6 (combo6.json y HomeFile.combo6)
+// ---------------------------------------------------------------------------
+const COMBO6_MAX_LEGS = 12;
+/**
+ * Cotas de cordura de una combinada publicada (la regla busca cuota 6–8): fuera de ellas el archivo está corrupto y
+ * las cifras (cuota de 40 dígitos, «1 de cada 10^20») desbordarían el boleto.
+ */
+const COMBO6_MAX_BOOK_ODDS = 1000;
+const COMBO6_MIN_PROB = 1e-4;
+/** Id usable en atributos id/for del DOM: solo [A-Za-z0-9_-]. */
+const combo6Id = (x: unknown): string => short(x, 300).replace(/[^A-Za-z0-9_-]/g, '-');
+
+/** Pata: partido identificable, equipos, selección, probabilidad en (0, 1) y cuota > 1; estimada ⇔ no es de la casa. */
+export function normCombo6Leg(l: unknown): Combo6Leg | undefined {
+  if (!isObj(l)) return undefined;
+  const matchId = short(l.matchId, 20);
+  const home = normTeamRef(l.home);
+  const away = normTeamRef(l.away);
+  const selection = sentence(l.selection, 120);
+  const prob = prob01(l.prob);
+  const bookOdds = oddsVal(l.bookOdds);
+  if (!matchId || !home || !away || !selection || prob === undefined || prob <= 0 || prob >= 1 || bookOdds === undefined) return undefined;
+  const category = isCombo6Category(l.category) ? l.category : undefined;
+  if (!category) return undefined;
+  // origen de la cuota: desconocido ⇒ «estimada» (nunca se presenta como cuota de la casa sin decirlo el archivo)
+  const oddsSource = isCombo6OddsSource(l.oddsSource) ? l.oddsSource : 'estimada';
+  const fair = fin(l.fairOdds);
+  const compId = str(l.compId).trim();
+  return {
+    matchId,
+    compId: COMP_ID.test(compId) ? compId : '',
+    compName: sentence(l.compName, 60),
+    kickoff: validDate(l.kickoff) ?? '',
+    home,
+    away,
+    category,
+    marketId: short(l.marketId, 80),
+    market: sentence(l.market, 120) || 'Mercado',
+    selection,
+    reason: sentence(l.reason, 240) || undefined,
+    prob,
+    fairOdds: fair !== undefined && fair >= 1 && Math.abs(fair * prob - 1) <= 0.02 ? fair : Math.min(10_000, 1 / prob),
+    bookOdds,
+    bookOddsEstimated: oddsSource !== 'casa',
+    oddsSource,
+    result: RESULTS.has(str(l.result)) ? (l.result as Combo6Leg['result']) : undefined,
+  };
+}
+
+/**
+ * Combinada: se descarta entera si alguna pata no es válida o si repite partido (no serían independientes). Las cifras
+ * (probabilidad, cuotas, EV, «1 de cada N», categorías, saques y resultado) se recalculan con las patas publicadas.
+ */
+export function normCombo6Combo(c: unknown, i = 0): Combo6Combo | undefined {
+  if (!isObj(c) || !Array.isArray(c.legs) || c.legs.length < 1 || c.legs.length > COMBO6_MAX_LEGS) return undefined;
+  const legs: Combo6Leg[] = [];
+  const matches = new Set<string>();
+  for (const raw of c.legs as unknown[]) {
+    const leg = normCombo6Leg(raw);
+    if (!leg || matches.has(leg.matchId)) return undefined;
+    matches.add(leg.matchId);
+    legs.push(leg);
+  }
+  legs.sort((a, b) => a.kickoff.localeCompare(b.kickoff));
+  const date = dayKeyStr(c.date);
+  if (!date) return undefined;
+  const scope = str(c.scope).trim();
+  const t = combo6Totals(legs);
+  if (!(t.prob >= COMBO6_MIN_PROB) || !(t.bookOdds > 1) || t.bookOdds > COMBO6_MAX_BOOK_ODDS) return undefined;
+  return {
+    id: combo6Id(c.id) || `c6-${date}-${i + 1}`,
+    date,
+    scope: COMP_ID.test(scope) ? scope : COMBO6_SCOPE_ALL,
+    label: sentence(c.label, 90) || 'Combinada 6',
+    legs,
+    ...t,
+    result: combo6Result(legs),
+  };
+}
+
+function normCombo6Day(d: Obj): Combo6Day | undefined {
+  const date = dayKeyStr(d.date);
+  if (!date) return undefined;
+  const main = normCombo6Combo(d.main);
+  const scopes = new Set<string>();
+  // ids únicos en el día (claves de React y id/for del DOM de cada boleto)
+  const ids = new Set<string>(main ? [main.id] : []);
+  const byCompetition = list(d.byCompetition, (x, i) => {
+    const c = normCombo6Combo(x, i);
+    if (!c || c.scope === COMBO6_SCOPE_ALL || scopes.has(c.scope)) return undefined;
+    scopes.add(c.scope);
+    if (ids.has(c.id)) c.id = `${c.id}-${c.scope}-${i + 1}`;
+    ids.add(c.id);
+    return c;
+  }, 10);
+  const k = isObj(d.counts) ? d.counts : {};
+  const cnt = (x: unknown) => {
+    const v = fin(x);
+    return v !== undefined && v >= 0 && v <= 1e6 ? Math.round(v) : 0;
+  };
+  const reason = sentence(d.reason, 320) || undefined;
+  return {
+    date,
+    main: main && main.scope === COMBO6_SCOPE_ALL ? main : undefined,
+    reason: main ? undefined : (reason ?? 'No hay ninguna combinada que cumpla la regla este día.'),
+    byCompetition,
+    counts: { matches: cnt(k.matches), eligibleMatches: cnt(k.eligibleMatches), candidateLegs: cnt(k.candidateLegs) },
+  };
+}
+
+function normCombo6History(x: unknown): Combo6History {
+  const h = isObj(x) ? x : {};
+  const cnt = (v: unknown) => {
+    const n = fin(v);
+    return n !== undefined && n >= 0 && n <= 1e7 ? Math.round(n) : 0;
+  };
+  const settled = cnt(h.settled);
+  const hits = Math.min(cnt(h.hits), settled);
+  // acierto = aciertos / resueltas (no se confía en otra cifra)
+  const hitRate = settled > 0 ? hits / settled : 0;
+  const lo = prob01(h.wilsonLow);
+  const hi = prob01(h.wilsonHigh);
+  const ci = settled > 0 && lo !== undefined && hi !== undefined && lo <= hitRate + 1e-9 && hitRate <= hi + 1e-9;
+  const avg = (v: unknown) => {
+    const n = fin(v);
+    return n !== undefined && n >= 0 && n <= 10_000 ? n : 0;
+  };
+  const cats = new Set<string>();
+  const byCategory = list(h.byCategory, (r) => {
+    if (!isCombo6Category(r.category) || cats.has(r.category)) return undefined;
+    cats.add(r.category);
+    const legs = cnt(r.legs);
+    const rh = Math.min(cnt(r.hits), legs);
+    const v = cnt(r.voids);
+    return {
+      category: r.category,
+      label: sentence(r.label, 40) || COMBO6_CATEGORY_LABEL[r.category],
+      legs,
+      hits: rh,
+      voids: v || undefined,
+      hitRate: legs > 0 ? rh / legs : 0,
+      expectedHitRate: prob01(r.expectedHitRate) ?? 0,
+    };
+  }, 20).sort((a, b) => COMBO6_CATEGORIES.indexOf(a.category) - COMBO6_CATEGORIES.indexOf(b.category));
+  const ids = new Set<string>();
+  const recent = list(h.recent, (r, i) => {
+    const c = normCombo6Combo(r, i);
+    if (!c || !c.result || ids.has(c.id)) return undefined;
+    ids.add(c.id);
+    return c;
+  }, 14).sort((a, b) => b.date.localeCompare(a.date));
+  const streak = cnt(h.longestLosingStreak);
+  return {
+    from: validDate(h.from) ?? '',
+    to: validDate(h.to) ?? '',
+    days: cnt(h.days),
+    combos: cnt(h.combos),
+    settled,
+    hits,
+    voids: cnt(h.voids) || undefined,
+    hitRate,
+    wilsonLow: ci ? lo : undefined,
+    wilsonHigh: ci ? hi : undefined,
+    expectedHitRate: prob01(h.expectedHitRate) ?? 0,
+    avgLegs: avg(h.avgLegs),
+    avgBookOdds: avg(h.avgBookOdds),
+    avgFairOdds: avg(h.avgFairOdds),
+    longestLosingStreak: Math.min(streak, settled),
+    byCategory,
+    recent,
+    warning: sentence(h.warning, 400) || undefined,
+  };
+}
+
+function normCombo6Rule(x: unknown): Combo6File['rule'] {
+  const r = isObj(x) ? x : {};
+  const num = (v: unknown, lo: number, hi: number, fb: number) => {
+    const n = fin(v);
+    return n !== undefined && n >= lo && n <= hi ? n : fb;
+  };
+  const d = COMBO6_DEFAULT_RULE;
+  const margins: Combo6File['rule']['margins'] = {};
+  if (isObj(r.margins)) for (const [k, v] of Object.entries(r.margins)) if (isCombo6Category(k) && fin(v) !== undefined && (v as number) >= 0 && (v as number) <= 0.5) margins[k] = v as number;
+  const targetMin = num(r.targetMin, 1.01, 1000, d.targetMin);
+  const legMinProb = num(r.legMinProb, 0.01, 0.99, d.legMinProb);
+  const minLegs = Math.round(num(r.minLegs, 1, 20, d.minLegs));
+  return {
+    targetMin,
+    targetMax: Math.max(targetMin, num(r.targetMax, 1.01, 1000, d.targetMax)),
+    legMinProb,
+    legMaxProb: Math.max(legMinProb, num(r.legMaxProb, 0.01, 0.99, d.legMaxProb)),
+    minLegs,
+    maxLegs: Math.max(minLegs, Math.round(num(r.maxLegs, 1, 20, d.maxLegs))),
+    minCategories: Math.round(num(r.minCategories, 1, 8, d.minCategories)),
+    maxPerCategory: Math.round(num(r.maxPerCategory, 1, 20, d.maxPerCategory)),
+    margins,
+  };
+}
+
+function normCombo6(v: Obj): Combo6File {
+  const dates = new Set<string>();
+  const days = list(v.days, normCombo6Day, 14)
+    .filter((d) => (dates.has(d.date) ? false : (dates.add(d.date), true)))
+    .sort((a, b) => a.date.localeCompare(b.date))
+    .slice(0, 7);
+  return {
+    ...(v as object),
+    rule: normCombo6Rule(v.rule),
+    days,
+    history: normCombo6History(v.history),
+    note: short(v.note, 1600),
+  } as unknown as Combo6File;
+}
+
+/** Bloque «Combinada 6» de la portada: sin fecha válida o sin una combinada válida del día, no se muestra. */
+function normHomeCombo6(x: unknown): HomeFile['combo6'] {
+  if (!isObj(x)) return undefined;
+  const date = dayKeyStr(x.date);
+  const combo = normCombo6Combo(x.combo);
+  if (!date || !combo || combo.date !== date) return undefined;
+  return { date, combo };
+}
+
 /**
  * Normaliza el JSON de `path` (ruta relativa al directorio de datos, ya validada).
  * Lanza Error si el archivo no tiene la forma mínima (objeto con `generatedAt`).
@@ -1497,6 +1737,7 @@ export function normalizeDataFile(path: string, value: unknown): unknown {
   if (path === 'confidence.json') return normConfidence(value);
   if (path === 'daily.json') return normDaily(value);
   if (path === 'longshots.json') return normLongshots(value);
+  if (path === 'combo6.json') return normCombo6(value);
   let m = /^competitions\/([a-z0-9-]{1,40})\.json$/.exec(path);
   if (m) return normCompetition(value, m[1]);
   m = /^matches\/[0-9]+\.json$/.exec(path);

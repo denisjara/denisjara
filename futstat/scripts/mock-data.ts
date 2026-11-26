@@ -19,6 +19,23 @@ import { buildMatchFactors, teamAbsenceList } from '../pipeline/analytics/factor
 import { historyView, type HistorySource } from '../pipeline/experiments/history';
 import type { MatchRecord, PlayerLine } from '../pipeline/types';
 import {
+  CATEGORY_LABEL,
+  LEG_MAX_PROB,
+  LEG_MIN_PROB,
+  MARGIN_EST,
+  MAX_LEGS,
+  MAX_PER_CATEGORY,
+  MIN_CATEGORIES,
+  MIN_LEGS,
+  TARGET_MAX,
+  TARGET_MIN,
+  dayCombos,
+  legRatio,
+  searchCombo6,
+  type Combo6EngineCombo,
+  type Combo6EngineLeg,
+} from '../pipeline/analytics/combo6';
+import {
   CONFIDENCE_FAMILIES,
   confidenceCandidates,
   settleCandidate,
@@ -81,7 +98,6 @@ import type {
   StatProjection,
   TeamFile,
   TeamFormBlock,
-  TeamMatchStatsPublic,
   ConfidenceFile,
   ConfidencePick,
   DailyCategory,
@@ -95,6 +111,13 @@ import type {
   LongshotKind,
   LongshotLeg,
   LongshotRecord,
+  Combo6Category,
+  Combo6Combo,
+  Combo6Day,
+  Combo6File,
+  Combo6Leg,
+  Combo6OddsSource,
+  TeamMatchStatsPublic,
   TeamRating,
   TeamRef,
   TeamSeasonStats,
@@ -2821,6 +2844,180 @@ write('longshots.json', longshotsFile);
   const best = d?.bets.find((b) => !b.result && b.legs.every((l) => Date.parse(l.date) > NOW_MS));
   if (d && best) {
     homeFile.longshot = { date: d.date, bets: d.bets.length, best };
+    bytes -= fs.statSync(path.join(OUT, 'home.json')).size;
+    files--;
+    write('home.json', homeFile);
+  }
+}
+
+// --- Combinada 6 (combo6.json + home.combo6)
+// Va al FINAL (después de «Cuota alta 6+») por la misma razón: no cambia ningún archivo generado antes. Las patas salen
+// de las predicciones de prueba (1X2 y matriz de marcadores) y de medias sintéticas de córners, tarjetas, tiros y
+// faltas; la combinada se elige con el MISMO buscador que producción (pipeline/analytics/combo6.ts).
+{
+  const C6_DISP = 30;
+  const c6Ou = (mean: number, line: number) => overUnderFromDist(nbPmfArray(mean, C6_DISP, 80), line);
+  const c6Pct = (x: number) => `${Math.round(x * 100)} %`;
+  type C6Raw = { category: Combo6Category; family: ConfidenceFamily; marketId: string; market: string; selection: string; prob: number; odds?: number; source?: Combo6OddsSource; reason: string; hit?: boolean };
+  const c6Reasons = new Map<string, string>();
+  /** Patas candidatas de un partido (una por categoría: la más eficiente dentro de la banda 70–88 %). */
+  function c6Legs(m: MatchRec, settled: boolean): Combo6EngineLeg[] {
+    const pr = predict(m);
+    const p = settled && m.pre ? m.pre : pr.q.p;
+    const lh = settled ? m.lamH : pr.lam.lambdaHome;
+    const la = settled ? m.lamA : pr.lam.lambdaAway;
+    const mat = scoreMatrix(lh, la, -0.05, 10);
+    const H = m.home.short;
+    const A = m.away.short;
+    const hg = m.hg ?? 0;
+    const ag = m.ag ?? 0;
+    const st = m.stats;
+    const sum = (k: keyof TeamMatchStatsPublic) => (st && typeof st.home[k] === 'number' && typeof st.away[k] === 'number' ? (st.home[k] as number) + (st.away[k] as number) : undefined);
+    const raw: C6Raw[] = [];
+    const favHome = p.home >= p.away;
+    const dcOdds = m.odds?.home && m.odds?.draw && m.odds?.away ? 1 / (1 / (favHome ? m.odds.home : m.odds.away) + 1 / m.odds.draw) : undefined;
+    const outcome = hg > ag ? 'home' : hg < ag ? 'away' : 'draw';
+    raw.push({
+      category: 'ganador', family: 'dc', marketId: 'dc', market: 'Doble oportunidad', selection: favHome ? `${H} o empate (1X)` : `Empate o ${A} (X2)`,
+      prob: (favHome ? p.home : p.away) + p.draw, odds: dcOdds, source: dcOdds ? 'derivada' : undefined,
+      reason: `Probabilidades del modelo: ${H} ${c6Pct(p.home)}, empate ${c6Pct(p.draw)}, ${A} ${c6Pct(p.away)}.`, hit: outcome !== (favHome ? 'away' : 'home'),
+    });
+    const favOdds = favHome ? m.odds?.home : m.odds?.away;
+    raw.push({
+      category: 'ganador', family: '1x2-fav', marketId: '1x2', market: 'Resultado final (1X2)', selection: `Gana ${favHome ? H : A}`,
+      prob: favHome ? p.home : p.away, odds: favOdds, source: favOdds ? 'casa' : undefined,
+      reason: `El modelo le da un ${c6Pct(favHome ? p.home : p.away)} de ganar (empate ${c6Pct(p.draw)}).`, hit: outcome === (favHome ? 'home' : 'away'),
+    });
+    let o15 = 0;
+    let u45 = 0;
+    mat.forEach((row, i) => row.forEach((v, j) => ((i + j >= 2 ? (o15 += v) : 0), i + j <= 4 ? (u45 += v) : 0)));
+    const goalsTxt = `Se esperan ${es(lh + la, 2)} goles (${es(lh, 2)} + ${es(la, 2)}).`;
+    raw.push({ category: 'goles', family: 'ou-1.5-over', marketId: 'ou-1.5', market: 'Más/Menos 1.5 goles', selection: 'Más de 1.5 goles', prob: o15, reason: goalsTxt, hit: hg + ag >= 2 });
+    raw.push({ category: 'goles', family: 'ou-4.5-under', marketId: 'ou-4.5', market: 'Más/Menos 4.5 goles', selection: 'Menos de 4.5 goles', prob: u45, reason: goalsTxt, hit: hg + ag <= 4 });
+    const tot = lh + la;
+    const stat = (category: Combo6Category, family: ConfidenceFamily, prefix: string, word: string, label: string, mean: number, line: number, side: 'over' | 'under', actual: number | undefined) => {
+      const q = c6Ou(mean, line)[side];
+      raw.push({
+        category, family, marketId: `${prefix}-ou-${line}`, market: `${label}: más/menos ${line}`, selection: `${side === 'over' ? 'Más' : 'Menos'} de ${line} ${word}`,
+        prob: q, reason: `Se esperan ${es(mean)} ${word}.`, hit: actual === undefined ? undefined : side === 'over' ? actual > line : actual < line,
+      });
+    };
+    stat('corners', 'corners-over-7.5', 'corners', 'córners', 'Córners', 9.4 + 0.6 * (tot - 2.6), 7.5, 'over', sum('corners'));
+    const yr = sum('yellow');
+    const rr = sum('red');
+    stat('tarjetas', 'cards-under-5.5', 'cards', 'tarjetas', 'Tarjetas', 4.4 - 0.3 * (tot - 2.6), 5.5, 'under', yr === undefined ? undefined : yr + (rr ?? 0));
+    stat('tiros-puerta', 'sot-under-11.5', 'sot', 'tiros a puerta', 'Tiros a puerta', 8.8 + 1.6 * (tot - 2.6), 11.5, 'under', sum('shotsOnTarget'));
+    stat('tiros', 'shots-over-21.5', 'shots', 'tiros', 'Tiros', 24.6 + 2.5 * (tot - 2.6), 21.5, 'over', sum('shots'));
+    stat('faltas', 'fouls-under-27.5', 'fouls', 'faltas', 'Faltas', 23.8 - 0.8 * (tot - 2.6), 27.5, 'under', sum('fouls'));
+    const best = new Map<Combo6Category, Combo6EngineLeg>();
+    for (const x of raw) {
+      if (!(x.prob >= LEG_MIN_PROB && x.prob <= LEG_MAX_PROB)) continue;
+      if (settled && x.hit === undefined) continue;
+      const prob = r(x.prob, 4);
+      const book = x.odds && x.odds > 1 ? x.odds : 1 / prob / (1 + MARGIN_EST[x.category]);
+      const source: Combo6OddsSource = x.odds && x.odds > 1 ? x.source! : 'estimada';
+      const leg: Combo6EngineLeg = {
+        match: { matchId: m.id, compId: m.compId, date: iso(m.ms), tier: COMPETITION_BY_ID.get(m.compId)?.tier ?? 5 },
+        category: x.category, family: x.family, marketId: x.marketId, market: x.market, selection: x.selection,
+        settle: { kind: 'outcome', win: ['home'] }, segment: m.odds ? 'mercado' : 'estadistico',
+        rawProb: prob, prob, fairOdds: 1 / prob, bookOdds: r(book, 3), oddsSource: source, estimated: source !== 'casa',
+      };
+      if (settled) leg.result = x.hit ? 'hit' : 'miss';
+      c6Reasons.set(`${m.id}|${x.marketId}`, x.reason);
+      const prev = best.get(x.category);
+      if (!prev || legRatio(leg) < legRatio(prev)) best.set(x.category, leg);
+    }
+    return [...best.values()];
+  }
+  const recById = new Map(MATCHES.map((m) => [m.id, m]));
+  const c6Public = (c: Combo6EngineCombo, date: string, scope: string): Combo6Combo => {
+    const legs: Combo6Leg[] = c.legs.map((l) => {
+      const m = recById.get(l.match.matchId)!;
+      const leg: Combo6Leg = {
+        matchId: m.id, compId: m.compId, compName: COMPETITION_BY_ID.get(m.compId)!.name, kickoff: iso(m.ms), home: ref(m.home), away: ref(m.away),
+        category: l.category, marketId: l.marketId, market: l.market, selection: l.selection, prob: l.prob, fairOdds: r(1 / l.prob, 3),
+        bookOdds: l.bookOdds, bookOddsEstimated: l.estimated, oddsSource: l.oddsSource,
+      };
+      const why = c6Reasons.get(`${m.id}|${l.marketId}`);
+      if (why && !l.result) leg.reason = why;
+      if (l.result) leg.result = l.result;
+      return leg;
+    });
+    const prob = legs.reduce((a, l) => a * l.prob, 1);
+    const book = legs.reduce((a, l) => a * l.bookOdds, 1);
+    const out: Combo6Combo = {
+      id: `c6-${scope}-${date}-${legs.map((l) => l.matchId).join('-')}`, date, scope,
+      label: scope === 'todas' ? 'Combinada 6 del día' : `Combinada 6 · ${COMPETITION_BY_ID.get(scope)!.shortName}`,
+      legs, prob: r(prob, 6), fairOdds: r(1 / prob, 3), bookOdds: r(book, 3), estimatedLegs: legs.filter((l) => l.bookOddsEstimated).length,
+      oneIn: Math.round(1 / prob), ev: r(prob * book - 1, 6), categories: new Set(legs.map((l) => l.category)).size,
+      firstKickoff: legs[0].kickoff, lastKickoff: legs[legs.length - 1].kickoff,
+    };
+    if (legs.every((l) => l.result)) out.result = legs.some((l) => l.result === 'miss') ? 'miss' : 'hit';
+    return out;
+  };
+  const c6Days: Combo6Day[] = [];
+  const todayKey = madridDay(NOW_MS);
+  const open = MATCHES.filter((m) => m.status === 'scheduled' && m.ms > NOW_MS && madridDay(m.ms) >= todayKey);
+  const dates = [...new Set(open.map((m) => madridDay(m.ms)))].sort().slice(0, 4);
+  dates.forEach((date, k) => {
+    let recs = open.filter((m) => madridDay(m.ms) === date).sort((a, b) => a.ms - b.ms || a.id.localeCompare(b.id));
+    // el último día, con pocos partidos: se publica sin combinada y con el motivo (como un lunes con 3 partidos)
+    if (k === dates.length - 1 && dates.length > 1) recs = recs.slice(0, 3);
+    const legs = recs.flatMap((m) => c6Legs(m, false));
+    const dc = dayCombos(legs, { continental: ['champions'] });
+    const day: Combo6Day = { date, byCompetition: [], counts: { matches: recs.length, eligibleMatches: new Set(legs.map((l) => l.match.matchId)).size, candidateLegs: legs.length } };
+    if (dc.main.combo) day.main = c6Public(dc.main.combo, date, 'todas');
+    else day.reason = dc.main.reason;
+    for (const x of dc.byCompetition) if (x.search.combo) day.byCompetition.push(c6Public(x.search.combo, date, x.compId));
+    c6Days.push(day);
+  });
+  // historial: las últimas combinadas resueltas con los partidos terminados de prueba; cifras globales realistas
+  const finishedByDay = new Map<string, MatchRec[]>();
+  for (const m of MATCHES) {
+    if (m.status !== 'finished' || !m.pre || m.ms > NOW_MS - 3 * 3_600_000) continue;
+    const k = madridDay(m.ms);
+    finishedByDay.set(k, [...(finishedByDay.get(k) ?? []), m]);
+  }
+  const recent: Combo6Combo[] = [];
+  for (const date of [...finishedByDay.keys()].sort().reverse()) {
+    if (recent.length >= 14) break;
+    const s = searchCombo6(finishedByDay.get(date)!.flatMap((m) => c6Legs(m, true)));
+    if (s.combo) recent.push(c6Public(s.combo, date, 'todas'));
+  }
+  const C6_HITS = 9;
+  const C6_SETTLED = 97;
+  const [c6lo, c6hi] = wilsonInterval(C6_HITS, C6_SETTLED);
+  const C6_CATS: [Combo6Category, number, number, number][] = [
+    ['ganador', 131, 101, 0.758],
+    ['goles', 168, 115, 0.721],
+    ['corners', 31, 25, 0.792],
+    ['tiros-puerta', 122, 87, 0.719],
+    ['tiros', 84, 66, 0.731],
+    ['tarjetas', 33, 22, 0.721],
+    ['faltas', 78, 54, 0.724],
+  ];
+  const combo6: Combo6File = {
+    generatedAt: GENERATED_AT,
+    rule: {
+      targetMin: TARGET_MIN, targetMax: TARGET_MAX, legMinProb: LEG_MIN_PROB, legMaxProb: LEG_MAX_PROB, minLegs: MIN_LEGS, maxLegs: MAX_LEGS,
+      minCategories: MIN_CATEGORIES, maxPerCategory: MAX_PER_CATEGORY,
+      margins: { ganador: 0.05, goles: 0.05, corners: 0.07, 'tiros-puerta': 0.07, tiros: 0.07, tarjetas: 0.07, faltas: 0.07 },
+    },
+    days: c6Days,
+    history: {
+      from: iso(DAY0 - 170 * DAY).slice(0, 10), to: iso(DAY0 - DAY).slice(0, 10), days: 150, combos: 99, settled: C6_SETTLED, hits: C6_HITS, voids: 2,
+      hitRate: r(C6_HITS / C6_SETTLED, 5), wilsonLow: r(Math.min(c6lo, C6_HITS / C6_SETTLED), 4), wilsonHigh: r(c6hi, 4), expectedHitRate: 0.1118,
+      avgLegs: 6.96, avgBookOdds: 6.02, avgFairOdds: 8.94, longestLosingStreak: 27,
+      byCategory: C6_CATS.map(([category, legs, hits, exp]) => ({ category, label: CATEGORY_LABEL[category], legs, hits, hitRate: r(hits / legs, 5), expectedHitRate: exp })),
+      recent,
+    },
+    note:
+      'Combinada de mercados mezclados con cuota total entre 6 y 8 y la mayor probabilidad posible según el modelo. No es una apuesta con ventaja: el margen de la casa se paga en cada pata y se multiplica. La mayoría de las cuotas son ESTIMADAS (la justa menos un margen típico): compara con tu casa. Sin ROI: no hay precios reales de la mayoría de las patas. Juego responsable, solo mayores de 18 años (+18). (Datos simulados.)',
+  };
+  write('combo6.json', combo6);
+  const hd = c6Days.find((d) => d.main && Date.parse(d.main.firstKickoff) > NOW_MS);
+  if (hd?.main) {
+    homeFile.combo6 = { date: hd.date, combo: hd.main };
     bytes -= fs.statSync(path.join(OUT, 'home.json')).size;
     files--;
     write('home.json', homeFile);

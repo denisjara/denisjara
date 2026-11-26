@@ -10,6 +10,6 @@ export default async function setup(): Promise<void> {
   const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
   // confidence.json: datos de prueba generados antes de los pronósticos de alta confianza → se regeneran
   const dir = path.join(root, 'public', 'mock-data');
-  if (fs.existsSync(path.join(dir, 'meta.json')) && fs.existsSync(path.join(dir, 'confidence.json'))) return;
+  if (fs.existsSync(path.join(dir, 'meta.json')) && fs.existsSync(path.join(dir, 'confidence.json')) && fs.existsSync(path.join(dir, 'combo6.json'))) return;
   await import('../../scripts/mock-data'); // el script genera los archivos al importarse
 }

@@ -11,7 +11,9 @@
  * fichas de equipo del índice, competiciones del meta), columnas de simulación, nombres de archivo seguros,
  * logos solo https en *.espncdn.com y ningún texto con `<script` ni `javascript:`. Apartados de apuestas: alta confianza
  * (confidence.json), pronósticos del día (daily.json) y cuota alta 6+ (longshots.json: cuota >= mínimo, prob en (0, 1),
- * cuota justa = 1/p, combinadas de partidos distintos con prob = producto, EV = p·cuota − 1, regla diaria, récord y aviso +18).
+ * cuota justa = 1/p, combinadas de partidos distintos con prob = producto, EV = p·cuota − 1, regla diaria, récord y aviso +18)
+ * y combinada 6 (combo6.json: regla publicada —patas, categorías, banda de probabilidad, ventana de cuota—, productos,
+ * cuotas estimadas marcadas y coherentes, historial con Wilson y aviso +18).
  * Umbrales de cordura (desactivables con --no-sanity): suficientes competiciones con datos, partidos analizados,
  * algún partido próximo o reciente en la portada y tamaño total razonable — para no publicar datos degenerados.
  * Sale con código 1 si hay errores.
@@ -1624,6 +1626,258 @@ const homeLongshot = obj({ date: str({ pattern: /^\d{4}-\d{2}-\d{2}$/ }), bets: 
   if (isObj(b) && (v.bets as number) < 1) fail(c, at, 'mejor apuesta con 0 apuestas en el día');
 });
 
+// ---------------------------------------------------------------------------
+// Combinada 6 (combo6.json y HomeFile.combo6)
+// ---------------------------------------------------------------------------
+
+const COMBO6_CATEGORY_IDS = ['ganador', 'goles', 'corners', 'tiros-puerta', 'tiros', 'tarjetas', 'faltas', 'jugadores'] as const;
+const COMBO6_ODDS_SOURCES = ['casa', 'derivada', 'estimada'] as const;
+/** Margen máximo admitido al estimar una cuota (justa / (1 + margen)). */
+const COMBO6_MAX_MARGIN = 0.15;
+const dayStr = str({ pattern: /^\d{4}-\d{2}-\d{2}$/ });
+
+/**
+ * Pata: prob en (0, 1), cuota justa = 1/p, cuota de la casa > 1, estimada ⇔ no es de la casa, una cuota estimada
+ * por debajo de la justa (lleva margen) y no más de un 15 % por debajo.
+ */
+const combo6Leg = obj(
+  {
+    matchId: safeId,
+    compId: str({ nonEmpty: true }),
+    compName: str({ nonEmpty: true }),
+    kickoff: iso,
+    home: teamRef,
+    away: teamRef,
+    category: str({ oneOf: COMBO6_CATEGORY_IDS }),
+    marketId: str({ nonEmpty: true, pattern: /^[A-Za-z0-9_.+-]{1,80}$/ }),
+    market: str({ nonEmpty: true }),
+    selection: str({ nonEmpty: true }),
+    prob: openProb,
+    fairOdds: num({ min: 1 }),
+    bookOdds: odds,
+    bookOddsEstimated: bool,
+    oddsSource: str({ oneOf: COMBO6_ODDS_SOURCES }),
+  },
+  { reason: str({ nonEmpty: true }), result: str({ oneOf: BET_RESULTS }) },
+  (v, at, c) => {
+    c.compRefs.push({ id: String(v.compId), at: `${at}.compId` });
+    const p = v.prob as number;
+    if (typeof p === 'number' && p >= 1) fail(c, at, `prob ${p} debe ser < 1`);
+    if (typeof p === 'number' && p > 0 && typeof v.fairOdds === 'number' && !relClose(v.fairOdds as number, 1 / p)) fail(c, at, `cuota justa ${String(v.fairOdds)} ≠ 1/prob (${(1 / p).toFixed(3)})`);
+    if (typeof v.bookOddsEstimated === 'boolean' && v.bookOddsEstimated !== (v.oddsSource !== 'casa')) fail(c, at, `bookOddsEstimated ${String(v.bookOddsEstimated)} incoherente con oddsSource ${String(v.oddsSource)}`);
+    if (v.oddsSource === 'estimada' && typeof v.bookOdds === 'number' && typeof v.fairOdds === 'number') {
+      const b = v.bookOdds as number;
+      const f = v.fairOdds as number;
+      if (b > f * (1 + REL_TOL) || b < f / (1 + COMBO6_MAX_MARGIN) - 1e-3) fail(c, at, `cuota estimada ${b} incoherente con la justa ${f} (margen entre 0 y ${COMBO6_MAX_MARGIN * 100} %)`);
+    }
+    if (v.category === 'jugadores' && !/^player-/.test(String(v.marketId))) fail(c, at, 'pata de jugadores sin mercado de jugador');
+  },
+);
+
+/**
+ * Combinada: partidos distintos en orden cronológico; prob = producto, cuota justa = 1/prob, cuota de la casa =
+ * producto de las patas, patas estimadas y categorías contadas, «1 de cada N», EV = p·cuota − 1, primer y último
+ * saque, resultado coherente con las patas (nulas fuera; todas nulas ⇒ nula). La regla (nº de patas, categorías,
+ * ventana de cuota y banda de probabilidad) se comprueba con `rule` en el archivo.
+ */
+const combo6Combo = obj(
+  {
+    id: str({ nonEmpty: true, pattern: /^[A-Za-z0-9_.+-]{1,300}$/ }),
+    date: dayStr,
+    scope: str({ nonEmpty: true, pattern: /^[a-z0-9-]{1,40}$/ }),
+    label: str({ nonEmpty: true }),
+    legs: arr(combo6Leg, { min: 1, max: 20 }),
+    prob: openProb,
+    fairOdds: num({ min: 1 }),
+    bookOdds: odds,
+    estimatedLegs: count,
+    oneIn: num({ min: 1, int: true }),
+    ev: num({ min: -1 }),
+    categories: num({ min: 1, int: true }),
+    firstKickoff: iso,
+    lastKickoff: iso,
+  },
+  { result: str({ oneOf: BET_RESULTS }) },
+  (v, at, c) => {
+    const legs = (Array.isArray(v.legs) ? v.legs : []).filter(isObj) as Record<string, unknown>[];
+    const p = v.prob as number;
+    if (typeof p !== 'number' || !legs.length) return;
+    if (v.scope !== 'todas') {
+      c.compRefs.push({ id: String(v.scope), at: `${at}.scope` });
+      if (legs.some((l) => l.compId !== v.scope)) fail(c, at, `combinada de ${String(v.scope)} con patas de otra competición`);
+    }
+    if (new Set(legs.map((l) => l.matchId)).size !== legs.length) fail(c, at, 'dos patas del mismo partido');
+    const times = legs.map((l) => Date.parse(String(l.kickoff)));
+    for (let i = 1; i < times.length; i++) if (times[i] < times[i - 1]) fail(c, `${at}.legs`, 'patas sin orden cronológico');
+    const product = legs.reduce((x, l) => x * (typeof l.prob === 'number' ? (l.prob as number) : NaN), 1);
+    if (Number.isFinite(product) && !(Math.abs(p - product) <= 2e-5 || relClose(p, product, 0.002))) fail(c, at, `prob ${p} ≠ producto de las patas (${product.toFixed(6)})`);
+    if (p > 0 && typeof v.fairOdds === 'number' && !relClose(v.fairOdds as number, 1 / p)) fail(c, at, `cuota justa ${String(v.fairOdds)} ≠ 1/prob (${(1 / p).toFixed(3)})`);
+    if (p > 0 && typeof v.oneIn === 'number' && Math.abs((v.oneIn as number) - 1 / p) > 0.51 + 0.01 / p) fail(c, at, `oneIn ${String(v.oneIn)} ≠ round(1/prob) (${(1 / p).toFixed(2)})`);
+    const book = legs.reduce((x, l) => x * (typeof l.bookOdds === 'number' ? (l.bookOdds as number) : NaN), 1);
+    if (Number.isFinite(book) && typeof v.bookOdds === 'number' && !relClose(v.bookOdds as number, book, 0.002)) fail(c, at, `bookOdds ${String(v.bookOdds)} ≠ producto de las cuotas de las patas (${book.toFixed(3)})`);
+    const est = legs.filter((l) => l.bookOddsEstimated === true).length;
+    if (typeof v.estimatedLegs === 'number' && v.estimatedLegs !== est) fail(c, at, `estimatedLegs ${String(v.estimatedLegs)} ≠ patas estimadas (${est})`);
+    const cats = new Set(legs.map((l) => l.category)).size;
+    if (typeof v.categories === 'number' && v.categories !== cats) fail(c, at, `categories ${String(v.categories)} ≠ categorías distintas (${cats})`);
+    if (typeof v.ev === 'number' && typeof v.bookOdds === 'number' && Math.abs((v.ev as number) - (p * (v.bookOdds as number) - 1)) > 0.005) {
+      fail(c, at, `EV ${String(v.ev)} incoherente con prob·cuota − 1 (${(p * (v.bookOdds as number) - 1).toFixed(4)})`);
+    }
+    const iso0 = (t: number) => (Number.isFinite(t) ? t : NaN);
+    if (iso0(Date.parse(String(v.firstKickoff))) !== Math.min(...times)) fail(c, at, 'firstKickoff ≠ primer saque de las patas');
+    if (iso0(Date.parse(String(v.lastKickoff))) !== Math.max(...times)) fail(c, at, 'lastKickoff ≠ último saque de las patas');
+    const noon = Date.parse(`${String(v.date)}T12:00:00Z`);
+    for (const t of times) if (Number.isFinite(noon) && Number.isFinite(t) && Math.abs(t - noon) > 38 * 3_600_000) fail(c, at, `pata que no es del día ${String(v.date)}`);
+    const rs = legs.map((l) => l.result);
+    const expected = rs.includes('miss') ? 'miss' : rs.some((r) => r === undefined) ? undefined : rs.every((r) => r === 'void') ? 'void' : 'hit';
+    if (v.result !== expected) fail(c, at, `resultado ${String(v.result)} incoherente con el de las patas (${String(expected)})`);
+  },
+);
+
+interface Combo6RuleV {
+  targetMin: number;
+  targetMax: number;
+  legMinProb: number;
+  legMaxProb: number;
+  minLegs: number;
+  maxLegs: number;
+  minCategories: number;
+  maxPerCategory: number;
+}
+
+/** La combinada cumple la regla publicada: patas, categorías, tope por categoría, banda de probabilidad y ventana de cuota. */
+function checkCombo6Rule(v: Record<string, unknown>, at: string, c: Ctx, r: Combo6RuleV): void {
+  const legs = (Array.isArray(v.legs) ? v.legs : []).filter(isObj) as Record<string, unknown>[];
+  if (legs.length < r.minLegs || legs.length > r.maxLegs) fail(c, at, `${legs.length} patas (regla: ${r.minLegs}–${r.maxLegs})`);
+  const per = new Map<string, number>();
+  for (const l of legs) per.set(String(l.category), (per.get(String(l.category)) ?? 0) + 1);
+  if (per.size < r.minCategories) fail(c, at, `${per.size} categorías (regla: al menos ${r.minCategories})`);
+  for (const [k, n] of per) if (n > r.maxPerCategory) fail(c, at, `${n} patas de ${k} (regla: como mucho ${r.maxPerCategory})`);
+  legs.forEach((l, i) => {
+    const p = l.prob as number;
+    if (typeof p === 'number' && (p < r.legMinProb - 1e-4 || p > r.legMaxProb + 1e-4)) fail(c, `${at}.legs[${i}]`, `prob ${p} fuera de la banda ${r.legMinProb}–${r.legMaxProb}`);
+  });
+  const b = v.bookOdds as number;
+  if (typeof b === 'number' && (b < r.targetMin * (1 - 0.003) || b > r.targetMax * (1 + 0.003))) fail(c, at, `cuota ${b} fuera de la ventana ${r.targetMin}–${r.targetMax}`);
+}
+
+const combo6Day = obj(
+  {
+    date: dayStr,
+    byCompetition: arr(combo6Combo, { max: 10 }),
+    counts: obj({ matches: count, eligibleMatches: count, candidateLegs: count }),
+  },
+  { main: combo6Combo, reason: str({ nonEmpty: true }) },
+  (v, at, c) => {
+    if (v.main === undefined && v.reason === undefined) fail(c, at, 'día sin combinada y sin motivo');
+    if (v.main !== undefined && v.reason !== undefined) fail(c, at, 'día con combinada y con motivo');
+    const main = isObj(v.main) ? v.main : undefined;
+    if (main && main.scope !== 'todas') fail(c, `${at}.main`, `ámbito ${String(main.scope)} (debe ser «todas»)`);
+    const all = [...(main ? [main] : []), ...((Array.isArray(v.byCompetition) ? v.byCompetition : []).filter(isObj) as Record<string, unknown>[])];
+    for (const x of all) if (x.date !== v.date) fail(c, at, `combinada del día ${String(x.date)} en el día ${String(v.date)}`);
+    const scopes = ((Array.isArray(v.byCompetition) ? v.byCompetition : []).filter(isObj) as Record<string, unknown>[]).map((x) => x.scope);
+    if (scopes.includes('todas')) fail(c, `${at}.byCompetition`, 'combinada «todas» entre las de competición');
+    if (new Set(scopes).size !== scopes.length) fail(c, `${at}.byCompetition`, 'competición repetida');
+    const k = isObj(v.counts) ? v.counts : {};
+    if (typeof k.eligibleMatches === 'number' && typeof k.matches === 'number' && (k.eligibleMatches as number) > (k.matches as number)) fail(c, `${at}.counts`, 'más partidos con patas que partidos');
+    if (typeof k.eligibleMatches === 'number' && typeof k.candidateLegs === 'number' && (k.candidateLegs as number) < (k.eligibleMatches as number)) fail(c, `${at}.counts`, 'menos patas candidatas que partidos con patas');
+    if (main && typeof k.eligibleMatches === 'number' && Array.isArray(main.legs) && main.legs.length > (k.eligibleMatches as number)) fail(c, `${at}.counts`, 'combinada con más patas que partidos con patas');
+  },
+);
+
+const combo6CategoryRecord = obj(
+  { category: str({ oneOf: COMBO6_CATEGORY_IDS }), label: str({ nonEmpty: true }), legs: count, hits: count, hitRate: prob, expectedHitRate: prob },
+  { voids: count },
+  (v, at, c) => checkRate(v, at, c, 'legs'),
+);
+
+const combo6History = obj(
+  {
+    from: str(),
+    to: str(),
+    days: count,
+    combos: count,
+    settled: count,
+    hits: count,
+    hitRate: prob,
+    expectedHitRate: prob,
+    avgLegs: nonNeg,
+    avgBookOdds: nonNeg,
+    avgFairOdds: nonNeg,
+    longestLosingStreak: count,
+    byCategory: arr(combo6CategoryRecord, { max: COMBO6_CATEGORY_IDS.length }),
+    recent: arr(combo6Combo, { max: 14 }),
+  },
+  { voids: count, wilsonLow: prob, wilsonHigh: prob, warning: str({ nonEmpty: true }) },
+  (v, at, c) => {
+    checkRate(v, at, c, 'settled');
+    const settled = v.settled as number;
+    const voids = (v.voids as number | undefined) ?? 0;
+    if (typeof v.combos === 'number' && settled + voids > (v.combos as number)) fail(c, at, `resueltas ${settled} + nulas ${voids} > combinadas ${String(v.combos)}`);
+    if (typeof v.days === 'number' && typeof v.combos === 'number' && (v.combos as number) > (v.days as number)) fail(c, at, `combinadas ${String(v.combos)} > días ${String(v.days)}`);
+    if (typeof v.longestLosingStreak === 'number' && (v.longestLosingStreak as number) > settled) fail(c, at, `racha ${String(v.longestLosingStreak)} > resueltas ${settled}`);
+    if (typeof v.combos === 'number' && (v.combos as number) > 0 && (v.avgBookOdds as number) < 1) fail(c, at, `cuota media ${String(v.avgBookOdds)} con combinadas`);
+    if (settled > 0 && (v.wilsonLow === undefined || v.wilsonHigh === undefined)) fail(c, at, 'falta el intervalo de Wilson');
+    const recent = (Array.isArray(v.recent) ? v.recent : []).filter(isObj) as Record<string, unknown>[];
+    for (let i = 0; i < recent.length; i++) {
+      if (recent[i].result === undefined) fail(c, `${at}.recent[${i}]`, 'combinada del historial sin resolver');
+      if (i > 0 && !(String(recent[i].date) < String(recent[i - 1].date))) fail(c, `${at}.recent`, 'no está ordenado del más reciente al más antiguo');
+    }
+    if (recent.length > settled + voids) fail(c, `${at}.recent`, 'más combinadas recientes que resueltas');
+  },
+);
+
+const combo6RuleCheck = obj(
+  {
+    targetMin: num({ gt: 1 }),
+    targetMax: num({ gt: 1 }),
+    legMinProb: openProb,
+    legMaxProb: openProb,
+    minLegs: num({ min: 2, int: true }),
+    maxLegs: num({ min: 2, max: 20, int: true }),
+    minCategories: num({ min: 1, int: true }),
+    maxPerCategory: num({ min: 1, int: true }),
+    margins: record(num({ min: 0, max: COMBO6_MAX_MARGIN })),
+  },
+  {},
+  (v, at, c) => {
+    if ((v.targetMax as number) < (v.targetMin as number)) fail(c, at, 'targetMax < targetMin');
+    if ((v.legMaxProb as number) < (v.legMinProb as number)) fail(c, at, 'legMaxProb < legMinProb');
+    if ((v.maxLegs as number) < (v.minLegs as number)) fail(c, at, 'maxLegs < minLegs');
+    if (isObj(v.margins)) for (const k of Object.keys(v.margins)) if (!(COMBO6_CATEGORY_IDS as readonly string[]).includes(k)) fail(c, `${at}.margins`, `categoría desconocida ${k}`);
+  },
+);
+
+const combo6File = obj(
+  { generatedAt: iso, rule: combo6RuleCheck, days: arr(combo6Day, { max: 4 }), history: combo6History, note: str({ nonEmpty: true }) },
+  {},
+  (v, at, c) => {
+    const rule = isObj(v.rule) ? (v.rule as unknown as Combo6RuleV) : undefined;
+    const days = (Array.isArray(v.days) ? v.days : []).filter(isObj) as Record<string, unknown>[];
+    for (let i = 1; i < days.length; i++) if (!(String(days[i].date) > String(days[i - 1].date))) fail(c, `${at}.days`, 'días repetidos o sin ordenar');
+    const h = isObj(v.history) ? v.history : {};
+    const combos: [Record<string, unknown>, string][] = [];
+    days.forEach((d, i) => {
+      if (isObj(d.main)) combos.push([d.main, `${at}.days[${i}].main`]);
+      ((Array.isArray(d.byCompetition) ? d.byCompetition : []).filter(isObj) as Record<string, unknown>[]).forEach((x, j) => combos.push([x, `${at}.days[${i}].byCompetition[${j}]`]));
+    });
+    ((Array.isArray(h.recent) ? h.recent : []).filter(isObj) as Record<string, unknown>[]).forEach((x, j) => combos.push([x, `${at}.history.recent[${j}]`]));
+    if (rule && typeof rule.targetMin === 'number') for (const [x, where] of combos) checkCombo6Rule(x, where, c, rule);
+    const ids = combos.map(([x]) => x.id);
+    if (new Set(ids).size !== ids.length) fail(c, at, 'combinada repetida (id)');
+    if (typeof v.note === 'string') {
+      if (!/18/.test(v.note as string)) fail(c, `${at}.note`, 'la nota debe recordar que es solo para mayores de 18 años');
+      if (!/estimad/i.test(v.note as string)) fail(c, `${at}.note`, 'la nota debe avisar de que las cuotas son estimadas');
+    }
+  },
+);
+
+const homeCombo6 = obj({ date: dayStr, combo: combo6Combo }, {}, (v, at, c) => {
+  const b = isObj(v.combo) ? v.combo : undefined;
+  if (b && b.result !== undefined) fail(c, `${at}.combo`, 'combinada ya resuelta');
+  if (b && b.date !== v.date) fail(c, `${at}.combo`, `combinada del día ${String(b.date)} anunciada para ${String(v.date)}`);
+  if (b && b.scope !== 'todas') fail(c, `${at}.combo`, 'la portada anuncia la combinada del día (ámbito «todas»)');
+});
+
 const homeFile = obj(
   {
     generatedAt: iso,
@@ -1645,6 +1899,7 @@ const homeFile = obj(
     },
     daily: homeDaily,
     longshot: homeLongshot,
+    combo6: homeCombo6,
     confidenceHeadline: obj(
       { hitRate: prob, picks: num({ min: 1, int: true }), hits: count, from: iso, to: iso },
       { upcoming: count, wilsonLow: prob, wilsonHigh: prob, baselineRate: prob, avgFairOdds: num({ min: 1 }) },
@@ -1728,7 +1983,7 @@ export interface ValidateOptions {
   partial?: boolean;
 }
 
-const ROOT_FILES = new Set(['meta.json', 'home.json', 'players.json', 'value.json', 'model.json', 'confidence.json', 'daily.json', 'longshots.json']);
+const ROOT_FILES = new Set(['meta.json', 'home.json', 'players.json', 'value.json', 'model.json', 'confidence.json', 'daily.json', 'longshots.json', 'combo6.json']);
 const SUB_DIRS = new Set(['competitions', 'matches', 'teams']);
 const SAFE_FILE = /^[A-Za-z0-9_-]{1,40}\.json$/;
 
@@ -1827,6 +2082,15 @@ export function validateDataDir(dir: string = OUTPUT_DIR, opts: ValidateOptions 
       if ((d.bets ?? []).length !== hl.bets) c.errors.push(`home.json: longshot.bets ${String(hl.bets)} ≠ apuestas del día en longshots.json (${(d.bets ?? []).length})`);
       if (hl.best && !(d.bets ?? []).some((b) => b?.id === hl.best!.id)) c.errors.push(`home.json: longshot.best (${String(hl.best.id)}) no está entre las apuestas del día en longshots.json`);
     }
+  }
+
+  const combo6 = check('combo6.json', combo6File) as { days?: { date?: string; main?: { id?: string } }[] } | undefined;
+  // portada ↔ combo6.json: la combinada anunciada es la del día que dice
+  const hc = (home as Record<string, unknown> | undefined)?.combo6 as { date?: string; combo?: { id?: string } } | undefined;
+  if (hc && combo6) {
+    const d = (combo6.days ?? []).find((x) => x?.date === hc.date);
+    if (!d) c.errors.push(`home.json: combo6.date ${String(hc.date)} ausente de combo6.json`);
+    else if (d.main?.id !== hc.combo?.id) c.errors.push(`home.json: combo6.combo (${String(hc.combo?.id)}) no es la combinada del día en combo6.json`);
   }
 
   const compFiles = listJson(dir, 'competitions');

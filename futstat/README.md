@@ -73,6 +73,7 @@ Para generarlo en local: `npm run build:standalone` → `standalone/FutStat-Lab.
 | **Inicio / Partidos populares** | `/` | Los partidos más relevantes de las próximas 72 h (ranking de popularidad), partidos de hoy y de mañana, resultados recientes con acierto del modelo, mejores apuestas de valor, jugadores en mejor forma y titulares del día. |
 | **Pronósticos del día** | `/hoy` | Los mejores pronósticos de hoy y de los 3 días siguientes con partidos, en todos los mercados validados fuera de muestra: resultado, goles, tiros y tiros a puerta, córners, tarjetas, faltas y jugadores. Bloque destacado para la competición continental del día (Champions, Europa League…), filtros por día, competición y categoría (`?dia=&comp=&cat=`), «Top del día» (uno por partido), combinadas sugeridas con su histórico fuera de muestra y, por partido, números esperados, lectura en viñetas y una frase con las cifras de cada pronóstico. |
 | **Cuota alta 6+** | `/cuota-alta` | Apuestas de cuota 6 o más (combinadas de 2–4 partidos, sorpresas 1X2, marcador exacto y goleador) de hoy y los 3 días siguientes con partidos, con probabilidad del modelo («1 de cada N»), cuota justa, cuota de la casa cuando existe y valor esperado; aviso fijo de que la mayoría pierden (+18), calculadora, historial fuera de muestra por tipo (aciertos con Wilson, esperado, ROI con cuotas de cierre, racha sin acertar) y calibración en la banda baja. Filtros `?dia=&tipo=`. |
+| **Combinada cuota 6** | `/combinada-6` | Una combinada al día de mercados mezclados (ganador de un partido, goles de otro, córners, tiros a puerta, tiros, tarjetas o faltas de otros), una pata por partido, con cuota total de la casa entre 6 y 8 y la **mayor probabilidad combinada posible** (patas validadas fuera de muestra con probabilidad recalibrada del 70–88 %). Por pata: partido, selección, probabilidad, cuota y su origen (casa, derivada o estimada); total: probabilidad («1 de cada N»), cuota justa, cuota y valor esperado. Hoy y los días siguientes con partidos, combinadas por competición continental (Champions, Europa League…) e historial fuera de muestra con Wilson, acierto por categoría y racha de fallos. Se recalcula en cada build (cada 3 horas). |
 | **Calendario** | `/partidos` | Todos los partidos por día y competición, con probabilidades 1X2, goles esperados, marcador más probable y cuotas cuando existen. |
 | **Alta confianza** | `/confianza` | Selecciones muy probables y de cuota baja cuyo mercado ha acertado al menos el 80 % fuera de muestra. Cabecera con el acierto real del holdout (n e intervalo de Wilson) junto a la línea base sin modelo, la tasa base y el lift; qué es y qué no es; picks de los próximos 14 días por día (probabilidad, cuota justa y de mercado, validación de su regla); acierto por mercado frente a su tasa base y resultados recientes con ✓/✗. |
 | **Ligas** | `/c/<liga>` | Una sección propia por cada liga (LaLiga, Premier League, Serie A, Bundesliga…) con pestañas: clasificación (con xPts y Elo), próximos partidos, resultados, estadísticas de equipos (goles, córners, tarjetas, tiros, posesión, over/BTTS, porterías a cero, goles por tramo de minutos), ratings, simulación de temporada, jugadores y backtest de esa liga. |
@@ -165,7 +166,7 @@ cubiertas por tests y utilizables tanto en Node como en el navegador. El pipelin
   se contrae hacia la media de la competición, `T' = L + 0,5 · (T − L)`, manteniendo el 1X2 (`L` = goles por partido de
   la competición en los últimos 365 días, vida media 180 días, 30 partidos ficticios hacia 2,6; solo partidos
   anteriores). Sin mercado, los totales de Dixon-Coles estaban demasiado dispersos (donde predecía 1,78 goles hubo 2,12;
-  donde 3,25, hubo 2,85). Ver [Cambios del modelo](#14-cambios-del-modelo-22-nov-2026).
+  donde 3,25, hubo 2,85). Ver [Cambios del modelo](#15-cambios-del-modelo-22-nov-2026).
 - Un índice de confianza (0–1) combina el acuerdo entre fuentes y el volumen de datos disponible.
 
 ### 5. Mercados derivados
@@ -492,7 +493,73 @@ apuesta que tenía cuota de cierre en todas sus patas.
 - Juego responsable: solo mayores de 18 años y solo dinero que puedas permitirte perder. Ver
   [Juego responsable](#juego-responsable-18).
 
-### 14. Cambios del modelo (22-nov-2026)
+### 14. Combinada cuota 6 (mercados mezclados)
+
+Respuesta a «fórmame una cuota 6 entre varios partidos: de uno los goles, de otro los córners, de otro el ganador…, con
+lo más probable». Motor: [`pipeline/analytics/combo6.ts`](pipeline/analytics/combo6.ts) (constantes documentadas en la
+cabecera); publicación: [`pipeline/publish/combo6.ts`](pipeline/publish/combo6.ts) → `public/data/combo6.json` (y
+`home.json` → `combo6`, la de hoy). Usa los mismos candidatos, requisitos de datos y calibraciones que los pronósticos
+del día; no cambia ningún otro archivo.
+
+**Regla.**
+
+- **Patas**: solo familias con regla **validada** fuera de muestra en el apartado del día; probabilidad = la recalibrada
+  (Platt) de esa regla, entre **0,70 y 0,88**. Una pata por partido (partidos distintos ⇒ independientes), de 4 a 9
+  patas, al menos 4 categorías (ganador, goles, córners, tiros a puerta, tiros, tarjetas, faltas) y como mucho 2 por
+  categoría. Por partido y categoría, solo la pata más eficiente (menor −ln p / ln cuota).
+- **Jugadores fuera**: su única regla validada («1+ tiro») acierta 86,8 % frente a una tasa base de 88,2 %, un 7,8 % se
+  anulan y dependen de la alineación.
+- **Cuota de cada pata**: `casa` (DraftKings vía ESPN: 1X2, línea principal de goles, hándicap), `derivada` (doble
+  oportunidad y empate no apuesta calculadas desde el 1X2, con su margen) o `estimada` = cuota justa / (1 + margen), con
+  márgenes **supuestos**: 5 % ganador y goles; 7 % córners, tarjetas, tiros, tiros a puerta, faltas y goles de un
+  equipo. La fuente no publica precios de esos mercados, así que son estimaciones: la cuota real puede quedar por
+  debajo de 6. Las derivadas y estimadas se marcan en la página.
+- **Objetivo**: producto de cuotas entre **6 y 8** y, entre todas las que cumplen, la de **mayor probabilidad
+  combinada**. Búsqueda por ramificación y poda sobre las 12 patas más eficientes de cada categoría, con tolerancia de
+  0,001 en ln p (como mucho un 0,1 % relativo peor que la óptima) y un máximo de 500.000 nodos; en modo exacto coincide
+  con la fuerza bruta en los tests.
+- **Por competición**: para Champions, Europa League, Conference, Libertadores y Sudamericana, la misma regla limitada a
+  esa competición cuando tiene ≥ 5 partidos con patas ese día.
+- Hoy solo usa partidos sin empezar; las patas nulas se quitan (como hacen las casas); resultado a 90'.
+
+**Por qué pocas patas moderadas y no muchas muy seguras.** Con cuota por pata c = 1 / (p · (1 + m)), la cuota total es
+1 / (P · Π(1 + m)): para una cuota fija de 6, cada pata añadida vuelve a pagar el margen y baja la probabilidad P que
+se puede conseguir. Con patas muy seguras (≈ 0,94) harían falta unas 20–26 para llegar a 6, y en el historial esas
+combinadas acertaban solo un 6–11 % de los días. El suelo de 0,70 por pata evita que la búsqueda meta patas poco
+probables. Resultado típico: ~7 patas de un 70–80 % y una probabilidad del 11–12 % (1 de cada 8–9), por debajo del 1/6
+que pagaría la cuota: **valor esperado negativo**.
+
+**Historial fuera de muestra (build del 26-nov-2026; 1-jun → 25-nov).** La misma regla en cada día pasado con
+predicciones, reglas y Platt ajustados solo con datos anteriores (tramos mensuales), cuotas de cierre y resultado a 90'.
+Sin ROI: la mayoría de las patas no tienen cuota real.
+
+- 152 días con partidos, **81 combinadas** (71 días sin combinada: en junio y julio casi no había reglas validadas, o
+  había menos de 4 partidos).
+- **6 acertadas de 81 = 7,4 %** (Wilson 90 %: 3,9–13,7 %) frente a un **11,1 % previsto**. 7,05 patas de media, cuota
+  media 6,01 (justa 9,02). Racha de fallos más larga: 29.
+- **Frágil**: una primera versión daba 8 de 82, pero 2 de esos aciertos eran días 1 de mes en los que el día local
+  (Madrid) empieza antes del inicio UTC del tramo y las reglas del tramo nuevo ya incluían partidos de ese mismo día
+  (fuga). Corregido: todo el día usa las reglas del tramo de su primer partido.
+
+| Categoría (patas) | Acierto real | Previsto |
+|---|---|---|
+| Ganador (115) | 77,4 % | 75,5 % |
+| Goles (150) | 67,3 % | 71,9 % |
+| Córners (22) | 81,8 % | 80,7 % |
+| Tiros a puerta (104) | 70,2 % | 71,6 % |
+| Tiros (76) | 86,8 % | 73,1 % |
+| Tarjetas (28) | 64,3 % | 72,1 % |
+| Faltas (64) | 67,2 % | 72,4 % |
+
+En todas las patas candidatas de la franja 0,70–0,80, tarjetas, empate no apuesta y «equipo: más de 2,5 tiros a puerta»
+salen 4–7 puntos optimistas y goles unos 2: la probabilidad publicada tiende a ser algo alta. Aviso automático en la
+página si, con ≥ 20 combinadas resueltas, el Wilson alto queda por debajo del 70 % de lo previsto (hoy no salta).
+
+**Advertencias:** ganar la combinada es lo raro (≈ 1 de cada 9 previsto; 1 de cada 13-14 en el historial) y a la larga se pierde; las cuotas estimadas pueden
+no existir a ese precio en tu casa. Solo mayores de 18 años y con dinero que puedas permitirte perder. Ver
+[Juego responsable](#juego-responsable-18).
+
+### 15. Cambios del modelo (22-nov-2026)
 
 Cada idea se probó en el banco de pruebas ([`pipeline/experiments/`](pipeline/experiments/README.md)) con las mismas
 predicciones walk-forward que producción, en una ventana de ajuste y dos de comprobación (T1, T2), con intervalos
@@ -520,7 +587,7 @@ núcleo (`MODEL` en [`pipeline/config.ts`](pipeline/config.ts) y `PRIOR_N` en
   de contexto (descanso, calendario, competición europea, ascenso, inicio de temporada, movimiento de cuotas).
 - El holdout ya se ha mirado una vez para estas decisiones: deja de ser del todo virgen para ellas.
 
-### 15. Cambios del modelo (26-nov-2026): factores del partido
+### 16. Cambios del modelo (26-nov-2026): factores del partido
 
 **Protocolo.** La regla de adopción se escribió el 26-nov-2026 **antes** de calcular ningún resultado de los factores
 (pre-registro en [`pipeline/experiments/README.md`](pipeline/experiments/README.md)). Ventanas: **T1** (1-jun → 31-jul-2026,
@@ -915,7 +982,7 @@ La app solo lee estos ficheros, todos tipados en [`src/types/data.ts`](src/types
 | Fichero | Contenido |
 |---|---|
 | `meta.json` | Competiciones, recuentos e índice de búsqueda de equipos |
-| `home.json` | Partidos populares, hoy, mañana, recientes, mejores apuestas de valor, mejores pronósticos de alta confianza (72 h) con su acierto fuera de muestra, resumen de los pronósticos del día (`daily`), la mejor apuesta de cuota alta aún abierta (`longshot`) y jugadores en forma |
+| `home.json` | Partidos populares, hoy, mañana, recientes, mejores apuestas de valor, mejores pronósticos de alta confianza (72 h) con su acierto fuera de muestra, resumen de los pronósticos del día (`daily`), la mejor apuesta de cuota alta aún abierta (`longshot`), la combinada cuota 6 de hoy (`combo6`) y jugadores en forma |
 | `competitions/<id>.json` | Clasificación, partidos, estadísticas de equipos, ratings, simulación, jugadores, promedios de liga, backtest |
 | `matches/<id>.json` | Análisis completo de un partido: modelo, mercados, proyecciones, forma, H2H, comparativa, *props*, valor y factores del partido (`factors`: árbitro, bajas, forma, casa/fuera, eliminatoria, lo que se juega, jugadores en forma; cada uno «usado en el modelo» o «informativo») |
 | `teams/<id>.json` | Ficha de equipo |
@@ -924,6 +991,7 @@ La app solo lee estos ficheros, todos tipados en [`src/types/data.ts`](src/types
 | `model.json` | Metodología, parámetros y backtest global y por competición |
 | `daily.json` | Pronósticos del día: hoy y los 3 días siguientes con partidos; por partido, pronósticos validados (máx. 2 por categoría y 8 por partido) con frase explicativa, números esperados y lectura; top del día, combinadas y récord fuera de muestra (global, por categoría y por combinada) |
 | `longshots.json` | Cuota alta 6+: apuestas de cuota ≥ 6 de hoy y los 3 días siguientes con partidos (patas, probabilidad, cuota justa y de la casa, valor esperado, frase con cifras, resultado de las ya jugadas), historial fuera de muestra por tipo, calibración en la banda baja y aviso +18 |
+| `combo6.json` | Combinada cuota 6 de mercados mezclados: regla (`rule`: cuota objetivo, banda de probabilidad por pata, patas, categorías, márgenes estimados), por día (hoy y siguientes) la combinada general (`main`, o `reason` si no hay) y las de cada competición continental (`byCompetition`), con cada pata (partido, categoría, mercado, selección, probabilidad, cuota justa y de la casa, origen `casa`/`derivada`/`estimada`, resultado), historial fuera de muestra (`history`: aciertos con Wilson, previsto, por categoría, racha, últimas 14) y nota |
 | `confidence.json` | Pronósticos de alta confianza de los próximos 14 días, resueltos recientes, acierto fuera de muestra (holdout) por nivel, fuente y familia, cobertura, cuota justa media, ROI con cuotas de cierre y reglas de producción |
 
 Convenciones: probabilidades en [0, 1], cuotas decimales, fechas ISO-8601 en UTC y textos en español.

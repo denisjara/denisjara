@@ -24,6 +24,7 @@ import { capitalize, dayKey, fromDayKey, int, longDate, pct, plural, relativeDay
 import {
   Card,
   ChipRow,
+  Combo6Callout,
   Disclaimer,
   EmptyState,
   ErrorState,
@@ -186,6 +187,7 @@ export default function LongshotsPage() {
 
   const track = (
     <>
+      <Combo6Callout text="¿Prefieres más probabilidad a la misma cuota? Una pata por partido, mercados distintos y las selecciones más probables hasta llegar a cuota ≈ 6." />
       <Section
         id="historial"
         eyebrow="Fuera de muestra"

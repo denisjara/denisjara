@@ -1,7 +1,7 @@
 /**
  * Secciones de metodología (español) de public/data/model.json, con los valores ajustados en este build.
  */
-import type { BacktestSummary, ConfidenceFile, DailyFile, LongshotFile, ModelFile } from '../../src/types/data';
+import type { BacktestSummary, Combo6File, ConfidenceFile, DailyFile, LongshotFile, ModelFile } from '../../src/types/data';
 import { MODEL, UPCOMING_DAYS } from '../config';
 import { MAX_EV } from '../analytics/value';
 import { ELO_GOAL_WEIGHT_FACTOR, LOW_DATA_GAMES } from '../analytics/predict';
@@ -24,6 +24,23 @@ import {
   SCORER_MIN_PROB,
   UNPRICED_EV,
 } from '../analytics/longshots';
+import {
+  COMBO6_CATEGORIES,
+  COMPETITION_MIN_MATCHES,
+  LEG_MAX_PROB as C6_LEG_MAX_PROB,
+  LEG_MIN_PROB as C6_LEG_MIN_PROB,
+  MARGIN_EST,
+  MARGIN_TEAM_GOALS,
+  MAX_LEGS as C6_MAX_LEGS,
+  MAX_PER_CATEGORY as C6_MAX_PER_CATEGORY,
+  MIN_CATEGORIES as C6_MIN_CATEGORIES,
+  MIN_LEGS as C6_MIN_LEGS,
+  POOL_PER_CATEGORY,
+  TARGET_MAX as C6_TARGET_MAX,
+  TARGET_MIN as C6_TARGET_MIN,
+  WARNING_MIN_N as C6_WARNING_MIN_N,
+  WARNING_RATIO as C6_WARNING_RATIO,
+} from '../analytics/combo6';
 import { lcFirst } from './util';
 import type { BuildContext } from './context';
 
@@ -47,6 +64,8 @@ export interface MethodologyInput {
   dailyFamilies?: DailyFamiliesSummary;
   /** apuestas de cuota alta (6+) publicadas en este build, con su historial fuera de muestra */
   longshots?: LongshotFile;
+  /** combinada de cuota 6 con mercados mezclados publicada en este build, con su historial fuera de muestra */
+  combo6?: Combo6File;
 }
 
 /** Reglas (familia · fuente) de las familias adicionales del apartado diario, con su validación fuera de muestra. */
@@ -188,6 +207,54 @@ export function dailySection(df: DailyFile | undefined, fam: DailyFamiliesSummar
   }
   body.push('Juego responsable: son estimaciones estadísticas, no garantías. Solo mayores de 18 años y con dinero que puedas permitirte perder.');
   return { title: 'Pronósticos del día', body };
+}
+
+/**
+ * Comprobación del historial de «Combinada cuota 6» (26-nov-2026, 1-jun → 25-nov): cifras FIJAS con fecha (no se
+ * recalculan; las vigentes son las del párrafo de historial, que sí sale de cada build).
+ */
+export function combo6ReviewNote(): string {
+  return (
+    'Comprobación del 26-nov-2026 (1-jun → 25-nov, 152 días con partidos): 81 combinadas (los otros 71 días no tuvieron: en junio y julio casi no había todavía reglas validadas, o había menos de 4 partidos), 6 acertadas (7,4 %; Wilson 90 %: 3,9–13,7 %) frente a un 11,1 % previsto, con 7,05 patas de media, cuota media 6,01 (justa 9,02) y una racha de 29 combinadas falladas seguidas. ' +
+    'El resultado es frágil: una primera versión daba 8 de 82, pero 2 de esos aciertos caían en días 1 de mes en los que el día local empieza antes del cambio de tramo y las reglas del tramo nuevo ya incluían partidos de ese mismo día (fuga); corregido (todo el día usa las reglas del tramo de su primer partido), quedan 6 de 81. ' +
+    'Por categoría (acierto real frente a previsto en las patas elegidas): ganador 77,4 % / 75,5 % (115 patas), goles 67,3 % / 71,9 % (150), córners 81,8 % / 80,7 % (22), tiros a puerta 70,2 % / 71,6 % (104), tiros 86,8 % / 73,1 % (76), tarjetas 64,3 % / 72,1 % (28) y faltas 67,2 % / 72,4 % (64). ' +
+    'Mirando todas las patas candidatas de la franja 70–80 %, tarjetas, empate no apuesta y «equipo: más de 2,5 tiros a puerta» salen 4–7 puntos optimistas y goles unos 2: la probabilidad publicada de la combinada tiende a ser algo alta.'
+  );
+}
+
+/** Sección «Combinada cuota 6 (mercados mezclados)» con la regla y el historial walk-forward de este build. */
+export function combo6Section(cf: Combo6File): ModelFile['sections'][number] {
+  const margins = COMBO6_CATEGORIES.filter((c) => c.id !== 'jugadores')
+    .map((c) => `${lcFirst(c.label)} ${pcI(MARGIN_EST[c.id])}`)
+    .join(', ');
+  const body: string[] = [
+    `Qué es: UNA combinada al día de mercados mezclados (el ganador de un partido, los goles de otro, los córners de otro, los tiros a puerta de otro…) cuya cuota total de la casa queda entre ${C6_TARGET_MIN} y ${C6_TARGET_MAX}, elegida para que la probabilidad de acertarla sea la MÁXIMA posible. Usa las mismas predicciones, candidatos y requisitos de datos que «Pronósticos del día». Se recalcula en cada build (cada 3 horas) y la de hoy solo usa partidos que aún no han empezado.`,
+    `Patas: solo de familias con una regla VALIDADA fuera de muestra en el apartado del día; la probabilidad es la recalibrada (Platt) de esa regla y tiene que estar entre ${pcI(C6_LEG_MIN_PROB)} y ${pcI(C6_LEG_MAX_PROB)}. Por debajo la pata deja de ser «probable»; por encima su cuota casi no suma y aun así paga el margen de la casa. Una pata por partido (partidos distintos, que se tratan como independientes: la probabilidad de la combinada es el producto), de ${C6_MIN_LEGS} a ${C6_MAX_LEGS} patas, al menos ${C6_MIN_CATEGORIES} categorías distintas y como mucho ${C6_MAX_PER_CATEGORY} patas por categoría. Por partido y categoría se considera solo la pata más eficiente (la que menos probabilidad pierde por cada unidad de cuota: menor −ln p / ln cuota). Los props de jugador quedan fuera: su única regla validada («1+ tiro») acertó 86,8 % frente a una tasa base de 88,2 %, un 7,8 % se anulan porque el jugador no juega y dependen de una alineación que se publica una hora antes.`,
+    `Cuota de cada pata: la de la casa cuando la fuente la da (DraftKings vía ESPN: 1X2, línea principal de goles y hándicap); doble oportunidad y empate no apuesta se DERIVAN de su 1X2 (con su margen); en el resto (córners, tarjetas, tiros, faltas, otras líneas…) la fuente no publica precio y la cuota se ESTIMA como cuota justa / (1 + margen), con márgenes típicos supuestos: ${margins}; goles de un equipo ${pcI(MARGIN_TEAM_GOALS)}. Son estimaciones, no precios: el margen real varía por casa, liga y línea (en mercados secundarios a menudo es mayor), así que la cuota que encuentres puede quedar por debajo de 6. Toda pata derivada o estimada se marca así en la página.`,
+    `Por qué pocas patas moderadas y no muchas muy seguras: si la cuota de cada pata es c = 1 / (p · (1 + m)), la cuota total es 1 / (P · Π(1 + m)), con P la probabilidad combinada. Para una cuota fija de 6, P = 1 / (6 · Π(1 + m)): cada pata añadida multiplica otra vez el margen y baja la probabilidad que se puede conseguir. Con patas de un 94 % harían falta unas 20–26 para llegar a 6 y, en el historial, esas combinadas acertaban solo un 6–11 % de los días. Por eso la regla busca, entre todas las combinadas válidas, la de mayor probabilidad combinada (ramificación y poda sobre las ${POOL_PER_CATEGORY} patas más eficientes de cada categoría, exacta salvo un 0,1 % relativo), y el suelo de ${pcI(C6_LEG_MIN_PROB)} por pata impide que la búsqueda meta patas poco probables con cuota alta. El resultado típico son 6–8 patas de un 70–80 % y una probabilidad de alrededor del 11–12 % (1 de cada 8–9), por debajo del 1/6 que pagaría la cuota: el valor esperado es NEGATIVO.`,
+    `Además, para Champions, Europa League, Conference, Libertadores y Sudamericana se publica la misma combinada restringida a esa competición cuando ese día tiene al menos ${COMPETITION_MIN_MATCHES} partidos con patas. Las patas nulas se quitan de la combinada (como hacen las casas); se resuelve a 90'.`,
+  ];
+  const h = cf.history;
+  if (h.settled > 0) {
+    const ci = h.wilsonLow !== undefined && h.wilsonHigh !== undefined ? `; Wilson 90 %: ${pcI(h.wilsonLow, 1)}–${pcI(h.wilsonHigh, 1)}` : '';
+    const cats = h.byCategory.filter((c) => c.legs > 0);
+    body.push(
+      `Historial FUERA DE MUESTRA de este build (la misma regla en cada día del ${day(h.from)} al ${day(h.to)}, con predicciones y reglas ajustadas solo con datos anteriores, cuotas de cierre y resultado a 90'): ${n0(h.days)} días con partidos, ${n0(h.combos)} combinadas, ${n0(h.hits)} acertadas de ${n0(h.settled)} resueltas (${pcI(h.hitRate, 1)}${ci}; el modelo esperaba ${pcI(h.expectedHitRate, 1)}); ${d(h.avgLegs)} patas de media, cuota media ${d(h.avgBookOdds)} (justa ${d(h.avgFairOdds)}); racha más larga sin acertar: ${n0(h.longestLosingStreak)}.${
+        cats.length ? ` Patas por categoría (acierto real / previsto): ${cats.map((c) => `${lcFirst(c.label)} ${pcI(c.hitRate, 1)} / ${pcI(c.expectedHitRate, 1)} (${n0(c.legs)})`).join(', ')}.` : ''
+      } Sin ROI: la mayoría de las patas no tienen cuota real de la casa.`,
+    );
+  } else {
+    body.push('Todavía no hay combinadas resueltas en el historial fuera de muestra.');
+  }
+  body.push(
+    h.warning ??
+      `Aviso automático: si, con ${C6_WARNING_MIN_N} o más combinadas resueltas, el límite alto de Wilson del acierto queda por debajo del ${pcI(C6_WARNING_RATIO)} de lo previsto, la página lo avisa.`,
+  );
+  body.push(combo6ReviewNote());
+  body.push(
+    'Aviso honesto: ganar esta combinada es lo raro (alrededor de 1 vez de cada 9) y a la larga se pierde dinero; con muestras así un buen mes es suerte. Solo mayores de 18 años y con dinero que puedas permitirte perder.',
+  );
+  return { title: 'Combinada cuota 6 (mercados mezclados)', body };
 }
 
 /**
@@ -440,6 +507,7 @@ export function methodologySections(i: MethodologyInput): ModelFile['sections'] 
   sections.push(confidenceSection(i.confidence, bt));
   if (i.daily) sections.push(dailySection(i.daily, i.dailyFamilies));
   if (i.longshots) sections.push(longshotSection(i.longshots));
+  if (i.combo6) sections.push(combo6Section(i.combo6));
 
   sections.push({
     title: 'Calidad de los datos',

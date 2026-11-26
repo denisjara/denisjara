@@ -116,7 +116,7 @@ cabeceras de micro-métricas.
 - Shell: barra lateral fija ≥1024px (`lg`), contenido `max-w-page` (1360px) con `px-4 sm:px-6`.
   En móvil, cabecera de 56px + barra inferior (el `main` ya reserva su alto).
   Menú en `layout/nav.ts`: `MAIN_NAV` (barra lateral y cajón) y `BOTTOM_NAV` (6 huecos de la barra inferior: Inicio, Hoy,
-  Partidos, Confianza, Jugadores, Valor; las entradas con `drawerOnly` —Cuota alta 6+, Modelo— solo salen en el cajón).
+  6+, Comb. 6, Partidos, Confianza; las entradas con `drawerOnly` —Jugadores, Valor, Modelo— solo salen en el cajón).
 - Página: `<div className="space-y-6">` (o `space-y-10` en páginas largas con Sections).
 - Rejillas: tarjetas de partido `grid gap-4 md:grid-cols-2 2xl:grid-cols-3`; dos columnas de
   contenido `grid gap-6 xl:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]`; KPIs `grid grid-cols-2 lg:grid-cols-4 gap-3`.
@@ -221,6 +221,19 @@ cabeceras de micro-métricas.
   banda baja), `BeforeBetting`. Filtros en la URL: `?dia=YYYY-MM-DD&tipo=combinadas|sorpresas|marcador|goleador|otras`. Las apuestas ya
   empezadas o resueltas van al final (`playableFirst`). El resumen del historial suma cuentas (`longshotSummary`), nunca promedia %.
 - Nunca prometer ganancias: nada de «apuesta segura», «gana»; el importe de la calculadora es un ejemplo, no una recomendación.
+
+### Combinada 6 (`Combo6.tsx`, utilidades puras en `lib/combo6.ts`; página `/combinada-6` en `pages/Combo6Page.tsx` + `pages/combo6/parts.tsx`)
+- Datos: `useCombo6()` → `combo6.json` (`Combo6File`: `days[]` con `main`, `byCompetition`, `reason`, `counts`; `rule`; `history`; `note`) y
+  `home.combo6` (avance de Inicio). Las cifras de una combinada se recalculan SIEMPRE con sus patas (`combo6Totals`).
+- **`Combo6CategoryBadge`** `{ category }` — insignia neutra con icono (`COMBO6_CATEGORY_ICON`). **`Combo6LegRow`** `{ leg, index?, now, day?, settled?, hideReason? }`
+  — hora local + competición, escudos, categoría → selección, explicación y Prob./Justa/Casa; la cuota estimada lleva SIEMPRE «≈» y «estimada».
+  **`Combo6Callout`** `{ text? }` — enlace destacado a `/combinada-6` (en `/cuota-alta` y `/hoy`).
+- De la página: `ComboTicket` (boleto: patas por hora | matriz con «Cuota en la casa ≈ X», probabilidad real y «1 de cada N», cuota justa, EV,
+  escalera de probabilidad acumulada y `CopyLegsButton`), `HistoryBlock` (acierto con Wilson frente a esperado, categorías —con n < 50 no se
+  califica la diferencia—, últimas 14 con ✓/✗ por pata), `HowItsBuilt` (`<details>` con la regla), `Combo6Warning` (aviso fijo, +18).
+- Copiar: `lib/clipboard.ts` `copyText()` (Clipboard API → `execCommand('copy')` → `false`); si falla, la UI muestra el texto seleccionado
+  para copiarlo a mano. Funciona sin red (standalone `file://`). Texto: `combo6CopyText(combo, { timeOf, title })`.
+- `?dia=YYYY-MM-DD` elige el día (hoy + 3); en el móvil está en la barra inferior («Comb. 6»).
 
 ### Factores del partido (`pages/match/FactorsPanel.tsx`, utilidades puras en `lib/factors.ts`)
 - Datos: `MatchFile.factors` normalizado por `normMatchFactors` (un apartado roto se omite). Panel `#factores` en la pestaña

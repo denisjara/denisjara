@@ -43,3 +43,5 @@ export type { ConfidenceRowProps } from './Confidence';
 export { CATEGORY_ICON, CategoryBadge, DailyKickoff, DailyLiftNote, DailyNum, DailyOdds, DailyRecordNote, DailyTopRow, PLAYER_VOID_NOTE, PlayerVoidNote, dailyMarket, dailySelection, marketOddsText, marketOddsTitle } from './Daily';
 export type { DailyTopRowProps } from './Daily';
 export { LONGSHOT_KIND_ICON, LONGSHOT_PLAYER_NOTE, LegKickoff, LongshotEv, LongshotKindBadge, LongshotLegRow, LongshotWarning, OneIn, legHref, longshotShortWarning, longshotWarningText } from './Longshot';
+export { COMBO6_CATEGORY_ICON, Combo6Callout, Combo6CategoryBadge, Combo6LegRow } from './Combo6';
+export type { Combo6LegRowProps } from './Combo6';

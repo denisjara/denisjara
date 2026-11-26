@@ -23,6 +23,7 @@ import type {
   TeamFile,
   TeamRef,
   ValueFile,
+  Combo6File,
 } from '../src/types/data';
 import { mulberry32, outcomeProbs, samplePoisson, scoreMatrix } from '../src/lib/models';
 import type { CompetitionConfig } from '../pipeline/config';
@@ -1254,6 +1255,74 @@ describe('alta confianza (build)', () => {
       expect(validateDataDir(broken, NO_SANITY).errors.join('\n')).toMatch(/home\.json: longshot\.best \(otra\) no está entre las apuestas del día/);
       fs.rmSync(path.join(broken, 'longshots.json'));
       expect(validateDataDir(broken, NO_SANITY).errors).toContain('longshots.json: archivo ausente');
+    });
+
+    // ---- combinada 6 (combo6.json): no cambia ningún otro archivo
+    it('combo6.json: regla publicada, días con combinada o motivo, patas de partidos por jugar y portada coherente', () => {
+      const f = readJson<Combo6File>(dir, 'combo6.json');
+      expect(f.rule).toMatchObject({ targetMin: 6, targetMax: 8, legMinProb: 0.7, legMaxProb: 0.88, minLegs: 4, maxLegs: 9, minCategories: 4, maxPerCategory: 2 });
+      expect(f.rule.margins.jugadores).toBeUndefined();
+      expect(f.days.length).toBeGreaterThan(0);
+      expect(f.days.length).toBeLessThanOrEqual(4);
+      for (const d of f.days) {
+        expect(!!d.main !== !!d.reason).toBe(true);
+        for (const c of [...(d.main ? [d.main] : []), ...d.byCompetition]) {
+          // solo partidos que aún no han empezado
+          for (const l of c.legs) expect(Date.parse(l.kickoff)).toBeGreaterThan(NOW.getTime());
+          expect(c.bookOdds).toBeGreaterThanOrEqual(6 * 0.997);
+          expect(c.bookOdds).toBeLessThanOrEqual(8 * 1.003);
+          expect(c.estimatedLegs).toBe(c.legs.filter((l) => l.oddsSource !== 'casa').length);
+        }
+      }
+      expect(f.note).toMatch(/ESTIMADA/);
+      expect(f.note).toMatch(/\(ROI\)/);
+      expect(f.note).toMatch(/\+18/);
+      const home = readJson<HomeFile>(dir, 'home.json');
+      const first = f.days.find((d) => d.main && Date.parse(d.main.firstKickoff) > NOW.getTime());
+      expect(home.combo6).toEqual(first ? { date: first.date, combo: first.main } : undefined);
+    });
+
+    it('la validación rechaza un combo6.json incoherente', () => {
+      const broken = path.join(tmp, 'combo6-broken');
+      fs.cpSync(dir, broken, { recursive: true });
+      const f = readJson<Combo6File>(broken, 'combo6.json') as unknown as Record<string, any>;
+      const l = (id: string, category: string, prob: number, bookOdds: number, oddsSource = 'estimada') => ({
+        matchId: id,
+        compId: 'liga-a',
+        compName: 'Liga A',
+        kickoff: f.days[0].date + 'T18:00:00Z',
+        home: { id: 'A1', name: 'Alfa 1', short: 'Alfa 1', abbr: 'ALF' },
+        away: { id: 'A2', name: 'Alfa 2', short: 'Alfa 2', abbr: 'ALF' },
+        category,
+        marketId: 'ou-4.5',
+        market: 'Más/Menos 4.5 goles',
+        selection: 'Menos de 4.5 goles',
+        prob,
+        fairOdds: 1 / prob,
+        bookOdds,
+        bookOddsEstimated: true,
+        oddsSource,
+      });
+      const legs = [l('1', 'goles', 0.75, 1.27), l('1', 'goles', 0.75, 1.27), l('2', 'goles', 0.75, 1.27), l('3', 'corners', 0.95, 1.5, 'casa')];
+      f.days[0].main = { id: 'x', date: f.days[0].date, scope: 'todas', label: 'X', legs, prob: 0.5, fairOdds: 2, bookOdds: 3, estimatedLegs: 1, oneIn: 2, ev: 0.9, categories: 2, firstKickoff: legs[0].kickoff, lastKickoff: legs[0].kickoff };
+      delete f.days[0].reason;
+      f.history.hitRate = 0.999;
+      f.note = 'Combinada.';
+      fs.writeFileSync(path.join(broken, 'combo6.json'), JSON.stringify(f));
+      const all = validateDataDir(broken, NO_SANITY).errors.join('\n');
+      expect(all).toMatch(/combo6\.json: .*dos patas del mismo partido/);
+      expect(all).toMatch(/combo6\.json: .*prob 0\.5 ≠ producto de las patas/);
+      expect(all).toMatch(/combo6\.json: .*bookOdds 3 ≠ producto/);
+      expect(all).toMatch(/combo6\.json: .*estimatedLegs 1 ≠ patas estimadas \(4\)/);
+      expect(all).toMatch(/combo6\.json: .*bookOddsEstimated true incoherente con oddsSource casa/);
+      expect(all).toMatch(/combo6\.json: .*prob 0\.95 fuera de la banda/);
+      expect(all).toMatch(/combo6\.json: .*3 patas de goles/);
+      expect(all).toMatch(/combo6\.json: .*cuota 3 fuera de la ventana 6–8/);
+      expect(all).toMatch(/combo6\.json: .*hitRate 0\.999 ≠/);
+      expect(all).toMatch(/combo6\.json: .*mayores de 18 años/);
+      expect(all).toMatch(/combo6\.json: .*cuotas son estimadas/);
+      fs.rmSync(path.join(broken, 'combo6.json'));
+      expect(validateDataDir(broken, NO_SANITY).errors).toContain('combo6.json: archivo ausente');
     });
 
     it('la validación rechaza picks incoherentes en confidence.json', () => {

@@ -20,9 +20,10 @@
  * pronósticos de alta confianza (historial walk-forward, calibración → holdout, reglas de producción) →
  * pronósticos del día (familias de tiros, faltas y jugadores, récord de la regla diaria) →
  * cuota alta 6+ (selecciones walk-forward recogidas en la misma pasada, récord de la regla diaria por tipo) →
+ * combinada 6 (la regla del día replicada sobre los tramos walk-forward de alta confianza y del apartado diario) →
  * competiciones (clasificación con forma/xPts/Elo, próximos, resultados, estadísticas, ratings, simulación,
  * jugadores, backtest, insights) → fichas de partido → jugadores → fichas de equipo → valor, alta confianza,
- * pronósticos del día, cuota alta 6+, portada, modelo, meta.
+ * pronósticos del día, cuota alta 6+, combinada 6, portada, modelo, meta.
  *
  * PUERTA DE CALIDAD: todo se escribe en un directorio temporal (`<salida>.tmp`, p. ej. public/data.tmp), se valida
  * con scripts/validate-data.ts (contrato + umbrales de cordura) y SOLO si pasa sustituye a la salida: la versión
@@ -43,6 +44,7 @@ import { buildTeamFile, primaryCompetition, teamCompetitions, teamsToPublish } f
 import { buildConfidenceFile, homeConfidence, prepareConfidence } from './publish/confidence';
 import { buildDailyFile, dailyFamiliesSummary, dailySummaryLine, homeDaily, prepareDaily } from './publish/daily';
 import { buildLongshotFile, homeLongshot, longshotCollector, longshotSummaryLine, prepareLongshots } from './publish/longshots';
+import { buildCombo6File, combo6SummaryLine, homeCombo6, prepareCombo6 } from './publish/combo6';
 import type { LongshotHistoryItem } from './analytics/longshots';
 import type { ConfidenceHistoryItem } from './analytics/confidence';
 import { dailyHistory, type DailyHistory } from './analytics/daily';
@@ -183,6 +185,10 @@ function runBuildLocked(opts: RunBuildOptions, outDir: string, log: (msg: string
   const longshots = prepareLongshots(ctx, history ? longshotCol.items : opts.longshotHistory);
   timer.lap('Cuota alta 6+ (historial)', longshotSummaryLine(longshots));
 
+  // combinada 6: la misma regla del día replicada en los días pasados con los tramos walk-forward ya calculados
+  const combo6 = prepareCombo6(ctx, confidence, daily);
+  timer.lap('Combinada 6 (historial)', combo6SummaryLine(combo6));
+
   const staging = stagingDirFor(outDir);
   assertSafeOutputDir(outDir, ROOT_DIR); // otra vez: pudo cambiar mientras se ajustaban los modelos
   recoverInterruptedSwap(outDir);
@@ -271,7 +277,12 @@ function runBuildLocked(opts: RunBuildOptions, outDir: string, log: (msg: string
     writer.write('daily.json', dailyFile);
     const longshotFile = buildLongshotFile(ctx, longshots);
     writer.write('longshots.json', longshotFile);
-    writer.write('home.json', buildHomeFile(ctx, bets, players, backtest, homeConfidence(ctx, confidence), homeDaily(dailyFile), homeLongshot(longshotFile, ctx.now)));
+    const combo6File = buildCombo6File(ctx, combo6);
+    writer.write('combo6.json', combo6File);
+    writer.write(
+      'home.json',
+      buildHomeFile(ctx, bets, players, backtest, homeConfidence(ctx, confidence), homeDaily(dailyFile), homeLongshot(longshotFile, ctx.now), homeCombo6(combo6File, ctx.now)),
+    );
     writer.write(
       'model.json',
       buildModelFile(
@@ -282,12 +293,13 @@ function runBuildLocked(opts: RunBuildOptions, outDir: string, log: (msg: string
         confidenceFile,
         { file: dailyFile, families: dailyFamiliesSummary(daily) },
         longshotFile,
+        combo6File,
       ),
     );
     writer.write('meta.json', buildMetaFile(ctx, metas, teamIndex, { players: players.length, valueBets: bets.length }, packageVersion()));
     timer.lap(
-      'Portada, valor, confianza, día, 6+, modelo y meta',
-      `${bets.length} apuestas de valor, ${confidenceFile.picks.length} picks de alta confianza, ${dailyFile.days.reduce((n, d) => n + d.counts.picks, 0)} picks del día en ${dailyFile.days.length} días, ${longshotFile.days.reduce((n, d) => n + d.bets.length, 0)} apuestas de cuota alta`,
+      'Portada, valor, confianza, día, 6+, combinada 6, modelo y meta',
+      `${bets.length} apuestas de valor, ${confidenceFile.picks.length} picks de alta confianza, ${dailyFile.days.reduce((n, d) => n + d.counts.picks, 0)} picks del día en ${dailyFile.days.length} días, ${longshotFile.days.reduce((n, d) => n + d.bets.length, 0)} apuestas de cuota alta, ${combo6File.days.filter((d) => d.main).length} combinadas 6 · ${combo6SummaryLine(combo6, combo6File)}`,
     );
 
     // ---- puerta de calidad: solo se publica si el conjunto completo pasa la validación

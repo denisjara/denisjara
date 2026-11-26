@@ -21,6 +21,7 @@ import {
   CATEGORY_ICON,
   Card,
   ChipRow,
+  Combo6Callout,
   CompetitionBadge,
   DailyTopRow,
   Disclaimer,
@@ -411,6 +412,7 @@ export default function DailyPage() {
             >
               <div className="space-y-3">
                 <ComboWarning combos={day.combos} />
+                <Combo6Callout text="¿Buscas una combinada de cuota ≈ 6? La Combinada 6 junta una pata por partido, cada una de un mercado distinto, con la mayor probabilidad posible." />
                 <div className="grid items-start gap-4 md:grid-cols-2 xl:grid-cols-3">
                   {day.combos.map((c) => (
                     <ComboCard key={c.id} combo={c} track={data.track.combos?.find((x) => x.id === c.id)} matches={matchById} now={now} />
@@ -419,6 +421,7 @@ export default function DailyPage() {
               </div>
             </Section>
           )}
+          {day.combos.length === 0 && <Combo6Callout />}
 
           {groups.map((g) => (
             <CompetitionSection key={`${day.date}-${g.compId}`} group={g} categories={categories} catLabel={catLabel} now={now} day={day.date} showAll={comp === g.compId || groups.length === 1} wide={wide} />

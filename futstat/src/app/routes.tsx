@@ -20,6 +20,7 @@ function lazyPage<T extends ComponentType<object>>(load: () => Promise<{ default
 const HomePage = lazyPage(() => import('./pages/HomePage'));
 const DailyPage = lazyPage(() => import('./pages/DailyPage'));
 const LongshotsPage = lazyPage(() => import('./pages/LongshotsPage'));
+const Combo6Page = lazyPage(() => import('./pages/Combo6Page'));
 const CalendarPage = lazyPage(() => import('./pages/CalendarPage'));
 const CompetitionPage = lazyPage(() => import('./pages/competition/CompetitionPage'));
 const MatchPage = lazyPage(() => import('./pages/match/MatchPage'));
@@ -37,6 +38,7 @@ export function AppRoutes() {
       <Route path="/" element={<HomePage />} />
       <Route path="/hoy" element={<DailyPage />} />
       <Route path="/cuota-alta" element={<LongshotsPage />} />
+      <Route path="/combinada-6" element={<Combo6Page />} />
       <Route path="/partidos" element={<CalendarPage />} />
       <Route path="/c/:compId" element={<CompetitionPage />} />
       <Route path="/m/:matchId" element={<MatchPage />} />

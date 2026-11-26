@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Activity, ArrowRight, BadgePercent, CalendarCheck, CalendarClock, Check, Dices, Flame, History, Radio, ShieldCheck, Target, TrendingUp, Users, X, Zap } from 'lucide-react';
+import { Activity, ArrowRight, BadgePercent, CalendarCheck, CalendarClock, Check, Dices, Flame, History, Radio, ShieldCheck, Target, Ticket, TrendingDown, TrendingUp, Users, X, Zap } from 'lucide-react';
 import type { ConfidencePick, HomeFile, MatchSummary, PlayerSeasonRow, ValuePick } from '../../types/data';
 import { useHome, useMeta } from '../lib/data';
 import { pickMarketLabel, pickSelection } from '../lib/picks';
@@ -9,11 +9,13 @@ import { useLiveScores, withLive } from '../lib/live';
 import { useNow } from '../lib/hooks';
 import { upcomingFirst } from '../lib/daily';
 import { LONGSHOT_DEFAULT_MIN_ODDS } from '../lib/longshots';
+import { combo6LegsByKickoff, combo6Started, combo6Totals } from '../lib/combo6';
 import { localizeDecimals } from '../lib/picks';
 import { groupMatchesByCompetition } from '../lib/competitions';
 import { ev as fmtEv, fromDayKey, int, kickoff, longDate, num, odds as fmtOdds, pct, plural, capitalize, relativeDay, shortDate, sumFinite } from '../lib/format';
 import {
   Card,
+  Combo6CategoryBadge,
   CompetitionBadge,
   ConfidenceRow,
   DailyTopRow,
@@ -311,6 +313,91 @@ function DailyTeaser({ daily }: { daily: NonNullable<HomeFile['daily']> }) {
 }
 
 // ---------------------------------------------------------------------------
+// Combinada 6 (avance de /combinada-6)
+// ---------------------------------------------------------------------------
+function Combo6Teaser({ combo6 }: { combo6: NonNullable<HomeFile['combo6']> }) {
+  const nowDate = useNow(60_000);
+  const now = nowDate.getTime();
+  const c = combo6.combo;
+  const legs = combo6LegsByKickoff(c.legs);
+  const t = combo6Totals(legs);
+  const day = fromDayKey(combo6.date);
+  const name = relativeDay(day, nowDate);
+  const rel = name === 'Hoy' || name === 'Mañana';
+  const shown = legs.slice(0, 5);
+  const started = combo6Started(c, now);
+  return (
+    <Section
+      id="combinada-6"
+      eyebrow={rel ? `${name} · ${shortDate(day)}` : capitalize(name)}
+      title="Combinada 6"
+      icon={<Ticket />}
+      moreTo="/combinada-6"
+      moreLabel="Ver la combinada"
+      description="Una pata por partido en mercados distintos: las selecciones más probables que, juntas, pagan unas 6 veces en la casa."
+    >
+      <Card pad="none" className="overflow-hidden">
+        <Link
+          to="/combinada-6"
+          className="grid gap-x-6 gap-y-3 px-3 py-3 transition-colors hover:bg-surface-2 sm:px-4 md:grid-cols-[minmax(0,1fr)_auto] md:items-center"
+          aria-label={`${c.label}: ${plural(legs.length, 'pata')}, cuota en la casa ${t.estimatedLegs ? 'aproximada ' : ''}${fmtOdds(t.bookOdds)}, probabilidad ${pct(t.prob, 1)}, 1 de cada ${int(t.oneIn)}`}
+        >
+          <span className="block min-w-0">
+            <span className="flex flex-wrap items-center gap-2">
+              <span className="font-display text-[17px] font-bold uppercase leading-tight text-ink-1 [overflow-wrap:anywhere]">{c.label}</span>
+              <span className="text-2xs text-ink-3">
+                {plural(legs.length, 'pata')} · {plural(t.categories, 'mercado')} distintos
+              </span>
+            </span>
+            <span className="mt-1.5 block space-y-1">
+              {shown.map((l) => (
+                <span key={`${l.matchId}-${l.selection}`} className="flex min-w-0 items-center gap-2 text-[12.5px]">
+                  <LegKickoff leg={{ date: l.kickoff }} now={now} day={combo6.date} className="w-[42px] text-2xs" />
+                  <Combo6CategoryBadge category={l.category} className="max-sm:hidden" />
+                  <span className="min-w-0 truncate text-ink-2">
+                    <span className="font-semibold text-ink-1">{localizeDecimals(l.selection)}</span> · {l.home.short || l.home.name} – {l.away.short || l.away.name}
+                  </span>
+                  <span className="num ml-auto shrink-0 text-2xs text-ink-3">{pct(l.prob)}</span>
+                </span>
+              ))}
+              {legs.length > shown.length && <span className="block text-2xs text-ink-3">y {plural(legs.length - shown.length, 'pata')} más</span>}
+            </span>
+          </span>
+          <span className="flex items-end justify-between gap-4 md:flex-col md:items-end md:gap-1 md:text-right">
+            <span className="block">
+              <span className="block text-[10px] font-semibold uppercase tracking-wider text-ink-3">Cuota en la casa</span>
+              <span className="block font-display text-[34px] font-extrabold leading-none text-ink-1">
+                {t.estimatedLegs > 0 && <span className="mr-0.5 text-[22px] text-ink-3">≈</span>}
+                {fmtOdds(t.bookOdds)}
+              </span>
+            </span>
+            <span className="block text-right text-[12.5px] text-ink-2">
+              <span className="num font-semibold text-ink-1">{pct(t.prob, 1)}</span> · 1 de cada {int(t.oneIn)}
+              <span className="block text-2xs text-ink-3">justa {fmtOdds(t.fairOdds)}</span>
+            </span>
+          </span>
+        </Link>
+        <div className="space-y-2.5 border-t border-line px-3 py-3 sm:px-4">
+          <p className="flex items-start gap-1.5 text-[12.5px] leading-snug text-ink-2">
+            <TrendingDown className="mt-px h-3.5 w-3.5 shrink-0 text-neg" aria-hidden="true" />
+            <span>
+              <strong className="font-semibold text-ink-1">La mayoría de los días se pierde.</strong> Cada pata paga el margen de la casa (valor esperado{' '}
+              <span className="num text-neg">{fmtEv(t.ev)}</span>
+              {t.estimatedLegs ? `; ${int(t.estimatedLegs)} de ${int(legs.length)} cuotas estimadas` : ''}). +18.
+              {started ? ' Algún partido ya ha empezado.' : ''}
+            </span>
+          </p>
+          <Link to="/combinada-6" className="btn-ghost -mx-2.5">
+            Ver las patas, copiarlas y su historial
+            <ArrowRight className="h-4 w-4 shrink-0" aria-hidden="true" />
+          </Link>
+        </div>
+      </Card>
+    </Section>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Cuota alta 6+ (avance de /cuota-alta)
 // ---------------------------------------------------------------------------
 function LongshotTeaser({ longshot }: { longshot: NonNullable<HomeFile['longshot']> }) {
@@ -493,6 +580,12 @@ export default function HomePage() {
       {home.longshot?.best && (
         <SafeBlock label="Cuota alta 6+">
           <LongshotTeaser longshot={home.longshot} />
+        </SafeBlock>
+      )}
+
+      {home.combo6?.combo && home.combo6.combo.legs.length > 0 && (
+        <SafeBlock label="Combinada 6">
+          <Combo6Teaser combo6={home.combo6} />
         </SafeBlock>
       )}
 

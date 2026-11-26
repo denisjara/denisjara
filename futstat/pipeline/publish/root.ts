@@ -4,6 +4,7 @@
  */
 import type {
   BacktestSummary,
+  Combo6File,
   ConfidenceFile,
   CompetitionMeta,
   DailyFile,
@@ -127,6 +128,7 @@ export function buildHomeFile(
   confidence?: { topConfidence: NonNullable<HomeFile['topConfidence']>; headline?: HomeFile['confidenceHeadline'] },
   daily?: HomeFile['daily'],
   longshot?: HomeFile['longshot'],
+  combo6?: HomeFile['combo6'],
 ): HomeFile {
   const now = ctx.now;
   const ms = publishedMatches(ctx);
@@ -193,6 +195,7 @@ export function buildHomeFile(
   }
   if (daily) file.daily = daily;
   if (longshot) file.longshot = longshot;
+  if (combo6) file.combo6 = combo6;
   return file;
 }
 
@@ -217,10 +220,11 @@ export function buildModelFile(
   confidence?: ConfidenceFile,
   daily?: { file: DailyFile; families?: DailyFamiliesSummary },
   longshots?: LongshotFile,
+  combo6?: Combo6File,
 ): ModelFile {
   return {
     generatedAt: ctx.refDate,
-    sections: methodologySections({ ctx, backtest, ...counts, confidence, daily: daily?.file, dailyFamilies: daily?.families, longshots }),
+    sections: methodologySections({ ctx, backtest, ...counts, confidence, daily: daily?.file, dailyFamilies: daily?.families, longshots, combo6 }),
     backtest: backtest ?? emptyBacktest(),
     perCompetition: per,
     parameters: modelParameters(ctx),

@@ -27,6 +27,7 @@
  *  public/data/model.json                    -> ModelFile        (methodology + global backtest)
  *  public/data/daily.json                    -> DailyFile        (best picks of the day, all markets, per match)
  *  public/data/longshots.json                -> LongshotFile     (high-odds bets >= 6: accumulators and singles)
+ *  public/data/combo6.json                   -> Combo6File       ("Combinada 6": most probable mixed-market accumulator at odds ~6)
  *  public/data/confidence.json               -> ConfidenceFile   (high-confidence picks + honest out-of-sample record)
  */
 
@@ -1097,6 +1098,8 @@ export interface HomeFile {
   daily?: { date: string; matches: number; picks: number; top: { match: MatchSummary; pick: DailyPick }[] };
   /** "Cuota alta 6+" teaser: best high-odds bet of today (or next day with matches), from longshots.json */
   longshot?: { date: string; bets: number; best?: LongshotBet };
+  /** (optional addition) "Combinada 6" teaser: main combo of today (or of the next day with one), from combo6.json */
+  combo6?: { date: string; combo: Combo6Combo };
   confidenceHeadline?: {
     hitRate: number;
     /** resolved holdout picks */
@@ -1342,5 +1345,174 @@ export interface LongshotFile {
     calibration: CalibrationBin[];
   };
   /** Spanish warning shown prominently (+18, most of these bets lose, margin compounds in accumulators) */
+  note: string;
+}
+
+// ---------------------------------------------------------------------------
+// "Combinada 6" (public/data/combo6.json)
+// ---------------------------------------------------------------------------
+
+/**
+ * Category of a "Combinada 6" leg (one leg per match; at most 2 legs per category; at least 4 categories per combo):
+ *  - 'ganador'       1X2 favourite, double chance, draw no bet, +1.5 handicap
+ *  - 'goles'         match goals over/under, both teams to score, team goals
+ *  - 'corners'       total corners          - 'tarjetas'  total cards
+ *  - 'tiros-puerta'  shots on target (total or one team)
+ *  - 'tiros'         total shots            - 'faltas'    total fouls
+ *  - 'jugadores'     player props (reserved: excluded while the daily engine's out-of-sample record shows no lift)
+ */
+export type Combo6Category = 'ganador' | 'goles' | 'corners' | 'tiros-puerta' | 'tiros' | 'tarjetas' | 'faltas' | 'jugadores';
+
+/**
+ * Where a leg's bookmaker odds come from:
+ *  - 'casa'      price published by the bookmaker (DraftKings via ESPN: 1X2, main goals line, ±1.5 handicap)
+ *  - 'derivada'  derived from the bookmaker's 1X2 prices (double chance / draw no bet), margin included — estimated
+ *  - 'estimada'  no price: fair odds / (1 + typical margin of the market) — estimated
+ */
+export type Combo6OddsSource = 'casa' | 'derivada' | 'estimada';
+
+export interface Combo6Leg {
+  matchId: string;
+  compId: string;
+  compName: string;
+  /** ISO kick-off of the match */
+  kickoff: string;
+  home: TeamRef;
+  away: TeamRef;
+  category: Combo6Category;
+  /** market id with the match-file scheme ('1x2', 'dc', 'ou-2.5', 'btts', 'team-home-ou-0.5', 'corners-ou-7.5', 'sot-ou-6.5', 'sot-away-ou-2.5', 'shots-ou-21.5', 'fouls-ou-27.5', 'cards-ou-1.5', 'ah-home-1.5'...) */
+  marketId: string;
+  /** Spanish market name */
+  market: string;
+  /** Spanish selection, with team names */
+  selection: string;
+  /** short Spanish explanation with the model's expected numbers (e.g. "Se esperan 10,5 córners (5,8 + 4,7)") */
+  reason?: string;
+  /** calibrated probability of the leg (the same as in "Pronósticos del día"), in [legMinProb, legMaxProb] */
+  prob: number;
+  /** 1 / prob */
+  fairOdds: number;
+  /** bookmaker odds used for the combo: real when oddsSource = 'casa', otherwise estimated */
+  bookOdds: number;
+  /** true unless the price is the bookmaker's own (oddsSource !== 'casa') */
+  bookOddsEstimated: boolean;
+  oddsSource: Combo6OddsSource;
+  /** settled at 90 minutes when the match has finished (void = stake returned, e.g. draw no bet with a draw) */
+  result?: 'hit' | 'miss' | 'void';
+}
+
+export interface Combo6Combo {
+  /** stable id: scope + date + legs */
+  id: string;
+  /** local day YYYY-MM-DD (Europe/Madrid) */
+  date: string;
+  /** 'todas' = all competitions; otherwise a competition id (continental competitions with >= 5 eligible matches) */
+  scope: string;
+  /** Spanish title, e.g. "Combinada 6 del día" / "Combinada 6 · Europa League" */
+  label: string;
+  /** chronological, one per match */
+  legs: Combo6Leg[];
+  /** product of the leg probabilities (legs are from different matches: independent) */
+  prob: number;
+  /** product of the leg fair odds = 1 / prob */
+  fairOdds: number;
+  /** product of the leg bookmaker odds (real or estimated), within [targetMin, targetMax] */
+  bookOdds: number;
+  /** legs whose bookmaker odds are estimated */
+  estimatedLegs: number;
+  /** "1 de cada N": round(1 / prob) */
+  oneIn: number;
+  /** expected value per unit staked at bookOdds: prob · bookOdds − 1 (normally negative: the margin compounds) */
+  ev: number;
+  /** distinct categories in the combo */
+  categories: number;
+  /** first and last kick-off (ISO) */
+  firstKickoff: string;
+  lastKickoff: string;
+  /** any leg missed ⇒ 'miss'; all settled ⇒ 'hit' (void legs are removed, as bookmakers do) or 'void' if every leg is void */
+  result?: 'hit' | 'miss' | 'void';
+}
+
+export interface Combo6Day {
+  /** local date YYYY-MM-DD (Europe/Madrid) */
+  date: string;
+  /** combo with every competition; absent when no combo satisfies the rule */
+  main?: Combo6Combo;
+  /** Spanish reason when there is no main combo */
+  reason?: string;
+  /** one combo per continental competition with >= 5 eligible matches that day (same rule, restricted) */
+  byCompetition: Combo6Combo[];
+  counts: {
+    /** matches analysed that day */
+    matches: number;
+    /** matches with at least one leg candidate inside the probability band */
+    eligibleMatches: number;
+    /** leg candidates (one per match and category) */
+    candidateLegs: number;
+  };
+}
+
+/** Out-of-sample leg record of one category in the combos of the history. */
+export interface Combo6CategoryRecord {
+  category: Combo6Category;
+  label: string;
+  /** legs in history combos (settled hit/miss; voids apart) */
+  legs: number;
+  hits: number;
+  voids?: number;
+  hitRate: number;
+  /** mean predicted probability of those legs */
+  expectedHitRate: number;
+}
+
+/** Walk-forward record of the SAME daily rule (data prior to each match, calibrations fitted with earlier months, settled at 90'). */
+export interface Combo6History {
+  from: string;
+  to: string;
+  /** days evaluated (with at least one match) */
+  days: number;
+  /** days with a combo */
+  combos: number;
+  /** settled combos (hit or miss) and hits */
+  settled: number;
+  hits: number;
+  voids?: number;
+  hitRate: number;
+  /** 90 % Wilson interval of hitRate (absent with no settled combos) */
+  wilsonLow?: number;
+  wilsonHigh?: number;
+  /** mean predicted combined probability of the settled combos (the hit rate the model expected) */
+  expectedHitRate: number;
+  avgLegs: number;
+  /** mean product of bookmaker odds (real or estimated) and of fair odds */
+  avgBookOdds: number;
+  avgFairOdds: number;
+  longestLosingStreak: number;
+  byCategory: Combo6CategoryRecord[];
+  /** last settled combos (max 14), most recent first, with leg-by-leg results */
+  recent: Combo6Combo[];
+  /** automatic Spanish warning when the observed hit rate is far below the expected one */
+  warning?: string;
+}
+
+export interface Combo6File {
+  generatedAt: string;
+  /** the rule (constants of pipeline/analytics/combo6.ts) */
+  rule: {
+    targetMin: number;
+    targetMax: number;
+    legMinProb: number;
+    legMaxProb: number;
+    minLegs: number;
+    maxLegs: number;
+    minCategories: number;
+    maxPerCategory: number;
+    /** typical bookmaker margin assumed per category when the price is estimated */
+    margins: Partial<Record<Combo6Category, number>>;
+  };
+  /** today and the next days with matches (max 4), chronological */
+  days: Combo6Day[];
+  history: Combo6History;
+  /** Spanish warning shown prominently (+18, no ROI: most legs have no real price, the margin compounds) */
   note: string;
 }

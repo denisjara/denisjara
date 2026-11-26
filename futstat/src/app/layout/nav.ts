@@ -1,4 +1,4 @@
-import { BadgePercent, CalendarCheck, CalendarDays, Dices, FlaskConical, House, ShieldCheck, Users, type LucideIcon } from 'lucide-react';
+import { BadgePercent, CalendarCheck, CalendarDays, Dices, FlaskConical, House, ShieldCheck, Ticket, Users, type LucideIcon } from 'lucide-react';
 
 export interface NavItem {
   to: string;
@@ -23,15 +23,22 @@ export const MAIN_NAV: NavItem[] = [
     short: '6+',
     icon: Dices,
     description: 'Apuestas de cuota 6 o más con su probabilidad real, valor esperado e historial (la mayoría pierden)',
-    // la barra inferior móvil tiene 6 huecos: en móvil va en el cajón del menú
-    drawerOnly: true,
+  },
+  {
+    to: '/combinada-6',
+    label: 'Combinada 6',
+    short: 'Comb. 6',
+    icon: Ticket,
+    description: 'Una pata por partido en mercados distintos: las selecciones más probables que juntas pagan unas 6 veces (la mayoría de días se pierde)',
   },
   { to: '/partidos', label: 'Partidos', icon: CalendarDays, description: 'Calendario con predicciones' },
   { to: '/confianza', label: 'Alta confianza', short: 'Confianza', icon: ShieldCheck, description: 'Pronósticos con acierto histórico ≥ 80 %, medido fuera de muestra' },
-  { to: '/jugadores', label: 'Jugadores', icon: Users, description: 'Forma y estadísticas de jugadores' },
-  { to: '/valor', label: 'Valor', icon: BadgePercent, description: 'Apuestas con valor esperado positivo' },
+  // la barra inferior móvil tiene 6 huecos: Jugadores y Valor van en el cajón del menú para que en el móvil se vean
+  // a la primera los apartados de apuestas del día (Hoy, 6+, Combinada 6)
+  { to: '/jugadores', label: 'Jugadores', icon: Users, description: 'Forma y estadísticas de jugadores', drawerOnly: true },
+  { to: '/valor', label: 'Valor', icon: BadgePercent, description: 'Apuestas con valor esperado positivo', drawerOnly: true },
   { to: '/modelo', label: 'Modelo', icon: FlaskConical, description: 'Metodología y backtest', drawerOnly: true },
 ];
 
-/** Barra inferior móvil: las 6 entradas de uso diario (el resto —Cuota alta 6+, Modelo— queda en el cajón del menú). */
+/** Barra inferior móvil: las 6 entradas de uso diario (el resto —Jugadores, Valor, Modelo— queda en el cajón del menú). */
 export const BOTTOM_NAV: NavItem[] = MAIN_NAV.filter((x) => !x.drawerOnly).slice(0, 6);
