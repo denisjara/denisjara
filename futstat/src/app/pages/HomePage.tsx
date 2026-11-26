@@ -283,7 +283,7 @@ function DailyTeaser({ daily }: { daily: NonNullable<HomeFile['daily']> }) {
       icon={<CalendarCheck />}
       moreTo="/hoy"
       moreLabel="Ver todos"
-      description={`Lo mejor de ${plural(daily.picks, 'pronóstico')} validados en ${plural(daily.matches, 'partido')}: resultado, goles, tiros, córners, tarjetas y jugadores. Muy probables y de cuota baja; no son una ventaja frente a la casa.`}
+      description={`Lo mejor de ${plural(daily.picks, 'pronóstico')} validados en ${plural(daily.matches, 'partido')}: resultado, goles, tiros, córners, tarjetas, faltas y jugadores. Muy probables y de cuota baja; no son una ventaja frente a la casa.`}
     >
       <Card pad="none" className="overflow-hidden">
         <ol className="divide-y divide-line/70">

@@ -168,6 +168,23 @@ export function dailySection(df: DailyFile | undefined, fam: DailyFamiliesSummar
   return { title: 'Pronósticos del día', body };
 }
 
+/**
+ * Cambios de modelo integrados el 22-nov-2026 tras el banco de pruebas (pipeline/experiments, protocolo tuning / T1 / T2
+ * y un único vistazo al holdout, registrado en .cache/holdout-looks.log). Cifras fijas, con fecha: no se recalculan.
+ */
+export function modelChangesSection(): ModelFile['sections'][number] {
+  return {
+    title: 'Cambios del modelo (22-nov-2026)',
+    body: [
+      'Protocolo: cada idea se probó en un banco de pruebas con las mismas predicciones walk-forward que producción, en una ventana de ajuste y dos de comprobación (T1 y T2), con intervalos bootstrap por días y comprobación automática de fuga. Solo lo que mejoró de forma estable se miró UNA vez en el holdout (16-sep → 21-nov-2026, 1.713 partidos, resultado a 90 minutos) antes de integrarlo.',
+      `Adoptado: (1) contracción del total de goles hacia la media de la competición en partidos sin línea de goles de la casa (s = ${d(MODEL.totalShrink.s, 1)}, sin copas nacionales); (2) contracción más fuerte de las tasas de córners y tarjetas (${STAT_PRIOR_N} partidos ficticios en lugar de 6). Holdout (22-nov-2026): córners Brier 0,2463 → 0,2400 y tarjetas 0,2372 → 0,2295 (mejoras claras); más/menos 2,5 goles 0,2369 → 0,2368 y ambos marcan 0,2476 → 0,2472 (prácticamente igual); 1X2 sin cambio significativo (RPS 0,1978 → 0,1980, diferencia +0,0002 con intervalo [−0,0004; +0,0006]; acierto 55,2 % en ambos).`,
+      'Probado y REVERTIDO: una ventaja local por grupo de competiciones para convertir el Elo en 1X2 (ligas europeas 50, copas europeas 25, continentales europeas 80, ligas americanas 70, continentales americanas 75 puntos). Mejoraba en ajuste y T2, pero en el holdout no se repitió (+0,00015 de RPS, n.s.; peor en competiciones continentales, +0,00122 [+0,00046; +0,00221]): se mantiene la ventaja de 65 puntos de los ratings.',
+      'Probado y NO adoptado (no superaron el protocolo, sin llegar al holdout): goles «ajustados» con un xG aproximado por tiros en el ajuste de Dixon-Coles; un combinador aprendido (pool logarítmico reajustado cada mes) en lugar del pool lineal, que mejoraba poco en ajuste y T2 pero no en T1 (intervalo que cruza el 0) y empeoraba en las ligas top; y factores de contexto (descanso, partidos acumulados, competición europea, ascenso, inicio de temporada, movimiento de cuotas), sin mejora estable en T1 ni T2.',
+      'Honestidad: el holdout ya se ha mirado una vez para estas decisiones; las cifras de acierto publicadas en el resto de secciones se recalculan en cada actualización con los datos del momento.',
+    ],
+  };
+}
+
 export function methodologySections(i: MethodologyInput): ModelFile['sections'] {
   const { ctx } = i;
   const s = ctx.suite;
@@ -226,6 +243,7 @@ export function methodologySections(i: MethodologyInput): ModelFile['sections'] 
       `La probabilidad final 1X2 es un pool lineal. Con cuotas: Dixon-Coles ${pc(MODEL.wDixonColes)}, Elo ${pc(MODEL.wElo)} y mercado sin margen ${pc(MODEL.wMarket)}. Sin cuotas: Dixon-Coles ${pc(MODEL.wDixonColesNoMarket)} y Elo ${pc(MODEL.wEloNoMarket)}. Los dos juegos de pesos se eligen por separado con una rejilla sobre el backtest walk-forward (menor RPS).`,
       `El peso del mercado está limitado al ${pc(MODEL.wMarket)}: el backtest usa cuotas de cierre, más precisas que las cuotas previas con las que se predicen los partidos próximos, y copiar el mercado no aportaría una opinión propia. Si un equipo tiene menos de ${LOW_DATA_GAMES} partidos en el Elo (recién llegado, equipo de copa) y hay cuotas, el peso de Dixon-Coles y Elo baja de forma lineal a favor del mercado.`,
       'Después se recalibran los goles esperados: se buscan los (λ_local, λ_visitante) cuya matriz de Dixon-Coles reproduce el 1X2 del ensamble y la probabilidad de más de 2,5 goles (mezcla del modelo y de la línea de goles de la casa). Así todos los mercados derivados son coherentes con la probabilidad final.',
+      `Partidos SIN línea de goles de la casa y fuera de las copas nacionales (desde el 22-nov-2026): el total de goles esperado se contrae hacia la media de la competición, T' = L + ${d(MODEL.totalShrink.s, 1)}·(T − L), manteniendo el 1X2. L son los goles por partido de la competición en los últimos ${MODEL.totalShrink.windowDays} días (vida media ${MODEL.totalShrink.halfLifeDays} días, ${MODEL.totalShrink.priorN} partidos ficticios hacia ${d(MODEL.totalShrink.globalTotal, 1)}), solo con partidos que empezaron antes. Motivo: sin mercado, los totales de Dixon-Coles estaban demasiado dispersos (donde predecía 1,78 goles hubo 2,12; donde 3,25, hubo 2,85). Las copas se excluyen porque contraerlas empeoraba (totales extremos reales en cruces entre categorías).`,
       'La confianza (0–1) combina el acuerdo entre fuentes (divergencia de Jensen-Shannon) y el volumen de datos de ambos equipos.',
     ],
   });
@@ -243,7 +261,7 @@ export function methodologySections(i: MethodologyInput): ModelFile['sections'] 
     title: 'Córners, tarjetas, tiros y faltas: binomial negativa',
     body: [
       'Para córners, tarjetas, tiros, tiros a puerta, faltas y fueras de juego se estima la media de cada equipo cruzando lo que genera (en casa o fuera) con lo que concede su rival, relativo a la media de la competición.',
-      `Las tasas se contraen hacia la media con ${STAT_PRIOR_N} partidos ficticios (shrinkage empírico-bayesiano) y los partidos se ponderan por antigüedad (vida media de ${HALF_LIFE_DAYS} días).`,
+      `Las tasas se contraen hacia la media con ${STAT_PRIOR_N} partidos ficticios (shrinkage empírico-bayesiano) y los partidos se ponderan por antigüedad (vida media de ${HALF_LIFE_DAYS} días). La contracción es más fuerte desde el 22-nov-2026 (antes 6 partidos ficticios, demasiado débil): en el holdout del 16-sep al 21-nov (1.713 partidos, mirado una sola vez) el Brier de córners bajó de 0,2463 a 0,2400 y el de tarjetas de 0,2372 a 0,2295.`,
       'Estas variables están sobredispersas (varianza mayor que la media), así que se modelan con una binomial negativa cuya dispersión se estima por el método de momentos sobre los residuos. El total sale de convolucionar las dos distribuciones: líneas de más/menos, total exacto y quién tendrá más.',
     ],
   });
@@ -279,6 +297,7 @@ export function methodologySections(i: MethodologyInput): ModelFile['sections'] 
     ],
   });
 
+  sections.push(modelChangesSection());
   sections.push(confidenceSection(i.confidence, bt));
   if (i.daily) sections.push(dailySection(i.daily, i.dailyFamilies));
 

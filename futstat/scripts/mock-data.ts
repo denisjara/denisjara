@@ -2254,9 +2254,10 @@ function dailyCombos(matches: { rec: MatchRec; dm: DailyMatch }[]): DailyCombo[]
   };
   const byCal = (ps: DailyPick[]) => [...ps].sort((a, b) => (b.calibratedProb ?? b.prob) - (a.calibratedProb ?? a.prob));
   return [
-    build('segura', 'Combinada segura', 3, (ps) => byCal(ps).find((x) => x.marketOdds && (x.calibratedProb ?? x.prob) >= 0.9) ?? byCal(ps)[0]),
-    build('equilibrada', 'Combinada equilibrada', 4, (ps, used) => byCal(ps).find((x) => !used.has(x.category)) ?? byCal(ps)[0]),
-    build('atrevida', 'Combinada atrevida', 6, (ps, used) => byCal(ps).reverse().find((x) => !used.has(x.category)) ?? byCal(ps)[byCal(ps).length - 1]),
+    // mismo número de patas que el motor real (analytics/daily.ts COMBO_DEFS): 2, 3 y 4–5
+    build('segura', 'Combinada segura', 2, (ps) => byCal(ps).find((x) => x.marketOdds && (x.calibratedProb ?? x.prob) >= 0.9) ?? byCal(ps)[0]),
+    build('equilibrada', 'Combinada equilibrada', 3, (ps, used) => byCal(ps).find((x) => !used.has(x.category)) ?? byCal(ps)[0]),
+    build('atrevida', 'Combinada atrevida', 5, (ps, used) => byCal(ps).reverse().find((x) => !used.has(x.category)) ?? byCal(ps)[byCal(ps).length - 1]),
   ].filter((x): x is DailyCombo => !!x);
 }
 
@@ -2278,10 +2279,12 @@ const dailyDays: DailyDay[] = [];
     dailyDays.push({
       date,
       matches: built.map((x) => x.dm),
-      // uno por partido, del mejor al peor; como mucho 3 de la misma categoría para que el top no sea monótono
+      // uno por partido, del mejor al peor; como mucho 3 de la misma categoría para que el top no sea monótono. Solo
+      // partidos que aún no han empezado (como el motor real: los terminados o en juego no entran en el top)
       top: (() => {
         const perCat = new Map<DailyCategory, number>();
-        return [...built]
+        return built
+          .filter((x) => x.rec.status === 'scheduled' && x.rec.ms > NOW_MS)
           .sort((a, b) => b.dm.picks[0].score! - a.dm.picks[0].score!)
           .slice(0, 10)
           .map((x) => {
@@ -2320,9 +2323,9 @@ const dailyFile: DailyFile = {
     },
     byCategory: DAILY_ORDER.map((category) => ({ category, label: DAILY_LABEL[category], baseRate: DAILY_TRACK[category][2], ...rec(DAILY_TRACK[category][0], DAILY_TRACK[category][1]) })),
     combos: [
-      { id: 'segura', label: 'Combinada segura', days: 96, hits: 71, hitRate: r(71 / 96, 4), avgLegs: 3, avgFairOdds: 1.36 },
-      { id: 'equilibrada', label: 'Combinada equilibrada', days: 96, hits: 57, hitRate: r(57 / 96, 4), avgLegs: 4, avgFairOdds: 1.62 },
-      { id: 'atrevida', label: 'Combinada atrevida', days: 41, hits: 19, hitRate: r(19 / 41, 4), avgLegs: 6, avgFairOdds: 2.21 },
+      { id: 'segura', label: 'Combinada segura', days: 96, hits: 81, hitRate: r(81 / 96, 4), avgLegs: 2, avgFairOdds: 1.16 },
+      { id: 'equilibrada', label: 'Combinada equilibrada', days: 96, hits: 74, hitRate: r(74 / 96, 4), avgLegs: 3, avgFairOdds: 1.27 },
+      { id: 'atrevida', label: 'Combinada atrevida', days: 41, hits: 27, hitRate: r(27 / 41, 4), avgLegs: 4.9, avgFairOdds: 1.52 },
     ],
     baseline: confidenceFile.track.baseline,
   },

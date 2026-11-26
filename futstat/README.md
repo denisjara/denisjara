@@ -71,6 +71,7 @@ Para generarlo en local: `npm run build:standalone` → `standalone/FutStat-Lab.
 | Sección | Ruta | Qué muestra |
 |---|---|---|
 | **Inicio / Partidos populares** | `/` | Los partidos más relevantes de las próximas 72 h (ranking de popularidad), partidos de hoy y de mañana, resultados recientes con acierto del modelo, mejores apuestas de valor, jugadores en mejor forma y titulares del día. |
+| **Pronósticos del día** | `/hoy` | Los mejores pronósticos de hoy y de los 3 días siguientes con partidos, en todos los mercados validados fuera de muestra: resultado, goles, tiros y tiros a puerta, córners, tarjetas, faltas y jugadores. Bloque destacado para la competición continental del día (Champions, Europa League…), filtros por día, competición y categoría (`?dia=&comp=&cat=`), «Top del día» (uno por partido), combinadas sugeridas con su histórico fuera de muestra y, por partido, números esperados, lectura en viñetas y una frase con las cifras de cada pronóstico. |
 | **Calendario** | `/partidos` | Todos los partidos por día y competición, con probabilidades 1X2, goles esperados, marcador más probable y cuotas cuando existen. |
 | **Alta confianza** | `/confianza` | Selecciones muy probables y de cuota baja cuyo mercado ha acertado al menos el 80 % fuera de muestra. Cabecera con el acierto real del holdout (n e intervalo de Wilson) junto a la línea base sin modelo, la tasa base y el lift; qué es y qué no es; picks de los próximos 14 días por día (probabilidad, cuota justa y de mercado, validación de su regla); acierto por mercado frente a su tasa base y resultados recientes con ✓/✗. |
 | **Ligas** | `/c/<liga>` | Una sección propia por cada liga (LaLiga, Premier League, Serie A, Bundesliga…) con pestañas: clasificación (con xPts y Elo), próximos partidos, resultados, estadísticas de equipos (goles, córners, tarjetas, tiros, posesión, over/BTTS, porterías a cero, goles por tramo de minutos), ratings, simulación de temporada, jugadores y backtest de esa liga. |
@@ -159,6 +160,11 @@ cubiertas por tests y utilizables tanto en Node como en el navegador. El pipelin
 - Después se **recalibran los goles esperados**: se buscan los `(λ_local, λ_visitante)` cuya matriz de
   Dixon-Coles reproduce el 1X2 del ensamble (y la línea de 2,5 goles cuando existe). Así **todos** los
   mercados derivados son coherentes con la probabilidad final y no solo el 1X2.
+- **Partidos sin línea de goles de la casa** (salvo copas nacionales), desde el 22-nov-2026: el total de goles esperado
+  se contrae hacia la media de la competición, `T' = L + 0,5 · (T − L)`, manteniendo el 1X2 (`L` = goles por partido de
+  la competición en los últimos 365 días, vida media 180 días, 30 partidos ficticios hacia 2,6; solo partidos
+  anteriores). Sin mercado, los totales de Dixon-Coles estaban demasiado dispersos (donde predecía 1,78 goles hubo 2,12;
+  donde 3,25, hubo 2,85). Ver [Cambios del modelo](#13-cambios-del-modelo-22-nov-2026).
 - Un índice de confianza (0–1) combina el acuerdo entre fuentes y el volumen de datos disponible.
 
 ### 5. Mercados derivados
@@ -179,7 +185,9 @@ esperado** (`EV = p · cuota − 1`).
 ### 6. Binomial negativa para córners, tarjetas, tiros y faltas
 
 - Para córners, tarjetas, tiros, tiros a puerta, faltas y fueras de juego se estima la media de cada equipo
-  cruzando lo que genera con lo que concede su rival, con *shrinkage* hacia la media de la liga.
+  cruzando lo que genera con lo que concede su rival, con *shrinkage* hacia la media de la liga (40 partidos ficticios
+  desde el 22-nov-2026; antes 6, demasiado débil: en el holdout el Brier de córners bajó de 0,2463 a 0,2400 y el de
+  tarjetas de 0,2372 a 0,2295).
 - Estas variables están **sobredispersas** (varianza mayor que la media), así que se modelan con una
   **binomial negativa** cuya dispersión se estima por el método de momentos.
 - La distribución del total se obtiene por convolución de las de ambos equipos: escalera de líneas
@@ -310,6 +318,121 @@ tarjetas 92,3 % frente a 93,8 % (**−1,5 pp**); un equipo marca menos de 3 89,0
   independientes (con 2 por partido no lo son del todo; un bootstrap por día da intervalos casi iguales).
 - «Resultados recientes» es lo que habría publicado el walk-forward mensual, no un registro de lo que se publicó.
 
+### 12. Pronósticos del día
+
+Respuesta a «¿qué podría apostar hoy?» en todos los mercados que el modelo sabe medir: resultado, goles, **tiros y tiros
+a puerta**, córners, tarjetas, **faltas** y **jugadores**. Página `/hoy` y bloque en Inicio. Motor:
+[`pipeline/analytics/daily.ts`](pipeline/analytics/daily.ts); publicación:
+[`pipeline/publish/daily.ts`](pipeline/publish/daily.ts) → `public/data/daily.json` (y `home.json` → `daily`); informe:
+`npx tsx scripts/eval-daily.ts`. `confidence.json` y `/confianza` **no cambian de alcance** (resultado, goles, córners y
+tarjetas).
+
+**Qué publica.** Hoy y los 3 días siguientes con partidos (zona Europe/Madrid). Por partido: todas las selecciones que
+superan una regla validada fuera de muestra, como mucho **2 por categoría y 8 por partido**, sin redundancias (nunca
+«más de 6,5» y «más de 7,5» de lo mismo, ni dos de resultado, ni dos del mismo jugador), ordenadas por una puntuación
+0–100; los números esperados (goles, tiros, tiros a puerta, córners, tarjetas, faltas), 2–5 viñetas de lectura y una
+frase por pronóstico con las cifras que lo sostienen. Además: «Top del día» (máx. 10, uno por partido y como mucho 3 del
+mismo mercado) y hasta 3 combinadas. Los partidos de hoy ya terminados aparecen con sus pronósticos reconstruidos
+walk-forward y resueltos (✓/✗); los que están en juego, con los calculados solo con información previa al saque. Ninguno
+de los dos entra en el top ni en las combinadas.
+
+**Familias propias del apartado (mismo procedimiento que la alta confianza).**
+
+- Tiros a puerta totales (más de 6,5/7,5/8,5; menos de 11,5/12,5/13,5) y de un equipo (más de 2,5/3,5); tiros totales
+  (más de 19,5/21,5/23,5; menos de 31,5/33,5/35,5); faltas (más de 17,5/19,5; menos de 27,5/29,5/31,5). Salen de las
+  proyecciones binomial negativa calculadas con partidos de días anteriores.
+- Jugadores: «1+ tiro», «2+ tiros», «1+ tiro a puerta» y «marca gol», con sus tasas por 90 minutos de líneas anteriores
+  al partido, solo para quien tiene ≥ 60 minutos esperados, jugó alguno de los 2 últimos partidos de su equipo y suma
+  ≥ 270 minutos. Si el jugador no juega, el pronóstico es **nulo** (como hacen las casas) y no cuenta ni como acierto ni
+  como fallo.
+- Recalibración de Platt por familia y fuente (con / sin cuotas), umbral, **solo la franja oro** (≥ 85 % en su histórico)
+  y **validación fuera de muestra**: walk-forward mensual; una regla solo se publica con **≥ 30 picks y ≥ 80 %**
+  acumulados en los meses anteriores. Resolución con las estadísticas del partido (sin dato no se evalúa; con prórroga
+  o penaltis se excluye).
+- **Publicadas en el build del 26-nov-2026 (21 reglas, acierto fuera de muestra):** tiros a puerta más de 6,5 (208/227),
+  más de 7,5 (49/59), menos de 12,5 (786/896), menos de 13,5 (856/989; sin cuotas 29/36); un equipo más de 2,5 tiros a
+  puerta (1.357/1.539; sin cuotas 48/53) y más de 3,5 (179/193); tiros más de 19,5 (1.862/2.010), más de 21,5
+  (913/1.006), más de 23,5 (57/60), menos de 33,5 (1.077/1.250), menos de 35,5 (956/1.097); faltas más de 17,5
+  (149/178), más de 19,5 (279/322; sin cuotas 32/37), menos de 27,5 (634/735), menos de 29,5 (881/1.002), menos de 31,5
+  (813/910); jugador 1+ tiro (1.618/1.874, más 154 nulos) y 2+ tiros (26/30, muestra mínima).
+- **No publicadas:** jugador 1+ tiro a puerta y marca gol (nunca llegan a la probabilidad exigida), más de 8,5 tiros a
+  puerta (sin regla), menos de 11,5 tiros a puerta (validada, 42/50, pero sin franja oro) y casi todas las variantes «sin
+  cuotas» (menos de 30 picks).
+
+**Récord fuera de muestra de la regla diaria** (la misma selección —2 por categoría, 8 por partido— aplicada mes a mes
+con reglas ajustadas y validadas solo con lo anterior; walk-forward del 1-jun al 25-nov-2026, 3.167 partidos; build del
+26-nov-2026, se recalcula en cada actualización):
+
+| Categoría | Aciertos / resueltos | Acierto (Wilson 90 %) | Tasa base de sus familias | Nulos |
+|---|---|---|---|---|
+| **Global** | **13.689 / 15.358** | **89,1 % (88,7–89,5 %)** | — | 117 |
+| Resultado | 1.625 / 1.829 | 88,8 % (87,6–90,0 %) | 88,8 % | 36 |
+| Goles | 3.240 / 3.626 | 89,4 % (88,5–90,2 %) | 85,8 % | 0 |
+| Tiros y tiros a puerta | 3.805 / 4.182 | 91,0 % (90,2–91,7 %) | 87,8 % | 0 |
+| Córners | 1.390 / 1.615 | 86,1 % (84,6–87,4 %) | 84,7 % | 0 |
+| Tarjetas | 1.087 / 1.224 | 88,8 % (87,2–90,2 %) | 87,1 % | 0 |
+| Faltas | 1.615 / 1.822 | 88,6 % (87,4–89,8 %) | 84,3 % | 0 |
+| Jugadores | 927 / 1.060 | 87,5 % (85,7–89,0 %) | 87,9 % | 81 |
+| *Estrategia fija SIN modelo (visitante menos de 3 goles + más de 1,5 tarjetas), mismos partidos* | *5.442 / 6.162* | *88,3 % (87,6–89,0 %)* | | |
+
+| Combinada (patas de partidos distintos) | Días acertados | Acierto | Patas de media | Cuota justa media |
+|---|---|---|---|---|
+| Segura | 117 / 131 | 89,3 % | 2,0 | 1,12 |
+| Equilibrada | 94 / 107 | 87,9 % | 3,0 | 1,19 |
+| Atrevida | 85 / 104 | 81,7 % | 4,96 | 1,39 |
+
+Comprobación independiente (26-nov-2026): re-resolviendo con los JSON crudos del `data-store` los picks fuera de muestra
+de «más de 19,5 tiros», «un equipo más de 2,5 tiros a puerta» y «jugador 1+ tiro» salen exactamente las mismas cifras
+(0 discrepancias), y un walk-forward propio y más simple (umbral sobre la probabilidad bruta, sin Platt) da 91,6 %,
+85,3 %, 84,0 % (menos de 29,5 faltas) y 83,9 %: por debajo del motor, pero por encima del 80 %.
+
+**Puntuación y combinadas.** Puntuación 0–100: 50 % probabilidad recalibrada, 30 % límite inferior de Wilson (90 %) del
+récord fuera de muestra de su regla, 20 % lift sobre la tasa base de su familia, −8 puntos si el lift es ≤ 0. Las
+combinadas toman la mejor pata de partidos distintos (primero las de lift positivo; como mucho 2 del mismo mercado):
+segura 2 patas, equilibrada 3, atrevida 4–5; su probabilidad es el producto de las probabilidades recalibradas
+(supone partidos independientes). La fórmula y los topes se fijaron a priori, sin optimizarlos.
+
+**Advertencias:**
+
+- **Alto acierto no es ventaja ni beneficio.** Son cuotas muy bajas (cuota justa mediana 1,13; entre 1,08 y 1,30) y la estrategia fija sin
+  modelo acierta casi lo mismo (88,3 % frente a 89,1 %). «Resultado» no mejora su tasa base y «jugadores» queda 0,4 pp
+  por debajo: su acierto es estructural, y la página lo dice en cada pronóstico («No mejora su tasa base»).
+- **Sin cuotas para medir la rentabilidad** de tiros, faltas y jugadores (ESPN no las publica); las combinadas casi nunca
+  llevan cuota de mercado. Cuando la llevan y es inferior a la justa, la página avisa de que a la larga pierde.
+- **Jugadores:** dependen de la alineación, que no se conoce al calcularlos (81 nulos de 1.141 en el walk-forward).
+- **Combinadas:** cada pata baja la probabilidad; la atrevida habría fallado el 18 % de los días.
+- Wilson supone picks independientes (con varios por partido y por día no lo son del todo). Un partido terminado solo
+  aparece resuelto el mismo día; no hay histórico de días anteriores en `daily.json`.
+- Juego responsable: solo mayores de 18 años. Ver [Juego responsable](#juego-responsable-18).
+
+### 13. Cambios del modelo (22-nov-2026)
+
+Cada idea se probó en el banco de pruebas ([`pipeline/experiments/`](pipeline/experiments/README.md)) con las mismas
+predicciones walk-forward que producción, en una ventana de ajuste y dos de comprobación (T1, T2), con intervalos
+bootstrap por días y comprobación automática de fuga. Lo que pasó el protocolo se miró **una sola vez** en el holdout
+(16-sep → 21-nov-2026, 1.713 partidos, resultado a 90 minutos; registro en `.cache/holdout-looks.log`) y se integró en el
+núcleo (`MODEL` en [`pipeline/config.ts`](pipeline/config.ts) y `PRIOR_N` en
+[`pipeline/analytics/projections.ts`](pipeline/analytics/projections.ts)).
+
+| Holdout (22-nov-2026) | Antes | Después |
+|---|---|---|
+| Córners (Brier) | 0,2463 | **0,2400** |
+| Tarjetas (Brier) | 0,2372 | **0,2295** |
+| Más/menos 2,5 goles (Brier) | 0,2369 | 0,2368 |
+| Ambos marcan (Brier) | 0,2476 | 0,2472 |
+| 1X2 (RPS) | 0,1978 | 0,1980 (Δ +0,0002 [−0,0004; +0,0006], no significativo) |
+| Acierto 1X2 | 55,2 % | 55,2 % |
+
+- **Adoptado:** contracción del total de goles sin línea de mercado (`MODEL.totalShrink`, s = 0,5, salvo copas) y
+  contracción más fuerte de córners y tarjetas (`PRIOR_N` 6 → 40).
+- **Probado y revertido:** ventaja local del Elo por grupo de competiciones para el 1X2 (`MODEL.eloProbHomeAdv`, vacío):
+  mejoraba en ajuste y T2 pero no se repitió en el holdout (+0,00015 de RPS, n.s.; peor en competiciones continentales,
+  +0,00122 [+0,00046; +0,00221]).
+- **Probado y no adoptado** (no superaron el protocolo): xG aproximado por tiros en el ajuste de Dixon-Coles, combinador
+  aprendido en lugar del pool lineal (mejoraba poco en ajuste y T2, no en T1, y empeoraba en las ligas top) y factores
+  de contexto (descanso, calendario, competición europea, ascenso, inicio de temporada, movimiento de cuotas).
+- El holdout ya se ha mirado una vez para estas decisiones: deja de ser del todo virgen para ellas.
+
 ### Parámetros principales
 
 | Parámetro | Valor | Significado |
@@ -322,11 +445,15 @@ tarjetas 92,3 % frente a 93,8 % (**−1,5 pp**); un equipo marca menos de 3 89,0
 | `eloGoalWeightFactor` | 0,2 | Peso relativo de Elo→goles frente a Dixon-Coles |
 | `lowDataGames` / `lowDataFloor` | 10 / 0 | Partidos Elo por debajo de los cuales el mercado gana peso |
 | `cupOnlyTier` | 1 | Tier del Elo inicial de equipos que solo juegan copas |
+| `totalShrink` | s 0,5 · 365 días · vida media 180 · 30 ficticios · 2,6 | Contracción del total de goles sin línea de mercado (salvo copas), desde el 22-nov-2026 |
+| `eloProbHomeAdv` | vacío (65 en todo) | Ventaja local del Elo por grupo para el 1X2: probada y revertida el 22-nov-2026 |
 | `minEv` / `minProb` / `maxOdds` | 0,05 / 0,12 / 8 | Filtros de apuestas de valor |
 | `kellyFraction` / `kellyCap` | 0,25 / 0,05 | Kelly fraccional y tope por apuesta |
 | `simIterations` | 10 000 | Iteraciones de la simulación de temporada |
 
-Todos están en `MODEL` dentro de [`pipeline/config.ts`](pipeline/config.ts).
+Todos están en `MODEL` dentro de [`pipeline/config.ts`](pipeline/config.ts). La contracción de córners, tarjetas, tiros y
+faltas (`PRIOR_N` = 40 partidos ficticios, vida media 150 días) está en
+[`pipeline/analytics/projections.ts`](pipeline/analytics/projections.ts).
 
 ---
 
@@ -433,6 +560,8 @@ npm run dev
 | `npm run data:update` | `data:fetch` + `data:build`. |
 | `npm run data:validate` | Comprueba que los JSON publicados cumplen el contrato y los umbrales de cordura. |
 | `npm run data:mock` | Genera datos de ejemplo realistas en `public/mock-data/` (sin red). |
+| `npx tsx scripts/eval-daily.ts` | Informe de los pronósticos del día con el `data-store` real (familias publicadas y descartadas, récord por categoría y combinadas), sin escribir en `public/`. |
+| `npx tsx scripts/eval-confidence.ts` | Informe de los pronósticos de alta confianza (holdout, walk-forward, reglas). |
 | `npm run dev` | Servidor de desarrollo de Vite. |
 | `npm run build` | Typecheck de la app + compilación a `dist/`. |
 | `npm run preview` | Sirve `dist/` localmente. |
@@ -598,13 +727,14 @@ La app solo lee estos ficheros, todos tipados en [`src/types/data.ts`](src/types
 | Fichero | Contenido |
 |---|---|
 | `meta.json` | Competiciones, recuentos e índice de búsqueda de equipos |
-| `home.json` | Partidos populares, hoy, mañana, recientes, mejores apuestas de valor, mejores pronósticos de alta confianza (72 h) con su acierto fuera de muestra y jugadores en forma |
+| `home.json` | Partidos populares, hoy, mañana, recientes, mejores apuestas de valor, mejores pronósticos de alta confianza (72 h) con su acierto fuera de muestra, resumen de los pronósticos del día (`daily`) y jugadores en forma |
 | `competitions/<id>.json` | Clasificación, partidos, estadísticas de equipos, ratings, simulación, jugadores, promedios de liga, backtest |
 | `matches/<id>.json` | Análisis completo de un partido: modelo, mercados, proyecciones, forma, H2H, comparativa, *props*, valor |
 | `teams/<id>.json` | Ficha de equipo |
 | `players.json` | Ranking global de jugadores por forma |
 | `value.json` | Todas las apuestas de valor |
 | `model.json` | Metodología, parámetros y backtest global y por competición |
+| `daily.json` | Pronósticos del día: hoy y los 3 días siguientes con partidos; por partido, pronósticos validados (máx. 2 por categoría y 8 por partido) con frase explicativa, números esperados y lectura; top del día, combinadas y récord fuera de muestra (global, por categoría y por combinada) |
 | `confidence.json` | Pronósticos de alta confianza de los próximos 14 días, resueltos recientes, acierto fuera de muestra (holdout) por nivel, fuente y familia, cobertura, cuota justa media, ROI con cuotas de cierre y reglas de producción |
 
 Convenciones: probabilidades en [0, 1], cuotas decimales, fechas ISO-8601 en UTC y textos en español.

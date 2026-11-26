@@ -395,6 +395,25 @@ describe('pronósticos del día: utilidades de la página', () => {
     expect(grouped.map((g) => g.category)).toEqual(DAILY_CATEGORIES.filter((c) => day.matches[0].picks.some((p) => p.category === c)));
   });
 
+  it('top con filtros: como mucho 3 de la misma familia (como el pipeline) y, si no se llena, se completa', () => {
+    const base = day.matches[0];
+    const mk = (i: number, picks: { family: string; score: number }[]) => ({
+      ...base,
+      match: { ...base.match, id: `m${i}`, date: `2026-11-24T1${i}:00:00Z` },
+      picks: picks.map((p, k) => ({ ...base.picks[0], category: 'resultado' as const, family: p.family, score: p.score, selection: `${p.family}-${i}-${k}` })),
+    });
+    const five = [0, 1, 2, 3, 4].map((i) => mk(i, [{ family: 'dnb', score: 90 - i }, { family: 'ah+1.5', score: 50 - i }]));
+    const top = dailyTop({ ...day, matches: five, top: [] }, { cat: 'resultado' });
+    expect(top.length).toBe(5);
+    expect(top.filter((t) => t.pick.family === 'dnb').length).toBe(3);
+    expect(top.filter((t) => t.pick.family === 'ah+1.5').length).toBe(2);
+    expect(new Set(top.map((t) => t.match.id)).size).toBe(5);
+    expect(top.map((t) => t.pick.score!)).toEqual([...top.map((t) => t.pick.score!)].sort((a, b) => b - a));
+    // una sola familia (p. ej. «jugadores» con solo «1+ tiro»): se completa con el mejor pick de cada partido
+    const single = [0, 1, 2, 3, 4].map((i) => mk(i, [{ family: 'player-shot-1', score: 80 - i }]));
+    expect(dailyTop({ ...day, matches: single, top: [] }, { cat: 'resultado' }).length).toBe(5);
+  });
+
   it('partidos empezados al final, día por defecto y siguiente día con pronósticos', () => {
     const now = Date.parse('2026-11-24T19:00:00Z');
     const sched = (date: string) => ({ status: 'scheduled' as const, date });

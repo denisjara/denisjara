@@ -123,9 +123,12 @@ export interface DailyTopItem {
   pick: DailyPick;
 }
 
+/** Como mucho estos picks de la misma familia de mercado en un top recalculado con filtros (DAILY_TOP_PER_FAMILY del pipeline). */
+export const TOP_PER_FAMILY = 3;
+
 /**
  * Top del día (máx. `max`, uno por partido). Sin filtros es el del pipeline (`day.top`, ya ordenado). Con filtros se
- * recalcula con el mismo criterio: el mejor pick de cada partido que pasa los filtros, ordenados por `score`.
+ * recalcula con el mismo criterio: uno por partido, por `score`, y como mucho TOP_PER_FAMILY de la misma familia.
  */
 export function dailyTop(day: DailyDay, f: DailyFilters = {}, max = 10): DailyTopItem[] {
   const byId = new Map(day.matches.map((m) => [m.match.id, m.match]));
@@ -137,10 +140,28 @@ export function dailyTop(day: DailyDay, f: DailyFilters = {}, max = 10): DailyTo
     }
     if (out.length) return out.slice(0, max);
   }
-  return filterDailyMatches(day.matches, f)
-    .map((m) => ({ match: m.match, pick: [...m.picks].sort((a, b) => pickRank(b) - pickRank(a))[0] }))
-    .sort((a, b) => pickRank(b.pick) - pickRank(a.pick) || a.match.date.localeCompare(b.match.date))
-    .slice(0, max);
+  // mismo criterio que el pipeline (publish/daily.ts, bestPerMatch): todos los picks por puntuación y el primero de cada
+  // partido cuya familia no tenga ya TOP_PER_FAMILY en la lista (variedad); si así no se llena, se completa con el mejor
+  // pick de los partidos que falten (p. ej. una categoría con una sola familia)
+  const all = filterDailyMatches(day.matches, f).flatMap((m) => m.picks.map((pick) => ({ match: m.match, pick })));
+  all.sort((a, b) => pickRank(b.pick) - pickRank(a.pick) || a.match.date.localeCompare(b.match.date) || a.match.id.localeCompare(b.match.id));
+  const out: DailyTopItem[] = [];
+  const used = new Set<string>();
+  const perFamily = new Map<string, number>();
+  for (const x of all) {
+    if (out.length >= max) break;
+    if (used.has(x.match.id) || (perFamily.get(x.pick.family) ?? 0) >= TOP_PER_FAMILY) continue;
+    used.add(x.match.id);
+    perFamily.set(x.pick.family, (perFamily.get(x.pick.family) ?? 0) + 1);
+    out.push(x);
+  }
+  for (const x of all) {
+    if (out.length >= max) break;
+    if (used.has(x.match.id)) continue;
+    used.add(x.match.id);
+    out.push(x);
+  }
+  return out.sort((a, b) => pickRank(b.pick) - pickRank(a.pick) || a.match.date.localeCompare(b.match.date));
 }
 
 /** Los que aún no han empezado primero (conservando el orden); los ya empezados, al final. */
