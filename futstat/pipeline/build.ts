@@ -19,9 +19,10 @@
  * Dixon-Coles walk-forward y predicciones pre-partido de la temporada actual (xG proxy, backtest, aciertos) →
  * pronósticos de alta confianza (historial walk-forward, calibración → holdout, reglas de producción) →
  * pronósticos del día (familias de tiros, faltas y jugadores, récord de la regla diaria) →
+ * cuota alta 6+ (selecciones walk-forward recogidas en la misma pasada, récord de la regla diaria por tipo) →
  * competiciones (clasificación con forma/xPts/Elo, próximos, resultados, estadísticas, ratings, simulación,
  * jugadores, backtest, insights) → fichas de partido → jugadores → fichas de equipo → valor, alta confianza,
- * pronósticos del día, portada, modelo, meta.
+ * pronósticos del día, cuota alta 6+, portada, modelo, meta.
  *
  * PUERTA DE CALIDAD: todo se escribe en un directorio temporal (`<salida>.tmp`, p. ej. public/data.tmp), se valida
  * con scripts/validate-data.ts (contrato + umbrales de cordura) y SOLO si pasa sustituye a la salida: la versión
@@ -41,6 +42,8 @@ import { buildMatchFile } from './publish/matches';
 import { buildTeamFile, primaryCompetition, teamCompetitions, teamsToPublish } from './publish/teams';
 import { buildConfidenceFile, homeConfidence, prepareConfidence } from './publish/confidence';
 import { buildDailyFile, dailyFamiliesSummary, dailySummaryLine, homeDaily, prepareDaily } from './publish/daily';
+import { buildLongshotFile, homeLongshot, longshotCollector, longshotSummaryLine, prepareLongshots } from './publish/longshots';
+import type { LongshotHistoryItem } from './analytics/longshots';
 import type { ConfidenceHistoryItem } from './analytics/confidence';
 import { dailyHistory, type DailyHistory } from './analytics/daily';
 import {
@@ -79,6 +82,11 @@ export interface RunBuildOptions extends BuildOptions {
    * orden que confidenceHistory. Sin él, con confidenceHistory el apartado diario solo usa las familias existentes.
    */
   dailyExtraHistory?: ConfidenceHistoryItem[];
+  /**
+   * (tests, junto con confidenceHistory) historial walk-forward de «Cuota alta 6+». Sin él, con confidenceHistory el
+   * apartado se publica sin historial (y sin recomendaciones).
+   */
+  longshotHistory?: LongshotHistoryItem[];
   /** validación antes de publicar (por defecto contrato + umbrales de cordura de producción) */
   validate?: ValidateOptions;
 }
@@ -149,9 +157,11 @@ function runBuildLocked(opts: RunBuildOptions, outDir: string, log: (msg: string
   // El historial walk-forward se calcula UNA vez para las familias existentes (confidence.json) y las adicionales del
   // apartado diario (daily.json): cada partido se predice una sola vez.
   let history: DailyHistory | undefined;
+  // «Cuota alta 6+»: sus selecciones walk-forward se recogen en la MISMA pasada (gancho visitExtra; no cambia nada más)
+  const longshotCol = longshotCollector(ctx);
   if (!opts.confidenceHistory) {
     try {
-      history = dailyHistory(ctx, { log });
+      history = dailyHistory(ctx, { log, visitExtra: longshotCol.visit });
     } catch (e) {
       log(`  aviso: historial de las familias del apartado diario no disponible (${(e as Error)?.message ?? e})`);
     }
@@ -168,6 +178,10 @@ function runBuildLocked(opts: RunBuildOptions, outDir: string, log: (msg: string
   // pronósticos del día: familias adicionales (tiros, faltas, jugadores) y récord de la regla de selección diaria
   const daily = prepareDaily(ctx, confidence, history ?? { extra: opts.dailyExtraHistory });
   timer.lap('Pronósticos del día (familias y récord)', dailySummaryLine(daily));
+
+  // cuota alta 6+: historial fuera de muestra de la regla diaria y tipos publicables
+  const longshots = prepareLongshots(ctx, history ? longshotCol.items : opts.longshotHistory);
+  timer.lap('Cuota alta 6+ (historial)', longshotSummaryLine(longshots));
 
   const staging = stagingDirFor(outDir);
   assertSafeOutputDir(outDir, ROOT_DIR); // otra vez: pudo cambiar mientras se ajustaban los modelos
@@ -255,18 +269,25 @@ function runBuildLocked(opts: RunBuildOptions, outDir: string, log: (msg: string
     writer.write('confidence.json', confidenceFile);
     const dailyFile = buildDailyFile(ctx, daily, confidence);
     writer.write('daily.json', dailyFile);
-    writer.write('home.json', buildHomeFile(ctx, bets, players, backtest, homeConfidence(ctx, confidence), homeDaily(dailyFile)));
+    const longshotFile = buildLongshotFile(ctx, longshots);
+    writer.write('longshots.json', longshotFile);
+    writer.write('home.json', buildHomeFile(ctx, bets, players, backtest, homeConfidence(ctx, confidence), homeDaily(dailyFile), homeLongshot(longshotFile, ctx.now)));
     writer.write(
       'model.json',
-      buildModelFile(ctx, per, backtest, { competitions: metas.length, teams: teamIds.length, players: players.length, valueBets: bets.length }, confidenceFile, {
-        file: dailyFile,
-        families: dailyFamiliesSummary(daily),
-      }),
+      buildModelFile(
+        ctx,
+        per,
+        backtest,
+        { competitions: metas.length, teams: teamIds.length, players: players.length, valueBets: bets.length },
+        confidenceFile,
+        { file: dailyFile, families: dailyFamiliesSummary(daily) },
+        longshotFile,
+      ),
     );
     writer.write('meta.json', buildMetaFile(ctx, metas, teamIndex, { players: players.length, valueBets: bets.length }, packageVersion()));
     timer.lap(
-      'Portada, valor, confianza, día, modelo y meta',
-      `${bets.length} apuestas de valor, ${confidenceFile.picks.length} picks de alta confianza, ${dailyFile.days.reduce((n, d) => n + d.counts.picks, 0)} picks del día en ${dailyFile.days.length} días`,
+      'Portada, valor, confianza, día, 6+, modelo y meta',
+      `${bets.length} apuestas de valor, ${confidenceFile.picks.length} picks de alta confianza, ${dailyFile.days.reduce((n, d) => n + d.counts.picks, 0)} picks del día en ${dailyFile.days.length} días, ${longshotFile.days.reduce((n, d) => n + d.bets.length, 0)} apuestas de cuota alta`,
     );
 
     // ---- puerta de calidad: solo se publica si el conjunto completo pasa la validación

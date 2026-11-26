@@ -72,6 +72,7 @@ Para generarlo en local: `npm run build:standalone` → `standalone/FutStat-Lab.
 |---|---|---|
 | **Inicio / Partidos populares** | `/` | Los partidos más relevantes de las próximas 72 h (ranking de popularidad), partidos de hoy y de mañana, resultados recientes con acierto del modelo, mejores apuestas de valor, jugadores en mejor forma y titulares del día. |
 | **Pronósticos del día** | `/hoy` | Los mejores pronósticos de hoy y de los 3 días siguientes con partidos, en todos los mercados validados fuera de muestra: resultado, goles, tiros y tiros a puerta, córners, tarjetas, faltas y jugadores. Bloque destacado para la competición continental del día (Champions, Europa League…), filtros por día, competición y categoría (`?dia=&comp=&cat=`), «Top del día» (uno por partido), combinadas sugeridas con su histórico fuera de muestra y, por partido, números esperados, lectura en viñetas y una frase con las cifras de cada pronóstico. |
+| **Cuota alta 6+** | `/cuota-alta` | Apuestas de cuota 6 o más (combinadas de 2–4 partidos, sorpresas 1X2, marcador exacto y goleador) de hoy y los 3 días siguientes con partidos, con probabilidad del modelo («1 de cada N»), cuota justa, cuota de la casa cuando existe y valor esperado; aviso fijo de que la mayoría pierden (+18), calculadora, historial fuera de muestra por tipo (aciertos con Wilson, esperado, ROI con cuotas de cierre, racha sin acertar) y calibración en la banda baja. Filtros `?dia=&tipo=`. |
 | **Calendario** | `/partidos` | Todos los partidos por día y competición, con probabilidades 1X2, goles esperados, marcador más probable y cuotas cuando existen. |
 | **Alta confianza** | `/confianza` | Selecciones muy probables y de cuota baja cuyo mercado ha acertado al menos el 80 % fuera de muestra. Cabecera con el acierto real del holdout (n e intervalo de Wilson) junto a la línea base sin modelo, la tasa base y el lift; qué es y qué no es; picks de los próximos 14 días por día (probabilidad, cuota justa y de mercado, validación de su regla); acierto por mercado frente a su tasa base y resultados recientes con ✓/✗. |
 | **Ligas** | `/c/<liga>` | Una sección propia por cada liga (LaLiga, Premier League, Serie A, Bundesliga…) con pestañas: clasificación (con xPts y Elo), próximos partidos, resultados, estadísticas de equipos (goles, córners, tarjetas, tiros, posesión, over/BTTS, porterías a cero, goles por tramo de minutos), ratings, simulación de temporada, jugadores y backtest de esa liga. |
@@ -164,7 +165,7 @@ cubiertas por tests y utilizables tanto en Node como en el navegador. El pipelin
   se contrae hacia la media de la competición, `T' = L + 0,5 · (T − L)`, manteniendo el 1X2 (`L` = goles por partido de
   la competición en los últimos 365 días, vida media 180 días, 30 partidos ficticios hacia 2,6; solo partidos
   anteriores). Sin mercado, los totales de Dixon-Coles estaban demasiado dispersos (donde predecía 1,78 goles hubo 2,12;
-  donde 3,25, hubo 2,85). Ver [Cambios del modelo](#13-cambios-del-modelo-22-nov-2026).
+  donde 3,25, hubo 2,85). Ver [Cambios del modelo](#14-cambios-del-modelo-22-nov-2026).
 - Un índice de confianza (0–1) combina el acuerdo entre fuentes y el volumen de datos disponible.
 
 ### 5. Mercados derivados
@@ -405,7 +406,75 @@ segura 2 patas, equilibrada 3, atrevida 4–5; su probabilidad es el producto de
   aparece resuelto el mismo día; no hay histórico de días anteriores en `daily.json`.
 - Juego responsable: solo mayores de 18 años. Ver [Juego responsable](#juego-responsable-18).
 
-### 13. Cambios del modelo (22-nov-2026)
+### 13. Cuota alta 6+
+
+Respuesta a «quiero algo con cuota de 6 o más». Página `/cuota-alta` y tarjeta en Inicio. Motor:
+[`pipeline/analytics/longshots.ts`](pipeline/analytics/longshots.ts); publicación:
+[`pipeline/publish/longshots.ts`](pipeline/publish/longshots.ts) → `public/data/longshots.json` (y `home.json` →
+`longshot`); informe: `npx tsx scripts/eval-longshots.ts`. Reutiliza la predicción de cada partido (1X2 del ensamble,
+matriz de marcadores, *props* de jugadores) y el mismo historial *walk-forward* que los pronósticos del día (se recoge
+en la misma pasada): `confidence.json` y `daily.json` **no cambian** (comprobado generando los datos con y sin este
+apartado: idénticos byte a byte).
+
+**Qué es y qué no es.** Una cuota 6 significa acertar, como mucho, **1 de cada 6** veces. Solo se gana a la larga si la
+probabilidad real supera la implícita en la cuota (valor esperado positivo), y en el historial **no ha sido así**. El
+apartado no promete nada: enseña la probabilidad, la cuota justa (1/p), la cuota de la casa cuando ESPN la publica
+(DraftKings: solo 1X2, más/menos y hándicap principales) y el valor esperado (p · cuota − 1).
+
+**Cómo se elige.**
+
+- Candidatos por partido (cuota de la casa si existe; si no, la justa): **sorpresas** 1X2 con cuota entre 6 y 15;
+  los 2 **marcadores exactos** más probables con cuota justa ≥ 6; **goleadores** con probabilidad de marcar entre 0,10 y
+  1/6 y ≥ 60' esperados (los mismos jugadores elegibles que en los pronósticos del día); **combinadas** de 2–4 patas de
+  partidos distintos, cada pata con cuota de la casa entre 1,30 y 3,50 y probabilidad ≥ 25 % (la de mayor valor
+  esperado de cada partido), producto de cuotas entre 6 y 12; probabilidad = producto de las patas.
+- Puntuación 0–100: 40 % probabilidad (respecto a la de cuota 6), 40 % valor esperado (sin cuota de la casa se asume
+  −20 %) y 20 % prestigio de la competición. Por día: como mucho 4 por tipo, sin repetir partido dentro de un tipo, y 12
+  en total. Hoy y los 3 días siguientes con partidos (Europe/Madrid); los de hoy ya jugados salen con ✓/✗.
+- Probabilidades recalibradas con Platt por grupo, reajustado cada mes solo con días anteriores (sobre todo baja la de
+  los goleadores, que el modelo inflaba). Un tipo deja de publicarse si tiene < 30 apuestas resueltas o su acierto real
+  (Wilson alto) no llega al 70 % de lo que prometía el modelo.
+
+**Historial real fuera de muestra (build del 26-nov-2026; 1-jun → 25-nov, 152 días).** La misma regla aplicada a
+cada día pasado con predicciones que solo usan datos anteriores a cada partido, resuelta a 90'. ROI: 1 unidad a cada
+apuesta que tenía cuota de cierre en todas sus patas.
+
+| Tipo | Aciertos | % (Wilson 90 %) | Esperado | Cuota media | ROI con cierre | Racha sin acertar |
+|---|---|---|---|---|---|---|
+| Combinadas | 51 / 403 | 12,7 % (10,2–15,6) | 15,6 % | 6,51 | −18,9 % (n = 403) | 39 |
+| Sorpresas (1X2) | 36 / 311 | 11,6 % (8,9–14,9) | 15,0 % | 6,82 | −20,9 % (n = 306) | 29 |
+| Marcador exacto | 46 / 355 | 13,0 % (10,3–16,2) | 13,5 % | 7,54 | no medible (sin cuota) | 39 |
+| Goleador | 52 / 385 (+42 nulas) | 13,5 % (10,9–16,6) | 15,3 % | 6,62 | no medible (sin cuota) | 38 |
+| **Total** | **185 / 1.454** | **12,7 %** (1 de cada 8) | 14,8 % | 6,85 | **−19,8 % (n = 709, −140,3 u)** | 65 (todas juntas) |
+
+- **Las de valor esperado positivo según el modelo perdieron más**: 337 apuestas, 34 aciertos, ROI −33,0 %; el resto,
+  −7,8 % (n = 372). El valor esperado del modelo no gana a la casa en este rango de cuotas.
+- **El modelo es optimista con lo que elige**: esperaba 14,8 % y se acertó 12,7 %. En las sorpresas, su probabilidad
+  media (14,95 %) era casi la implícita en la cuota de cierre con margen (14,93 %) y se acertó un 11,6 %: las cuotas altas
+  pagan menos de lo que valen. La calibración global en la banda 0,05–0,25 (27.883 selecciones evaluadas, no solo las
+  elegidas) sí cuadra: 7,9 → 7,5 %, 12,2 → 11,6 %, 17,3 → 17,3 %, 22,5 → 22,8 % (predicho → observado).
+- **Mucha varianza**: junio 0 de 65 (casi solo liga y copa chilenas por el parón del Mundial); por meses el ROI fue de −49 % (agosto) a
+  +8,8 % (noviembre). Un mes bueno no indica nada.
+- **Recálculo independiente** (26-nov): las selecciones, la recalibración, la regla diaria, la resolución y el ROI de
+  sorpresas y combinadas reimplementados aparte dieron exactamente las mismas cifras.
+
+**Advertencias:**
+
+- **La mayoría de estas apuestas pierden.** Hubo rachas de hasta 39 fallos seguidos dentro de un tipo (65 contando
+  todas): con cuotas así son normales.
+- **Cuotas del historial = cuotas de cierre.** Para los partidos pasados la fuente solo guarda la última cuota antes del
+  saque, y el historial la usa como entrada del modelo, para elegir las patas de las combinadas y el rango de las
+  sorpresas, y para el ROI. Es información anterior al partido, pero en producción las apuestas se publican con la cuota
+  del momento (a veces días antes) y cada cual apostará a la cuota que encuentre.
+- **Marcador exacto y goleador no tienen cuota de la casa** en la fuente: su valor esperado no se puede medir y en la
+  realidad esos mercados llevan márgenes grandes. Goleador: si el jugador no juega, la casa suele anular la apuesta; en
+  el historial solo se evalúan partidos con alineaciones publicadas.
+- **Combinadas**: el margen de la casa se multiplica en cada pata, y las patas de un mismo día no son del todo
+  independientes (Wilson tampoco lo considera).
+- Juego responsable: solo mayores de 18 años y solo dinero que puedas permitirte perder. Ver
+  [Juego responsable](#juego-responsable-18).
+
+### 14. Cambios del modelo (22-nov-2026)
 
 Cada idea se probó en el banco de pruebas ([`pipeline/experiments/`](pipeline/experiments/README.md)) con las mismas
 predicciones walk-forward que producción, en una ventana de ajuste y dos de comprobación (T1, T2), con intervalos
@@ -561,6 +630,7 @@ npm run dev
 | `npm run data:validate` | Comprueba que los JSON publicados cumplen el contrato y los umbrales de cordura. |
 | `npm run data:mock` | Genera datos de ejemplo realistas en `public/mock-data/` (sin red). |
 | `npx tsx scripts/eval-daily.ts` | Informe de los pronósticos del día con el `data-store` real (familias publicadas y descartadas, récord por categoría y combinadas), sin escribir en `public/`. |
+| `npx tsx scripts/eval-longshots.ts` | Informe de «Cuota alta 6+» con el `data-store` real: historial fuera de muestra por tipo, sin y con recalibración, calibración y apuestas de hoy, sin escribir en `public/`. |
 | `npx tsx scripts/eval-confidence.ts` | Informe de los pronósticos de alta confianza (holdout, walk-forward, reglas). |
 | `npm run dev` | Servidor de desarrollo de Vite. |
 | `npm run build` | Typecheck de la app + compilación a `dist/`. |
@@ -727,7 +797,7 @@ La app solo lee estos ficheros, todos tipados en [`src/types/data.ts`](src/types
 | Fichero | Contenido |
 |---|---|
 | `meta.json` | Competiciones, recuentos e índice de búsqueda de equipos |
-| `home.json` | Partidos populares, hoy, mañana, recientes, mejores apuestas de valor, mejores pronósticos de alta confianza (72 h) con su acierto fuera de muestra, resumen de los pronósticos del día (`daily`) y jugadores en forma |
+| `home.json` | Partidos populares, hoy, mañana, recientes, mejores apuestas de valor, mejores pronósticos de alta confianza (72 h) con su acierto fuera de muestra, resumen de los pronósticos del día (`daily`), la mejor apuesta de cuota alta aún abierta (`longshot`) y jugadores en forma |
 | `competitions/<id>.json` | Clasificación, partidos, estadísticas de equipos, ratings, simulación, jugadores, promedios de liga, backtest |
 | `matches/<id>.json` | Análisis completo de un partido: modelo, mercados, proyecciones, forma, H2H, comparativa, *props*, valor |
 | `teams/<id>.json` | Ficha de equipo |
@@ -735,6 +805,7 @@ La app solo lee estos ficheros, todos tipados en [`src/types/data.ts`](src/types
 | `value.json` | Todas las apuestas de valor |
 | `model.json` | Metodología, parámetros y backtest global y por competición |
 | `daily.json` | Pronósticos del día: hoy y los 3 días siguientes con partidos; por partido, pronósticos validados (máx. 2 por categoría y 8 por partido) con frase explicativa, números esperados y lectura; top del día, combinadas y récord fuera de muestra (global, por categoría y por combinada) |
+| `longshots.json` | Cuota alta 6+: apuestas de cuota ≥ 6 de hoy y los 3 días siguientes con partidos (patas, probabilidad, cuota justa y de la casa, valor esperado, frase con cifras, resultado de las ya jugadas), historial fuera de muestra por tipo, calibración en la banda baja y aviso +18 |
 | `confidence.json` | Pronósticos de alta confianza de los próximos 14 días, resueltos recientes, acierto fuera de muestra (holdout) por nivel, fuente y familia, cobertura, cuota justa media, ROI con cuotas de cierre y reglas de producción |
 
 Convenciones: probabilidades en [0, 1], cuotas decimales, fechas ISO-8601 en UTC y textos en español.

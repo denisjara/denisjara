@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Activity, ArrowRight, BadgePercent, CalendarCheck, CalendarClock, Check, Flame, History, Radio, ShieldCheck, Target, TrendingUp, Users, X, Zap } from 'lucide-react';
+import { Activity, ArrowRight, BadgePercent, CalendarCheck, CalendarClock, Check, Dices, Flame, History, Radio, ShieldCheck, Target, TrendingUp, Users, X, Zap } from 'lucide-react';
 import type { ConfidencePick, HomeFile, MatchSummary, PlayerSeasonRow, ValuePick } from '../../types/data';
 import { useHome, useMeta } from '../lib/data';
 import { pickMarketLabel, pickSelection } from '../lib/picks';
@@ -8,6 +8,8 @@ import { lookup } from '../lib/lookup';
 import { useLiveScores, withLive } from '../lib/live';
 import { useNow } from '../lib/hooks';
 import { upcomingFirst } from '../lib/daily';
+import { LONGSHOT_DEFAULT_MIN_ODDS } from '../lib/longshots';
+import { localizeDecimals } from '../lib/picks';
 import { groupMatchesByCompetition } from '../lib/competitions';
 import { ev as fmtEv, fromDayKey, int, kickoff, longDate, num, odds as fmtOdds, pct, plural, capitalize, relativeDay, shortDate, sumFinite } from '../lib/format';
 import {
@@ -19,6 +21,10 @@ import {
   EmptyState,
   ErrorState,
   KpiTile,
+  LegKickoff,
+  LongshotEv,
+  LongshotKindBadge,
+  LongshotWarning,
   MatchCard,
   MatchGroup,
   MatchRow,
@@ -305,6 +311,73 @@ function DailyTeaser({ daily }: { daily: NonNullable<HomeFile['daily']> }) {
 }
 
 // ---------------------------------------------------------------------------
+// Cuota alta 6+ (avance de /cuota-alta)
+// ---------------------------------------------------------------------------
+function LongshotTeaser({ longshot }: { longshot: NonNullable<HomeFile['longshot']> }) {
+  const nowDate = useNow(60_000);
+  const now = nowDate.getTime();
+  const bet = longshot.best!;
+  const day = fromDayKey(longshot.date);
+  const name = relativeDay(day, nowDate);
+  const rel = name === 'Hoy' || name === 'Mañana';
+  const legs = bet.legs.slice(0, 4);
+  return (
+    <Section
+      id="cuota-alta"
+      eyebrow={rel ? `${name} · ${shortDate(day)}` : capitalize(name)}
+      title="Cuota alta 6+"
+      icon={<Dices />}
+      moreTo="/cuota-alta"
+      moreLabel="Ver todas"
+      description="La apuesta de cuota alta que el modelo ve mejor, con su probabilidad real. No es una recomendación: casi siempre se pierde."
+    >
+      <Card pad="none" className="overflow-hidden">
+        <Link to="/cuota-alta" className="grid gap-x-6 gap-y-3 px-3 py-3 transition-colors hover:bg-surface-2 sm:px-4 md:grid-cols-[minmax(0,1fr)_auto] md:items-center" aria-label={`${bet.label}: cuota ${fmtOdds(bet.displayOdds)}, probabilidad ${pct(bet.prob, 1)}, 1 de cada ${int(bet.oneIn)}`}>
+          <span className="block min-w-0">
+            <span className="flex flex-wrap items-center gap-2">
+              <LongshotKindBadge kind={bet.kind} />
+              <span className="font-display text-[17px] font-bold uppercase leading-tight text-ink-1 [overflow-wrap:anywhere]">{bet.label}</span>
+            </span>
+            <span className="mt-1.5 block space-y-0.5">
+              {legs.map((l) => (
+                <span key={`${l.matchId}-${l.selection}`} className="flex min-w-0 items-center gap-2 text-[12.5px]">
+                  <span className="flex shrink-0 -space-x-1.5">
+                    <TeamCrest team={l.home} size={16} className="ring-2 ring-surface-1" />
+                    <TeamCrest team={l.away} size={16} className="ring-2 ring-surface-1" />
+                  </span>
+                  <span className="min-w-0 truncate text-ink-2">
+                    <span className="font-semibold text-ink-1">{localizeDecimals(l.selection)}</span> · {l.home.short || l.home.name} – {l.away.short || l.away.name}
+                  </span>
+                  <LegKickoff leg={l} now={now} day={longshot.date} className="text-2xs" />
+                </span>
+              ))}
+              {bet.legs.length > legs.length && <span className="block text-2xs text-ink-3">y {plural(bet.legs.length - legs.length, 'pata')} más</span>}
+            </span>
+          </span>
+          <span className="flex items-end justify-between gap-4 md:flex-col md:items-end md:gap-1 md:text-right">
+            <span className="block">
+              <span className="block text-[10px] font-semibold uppercase tracking-wider text-ink-3">{bet.marketOdds ? 'Cuota de la casa' : 'Cuota justa'}</span>
+              <span className="block font-display text-[34px] font-extrabold leading-none text-ink-1">{fmtOdds(bet.displayOdds)}</span>
+            </span>
+            <span className="block text-right text-[12.5px] text-ink-2">
+              <span className="num font-semibold text-ink-1">{pct(bet.prob, 1)}</span> · 1 de cada {int(bet.oneIn)}
+            </span>
+          </span>
+        </Link>
+        <div className="space-y-2.5 border-t border-line px-3 py-3 sm:px-4">
+          <LongshotEv bet={bet} detail={false} />
+          <LongshotWarning minOdds={LONGSHOT_DEFAULT_MIN_ODDS} compact />
+          <Link to="/cuota-alta" className="btn-ghost -mx-2.5">
+            Ver {longshot.bets > 1 ? `las ${int(longshot.bets)} apuestas` : 'la apuesta'} de cuota alta, con su historial
+            <ArrowRight className="h-4 w-4 shrink-0" aria-hidden="true" />
+          </Link>
+        </div>
+      </Card>
+    </Section>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Jugadores en racha
 // ---------------------------------------------------------------------------
 function HotPlayers({ players }: { players: PlayerSeasonRow[] }) {
@@ -416,6 +489,12 @@ export default function HomePage() {
       </SafeBlock>
 
       {home.daily && home.daily.top.length > 0 && <DailyTeaser daily={home.daily} />}
+
+      {home.longshot?.best && (
+        <SafeBlock label="Cuota alta 6+">
+          <LongshotTeaser longshot={home.longshot} />
+        </SafeBlock>
+      )}
 
       <Section
         id="populares"

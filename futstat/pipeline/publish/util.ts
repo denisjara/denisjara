@@ -360,6 +360,11 @@ export function localDay(ms: number, timeZone: string): string {
   return f.format(new Date(ms));
 }
 
+/** Primera letra en minúscula (sin tocar siglas como «1X2»): «Sorpresas (1X2)» → «sorpresas (1X2)». */
+export function lcFirst(x: string): string {
+  return x.charAt(0).toLowerCase() + x.slice(1);
+}
+
 /** Día local siguiente a `day` ("YYYY-MM-DD"), sin depender de la zona (aritmética de calendario). */
 export function nextDay(day: string): string {
   const t = Date.parse(`${day}T12:00:00Z`) + DAY_MS;

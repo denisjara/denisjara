@@ -1,17 +1,37 @@
 /**
  * Secciones de metodología (español) de public/data/model.json, con los valores ajustados en este build.
  */
-import type { BacktestSummary, ConfidenceFile, DailyFile, ModelFile } from '../../src/types/data';
+import type { BacktestSummary, ConfidenceFile, DailyFile, LongshotFile, ModelFile } from '../../src/types/data';
 import { MODEL, UPCOMING_DAYS } from '../config';
 import { MAX_EV } from '../analytics/value';
 import { ELO_GOAL_WEIGHT_FACTOR, LOW_DATA_GAMES } from '../analytics/predict';
 import { CUP_ONLY_TIER } from '../analytics/ratings';
 import { PRIOR_N as STAT_PRIOR_N, HALF_LIFE_DAYS } from '../analytics/projections';
+import {
+  COMBO_MAX_LEGS,
+  COMBO_MAX_ODDS,
+  COMBO_MIN_LEGS,
+  GATE_MIN_N,
+  GATE_MIN_RATIO,
+  LEG_MAX_ODDS,
+  LEG_MIN_ODDS,
+  LEG_MIN_PROB,
+  MAX_PER_DAY,
+  MAX_PER_KIND,
+  MAX_SINGLE_ODDS,
+  MIN_ODDS,
+  SCORER_MIN_EXP_MINUTES,
+  SCORER_MIN_PROB,
+  UNPRICED_EV,
+} from '../analytics/longshots';
+import { lcFirst } from './util';
 import type { BuildContext } from './context';
 
 const n0 = (x: number) => Math.round(x).toLocaleString('es-ES');
 const d = (x: number, k = 2) => x.toFixed(k).replace('.', ',');
 const pc = (x: number, k = 0) => `${(x * 100).toFixed(k).replace('.', ',')} %`;
+/** Porcentaje con el mismo redondeo que la interfaz (Intl es-ES): «Cuota alta 6+» repite cifras que la página muestra. */
+const pcI = (x: number, k = 0) => `${new Intl.NumberFormat('es-ES', { minimumFractionDigits: k, maximumFractionDigits: k, useGrouping: false }).format(x * 100)} %`;
 
 export interface MethodologyInput {
   ctx: BuildContext;
@@ -25,6 +45,8 @@ export interface MethodologyInput {
   /** pronósticos del día publicados en este build y resumen de sus familias adicionales (tiros, faltas, jugadores) */
   daily?: DailyFile;
   dailyFamilies?: DailyFamiliesSummary;
+  /** apuestas de cuota alta (6+) publicadas en este build, con su historial fuera de muestra */
+  longshots?: LongshotFile;
 }
 
 /** Reglas (familia · fuente) de las familias adicionales del apartado diario, con su validación fuera de muestra. */
@@ -169,6 +191,83 @@ export function dailySection(df: DailyFile | undefined, fam: DailyFamiliesSummar
 }
 
 /**
+ * Revisión independiente del historial de «Cuota alta 6+» (26-nov-2026): cifras FIJAS con fecha (no se recalculan; las
+ * vigentes son las del párrafo de historial, que sí sale de cada build).
+ */
+export function longshotReviewNote(): string {
+  return (
+    'Revisión del 26-nov-2026 (1-jun → 25-nov, 152 días): un recálculo independiente de la regla (selecciones, recalibración, regla diaria, resolución a 90\' y ROI reimplementados aparte) dio exactamente las mismas cifras que el historial publicado: 185 aciertos en 1454 apuestas resueltas (12,7 %, el modelo esperaba 14,8 %) y ROI −19,8 % con la cuota de cierre (n = 709, −140,3 unidades). ' +
+    'Las que el modelo veía con valor esperado POSITIVO perdieron más (337 apuestas, 34 aciertos, ROI −33,0 %) que el resto (372 apuestas, ROI −7,8 %): el valor esperado del modelo no sirve para ganar a la casa en este rango de cuotas. ' +
+    'En las sorpresas la probabilidad media del modelo (14,95 %) era casi la implícita en la cuota de cierre con margen (14,93 %) y se acertó un 11,6 %: las cuotas altas pagan menos de lo que valen (sesgo favorito–no favorito), y la casa lo cobra. ' +
+    'Por meses el resultado varía mucho (junio 0 de 65; julio ROI +6,2 %, n = 61; agosto −49,0 %, n = 171; noviembre +8,8 %, n = 136): un mes bueno no indica nada. Con las mismas entradas, confidence.json y daily.json no cambian al añadir este apartado.'
+  );
+}
+
+/** Sección «Cuota alta 6+» con las cifras reales (walk-forward) de este build. */
+export function longshotSection(lf: LongshotFile | undefined): ModelFile['sections'][number] {
+  const body: string[] = [
+    `Qué es: apuestas cuya cuota es ${MIN_ODDS} o más. Por definición aciertan como mucho 1 de cada ${MIN_ODDS} veces y solo se gana a la larga si la probabilidad real supera la implícita en la cuota (valor esperado positivo). Para cada apuesta se publica la probabilidad del modelo, la cuota justa (1/p), la cuota de la casa cuando la fuente la da (DraftKings vía ESPN: solo 1X2, más/menos y hándicap principales) y el valor esperado (p · cuota − 1).`,
+    `Candidatos por partido (cuota de la casa si existe; si no, la justa): sorpresas 1X2 con cuota entre ${MIN_ODDS} y ${MAX_SINGLE_ODDS} (victoria del no favorito o empate); los 2 marcadores exactos más probables con cuota justa ${MIN_ODDS} o más (de la matriz de marcadores); goleadores con probabilidad de marcar entre ${d(SCORER_MIN_PROB)} y 1/${MIN_ODDS} y ${SCORER_MIN_EXP_MINUTES} o más minutos esperados (mismos jugadores elegibles que los pronósticos del día); y combinadas de ${COMBO_MIN_LEGS} a ${COMBO_MAX_LEGS} patas de PARTIDOS DISTINTOS con cuota de la casa (cada pata entre ${d(LEG_MIN_ODDS)} y ${d(LEG_MAX_ODDS)} y probabilidad de ${pcI(LEG_MIN_PROB)} o más; la de mayor valor esperado de cada partido) cuyo producto de cuotas queda entre ${MIN_ODDS} y ${COMBO_MAX_ODDS}. La probabilidad de una combinada es el producto de las de sus patas (partidos independientes).`,
+    `Selección diaria: puntuación 0–100 = 40 % probabilidad respecto a la de cuota ${MIN_ODDS}, 40 % valor esperado (sin cuota de la casa se asume un valor esperado de −${pcI(Math.abs(UNPRICED_EV))}, el margen típico de marcador y goleador) y 20 % prestigio de la competición; como mucho ${MAX_PER_KIND} por tipo, sin repetir partido dentro de un tipo, y ${MAX_PER_DAY} por día. Las probabilidades se recalibran (Platt por grupo de selección, ajustado cada mes solo con días anteriores): sobre todo baja la de los goleadores, que el modelo inflaba.`,
+  ];
+  const t = lf?.track;
+  const rows = (t?.byKind ?? []).filter((r) => r.bets > 0);
+  if (t && rows.length) {
+    body.push(
+      `Historial FUERA DE MUESTRA (la misma regla aplicada a cada día del ${day(t.from)} al ${day(t.to)} con predicciones que solo usan datos anteriores a cada partido, resultado a 90'): ${rows
+        .map((r) => {
+          const settled = r.bets - (r.voids ?? 0);
+          const roi = r.roi ? `; ROI contra la cuota de cierre ${r.roi.roi >= 0 ? '+' : '−'}${d(Math.abs(r.roi.roi * 100), 1)} % (n = ${n0(r.roi.bets)})` : '; sin cuota de la casa, ROI no medible';
+          return `${lcFirst(r.label)}: ${n0(r.hits)} de ${n0(settled)} (${pcI(r.hitRate, 1)}; el modelo esperaba ${pcI(r.expectedHitRate, 1)}), cuota media ${d(r.avgOdds)}${roi}; racha más larga sin acertar ${r.longestLosingStreak ?? 0}`;
+        })
+        .join(' · ')}.`,
+    );
+    // total del apartado (suma de los tipos): aciertos sobre resueltas y ROI de las que tenían cuota de cierre en todas sus patas
+    const hits = rows.reduce((s, r) => s + r.hits, 0);
+    const settled = rows.reduce((s, r) => s + r.bets - (r.voids ?? 0), 0);
+    const exp = settled ? rows.reduce((s, r) => s + r.expectedHitRate * (r.bets - (r.voids ?? 0)), 0) / settled : 0;
+    const roiBets = rows.reduce((s, r) => s + (r.roi?.bets ?? 0), 0);
+    const profit = rows.reduce((s, r) => s + (r.roi?.profit ?? 0), 0);
+    if (settled > 0) {
+      body.push(
+        `En total: ${n0(hits)} aciertos en ${n0(settled)} apuestas resueltas (${pcI(hits / settled, 1)}${hits > 0 ? `, 1 de cada ${Math.round(settled / hits)}` : ''}; el modelo esperaba ${pcI(exp, 1)}: es optimista con las apuestas que elige)${
+          roiBets > 0 ? ` y, con 1 unidad a cada una de las ${n0(roiBets)} que tenían cuota de cierre, ${profit >= 0 ? '+' : '−'}${d(Math.abs(profit), 1)} unidades (ROI ${profit >= 0 ? '+' : '−'}${d(Math.abs((profit / roiBets) * 100), 1)} %)` : ''
+        }. ${
+          rows.some((r) => r.roi) && rows.every((r) => !r.roi || r.roi.profit < 0)
+            ? 'Ningún tipo con cuota de la casa ha ganado dinero fuera de muestra.'
+            : 'Un ROI positivo con muestras así puede ser suerte: no garantiza nada.'
+        }`,
+      );
+    }
+    const cal = t.calibration.filter((b) => b.n > 0);
+    if (cal.length) {
+      body.push(
+        `Calibración del modelo en la banda de probabilidad baja (1X2, los 3 marcadores más probables y goleadores, recalibrados walk-forward): ${cal
+          .map((b) => `${pcI(b.from)}–${pcI(b.to)}: predicho ${pcI(b.predicted, 1)}, observado ${pcI(b.observed, 1)} (n = ${n0(b.n)})`)
+          .join('; ')}.`,
+      );
+    }
+    const ex = (t.byKind ?? []).filter((r) => r.excluded);
+    body.push(
+      ex.length
+        ? `Tipos que no se publican como recomendación (exigencia: ${GATE_MIN_N} apuestas resueltas fuera de muestra y que el límite superior de Wilson del acierto llegue al ${pcI(GATE_MIN_RATIO)} de lo que prometía el modelo): ${ex.map((r) => `${lcFirst(r.label)} (${r.excluded})`).join('; ')}.`
+        : `Todos los tipos cumplen la exigencia mínima para publicarse (${GATE_MIN_N} apuestas resueltas fuera de muestra y acierto compatible con al menos el ${pcI(GATE_MIN_RATIO)} de lo prometido), lo que NO significa que sean rentables.`,
+    );
+  } else {
+    body.push('Todavía no hay historial suficiente para medir estas apuestas fuera de muestra: no se publica ninguna recomendación.');
+  }
+  body.push(
+    'Límites: la casa no publica en la fuente cuotas de marcador exacto ni de goleador (sus márgenes suelen ser mucho mayores que en el 1X2), así que su valor esperado no se puede medir; el modelo apenas difiere del mercado en el 1X2 y, cuando lo hace, la casa suele tener razón; en las combinadas el margen se multiplica en cada pata; las de hoy ya jugadas se muestran con su resultado.',
+  );
+  body.push(
+    'Cómo se mide el historial (y qué no es idéntico a producción): en los partidos pasados la fuente solo guarda la cuota de CIERRE (la última antes del saque), así que el historial la usa como entrada del modelo (componente de mercado del 1X2), para elegir las patas de las combinadas y el rango 6–15 de las sorpresas, y para el ROI. Es información anterior al partido, pero en producción las apuestas se publican con la cuota del momento, a veces días antes, y quien apueste lo hará a la cuota que encuentre. Los goleadores del historial solo se evalúan en partidos con alineaciones y minutos publicados (sin ellos no se pueden resolver); si el jugador no juega, la apuesta es nula y no cuenta en el porcentaje.',
+  );
+  body.push(longshotReviewNote());
+  body.push('Juego responsable: la mayoría de estas apuestas pierden. Solo mayores de 18 años y con dinero que puedas permitirte perder.');
+  return { title: 'Cuota alta 6+', body };
+}
+
+/**
  * Cambios de modelo integrados el 22-nov-2026 tras el banco de pruebas (pipeline/experiments, protocolo tuning / T1 / T2
  * y un único vistazo al holdout, registrado en .cache/holdout-looks.log). Cifras fijas, con fecha: no se recalculan.
  */
@@ -300,6 +399,7 @@ export function methodologySections(i: MethodologyInput): ModelFile['sections'] 
   sections.push(modelChangesSection());
   sections.push(confidenceSection(i.confidence, bt));
   if (i.daily) sections.push(dailySection(i.daily, i.dailyFamilies));
+  if (i.longshots) sections.push(longshotSection(i.longshots));
 
   sections.push({
     title: 'Calidad de los datos',

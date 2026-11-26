@@ -1078,6 +1078,8 @@ export interface LongshotLeg {
   category?: DailyCategory;
   /** player of a goalscorer leg (if he does not play, bookmakers usually void the bet) */
   player?: { id: string; name: string; short: string; teamId: string };
+  /** (optional addition) settled result of THIS leg when its match has finished (accumulators show which leg failed) */
+  result?: 'hit' | 'miss' | 'void';
 }
 
 export interface LongshotBet {
@@ -1131,6 +1133,13 @@ export interface LongshotRecord {
   roi?: { bets: number; staked: number; profit: number; roi: number };
   /** longest losing streak observed (bets) — to set expectations */
   longestLosingStreak?: number;
+  /** (optional addition) void bets (player did not play): not counted in hitRate, so settled = bets − voids */
+  voids?: number;
+  /**
+   * (optional addition) Spanish reason why this kind is NOT published as a recommendation right now (no out-of-sample
+   * sample or badly calibrated: observed hit rate far below the model's promise). Absent = published.
+   */
+  excluded?: string;
 }
 
 export interface LongshotFile {

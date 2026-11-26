@@ -9,7 +9,9 @@
  * convierte NaN en null), probabilidades en [0,1], 1X2 que suman ≈ 1, matrices de marcadores y distribuciones
  * ≈ 1, cuotas > 1, coherencia EV/Kelly, referencias (hasDetail ⇒ existe matches/<id>.json, compId válido,
  * fichas de equipo del índice, competiciones del meta), columnas de simulación, nombres de archivo seguros,
- * logos solo https en *.espncdn.com y ningún texto con `<script` ni `javascript:`.
+ * logos solo https en *.espncdn.com y ningún texto con `<script` ni `javascript:`. Apartados de apuestas: alta confianza
+ * (confidence.json), pronósticos del día (daily.json) y cuota alta 6+ (longshots.json: cuota >= mínimo, prob en (0, 1),
+ * cuota justa = 1/p, combinadas de partidos distintos con prob = producto, EV = p·cuota − 1, regla diaria, récord y aviso +18).
  * Umbrales de cordura (desactivables con --no-sanity): suficientes competiciones con datos, partidos analizados,
  * algún partido próximo o reciente en la portada y tamaño total razonable — para no publicar datos degenerados.
  * Sale con código 1 si hay errores.
@@ -1235,6 +1237,200 @@ const homeDaily = obj(
   },
 );
 
+// ---------------------------------------------------------------------------
+// Cuota alta 6+ (longshots.json y HomeFile.longshot)
+// ---------------------------------------------------------------------------
+
+const LONGSHOT_KINDS = ['combinada', 'sorpresa', 'marcador', 'goleador', 'otro'] as const;
+const BET_RESULTS = ['hit', 'miss', 'void'] as const;
+/** Tolerancia relativa de cuotas y probabilidades publicadas (redondeadas a 2–4 decimales). */
+const REL_TOL = 0.01;
+const relClose = (a: number, b: number, tol = REL_TOL) => Math.abs(a - b) <= tol * Math.max(Math.abs(a), Math.abs(b), 1e-9);
+const openProb = num({ gt: 0, max: 1 });
+
+/** Pata: probabilidad en (0, 1), cuota justa = 1/p; partido y competición referenciados. */
+const longshotLeg = obj(
+  {
+    matchId: safeId,
+    compId: str({ nonEmpty: true }),
+    compName: str({ nonEmpty: true }),
+    date: iso,
+    home: teamRef,
+    away: teamRef,
+    market: str({ nonEmpty: true }),
+    selection: str({ nonEmpty: true }),
+    prob: openProb,
+    fairOdds: num({ min: 1 }),
+  },
+  {
+    marketOdds: odds,
+    category: str({ oneOf: DAILY_CATEGORY_IDS }),
+    player: obj({ id: safeId, name: str({ nonEmpty: true }), short: str(), teamId: safeId }),
+    result: str({ oneOf: BET_RESULTS }),
+  },
+  (v, at, c) => {
+    c.compRefs.push({ id: String(v.compId), at: `${at}.compId` });
+    const p = v.prob as number;
+    if (typeof p === 'number' && p >= 1) fail(c, at, `prob ${p} debe ser < 1`);
+    if (typeof p === 'number' && p > 0 && typeof v.fairOdds === 'number' && !relClose(v.fairOdds as number, 1 / p)) fail(c, at, `cuota justa ${String(v.fairOdds)} ≠ 1/prob (${(1 / p).toFixed(3)})`);
+    if (v.player !== undefined && v.category !== undefined && v.category !== 'jugadores') fail(c, at, 'pata con jugador fuera de la categoría jugadores');
+  },
+);
+
+/**
+ * Apuesta: simples con 1 pata; combinadas con 2–4 patas de partidos distintos y prob = producto; cuota justa = 1/p;
+ * cuota de la casa = producto de las patas (solo si todas la tienen); displayOdds = cuota de la casa o, si no, la justa;
+ * EV = p·cuota − 1 (solo con cuota de la casa); oneIn ≈ 1/p; resultado coherente con el de las patas.
+ */
+const longshotBet = obj(
+  {
+    id: str({ nonEmpty: true, pattern: /^[A-Za-z0-9_.+-]{1,300}$/ }),
+    kind: str({ oneOf: LONGSHOT_KINDS }),
+    label: str({ nonEmpty: true }),
+    legs: arr(longshotLeg, { min: 1, max: 4 }),
+    prob: openProb,
+    fairOdds: num({ min: 1 }),
+    displayOdds: num({ gt: 1 }),
+    oneIn: num({ min: 1, int: true }),
+    score: num({ min: 0, max: 100 }),
+    reason: str({ nonEmpty: true }),
+  },
+  { marketOdds: odds, ev: num({ min: -1 }), result: str({ oneOf: BET_RESULTS }) },
+  (v, at, c) => {
+    const legs = (Array.isArray(v.legs) ? v.legs : []).filter(isObj) as Record<string, unknown>[];
+    const p = v.prob as number;
+    if (typeof p !== 'number' || !legs.length) return;
+    if (p >= 1) fail(c, at, `prob ${p} debe ser < 1`);
+    if (v.kind === 'combinada') {
+      if (legs.length < 2) fail(c, at, `combinada con ${legs.length} pata`);
+      if (new Set(legs.map((l) => l.matchId)).size !== legs.length) fail(c, at, 'combinada con dos patas del mismo partido');
+    } else if (legs.length !== 1) fail(c, at, `apuesta simple (${String(v.kind)}) con ${legs.length} patas`);
+    if (v.kind === 'goleador' && legs.some((l) => !isObj(l.player))) fail(c, at, 'goleador sin jugador');
+    const product = legs.reduce((x, l) => x * (typeof l.prob === 'number' ? (l.prob as number) : NaN), 1);
+    if (Number.isFinite(product) && !(Math.abs(p - product) <= 2e-4 || relClose(p, product, 0.005))) fail(c, at, `prob ${p} ≠ producto de las patas (${product.toFixed(5)})`);
+    if (p > 0 && typeof v.fairOdds === 'number' && !relClose(v.fairOdds as number, 1 / p)) fail(c, at, `cuota justa ${String(v.fairOdds)} ≠ 1/prob (${(1 / p).toFixed(3)})`);
+    if (p > 0 && typeof v.oneIn === 'number' && Math.abs((v.oneIn as number) - 1 / p) > 0.51 + 0.01 / p) fail(c, at, `oneIn ${String(v.oneIn)} ≠ round(1/prob) (${(1 / p).toFixed(2)})`);
+    const priced = legs.every((l) => typeof l.marketOdds === 'number');
+    const market = legs.reduce((x, l) => x * (typeof l.marketOdds === 'number' ? (l.marketOdds as number) : 1), 1);
+    if (v.marketOdds !== undefined && !priced) fail(c, at, 'marketOdds sin cuota de la casa en todas las patas');
+    if (v.marketOdds === undefined && priced) fail(c, at, 'todas las patas tienen cuota de la casa pero falta marketOdds');
+    if (typeof v.marketOdds === 'number' && priced && !relClose(v.marketOdds as number, market)) fail(c, at, `marketOdds ${String(v.marketOdds)} ≠ producto de las cuotas de las patas (${market.toFixed(3)})`);
+    const shown = typeof v.marketOdds === 'number' ? (v.marketOdds as number) : (v.fairOdds as number);
+    if (typeof v.displayOdds === 'number' && typeof shown === 'number' && !relClose(v.displayOdds as number, shown)) fail(c, at, `displayOdds ${String(v.displayOdds)} ≠ ${typeof v.marketOdds === 'number' ? 'marketOdds' : 'fairOdds'} (${shown})`);
+    if ((v.ev === undefined) !== (v.marketOdds === undefined)) fail(c, at, 'ev y marketOdds van juntos');
+    if (typeof v.ev === 'number' && typeof v.marketOdds === 'number' && Math.abs((v.ev as number) - (p * (v.marketOdds as number) - 1)) > 0.01) {
+      fail(c, at, `EV ${String(v.ev)} incoherente con prob·cuota − 1 (${(p * (v.marketOdds as number) - 1).toFixed(4)})`);
+    }
+    // resultado: una pata fallada ⇒ fallada; todas resueltas ⇒ acierto (o nula si alguna lo es)
+    const rs = legs.map((l) => l.result);
+    const expected = rs.includes('miss') ? 'miss' : rs.some((r) => r === undefined) ? undefined : rs.includes('void') ? 'void' : 'hit';
+    if (v.result !== expected) fail(c, at, `resultado ${String(v.result)} incoherente con el de las patas (${String(expected)})`);
+  },
+);
+
+const longshotDay = obj({ date: str({ pattern: /^\d{4}-\d{2}-\d{2}$/ }), bets: arr(longshotBet, { max: 12 }) }, {}, (v, at, c) => {
+  const bets = (Array.isArray(v.bets) ? v.bets : []).filter(isObj) as Record<string, unknown>[];
+  const perKind = new Map<string, number>();
+  const used = new Map<string, Set<string>>();
+  const noon = Date.parse(`${String(v.date)}T12:00:00Z`);
+  if (new Set(bets.map((b) => b.id)).size !== bets.length) fail(c, `${at}.bets`, 'apuesta repetida (id)');
+  bets.forEach((b, i) => {
+    const k = String(b.kind);
+    perKind.set(k, (perKind.get(k) ?? 0) + 1);
+    const u = used.get(k) ?? new Set<string>();
+    for (const l of (Array.isArray(b.legs) ? b.legs : []).filter(isObj) as Record<string, unknown>[]) {
+      if (u.has(String(l.matchId))) fail(c, `${at}.bets[${i}]`, `partido ${String(l.matchId)} repetido dentro del tipo ${k}`);
+      u.add(String(l.matchId));
+      const t = Date.parse(String(l.date));
+      if (Number.isFinite(noon) && Number.isFinite(t) && Math.abs(t - noon) > 38 * 3_600_000) fail(c, `${at}.bets[${i}]`, `partido ${String(l.matchId)} (${String(l.date)}) que no es del día ${String(v.date)}`);
+    }
+    used.set(k, u);
+    const prev = bets[i - 1];
+    if (prev && typeof b.score === 'number' && typeof prev.score === 'number' && (b.score as number) > (prev.score as number) + 1e-9) fail(c, `${at}.bets`, 'no está ordenado por puntuación');
+  });
+  for (const [k, n] of perKind) if (n > 4) fail(c, `${at}.bets`, `${n} apuestas de tipo ${k} (máximo 4)`);
+});
+
+const longshotRecord = obj(
+  {
+    kind: str({ oneOf: LONGSHOT_KINDS }),
+    label: str({ nonEmpty: true }),
+    bets: count,
+    hits: count,
+    hitRate: prob,
+    expectedHitRate: prob,
+    avgOdds: nonNeg,
+  },
+  {
+    wilsonLow: prob,
+    wilsonHigh: prob,
+    roi: obj({ bets: num({ min: 1, int: true }), staked: num({ gt: 0 }), profit: num(), roi: num({ min: -1 }) }),
+    longestLosingStreak: count,
+    voids: count,
+    excluded: str({ nonEmpty: true }),
+  },
+  (v, at, c) => {
+    const bets = v.bets as number;
+    const settled = bets - ((v.voids as number | undefined) ?? 0);
+    if (settled < 0) fail(c, at, `nulas ${String(v.voids)} > apuestas ${bets}`);
+    checkRate({ ...v, n: settled }, at, c);
+    if (bets > 0 && (v.avgOdds as number) < 1) fail(c, at, `cuota media ${String(v.avgOdds)} con ${bets} apuestas`);
+    if (typeof v.longestLosingStreak === 'number' && (v.longestLosingStreak as number) > settled) fail(c, at, `racha ${String(v.longestLosingStreak)} > apuestas resueltas ${settled}`);
+    const r = v.roi as Record<string, number> | undefined;
+    if (isObj(r)) {
+      if (r.bets > settled) fail(c, `${at}.roi`, `ROI sobre ${r.bets} apuestas > resueltas ${settled}`);
+      if (Math.abs(r.staked - r.bets) > 1e-9) fail(c, `${at}.roi`, 'apuesta plana: staked ≠ bets');
+      if (r.profit < -r.staked - 1e-6) fail(c, `${at}.roi`, `pérdida ${r.profit} mayor que lo apostado`);
+      if (r.staked > 0 && Math.abs(r.roi - r.profit / r.staked) > 1e-3) fail(c, `${at}.roi`, `roi ${r.roi} ≠ profit/staked`);
+    }
+  },
+);
+
+const longshotFile = obj(
+  {
+    generatedAt: iso,
+    minOdds: num({ min: 1.01 }),
+    days: arr(longshotDay, { max: 4 }),
+    track: obj({
+      from: iso,
+      to: iso,
+      byKind: arr(longshotRecord, { max: LONGSHOT_KINDS.length }),
+      calibration: arr(
+        obj({ from: prob, to: prob, predicted: prob, observed: prob, n: num({ min: 1, int: true }) }, {}, (v, at, c) => {
+          if ((v.from as number) < 0.05 - 1e-9 || (v.to as number) > 0.25 + 1e-9) fail(c, at, 'bin fuera de la banda 0,05–0,25');
+          if ((v.predicted as number) < (v.from as number) - 1e-6 || (v.predicted as number) > (v.to as number) + 1e-6) fail(c, at, 'probabilidad media fuera de su bin');
+        }),
+      ),
+    }),
+    note: str({ nonEmpty: true }),
+  },
+  {},
+  (v, at, c) => {
+    const minOdds = v.minOdds as number;
+    const days = (Array.isArray(v.days) ? v.days : []).filter(isObj) as Record<string, unknown>[];
+    for (let i = 1; i < days.length; i++) if (!(String(days[i].date) > String(days[i - 1].date))) fail(c, `${at}.days`, 'días repetidos o sin ordenar');
+    const track = isObj(v.track) ? v.track : {};
+    const records = (Array.isArray(track.byKind) ? track.byKind : []).filter(isObj) as Record<string, unknown>[];
+    if (new Set(records.map((r) => r.kind)).size !== records.length) fail(c, `${at}.track.byKind`, 'tipo repetido');
+    const excluded = new Set(records.filter((r) => r.excluded !== undefined).map((r) => String(r.kind)));
+    days.forEach((d, i) =>
+      ((Array.isArray(d.bets) ? d.bets : []).filter(isObj) as Record<string, unknown>[]).forEach((b, j) => {
+        const where = `${at}.days[${i}].bets[${j}]`;
+        if (typeof b.displayOdds === 'number' && typeof minOdds === 'number' && (b.displayOdds as number) < minOdds - 1e-6) fail(c, where, `cuota ${String(b.displayOdds)} < mínimo ${minOdds}`);
+        if (b.result === undefined && excluded.has(String(b.kind))) fail(c, where, `apuesta abierta de un tipo que no se publica (${String(b.kind)})`);
+      }),
+    );
+    for (const r of records) if ((r.bets as number) > 0 && typeof minOdds === 'number' && (r.avgOdds as number) < minOdds - 1e-6) fail(c, `${at}.track.byKind`, `cuota media ${String(r.avgOdds)} < mínimo ${minOdds} (${String(r.kind)})`);
+    if (typeof v.note === 'string' && !/18/.test(v.note as string)) fail(c, `${at}.note`, 'la nota debe recordar que es solo para mayores de 18 años');
+  },
+);
+
+const homeLongshot = obj({ date: str({ pattern: /^\d{4}-\d{2}-\d{2}$/ }), bets: count }, { best: longshotBet }, (v, at, c) => {
+  const b = v.best as Record<string, unknown> | undefined;
+  if (isObj(b) && b.result !== undefined) fail(c, `${at}.best`, 'apuesta ya resuelta');
+  if (isObj(b) && (v.bets as number) < 1) fail(c, at, 'mejor apuesta con 0 apuestas en el día');
+});
+
 const homeFile = obj(
   {
     generatedAt: iso,
@@ -1255,6 +1451,7 @@ const homeFile = obj(
       }
     },
     daily: homeDaily,
+    longshot: homeLongshot,
     confidenceHeadline: obj(
       { hitRate: prob, picks: num({ min: 1, int: true }), hits: count, from: iso, to: iso },
       { upcoming: count, wilsonLow: prob, wilsonHigh: prob, baselineRate: prob, avgFairOdds: num({ min: 1 }) },
@@ -1338,7 +1535,7 @@ export interface ValidateOptions {
   partial?: boolean;
 }
 
-const ROOT_FILES = new Set(['meta.json', 'home.json', 'players.json', 'value.json', 'model.json', 'confidence.json', 'daily.json']);
+const ROOT_FILES = new Set(['meta.json', 'home.json', 'players.json', 'value.json', 'model.json', 'confidence.json', 'daily.json', 'longshots.json']);
 const SUB_DIRS = new Set(['competitions', 'matches', 'teams']);
 const SAFE_FILE = /^[A-Za-z0-9_-]{1,40}\.json$/;
 
@@ -1427,6 +1624,17 @@ export function validateDataDir(dir: string = OUTPUT_DIR, opts: ValidateOptions 
   check('model.json', modelFile);
   check('confidence.json', confidenceFile);
   check('daily.json', dailyFile);
+  const longshots = check('longshots.json', longshotFile) as { days?: { date?: string; bets?: { id?: string }[] }[] } | undefined;
+  // portada ↔ longshots.json: la mejor apuesta es una de las del día que anuncia, con el mismo nº de apuestas
+  const hl = (home as Record<string, unknown> | undefined)?.longshot as { date?: string; bets?: number; best?: { id?: string } } | undefined;
+  if (hl && longshots) {
+    const d = (longshots.days ?? []).find((x) => x?.date === hl.date);
+    if (!d) c.errors.push(`home.json: longshot.date ${String(hl.date)} ausente de longshots.json`);
+    else {
+      if ((d.bets ?? []).length !== hl.bets) c.errors.push(`home.json: longshot.bets ${String(hl.bets)} ≠ apuestas del día en longshots.json (${(d.bets ?? []).length})`);
+      if (hl.best && !(d.bets ?? []).some((b) => b?.id === hl.best!.id)) c.errors.push(`home.json: longshot.best (${String(hl.best.id)}) no está entre las apuestas del día en longshots.json`);
+    }
+  }
 
   const compFiles = listJson(dir, 'competitions');
   for (const id of compIds) if (!compFiles.includes(`competitions/${id}.json`)) c.errors.push(`meta.json: falta competitions/${id}.json`);

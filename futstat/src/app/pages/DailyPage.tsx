@@ -20,18 +20,19 @@ import { capitalize, dayKey, fromDayKey, int, longDate, pct, plural, relativeDay
 import {
   CATEGORY_ICON,
   Card,
+  ChipRow,
   CompetitionBadge,
   DailyTopRow,
   Disclaimer,
   EmptyState,
   ErrorState,
+  FilterChip,
   KpiTile,
   PageHeader,
   Section,
   Skeleton,
   SkeletonCard,
   ciText,
-  cx,
   ownRate,
 } from '../components';
 import { ComboCard, ComboWarning, DailyMatchCard, FeaturedCompetition, HowToRead } from './daily/parts';
@@ -39,38 +40,7 @@ import { ComboCard, ComboWarning, DailyMatchCard, FeaturedCompetition, HowToRead
 /** «Hoy», «Mañana» o «jue 26 nov» para un día YYYY-MM-DD. */
 const dayName = (date: string, now: Date) => relativeDay(fromDayKey(date), now);
 
-// ---------------------------------------------------------------------------
-// Chips (día, competición, categoría)
-// ---------------------------------------------------------------------------
-function Chip({ active, onClick, count, disabled, children, title }: { active: boolean; onClick: () => void; count?: number; disabled?: boolean; children: ReactNode; title?: string }) {
-  return (
-    <button
-      type="button"
-      aria-pressed={active}
-      disabled={disabled}
-      onClick={onClick}
-      title={title}
-      className={cx(
-        'flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg border px-2.5 py-1.5 text-[12.5px] font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-45',
-        active ? 'border-accent-text bg-surface-3 text-ink-1' : 'border-line bg-surface-2 text-ink-2 hover:text-ink-1',
-      )}
-    >
-      {children}
-      {count !== undefined && <span className="num text-[11px] text-ink-3">{int(count)}</span>}
-    </button>
-  );
-}
-
-function ChipRow({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <div className="flex min-w-0 items-center gap-2.5">
-      <span className="eyebrow w-[86px] shrink-0 max-sm:sr-only">{label}</span>
-      <div className="-mx-1 flex min-w-0 flex-1 gap-1.5 overflow-x-auto px-1 py-1 scrollbar-none" role="group" aria-label={label}>
-        {children}
-      </div>
-    </div>
-  );
-}
+const Chip = FilterChip;
 
 // ---------------------------------------------------------------------------
 // Cabecera: selector de día y KPIs

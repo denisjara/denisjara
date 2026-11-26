@@ -86,6 +86,11 @@ import type {
   DailyFile,
   DailyMatch,
   DailyPick,
+  LongshotBet,
+  LongshotFile,
+  LongshotKind,
+  LongshotLeg,
+  LongshotRecord,
   TeamRating,
   TeamRef,
   TeamSeasonStats,
@@ -2416,6 +2421,272 @@ const metaFile: MetaFile = {
   teams: metaTeams,
 };
 write('meta.json', metaFile);
+
+// --- Cuota alta 6+ (longshots.json + home.longshot)
+// Va al FINAL a propósito: los props de jugador (goleadores) consumen el generador aleatorio, y así no cambia ningún
+// archivo generado antes. home.json se reescribe con su bloque `longshot`.
+const LS_MIN = 6;
+const lsLeg = (m: MatchRec, market: string, selection: string, prob: number, marketOdds?: number, extra: Partial<LongshotLeg> = {}): LongshotLeg => ({
+  matchId: m.id,
+  compId: m.compId,
+  compName: COMPETITION_BY_ID.get(m.compId)!.name,
+  date: iso(m.ms),
+  home: ref(m.home),
+  away: ref(m.away),
+  market,
+  selection,
+  prob: r(prob, 4),
+  fairOdds: r(1 / r(prob, 4), 3),
+  ...(marketOdds ? { marketOdds: r(marketOdds, 2) } : {}),
+  ...extra,
+});
+const lsBet = (kind: LongshotKind, label: string, legs: LongshotLeg[], reason: string, result?: LongshotBet['result']): LongshotBet | undefined => {
+  const prob = legs.reduce((a, l) => a * l.prob, 1);
+  const marketOdds = legs.every((l) => l.marketOdds) ? r(legs.reduce((a, l) => a * l.marketOdds!, 1), 2) : undefined;
+  const fairOdds = r(1 / r(prob, 4), 3);
+  const displayOdds = marketOdds ?? fairOdds;
+  if (displayOdds < LS_MIN || prob < 0.02) return undefined;
+  const ev = marketOdds ? r(prob * marketOdds - 1, 4) : undefined;
+  const bet: LongshotBet = {
+    id: `${kind}-${legs.map((l) => l.matchId).join('-')}-${label.replace(/[^a-z0-9]+/gi, '').toLowerCase().slice(0, 16)}`,
+    kind,
+    label,
+    legs,
+    prob: r(prob, 4),
+    fairOdds,
+    displayOdds,
+    oneIn: Math.round(1 / prob),
+    score: r(clampN(35 + 260 * prob + (ev !== undefined ? 120 * ev : -4) - 2 * (legs.length - 1), 0, 100), 1),
+    reason,
+  };
+  if (marketOdds) bet.marketOdds = marketOdds;
+  if (ev !== undefined) bet.ev = ev;
+  if (result) {
+    bet.result = result;
+    if (legs.length === 1) legs[0].result = result;
+  }
+  return bet;
+};
+const lsPct = (p: number) => `${es(p * 100, 1)}%`;
+const SIDE_LABEL = { home: 'local', draw: 'empate', away: 'visitante' } as const;
+
+function longshotsFor(m: MatchRec): LongshotBet[] {
+  const out: (LongshotBet | undefined)[] = [];
+  const finished = m.status === 'finished';
+  if (finished && !m.pre) return [];
+  const p = finished ? m.pre! : predict(m).q.p;
+  const lam = finished ? { lambdaHome: m.lamH, lambdaAway: m.lamA, rho: -0.05 } : predict(m).lam;
+  const mat = scoreMatrix(lam.lambdaHome, lam.lambdaAway, lam.rho, 10);
+  const hn = m.home.short;
+  const an = m.away.short;
+  const actual = finished ? (m.hg! > m.ag! ? 'home' : m.hg! < m.ag! ? 'away' : 'draw') : undefined;
+  // 1) sorpresa: 1X2 con cuota >= 6 (la de la casa si existe; si no, la justa del modelo)
+  for (const side of ['home', 'away', 'draw'] as const) {
+    const odds = m.odds?.[side];
+    const prob = p[side];
+    if (!(prob > 0) || (odds ?? 1 / prob) < LS_MIN) continue;
+    const team = side === 'home' ? m.home : m.away;
+    const sel = side === 'draw' ? 'Empate' : `Gana ${team.short}`;
+    const implied = odds ? ` La casa paga ${es(odds, 2)}, como si fuera un ${lsPct(1 / odds)}.` : ' La fuente no publica cuota para este partido.';
+    out.push(
+      lsBet(
+        'sorpresa',
+        side === 'draw' ? `Sorpresa: empate en el ${hn}–${an}` : `Sorpresa: gana ${team.short}`,
+        [lsLeg(m, 'Resultado final (1X2)', sel, prob, odds)],
+        `El modelo da un ${lsPct(prob)} al ${SIDE_LABEL[side]} (Elo ${miles(elo.get(m.home.id))} frente a ${miles(elo.get(m.away.id))}).${implied}`,
+        actual ? (actual === side ? 'hit' : 'miss') : undefined,
+      ),
+    );
+  }
+  // 2) marcador exacto: el más probable (sin cuota de la casa: ESPN no la publica)
+  const ml = mostLikelyScore(mat);
+  out.push(
+    lsBet(
+      'marcador',
+      `Marcador exacto ${ml.home}-${ml.away}`,
+      [lsLeg(m, 'Resultado exacto', `${hn} ${ml.home}-${ml.away} ${an}`, ml.prob)],
+      `Goles esperados ${es(lam.lambdaHome, 2)}–${es(lam.lambdaAway, 2)}: el ${ml.home}-${ml.away} es el marcador más probable del modelo, y aun así sale ${lsPct(ml.prob)} de las veces.`,
+      finished ? (m.hg === ml.home && m.ag === ml.away ? 'hit' : 'miss') : undefined,
+    ),
+  );
+  // 3) otra: el favorito gana por 3 o más goles
+  const favHome = p.home >= p.away;
+  let big = 0;
+  mat.forEach((row, i) => row.forEach((v, j) => ((favHome ? i - j : j - i) >= 3 ? (big += v) : 0)));
+  if (big >= 0.04) {
+    const fav = favHome ? hn : an;
+    out.push(
+      lsBet(
+        'otro',
+        `${fav} gana por 3 o más goles`,
+        [lsLeg(m, 'Margen de victoria', `${fav} por 3 o más`, big)],
+        `${fav} es favorito (${lsPct(Math.max(p.home, p.away))}), pero ganar por tres goles o más solo pasa un ${lsPct(big)} de las veces según la matriz de marcadores.`,
+        finished ? ((favHome ? m.hg! - m.ag! : m.ag! - m.hg!) >= 3 ? 'hit' : 'miss') : undefined,
+      ),
+    );
+  }
+  // 4) goleador: el jugador con más opciones de marcar cuya cuota justa llega a 6 (solo partidos por jugar). UNO por
+  //    partido (el mejor de los dos equipos): la regla diaria del pipeline no repite partido dentro de un tipo.
+  if (!finished) {
+    const best = ([[m.home, lam.lambdaHome], [m.away, lam.lambdaAway]] as [TeamDef, number][])
+      .map(([t, l]) => ({ t, l, pp: propsFor(t, l).filter((x) => x.expMinutes >= 60 && x.pGoal <= 1 / LS_MIN && x.pGoal >= 0.08).sort((a, b) => b.pGoal - a.pGoal)[0] }))
+      .filter((x) => !!x.pp)
+      .sort((a, b) => b.pp!.pGoal - a.pp!.pGoal)
+      .slice(0, 1);
+    for (const { t, l, pp: p0 } of best) {
+      const pp = p0!;
+      out.push(
+        lsBet(
+          'goleador',
+          `Goleador: ${pp.player.short}`,
+          [lsLeg(m, 'Marca en cualquier momento', `${pp.player.short} marca`, pp.pGoal, undefined, { category: 'jugadores', player: { id: pp.player.id, name: pp.player.name, short: pp.player.short, teamId: t.id } })],
+          `${pp.goals} ${pp.goals === 1 ? 'gol' : 'goles'} en ${pp.apps} partidos (${miles(pp.minutes)}'); se le esperan ${pp.expMinutes} minutos y su equipo proyecta ${es(l, 2)} goles.`,
+        ),
+      );
+    }
+  }
+  return out.filter((x): x is LongshotBet => !!x);
+}
+
+/** Combinadas del día: patas de partidos DISTINTOS hasta llegar a cuota 6 (con y sin cuota de la casa en todas). */
+function longshotCombos(recs: MatchRec[]): LongshotBet[] {
+  const pool = recs.filter((m) => m.status === 'scheduled' && m.ms > NOW_MS);
+  const out: (LongshotBet | undefined)[] = [];
+  // a) favoritos 1X2 con cuota de la casa: favoritos moderados (50–70 %) hasta que la cuota total llega a 6 (máx. 4 patas)
+  const favs = pool
+    .filter((m) => m.odds?.home && m.odds?.away)
+    .map((m) => {
+      const q = predict(m).q.p;
+      const side = q.home >= q.away ? ('home' as const) : ('away' as const);
+      return { m, side, prob: q[side], odds: m.odds![side]! };
+    })
+    .filter((x) => x.prob >= 0.5 && x.prob <= 0.72)
+    .sort((a, b) => b.prob - a.prob);
+  const used = new Set<string>();
+  for (let c = 0; c < 2; c++) {
+    const pick: typeof favs = [];
+    let odds = 1;
+    for (const x of favs) {
+      if (used.has(x.m.id) || pick.length >= 4) continue;
+      pick.push(x);
+      odds *= x.odds;
+      if (odds >= LS_MIN) break;
+    }
+    if (odds < LS_MIN || pick.length < 2) break;
+    for (const x of pick) used.add(x.m.id);
+    const legs = pick.map((x) => lsLeg(x.m, 'Resultado final (1X2)', `Gana ${(x.side === 'home' ? x.m.home : x.m.away).short}`, x.prob, x.odds));
+    out.push(
+      lsBet(
+        'combinada',
+        `Combinada de ${pick.length} favoritos`,
+        legs,
+        `${pick.length} favoritos del ${lsPct(Math.min(...pick.map((x) => x.prob)))} al ${lsPct(Math.max(...pick.map((x) => x.prob)))}: juntos solo salen el ${lsPct(pick.reduce((a, x) => a * x.prob, 1))} de las veces y la casa cobra su margen en cada pata.`,
+      ),
+    );
+  }
+  // b) goles: más de 2,5 (con cuota de la casa si la hay) y ambos marcan (sin cuota): la cuota total es la justa
+  const goals = pool
+    .filter((m) => !used.has(m.id))
+    .map((m) => ({ m, q: predict(m).q }))
+    .filter((x) => x.q.btts >= 0.42)
+    .sort((a, b) => b.q.btts - a.q.btts);
+  const gl: LongshotLeg[] = [];
+  for (const [i, x] of goals.entries()) {
+    if (gl.length >= 4 || gl.reduce((a, l) => a * l.fairOdds, 1) >= LS_MIN) break;
+    gl.push(
+      i % 2 === 0 && x.m.odds?.over && x.m.odds.totalLine === 2.5
+        ? lsLeg(x.m, 'Total de goles: más/menos 2.5', 'Más de 2.5 goles', x.q.over25, x.m.odds.over)
+        : lsLeg(x.m, 'Ambos marcan', 'Sí', x.q.btts),
+    );
+  }
+  if (gl.length >= 2) {
+    out.push(
+      lsBet(
+        'combinada',
+        `Combinada de goles (${gl.length} partidos)`,
+        gl,
+        'Partidos con muchos goles esperados. Ambos marcan no tiene cuota de la casa en la fuente, así que la cuota total es la justa: compárala con la de tu casa.',
+      ),
+    );
+  }
+  return out.filter((x): x is LongshotBet => !!x);
+}
+
+const lsDays: LongshotFile['days'] = [];
+{
+  const todayKey = madridDay(NOW_MS);
+  for (const date of dailyDays.map((d) => d.date)) {
+    const recs = MATCHES.filter((m) => madridDay(m.ms) === date && (m.status !== 'finished' || date === todayKey) && m.status !== 'postponed' && m.status !== 'cancelled').sort(
+      (a, b) => dailyRank(b) - dailyRank(a) || a.ms - b.ms || a.id.localeCompare(b.id),
+    );
+    const all = [...longshotCombos(recs), ...recs.flatMap(longshotsFor)].sort((a, b) => b.score - a.score || a.id.localeCompare(b.id));
+    // variedad: primero las 2 mejores de cada tipo, luego el resto por puntuación (máx. 4 por tipo y 12 en total)
+    const chosen = new Set<LongshotBet>();
+    const perKind = new Map<LongshotKind, number>();
+    const take = (b: LongshotBet, cap: number) => {
+      const k = perKind.get(b.kind) ?? 0;
+      if (chosen.has(b) || k >= cap || chosen.size >= 12) return;
+      perKind.set(b.kind, k + 1);
+      chosen.add(b);
+    };
+    // una ya resuelta (partido terminado hoy) para que la página enseñe también el ✓/✗
+    const settled = all.find((b) => b.result);
+    if (settled) take(settled, 2);
+    for (const b of all) take(b, 2);
+    for (const b of all) take(b, 4);
+    lsDays.push({ date, bets: all.filter((b) => chosen.has(b)) });
+  }
+}
+// historial walk-forward (cifras de prueba realistas: con cuota alta casi todo pierde y el modelo es algo optimista).
+// 'otro' no pasa la validación (muestra pequeña), como en producción: no se publica y sus apuestas no salen en los días.
+const LS_EXCLUDED: Partial<Record<LongshotKind, string>> = { otro: 'sin muestra suficiente fuera de muestra (44 apuestas resueltas; se exigen 100)' };
+for (const d of lsDays) d.bets = d.bets.filter((b) => !LS_EXCLUDED[b.kind]);
+const LS_TRACK: [LongshotKind, string, number, number, number, number, number, [number, number, number] | undefined, number][] = [
+  // tipo, etiqueta, apuestas, aciertos, nulas, esperado, cuota media, ROI [apuestas, apostado, beneficio], peor racha
+  ['combinada', 'Combinadas', 412, 47, 0, 0.128, 8.6, [288, 288, -61.4], 37],
+  ['sorpresa', 'Sorpresas', 236, 30, 0, 0.142, 7.3, [236, 236, -38.9], 29],
+  ['marcador', 'Marcador exacto', 318, 33, 0, 0.112, 9.1, undefined, 41],
+  ['goleador', 'Goleador', 274, 36, 13, 0.139, 7.4, undefined, 24],
+  ['otro', 'Otras', 44, 4, 0, 0.121, 8.2, undefined, 18],
+];
+const longshotsFile: LongshotFile = {
+  generatedAt: GENERATED_AT,
+  minOdds: LS_MIN,
+  days: lsDays,
+  track: {
+    from: iso(DAY0 - 170 * DAY),
+    to: iso(NOW_MS - DAY),
+    byKind: LS_TRACK.map(([kind, label, bets, hits, voids, exp, avgOdds, roi, streak]) => {
+      const settled = bets - voids;
+      const [lo, hi] = wilsonInterval(hits, settled);
+      const rec: LongshotRecord = { kind, label, bets, hits, hitRate: r(hits / settled, 4), wilsonLow: r(lo, 4), wilsonHigh: r(hi, 4), expectedHitRate: exp, avgOdds, longestLosingStreak: streak };
+      if (roi) rec.roi = { bets: roi[0], staked: roi[1], profit: roi[2], roi: r(roi[2] / roi[1], 4) };
+      if (voids) rec.voids = voids;
+      if (LS_EXCLUDED[kind]) rec.excluded = LS_EXCLUDED[kind];
+      return rec;
+    }),
+    // misma banda y anchura que el pipeline (0,05–0,25, bins de 0,05)
+    calibration: [
+      { from: 0.05, to: 0.1, predicted: 0.079, observed: 0.071, n: 312 },
+      { from: 0.1, to: 0.15, predicted: 0.122, observed: 0.113, n: 498 },
+      { from: 0.15, to: 0.2, predicted: 0.171, observed: 0.162, n: 241 },
+      { from: 0.2, to: 0.25, predicted: 0.223, observed: 0.219, n: 167 },
+    ],
+  },
+  note: 'Con cuota 6 o más, la mayoría de estas apuestas pierden. En las combinadas, el margen de la casa se cobra en cada pata. Los goleadores suelen anularse si el jugador no juega. No es un consejo de apuesta. Juego responsable, solo mayores de 18 años. (Datos simulados.)',
+};
+write('longshots.json', longshotsFile);
+{
+  // home.json con el avance de «Cuota alta 6+»: la mejor apuesta aún por jugar de hoy (o del siguiente día con apuestas)
+  const d = lsDays.find((x) => x.bets.some((b) => !b.result && b.legs.every((l) => Date.parse(l.date) > NOW_MS)));
+  const best = d?.bets.find((b) => !b.result && b.legs.every((l) => Date.parse(l.date) > NOW_MS));
+  if (d && best) {
+    homeFile.longshot = { date: d.date, bets: d.bets.length, best };
+    bytes -= fs.statSync(path.join(OUT, 'home.json')).size;
+    files--;
+    write('home.json', homeFile);
+  }
+}
 
 console.log(
   `[mock-data] ${files} archivos (${(bytes / 1024).toFixed(0)} KB) en ${path.relative(process.cwd(), OUT)} · ` +

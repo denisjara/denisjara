@@ -33,7 +33,11 @@ export function expectedCalibrationError(bins: CalibrationBin[]): number | undef
 // ---------------------------------------------------------------------------
 // Curva de calibración + histograma de casos por tramo
 // ---------------------------------------------------------------------------
-export function CalibrationPlot({ bins, ariaLabel, className }: { bins: CalibrationBin[]; ariaLabel: string; className?: string }) {
+/**
+ * `max` (por defecto 1) recorta los dos ejes a [0, max]: para la banda baja de probabilidades (cuotas altas) los puntos
+ * no quedan apelotonados en una esquina. Lo que se sale del eje se dibuja en el borde.
+ */
+export function CalibrationPlot({ bins, ariaLabel, className, max = 1 }: { bins: CalibrationBin[]; ariaLabel: string; className?: string; max?: number }) {
   const [ref, width] = useElementWidth<HTMLDivElement>(480);
   const [hover, setHover] = useState<number | null>(null);
   const pts = bins.filter((b) => b.n > 0).sort((a, b) => a.from - b.from);
@@ -44,12 +48,15 @@ export function CalibrationPlot({ bins, ariaLabel, className }: { bins: Calibrat
   const histH = 52;
   const gap = 30; // eje X del gráfico principal
   const H = m.t + plot + gap + histH + 26;
-  const sx = (v: number) => m.l + v * iw;
-  const sy = (v: number) => m.t + (1 - v) * plot;
+  const top = Number.isFinite(max) && max > 0 && max <= 1 ? max : 1;
+  const clip = (v: number) => Math.max(0, Math.min(top, v)) / top;
+  const sx = (v: number) => m.l + clip(v) * iw;
+  const sy = (v: number) => m.t + (1 - clip(v)) * plot;
   const hy0 = m.t + plot + gap; // parte superior del histograma
   const maxN = Math.max(1, ...pts.map((b) => b.n));
   const r = (n: number) => 4 + 4.5 * Math.sqrt(n / maxN);
-  const ticks = [0, 0.2, 0.4, 0.6, 0.8, 1];
+  const tickStep = top <= 0.25 ? 0.05 : top <= 0.5 ? 0.1 : 0.2;
+  const ticks = Array.from({ length: Math.floor(top / tickStep + 1e-6) + 1 }, (_, i) => Math.round(i * tickStep * 100) / 100);
   const MIN_N = 5;
   const solid = pts.filter((b) => b.n >= MIN_N);
   const d = solid.map((b, i) => `${i ? 'L' : 'M'}${sx(b.predicted).toFixed(1)},${sy(b.observed).toFixed(1)}`).join('');
@@ -128,7 +135,7 @@ export function CalibrationPlot({ bins, ariaLabel, className }: { bins: Calibrat
             <text x={m.l - 6} y={sy(t)} dy="0.32em" textAnchor="end" className={AXIS}>
               {pct(t)}
             </text>
-            <text x={sx(t)} y={m.t + plot + 14} textAnchor={t === 0 ? 'start' : t === 1 ? 'end' : 'middle'} className={AXIS}>
+            <text x={sx(t)} y={m.t + plot + 14} textAnchor={t === 0 ? 'start' : t >= top - 1e-9 ? 'end' : 'middle'} className={AXIS}>
               {pct(t)}
             </text>
           </g>
@@ -140,7 +147,7 @@ export function CalibrationPlot({ bins, ariaLabel, className }: { bins: Calibrat
           Frecuencia observada →
         </text>
         {/* diagonal = calibración perfecta */}
-        <line x1={sx(0)} y1={sy(0)} x2={sx(1)} y2={sy(1)} stroke={token('ink-3')} strokeWidth={1} />
+        <line x1={sx(0)} y1={sy(0)} x2={sx(top)} y2={sy(top)} stroke={token('ink-3')} strokeWidth={1} />
         {/* banda del tramo activo */}
         {hb && <rect x={sx(hb.from)} y={m.t} width={Math.max(1, sx(hb.to) - sx(hb.from))} height={plot + gap + histH} fill={token('ink-3', 0.08)} />}
         {/* intervalos de confianza */}

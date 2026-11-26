@@ -494,11 +494,20 @@ function settleAll(cands: ConfidenceCandidate[], d: SettleData & ExtraSettleData
   return out;
 }
 
+export interface DailyHistoryOptions extends HistoryOptions {
+  /**
+   * gancho por partido evaluado con la entrada sin fuga de las familias adicionales (props de los jugadores elegibles
+   * incluidos cuando el partido tiene líneas de jugador) y los datos de resolución completos. Lo usa el apartado «Cuota
+   * alta 6+» (analytics/longshots.ts) para no volver a predecir nada. No cambia el historial devuelto.
+   */
+  visitExtra?: (m: MatchRecord, input: CandidateInput, extra: ExtraInput, d: SettleData & ExtraSettleData, item: ConfidenceHistoryItem) => void;
+}
+
 /**
  * Historial walk-forward de las familias existentes y de las adicionales: cada partido terminado de la temporada actual
  * se predice UNA vez (walkForwardInput) y de esa misma entrada salen los dos conjuntos de candidatos.
  */
-export function dailyHistory(ctx: BuildContext, opts: HistoryOptions = {}): DailyHistory {
+export function dailyHistory(ctx: BuildContext, opts: DailyHistoryOptions = {}): DailyHistory {
   const extraById = new Map<string, { candidates: SettledCandidate[]; base: Partial<Record<ConfidenceFamily, CandidateResult>> }>();
   const base = confidenceHistory(ctx, {
     ...opts,
@@ -512,6 +521,7 @@ export function dailyHistory(ctx: BuildContext, opts: HistoryOptions = {}): Dail
       const natural: Partial<Record<ConfidenceFamily, CandidateResult>> = {};
       for (const c of settleAll(extraCandidates(ein, { ...opts, natural: true }), ed)) natural[c.family] = c.result;
       extraById.set(item.matchId, { candidates, base: natural });
+      opts.visitExtra?.(m, input, ein, ed, item);
     },
   });
   const extra = base.map((it): ConfidenceHistoryItem => {

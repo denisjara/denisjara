@@ -12,17 +12,19 @@ import type {
   ConfidenceFile,
   DailyFile,
   HomeFile,
+  LongshotFile,
   MatchFile,
   MetaFile,
   ModelFile,
   OddsSnapshot,
+  PlayerProp,
   PlayersFile,
   StandingGroup,
   TeamFile,
   TeamRef,
   ValueFile,
 } from '../src/types/data';
-import { mulberry32, samplePoisson } from '../src/lib/models';
+import { mulberry32, outcomeProbs, samplePoisson, scoreMatrix } from '../src/lib/models';
 import type { CompetitionConfig } from '../pipeline/config';
 import type { CompetitionStore, MatchRecord, PlayerLine } from '../pipeline/types';
 import { PublishRejectedError, runBuild, stagingDirFor, type BuildReport } from '../pipeline/build';
@@ -37,6 +39,7 @@ import {
   type SettledCandidate,
 } from '../pipeline/analytics/confidence';
 import { familyRows, publicPick, slimSummary, validatedOutOfSample } from '../pipeline/publish/confidence';
+import { historyItem, type LongshotHistoryItem } from '../pipeline/analytics/longshots';
 import { remainingFixtures } from '../pipeline/publish/simulation';
 import {
   LockedError,
@@ -350,6 +353,21 @@ describe('runBuild (mundo sintético)', () => {
     expect(model.backtest.matches).toBeGreaterThan(90);
     expect(model.perCompetition.map((p) => p.compId)).toContain('liga-a');
     expect(model.parameters.simIterations).toBe(10000);
+  });
+
+  it('cuota alta 6+ sin historial: longshots.json válido, con los días pero sin apuestas ni récord, aviso +18 y sin resumen en portada', () => {
+    const f = readJson<LongshotFile>(outDir, 'longshots.json');
+    expect(f.minOdds).toBe(6);
+    expect(f.days.length).toBeGreaterThan(0);
+    expect(f.days.length).toBeLessThanOrEqual(4);
+    for (const d of f.days) expect(d.bets).toEqual([]);
+    expect(f.track.byKind).toEqual([]);
+    expect(f.track.calibration).toEqual([]);
+    expect(f.note).toMatch(/la mayoría PIERDEN/);
+    expect(f.note).toMatch(/no se publica ninguna recomendación\./);
+    expect(f.note).not.toMatch(/\.:/);
+    expect(f.note).toMatch(/18/);
+    expect(readJson<HomeFile>(outDir, 'home.json').longshot).toBeUndefined();
   });
 
   it('--only publica solo las competiciones pedidas', () => {
@@ -666,6 +684,59 @@ function dailyExtraTestHistory(base: ConfidenceHistoryItem[]): ConfidenceHistory
   });
 }
 
+/**
+ * Historial sintético de «Cuota alta 6+» (1-jun → 19-nov de 2025, 6 partidos al día): cuotas con un 6 % de margen sobre
+ * las probabilidades verdaderas (las del modelo), marcador simulado y un goleador por equipo; así el ROI esperado es
+ * negativo y cada tipo tiene muestra suficiente.
+ */
+function longshotTestHistory(): LongshotHistoryItem[] {
+  const rng = mulberry32(4242);
+  const out: LongshotHistoryItem[] = [];
+  const price = (p: number) => Math.round((0.94 / p) * 100) / 100;
+  const scorer = (id: string, teamId: string, pGoal: number): PlayerProp => ({
+    player: { id, name: `Delantero ${id}`, short: `D. ${id}`, position: 'F', teamId },
+    apps: 14,
+    minutes: 1100,
+    goals: 4,
+    assists: 1,
+    expMinutes: 80,
+    formIndex: 55,
+    pGoal,
+    pAssist: 0.1,
+    pGoalOrAssist: 0.2,
+    pShots1: 0.8,
+    pShots2: 0.5,
+    pSot1: 0.5,
+    pSot2: 0.2,
+    pCard: 0.1,
+  });
+  const start = Date.UTC(2025, 5, 2, 18);
+  for (let d = 0; d < 170; d++) {
+    for (let k = 0; k < 6; k++) {
+      const lh = 0.9 + rng() * 1.5;
+      const la = 0.5 + rng() * 1.2;
+      const matrix = scoreMatrix(lh, la, -0.05);
+      const p = outcomeProbs(matrix);
+      let under = 0;
+      for (let i = 0; i < matrix.length; i++) for (let j = 0; j < matrix[i].length; j++) if (i + j <= 2) under += matrix[i][j];
+      const odds: OddsSnapshot = { provider: 'Test', home: price(p.home), draw: price(p.draw), away: price(p.away), totalLine: 2.5, over: price(1 - under), under: price(under) };
+      const hg = samplePoisson(lh, rng);
+      const ag = samplePoisson(la, rng);
+      const home = TEAMS_A[(d + k) % TEAMS_A.length].ref;
+      const away = TEAMS_B[(d * 3 + k) % TEAMS_B.length].ref;
+      const ps = [scorer(`h${k}`, home.id, 0.1 + rng() * 0.06), scorer(`a${k}`, away.id, 0.1 + rng() * 0.06)];
+      const lines = new Map(ps.map((x) => [x.player.id, { minutes: rng() < 0.05 ? 0 : 85, shots: 2, shotsOnTarget: 1, goals: rng() < x.pGoal ? 1 : 0 }]));
+      out.push(
+        historyItem(
+          { matchId: `ls-${d}-${k}`, compId: 'liga-a', compName: 'Liga A', date: new Date(start + d * DAY + k * 3_600_000).toISOString(), home, away, tier: 8, p, matrix, odds, lambdaHome: lh, lambdaAway: la, withMarket: true, players: { home: [ps[0]], away: [ps[1]] } },
+          { hg, ag, players: lines },
+        ),
+      );
+    }
+  }
+  return out;
+}
+
 describe('alta confianza (build)', () => {
   it('sin historial suficiente: confidence.json vacío pero válido, sin cifras en portada y la sección de metodología lo dice', () => {
     const c = readJson<ConfidenceFile>(outDir, 'confidence.json');
@@ -707,7 +778,18 @@ describe('alta confianza (build)', () => {
       dir = path.join(tmp, 'conf');
       stores = testStores();
       const history = confidenceTestHistory(stores);
-      runBuild({ stores, configs: CONFIGS, now: NOW, outDir: dir, fast: true, log: () => {}, validate: NO_SANITY, confidenceHistory: history, dailyExtraHistory: dailyExtraTestHistory(history) });
+      runBuild({
+        stores,
+        configs: CONFIGS,
+        now: NOW,
+        outDir: dir,
+        fast: true,
+        log: () => {},
+        validate: NO_SANITY,
+        confidenceHistory: history,
+        dailyExtraHistory: dailyExtraTestHistory(history),
+        longshotHistory: longshotTestHistory(),
+      });
     });
 
     it('pasa la validación del contrato', () => {
@@ -1014,6 +1096,148 @@ describe('alta confianza (build)', () => {
       expect(all).toMatch(/daily\.json: .*hitRate 0\.999 ≠/);
       fs.rmSync(path.join(broken, 'daily.json'));
       expect(validateDataDir(broken, NO_SANITY).errors).toContain('daily.json: archivo ausente');
+    });
+
+    // ---- cuota alta 6+ (longshots.json): no cambia confidence.json ni daily.json (sus tests de arriba siguen iguales)
+    it('longshots.json: apuestas con cuota >= 6 de partidos por jugar, regla diaria y cifras coherentes', () => {
+      const f = readJson<LongshotFile>(dir, 'longshots.json');
+      expect(f.minOdds).toBe(6);
+      expect(f.days.length).toBeGreaterThan(0);
+      expect(f.days.length).toBeLessThanOrEqual(4);
+      // partidos por jugar y, hoy, el que está en juego (con la información anterior al saque)
+      const upcoming = new Set(['up-a01', 'up-a23', 'up-b01', 'up-e0', 'up-c0', 'live-a67']);
+      const all = f.days.flatMap((d) => d.bets);
+      expect(all.length).toBeGreaterThan(0);
+      expect(new Set(all.map((b) => b.kind)).size).toBeGreaterThanOrEqual(2);
+      for (const d of f.days) {
+        expect(d.bets.length).toBeLessThanOrEqual(12);
+        const perKind = new Map<string, Set<string>>();
+        d.bets.forEach((b, i) => {
+          if (i) expect(b.score).toBeLessThanOrEqual(d.bets[i - 1].score);
+          expect(b.displayOdds).toBeGreaterThanOrEqual(6);
+          expect(b.prob).toBeGreaterThan(0);
+          expect(b.prob).toBeLessThan(1);
+          expect(b.fairOdds).toBeCloseTo(1 / b.prob, 1);
+          expect(b.oneIn).toBe(Math.round(1 / b.prob));
+          expect(b.result).toBeUndefined();
+          expect(b.reason.length).toBeGreaterThan(30);
+          const set = perKind.get(b.kind) ?? new Set<string>();
+          for (const l of b.legs) {
+            expect(upcoming.has(l.matchId)).toBe(true);
+            expect(set.has(l.matchId)).toBe(false);
+            set.add(l.matchId);
+          }
+          perKind.set(b.kind, set);
+          if (b.kind === 'combinada') {
+            expect(new Set(b.legs.map((l) => l.matchId)).size).toBe(b.legs.length);
+            expect(b.prob).toBeCloseTo(b.legs.reduce((t, l) => t * l.prob, 1), 3);
+            expect(b.marketOdds).toBeCloseTo(b.legs.reduce((t, l) => t * l.marketOdds!, 1), 1);
+            expect(b.ev).toBeCloseTo(b.prob * b.marketOdds! - 1, 2);
+          } else expect(b.legs).toHaveLength(1);
+          if (b.marketOdds !== undefined) expect(b.displayOdds).toBe(b.marketOdds);
+          else expect(b.ev).toBeUndefined();
+        });
+        for (const set of perKind.values()) expect(set.size).toBeGreaterThan(0);
+        for (const k of ['combinada', 'sorpresa', 'marcador', 'goleador']) expect(d.bets.filter((b) => b.kind === k).length).toBeLessThanOrEqual(4);
+      }
+    });
+
+    it('longshots.json: historial fuera de muestra por tipo (aciertos, %, Wilson, esperado, cuota media, ROI con cierre, racha) y calibración', () => {
+      const f = readJson<LongshotFile>(dir, 'longshots.json');
+      expect(f.track.from >= '2025-06-01').toBe(true);
+      expect(f.track.to < '2025-11-22').toBe(true);
+      expect(f.track.byKind.map((r) => r.kind)).toEqual(['combinada', 'sorpresa', 'marcador', 'goleador']);
+      for (const r of f.track.byKind) {
+        const settled = r.bets - (r.voids ?? 0);
+        expect(r.bets).toBeGreaterThan(30);
+        expect(r.hits).toBeLessThanOrEqual(settled);
+        expect(r.hitRate).toBeCloseTo(r.hits / settled, 3);
+        expect(r.wilsonLow!).toBeLessThanOrEqual(r.hitRate);
+        expect(r.wilsonHigh!).toBeGreaterThanOrEqual(r.hitRate);
+        expect(r.avgOdds).toBeGreaterThanOrEqual(6);
+        expect(r.expectedHitRate).toBeGreaterThan(0.05);
+        expect(r.expectedHitRate).toBeLessThanOrEqual(1 / 6 + 1e-3);
+        expect(r.longestLosingStreak).toBeGreaterThan(3);
+        expect(r.excluded).toBeUndefined();
+      }
+      expect(f.track.byKind.find((r) => r.kind === 'goleador')!.voids).toBeGreaterThan(0);
+      for (const k of ['combinada', 'sorpresa']) expect(f.track.byKind.find((r) => r.kind === k)!.roi!.bets).toBeGreaterThan(30);
+      for (const k of ['marcador', 'goleador']) expect(f.track.byKind.find((r) => r.kind === k)!.roi).toBeUndefined();
+      expect(f.track.calibration.length).toBeGreaterThan(2);
+      for (const b of f.track.calibration) {
+        expect(b.from).toBeGreaterThanOrEqual(0.05);
+        expect(b.to).toBeLessThanOrEqual(0.25);
+      }
+      expect(f.note).toMatch(/la mayoría PIERDEN/);
+      expect(f.note).toMatch(/acertó \d+ de \d+ apuestas \(\d+(,\d)? %, 1 de cada \d+; el modelo esperaba/);
+      expect(f.note).toMatch(/ROI [+−]\d/);
+      expect(f.note).toMatch(/margen de la casa se multiplica/);
+      expect(f.note).toMatch(/mayores de 18 años/);
+    });
+
+    it('portada y metodología: la mejor apuesta abierta del primer día con apuestas y la sección «Cuota alta 6+»', () => {
+      const f = readJson<LongshotFile>(dir, 'longshots.json');
+      const home = readJson<HomeFile>(dir, 'home.json');
+      // la del partido en juego (hoy) no cuenta: solo apuestas cuyos partidos aún no han empezado
+      const open = (b: LongshotFile['days'][number]['bets'][number]) => b.legs.every((l) => Date.parse(l.date) > NOW.getTime());
+      expect(f.days[0].bets.some((b) => b.legs.some((l) => l.matchId === 'live-a67'))).toBe(true);
+      const day = f.days.find((d) => d.bets.some(open))!;
+      expect(home.longshot).toEqual({ date: day.date, bets: day.bets.length, best: day.bets.find(open) });
+      const model = readJson<ModelFile>(dir, 'model.json');
+      const sec = model.sections.find((x) => x.title === 'Cuota alta 6+');
+      expect(sec?.body.join(' ')).toMatch(/FUERA DE MUESTRA/);
+      expect(sec?.body.join(' ')).toMatch(/combinadas: \d+ de \d+/);
+      // total del apartado coherente con la suma de los tipos y advertencia de que el historial usa cuotas de cierre
+      const rows = f.track.byKind.filter((r) => r.bets > 0);
+      const hits = rows.reduce((s, r) => s + r.hits, 0);
+      const settled = rows.reduce((s, r) => s + r.bets - (r.voids ?? 0), 0);
+      expect(sec?.body.join(' ')).toContain(`En total: ${hits.toLocaleString('es-ES')} aciertos en ${settled.toLocaleString('es-ES')} apuestas resueltas`);
+      expect(sec?.body.join(' ')).toMatch(/cuota de CIERRE/);
+    });
+
+    it('la validación rechaza un longshots.json incoherente', () => {
+      const broken = path.join(tmp, 'longshots-broken');
+      fs.cpSync(dir, broken, { recursive: true });
+      const f = readJson<LongshotFile>(broken, 'longshots.json') as unknown as Record<string, any>;
+      const day = f.days.find((d: any) => d.bets.length > 0);
+      const bet = day.bets[0];
+      const single = { ...bet, id: 'x-single', kind: 'marcador', legs: [{ ...bet.legs[0] }], prob: 0.3, fairOdds: 1 / 0.3, displayOdds: 3.33, oneIn: 3 };
+      delete single.marketOdds;
+      delete single.ev;
+      const combo = {
+        ...bet,
+        id: 'x-combo',
+        kind: 'combinada',
+        legs: [{ ...bet.legs[0], marketOdds: 2 }, { ...bet.legs[0], marketOdds: 2.5 }],
+        prob: 0.5,
+        fairOdds: 2,
+        displayOdds: 7,
+        oneIn: 2,
+        marketOdds: 7,
+        ev: 0.9,
+      };
+      day.bets.push(single, combo, { ...combo, id: 'x-res', result: 'hit' });
+      f.track.byKind[0].hitRate = 0.999;
+      f.note = 'Apuestas de cuota alta.';
+      fs.writeFileSync(path.join(broken, 'longshots.json'), JSON.stringify(f));
+      const all = validateDataDir(broken, NO_SANITY).errors.join('\n');
+      expect(all).toMatch(/longshots\.json: .*cuota 3\.33 < mínimo 6/);
+      expect(all).toMatch(/longshots\.json: .*combinada con dos patas del mismo partido/);
+      expect(all).toMatch(/longshots\.json: .*prob 0\.5 ≠ producto de las patas/);
+      expect(all).toMatch(/longshots\.json: .*EV 0\.9 incoherente/);
+      expect(all).toMatch(/longshots\.json: .*marketOdds 7 ≠ producto de las cuotas/);
+      expect(all).toMatch(/longshots\.json: .*resultado hit incoherente con el de las patas/);
+      expect(all).toMatch(/longshots\.json: .*repetido dentro del tipo/);
+      expect(all).toMatch(/longshots\.json: .*no está ordenado por puntuación/);
+      expect(all).toMatch(/longshots\.json: .*hitRate 0\.999 ≠/);
+      expect(all).toMatch(/longshots\.json: .*mayores de 18 años/);
+      // portada que anuncia una apuesta que no está en longshots.json
+      const h = readJson<HomeFile>(broken, 'home.json') as unknown as Record<string, any>;
+      h.longshot = { ...h.longshot, best: { ...h.longshot.best, id: 'otra' } };
+      fs.writeFileSync(path.join(broken, 'home.json'), JSON.stringify(h));
+      expect(validateDataDir(broken, NO_SANITY).errors.join('\n')).toMatch(/home\.json: longshot\.best \(otra\) no está entre las apuestas del día/);
+      fs.rmSync(path.join(broken, 'longshots.json'));
+      expect(validateDataDir(broken, NO_SANITY).errors).toContain('longshots.json: archivo ausente');
     });
 
     it('la validación rechaza picks incoherentes en confidence.json', () => {

@@ -116,7 +116,7 @@ cabeceras de micro-métricas.
 - Shell: barra lateral fija ≥1024px (`lg`), contenido `max-w-page` (1360px) con `px-4 sm:px-6`.
   En móvil, cabecera de 56px + barra inferior (el `main` ya reserva su alto).
   Menú en `layout/nav.ts`: `MAIN_NAV` (barra lateral y cajón) y `BOTTOM_NAV` (6 huecos de la barra inferior: Inicio, Hoy,
-  Partidos, Confianza, Jugadores, Valor; las entradas con `drawerOnly` —Modelo— solo salen en el cajón).
+  Partidos, Confianza, Jugadores, Valor; las entradas con `drawerOnly` —Cuota alta 6+, Modelo— solo salen en el cajón).
 - Página: `<div className="space-y-6">` (o `space-y-10` en páginas largas con Sections).
 - Rejillas: tarjetas de partido `grid gap-4 md:grid-cols-2 2xl:grid-cols-3`; dos columnas de
   contenido `grid gap-6 xl:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]`; KPIs `grid grid-cols-2 lg:grid-cols-4 gap-3`.
@@ -200,6 +200,32 @@ cabeceras de micro-métricas.
 - Avisos de contraste: los textos de aviso van en `ink-2` con el icono en `warn` (el token `warn` no llega a AA como texto
   pequeño en tema claro). Los partidos ya empezados no se atenúan con opacidad: se marcan con su estado.
 
+### Cuota alta 6+ (`Longshot.tsx`, utilidades puras en `lib/longshots.ts`; página `/cuota-alta` en `pages/LongshotsPage.tsx` + `pages/longshots/parts.tsx`)
+- Datos: `useLongshots()` → `longshots.json` (`LongshotFile`: `minOdds`, `days[]` con `bets`, `track.byKind` y `track.calibration`) y
+  `home.longshot` (avance de Inicio, solo si hay `best`). `sanitize.ts`: tipos en lista blanca (uno desconocido se deduce del nº de
+  patas: 2+ → combinada, 1 → otro), apuesta descartada entera si una pata no es válida o repite partido, prob. total ≤ la de su pata
+  menos probable, cuota de la casa total solo si todas las patas la tienen, `fairOdds`/`displayOdds`/`ev`/`oneIn` recalculados si no
+  cuadran, apuestas por debajo de `minOdds` fuera, máx. 8 por tipo y 24 por día, ROI siempre = beneficio / apostado.
+- **Aviso obligatorio y no ocultable** (`LongshotWarning`, `longshotWarningText(minOdds)`): «Con cuota 6 o más, la mayoría de estas
+  apuestas pierden: aciertan 1 de cada 6 o menos. Solo ganarías a la larga si la probabilidad real es mayor que la que paga la casa.»
+  En la página va con `TrackSentence` (historial real: apuestas, aciertos, %, ROI con cuotas de cierre y su n); en Inicio, `compact`.
+- **`LongshotKindBadge`** `{ kind }` — insignia neutra con icono (`LONGSHOT_KIND_ICON`), nunca un color por tipo.
+- **`LongshotEv`** `{ bet, detail? }` — valor esperado SIEMPRE con signo e icono: ⚡ `text-pos` + borde `accent-text` si es positivo,
+  ↘ `text-neg` si no; sin cuota de la casa, «Compárala con tu casa: necesitas al menos <cuota justa>».
+- **`LongshotLegRow`** `{ leg, index?, now, day?, settled?, showResult? }` — pata: partido, competición, hora local (`LegKickoff`),
+  mercado → selección, Prob./Justa/Casa («—» sin cuota) y ✓/✗ de la pata en combinadas. Enlaza al partido (`legHref`).
+- Página: `LongshotCard` (cuota total grande = `displayOdds`; prob. total y «1 de cada N»; producto de las patas; EV; frase `reason`;
+  aviso de goleador «si no juega, la apuesta suele anularse»; calculadora «si apuestas 10 €, ganarías X si acierta» con
+  X = importe·(cuota − 1) y cuánto se pierde si falla), `TrackBlock` (tabla por tipo con acierto + n + Wilson, esperado, ROI de cierre,
+  peor racha; tipos excluidos marcados «No se publica» con su motivo; `CalibrationPlot` con `max` = `calibrationDomain(bins)` para la
+  banda baja), `BeforeBetting`. Filtros en la URL: `?dia=YYYY-MM-DD&tipo=combinadas|sorpresas|marcador|goleador|otras`. Las apuestas ya
+  empezadas o resueltas van al final (`playableFirst`). El resumen del historial suma cuentas (`longshotSummary`), nunca promedia %.
+- Nunca prometer ganancias: nada de «apuesta segura», «gana»; el importe de la calculadora es un ejemplo, no una recomendación.
+
+### Filtros
+- **`FilterChip`** `{ active, onClick, count?, disabled?, title? }` + **`ChipRow`** `{ label }` — chips con `aria-pressed` y recuento
+  (días, competiciones, categorías, tipos). Los usan `/hoy` y `/cuota-alta`.
+
 ### Forma y equipos
 - **`TeamCrest`** `{ team: {name, abbr?, logo?, color?}, size?=24, alt? }` — logo o iniciales sobre color del equipo.
 - **`FormChips`** `{ form: "WWDLW", max?=5, size?: 'xs'|'sm'|'md', label? }` — V/E/D con letra; último a la derecha subrayado.
@@ -249,7 +275,7 @@ cabeceras de micro-métricas.
 ## 7. Librería (`src/app/lib`)
 
 - **`data.ts`**: `useMeta()`, `useHome()`, `useCompetition(id)`, `useMatch(id)`, `useTeam(id)`, `usePlayers()`,
-  `useValue()`, `useModel()`, `useConfidence()`, `useDaily()` → `{ data, error, loading, reload }`. `useCompetitionMeta(id)`,
+  `useValue()`, `useModel()`, `useConfidence()`, `useDaily()`, `useLongshots()` → `{ data, error, loading, reload }`. `useCompetitionMeta(id)`,
   `useCompetitions(ids)` (varias en paralelo, resultados parciales), `fetchJson(path)` con caché,
   `DataError` (`notFound`). Base: `BASE_URL + (VITE_DATA_DIR ?? 'data')`.
 - **`format.ts`**: `pct(p, d?)`, `num(x, d?)`, `int`, `compact`, `odds(o)`, `fairOddsFromProb(p)`, `xg`, `ev`,
@@ -304,7 +330,9 @@ Checklist antes de entregar una página: `npx tsc -p tsconfig.app.json --noEmit`
 el resto próximos —, 6 equipos, players, value, model y confidence: pronósticos de alta confianza con el mismo generador
 de candidatos que producción y reglas de prueba con cifras realistas; y `daily.json` + `home.daily`: 4 días con partidos
 —Champions hoy y mañana, ligas después—, las 7 categorías, combinadas con y sin cuota de mercado, una categoría de muestra
-pequeña y picks que no mejoran su tasa base). Las fechas son relativas al momento de generarlo
+pequeña y picks que no mejoran su tasa base; y `longshots.json` + `home.longshot`: 4 días con combinadas con y sin cuota de la
+casa, sorpresas con EV + y −, marcadores, goleadores y «otras» excluidas por muestra pequeña, una apuesta ya resuelta y nulas en
+goleador). Las fechas son relativas al momento de generarlo
 (siempre hay partidos hoy/mañana/en vivo): regenera si lo usas otro día.
 Arranca con `VITE_DATA_DIR=mock-data npx vite --port <tu puerto> --strictPort`.
 

@@ -19,6 +19,7 @@ export { CompetitionHeader } from './CompetitionHeader';
 export { Tabs, TabPanel, useUrlTab } from './Tabs';
 export type { TabItem } from './Tabs';
 export { SegmentedControl } from './SegmentedControl';
+export { FilterChip, ChipRow } from './FilterChips';
 export type { SegmentOption } from './SegmentedControl';
 export { DataTable } from './DataTable';
 export type { Column, DataTableProps } from './DataTable';
@@ -41,3 +42,4 @@ export { TierBadge, SafePickChip, OutOfSampleNote, ResultMark, ConfidenceRow, Ra
 export type { ConfidenceRowProps } from './Confidence';
 export { CATEGORY_ICON, CategoryBadge, DailyKickoff, DailyLiftNote, DailyNum, DailyOdds, DailyRecordNote, DailyTopRow, PLAYER_VOID_NOTE, PlayerVoidNote, dailyMarket, dailySelection, marketOddsText, marketOddsTitle } from './Daily';
 export type { DailyTopRowProps } from './Daily';
+export { LONGSHOT_KIND_ICON, LONGSHOT_PLAYER_NOTE, LegKickoff, LongshotEv, LongshotKindBadge, LongshotLegRow, LongshotWarning, OneIn, legHref, longshotShortWarning, longshotWarningText } from './Longshot';

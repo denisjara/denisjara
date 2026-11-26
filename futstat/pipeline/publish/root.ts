@@ -8,6 +8,7 @@ import type {
   CompetitionMeta,
   DailyFile,
   HomeFile,
+  LongshotFile,
   MatchSummary,
   MetaFile,
   ModelFile,
@@ -125,6 +126,7 @@ export function buildHomeFile(
   backtest: BacktestSummary | undefined,
   confidence?: { topConfidence: NonNullable<HomeFile['topConfidence']>; headline?: HomeFile['confidenceHeadline'] },
   daily?: HomeFile['daily'],
+  longshot?: HomeFile['longshot'],
 ): HomeFile {
   const now = ctx.now;
   const ms = publishedMatches(ctx);
@@ -190,6 +192,7 @@ export function buildHomeFile(
     if (confidence.headline) file.confidenceHeadline = confidence.headline;
   }
   if (daily) file.daily = daily;
+  if (longshot) file.longshot = longshot;
   return file;
 }
 
@@ -213,10 +216,11 @@ export function buildModelFile(
   counts: { competitions: number; teams: number; players: number; valueBets: number },
   confidence?: ConfidenceFile,
   daily?: { file: DailyFile; families?: DailyFamiliesSummary },
+  longshots?: LongshotFile,
 ): ModelFile {
   return {
     generatedAt: ctx.refDate,
-    sections: methodologySections({ ctx, backtest, ...counts, confidence, daily: daily?.file, dailyFamilies: daily?.families }),
+    sections: methodologySections({ ctx, backtest, ...counts, confidence, daily: daily?.file, dailyFamilies: daily?.families, longshots }),
     backtest: backtest ?? emptyBacktest(),
     perCompetition: per,
     parameters: modelParameters(ctx),

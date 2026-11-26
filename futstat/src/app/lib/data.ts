@@ -22,6 +22,7 @@ import type {
   ConfidenceFile,
   DailyFile,
   HomeFile,
+  LongshotFile,
   MatchFile,
   MetaFile,
   ModelFile,
@@ -63,7 +64,7 @@ export function isValidNumericId(id: unknown): id is string {
 }
 
 /** Lista blanca de archivos que la app puede pedir. */
-const ALLOWED_PATH = /^(?:(?:meta|home|players|value|model|confidence|daily)\.json|competitions\/[a-z0-9-]{1,40}\.json|(?:matches|teams)\/[0-9]{1,15}\.json)$/;
+const ALLOWED_PATH = /^(?:(?:meta|home|players|value|model|confidence|daily|longshots)\.json|competitions\/[a-z0-9-]{1,40}\.json|(?:matches|teams)\/[0-9]{1,15}\.json)$/;
 export function isAllowedDataPath(path: string): boolean {
   return ALLOWED_PATH.test(path);
 }
@@ -482,6 +483,8 @@ export const useModel = () => useJson<ModelFile>('model.json');
 export const useConfidence = () => useJson<ConfidenceFile>('confidence.json');
 /** «Pronósticos del día» (daily.json): mejores selecciones validadas de hoy y de los próximos días con partidos. */
 export const useDaily = () => useJson<DailyFile>('daily.json');
+/** «Cuota alta 6+» (longshots.json): apuestas de cuota 6 o más con su probabilidad real, valor esperado e historial. */
+export const useLongshots = () => useJson<LongshotFile>('longshots.json');
 
 /** CompetitionMeta por id desde meta.json (undefined mientras carga o si no existe). */
 export function useCompetitionMeta(id: string | undefined): CompetitionMeta | undefined {

@@ -29,6 +29,12 @@ import type {
   DailyPick,
   FormMatch,
   HomeFile,
+  LongshotBet,
+  LongshotDay,
+  LongshotFile,
+  LongshotKind,
+  LongshotLeg,
+  LongshotRecord,
   MatchFile,
   MatchStatus,
   MatchSummary,
@@ -48,6 +54,7 @@ import type {
 } from '../../types/data';
 import { safeImageUrl } from './safeUrl';
 import { DAILY_CATEGORIES, DAILY_CATEGORY_LABEL, inferDailyCategory, isDailyCategory } from './daily';
+import { LONGSHOT_DEFAULT_MIN_ODDS, LONGSHOT_KINDS, LONGSHOT_KIND_LABEL, isLongshotKind, oneIn } from './longshots';
 
 type Obj = Record<string, unknown>;
 
@@ -487,6 +494,7 @@ function normHome(v: Obj): HomeFile {
     topConfidence: list(v.topConfidence, confidenceItem, 20),
     confidenceHeadline: normConfidenceHeadline(v.confidenceHeadline),
     daily: normHomeDaily(v.daily),
+    longshot: normHomeLongshot(v.longshot),
   } as unknown as HomeFile;
 }
 
@@ -1075,6 +1083,221 @@ function normHomeDaily(x: unknown): HomeFile['daily'] {
   return { date, matches: Math.max(top.length, Math.round(fin(x.matches) ?? 0)), picks: Math.max(top.length, Math.round(fin(x.picks) ?? 0)), top };
 }
 
+// ---------------------------------------------------------------------------
+// Cuota alta 6+ (longshots.json y HomeFile.longshot)
+// ---------------------------------------------------------------------------
+/** Cuota decimal válida (> 1) y acotada a 10.000: un valor absurdo no llega a la pantalla. */
+const oddsVal = (x: unknown): number | undefined => {
+  const v = fin(x);
+  return v !== undefined && v > 1 && v <= 10_000 ? v : undefined;
+};
+const LONGSHOT_MAX_LEGS = 6;
+const LONGSHOT_MAX_BETS_PER_DAY = 24;
+const LONGSHOT_MAX_PER_KIND = 8;
+
+/** Pata de una apuesta de cuota alta: partido identificable, equipos, selección con texto y probabilidad en (0, 1). */
+export function normLongshotLeg(l: unknown): LongshotLeg | undefined {
+  if (!isObj(l)) return undefined;
+  const matchId = short(l.matchId, 20);
+  const home = normTeamRef(l.home);
+  const away = normTeamRef(l.away);
+  const selection = sentence(l.selection, 120);
+  const prob = prob01(l.prob);
+  if (!matchId || !home || !away || !selection || prob === undefined || prob <= 0 || prob >= 1) return undefined;
+  const fair = fin(l.fairOdds);
+  const compId = str(l.compId).trim();
+  const pl = isObj(l.player) && short(l.player.name, 80) ? l.player : undefined;
+  return {
+    matchId,
+    compId: COMP_ID.test(compId) ? compId : '',
+    compName: sentence(l.compName, 60),
+    date: validDate(l.date) ?? '',
+    home,
+    away,
+    market: sentence(l.market, 120) || 'Mercado',
+    selection,
+    prob,
+    // la cuota justa es 1 / probabilidad: si la publicada no cuadra (±2 %), se recalcula
+    fairOdds: fair !== undefined && fair >= 1 && Math.abs(fair * prob - 1) <= 0.02 ? fair : Math.min(10_000, 1 / prob),
+    marketOdds: oddsVal(l.marketOdds),
+    category: isDailyCategory(l.category) ? l.category : undefined,
+    player: pl ? { id: short(pl.id, 20), name: short(pl.name, 80), short: short(pl.short, 40) || short(pl.name, 40), teamId: short(pl.teamId, 20) } : undefined,
+    result: RESULTS.has(str(l.result)) ? (l.result as LongshotLeg['result']) : undefined,
+  };
+}
+
+/**
+ * Apuesta de cuota alta. Se descarta entera si alguna pata no es válida, si una combinada repite partido (sus patas
+ * no serían independientes), si el número de patas no corresponde al tipo o si su probabilidad supera la de su pata
+ * menos probable. Las cifras derivadas (cuota justa, cuota mostrada, valor esperado, «1 de cada N») se recalculan si
+ * no cuadran con la probabilidad y la cuota de la casa: lo que se ve siempre es coherente.
+ */
+export function normLongshotBet(b: unknown, i = 0): LongshotBet | undefined {
+  if (!isObj(b) || !Array.isArray(b.legs) || b.legs.length < 1 || b.legs.length > LONGSHOT_MAX_LEGS) return undefined;
+  const legs: LongshotLeg[] = [];
+  const matches = new Set<string>();
+  for (const raw of b.legs as unknown[]) {
+    const leg = normLongshotLeg(raw);
+    if (!leg || matches.has(leg.matchId)) return undefined;
+    matches.add(leg.matchId);
+    legs.push(leg);
+  }
+  // tipo de la lista blanca; uno desconocido se deduce del número de patas (nunca se inventa «sorpresa» o «goleador»)
+  const kind: LongshotKind = isLongshotKind(b.kind) ? b.kind : legs.length > 1 ? 'combinada' : 'otro';
+  if (kind === 'combinada' ? legs.length < 2 : legs.length !== 1) return undefined;
+  const prob = prob01(b.prob);
+  if (prob === undefined || prob <= 0 || prob >= 1) return undefined;
+  if (prob > Math.min(...legs.map((l) => l.prob)) + 0.005) return undefined;
+  const fair = fin(b.fairOdds);
+  const fairOdds = fair !== undefined && fair >= 1 && Math.abs(fair * prob - 1) <= 0.02 ? fair : Math.min(10_000, 1 / prob);
+  // cuota de la casa de la apuesta entera solo si TODAS las patas tienen la suya
+  const marketOdds = legs.every((l) => l.marketOdds !== undefined) ? oddsVal(b.marketOdds) : undefined;
+  const shown = fin(b.displayOdds);
+  const expectedShown = marketOdds ?? fairOdds;
+  const displayOdds = shown !== undefined && shown > 1 && Math.abs(shown / expectedShown - 1) <= 0.01 ? shown : expectedShown;
+  const evRaw = fin(b.ev);
+  const evCalc = marketOdds !== undefined ? prob * marketOdds - 1 : undefined;
+  const ev = evCalc === undefined ? undefined : evRaw !== undefined && Math.abs(evRaw - evCalc) <= 0.01 ? evRaw : evCalc;
+  const score = fin(b.score);
+  const id = short(b.id, 60) || `${kind}-${i + 1}`;
+  return {
+    id,
+    kind,
+    label: sentence(b.label, 90) || (kind === 'combinada' ? `Combinada de ${legs.length} partidos` : LONGSHOT_KIND_LABEL[kind]),
+    legs,
+    prob,
+    fairOdds,
+    marketOdds,
+    displayOdds,
+    ev,
+    oneIn: oneIn(prob),
+    score: score !== undefined ? Math.max(0, Math.min(100, score)) : 0,
+    reason: sentence(b.reason, 320),
+    result: RESULTS.has(str(b.result)) ? (b.result as LongshotBet['result']) : undefined,
+  };
+}
+
+function normLongshotDay(d: Obj, minOdds: number): LongshotDay | undefined {
+  const date = dayKeyStr(d.date);
+  if (!date) return undefined;
+  const ids = new Set<string>();
+  const perKind = new Map<LongshotKind, number>();
+  const bets = list(d.bets, (b, i) => normLongshotBet(b, i), 200)
+    .filter((b) => {
+      // el apartado es de cuota mínima `minOdds`: lo que no llega no se enseña bajo ese título
+      if (b.displayOdds < minOdds - 0.005 || ids.has(b.id)) return false;
+      const k = perKind.get(b.kind) ?? 0;
+      if (k >= LONGSHOT_MAX_PER_KIND) return false;
+      ids.add(b.id);
+      perKind.set(b.kind, k + 1);
+      return true;
+    })
+    .slice(0, LONGSHOT_MAX_BETS_PER_DAY);
+  return { date, bets };
+}
+
+/** Historial fuera de muestra de un tipo: cuentas coherentes (aciertos ≤ apuestas), acierto en [0, 1] y ROI cuadrado. */
+export function normLongshotRecord(x: unknown): LongshotRecord | undefined {
+  if (!isObj(x) || !isLongshotKind(x.kind)) return undefined;
+  const bets = fin(x.bets);
+  const hits = fin(x.hits);
+  if (bets === undefined || hits === undefined || bets < 0 || hits < 0 || hits > bets || bets > 1e7) return undefined;
+  const nBets = Math.round(bets);
+  const nHits = Math.round(hits);
+  // nulas (el jugador no juega): no cuentan en el acierto; resueltas = apuestas − nulas ≥ aciertos
+  const v = fin(x.voids);
+  const voids = v !== undefined && v >= 0 && nBets - Math.round(v) >= nHits ? Math.round(v) : undefined;
+  // acierto = aciertos / resueltas. Con nulas conocidas se calcula siempre así; sin ellas, el publicado se acepta si es
+  // ≥ aciertos / apuestas (si no cuadra, aciertos / apuestas)
+  const rate = prob01(x.hitRate);
+  const floor = nBets > 0 ? nHits / nBets : 0;
+  const settled = voids !== undefined ? nBets - voids : undefined;
+  const hitRate =
+    settled !== undefined ? (settled > 0 ? nHits / settled : 0) : rate !== undefined && rate + 1e-9 >= floor && (nHits === 0 ? rate === 0 : true) ? rate : floor;
+  const lo = prob01(x.wilsonLow);
+  const hi = prob01(x.wilsonHigh);
+  const ci = lo !== undefined && hi !== undefined && lo <= hitRate + 1e-9 && hitRate <= hi + 1e-9;
+  const avg = fin(x.avgOdds);
+  const roiObj = isObj(x.roi) ? x.roi : undefined;
+  let roi: LongshotRecord['roi'];
+  if (roiObj) {
+    const rb = fin(roiObj.bets);
+    const staked = fin(roiObj.staked);
+    const profit = fin(roiObj.profit);
+    // no se puede perder más de lo apostado; el ROI es siempre beneficio / apostado (no se confía en otra cifra)
+    if (rb !== undefined && staked !== undefined && profit !== undefined && rb >= 1 && rb <= nBets && staked > 0 && profit >= -staked - 1e-6 && profit <= staked * 10_000) {
+      roi = { bets: Math.round(rb), staked, profit, roi: profit / staked };
+    }
+  }
+  const streak = fin(x.longestLosingStreak);
+  return {
+    kind: x.kind,
+    label: sentence(x.label, 40) || LONGSHOT_KIND_LABEL[x.kind],
+    bets: nBets,
+    hits: nHits,
+    hitRate,
+    wilsonLow: ci ? lo : undefined,
+    wilsonHigh: ci ? hi : undefined,
+    expectedHitRate: prob01(x.expectedHitRate) as number,
+    avgOdds: avg !== undefined && avg > 1 && avg <= 10_000 ? avg : (undefined as unknown as number),
+    roi,
+    longestLosingStreak: streak !== undefined && streak >= 0 && streak <= nBets ? Math.round(streak) : undefined,
+    voids,
+    excluded: sentence(x.excluded, 240) || undefined,
+  };
+}
+
+/** Tramo de calibración válido (probabilidades en [0, 1], from < to, n ≥ 0). */
+function normCalibrationBin(x: Obj) {
+  const from = prob01(x.from);
+  const to = prob01(x.to);
+  const predicted = prob01(x.predicted);
+  const observed = prob01(x.observed);
+  const n = fin(x.n);
+  if (from === undefined || to === undefined || predicted === undefined || observed === undefined || n === undefined || from >= to || n < 0) return undefined;
+  return { from, to, predicted, observed, n: Math.round(n) };
+}
+
+function normLongshots(v: Obj): LongshotFile {
+  const mo = fin(v.minOdds);
+  const minOdds = mo !== undefined && mo >= 1.5 && mo <= 1000 ? mo : LONGSHOT_DEFAULT_MIN_ODDS;
+  const t = isObj(v.track) ? v.track : {};
+  const dates = new Set<string>();
+  const days = list(v.days, (d) => normLongshotDay(d, minOdds), 14)
+    .filter((d) => (dates.has(d.date) ? false : (dates.add(d.date), true)))
+    .sort((a, b) => a.date.localeCompare(b.date))
+    .slice(0, 7);
+  const kinds = new Set<LongshotKind>();
+  const byKind = list(t.byKind, (x) => {
+    const r = normLongshotRecord(x);
+    if (!r || kinds.has(r.kind)) return undefined;
+    kinds.add(r.kind);
+    return r;
+  }, 20).sort((a, b) => LONGSHOT_KINDS.indexOf(a.kind) - LONGSHOT_KINDS.indexOf(b.kind));
+  return {
+    ...(v as object),
+    minOdds,
+    days,
+    track: {
+      from: validDate(t.from) ?? '',
+      to: validDate(t.to) ?? '',
+      byKind,
+      calibration: list(t.calibration, normCalibrationBin, 40).sort((a, b) => a.from - b.from),
+    },
+    note: short(v.note, 1200),
+  } as unknown as LongshotFile;
+}
+
+/** Bloque «Cuota alta 6+» de la portada: sin fecha válida o sin una apuesta válida que enseñar, no se muestra. */
+function normHomeLongshot(x: unknown): HomeFile['longshot'] {
+  if (!isObj(x)) return undefined;
+  const date = dayKeyStr(x.date);
+  const best = normLongshotBet(x.best);
+  if (!date || !best) return undefined;
+  const bets = fin(x.bets);
+  return { date, bets: Math.max(1, Math.round(bets !== undefined && bets >= 0 && bets <= 1000 ? bets : 1)), best };
+}
+
 /**
  * Normaliza el JSON de `path` (ruta relativa al directorio de datos, ya validada).
  * Lanza Error si el archivo no tiene la forma mínima (objeto con `generatedAt`).
@@ -1089,6 +1312,7 @@ export function normalizeDataFile(path: string, value: unknown): unknown {
   if (path === 'model.json') return normModel(value);
   if (path === 'confidence.json') return normConfidence(value);
   if (path === 'daily.json') return normDaily(value);
+  if (path === 'longshots.json') return normLongshots(value);
   let m = /^competitions\/([a-z0-9-]{1,40})\.json$/.exec(path);
   if (m) return normCompetition(value, m[1]);
   m = /^matches\/[0-9]+\.json$/.exec(path);
