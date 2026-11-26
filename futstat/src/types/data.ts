@@ -26,6 +26,7 @@
  *  public/data/value.json                    -> ValueFile        (all value bets across competitions)
  *  public/data/model.json                    -> ModelFile        (methodology + global backtest)
  *  public/data/daily.json                    -> DailyFile        (best picks of the day, all markets, per match)
+ *  public/data/longshots.json                -> LongshotFile     (high-odds bets >= 6: accumulators and singles)
  *  public/data/confidence.json               -> ConfidenceFile   (high-confidence picks + honest out-of-sample record)
  */
 
@@ -908,6 +909,8 @@ export interface HomeFile {
   /** out-of-sample (holdout) record of the high-confidence picks */
   /** "Pronósticos del día" teaser: best picks of today (or of the next day with matches), from daily.json */
   daily?: { date: string; matches: number; picks: number; top: { match: MatchSummary; pick: DailyPick }[] };
+  /** "Cuota alta 6+" teaser: best high-odds bet of today (or next day with matches), from longshots.json */
+  longshot?: { date: string; bets: number; best?: LongshotBet };
   confidenceHeadline?: {
     hitRate: number;
     /** resolved holdout picks */
@@ -1041,5 +1044,108 @@ export interface DailyFile {
     baseline?: ConfidenceBaseline;
   };
   /** Spanish caveat shown on the page (high hit rate ≠ edge over the bookmaker; +18; lineups) */
+  note: string;
+}
+
+// ---------------------------------------------------------------------------
+// High-odds bets — "Cuota alta 6+" (public/data/longshots.json)
+// ---------------------------------------------------------------------------
+
+/**
+ * Kind of high-odds bet:
+ *  - 'combinada'   accumulator of 2–4 legs from DIFFERENT matches whose combined odds reach the minimum
+ *  - 'sorpresa'    single 1X2 selection with odds >= minimum (an underdog win, sometimes a draw)
+ *  - 'marcador'    single exact score
+ *  - 'goleador'    single player to score
+ *  - 'otro'        any other single market (e.g. half-time/full-time, winning margin)
+ */
+export type LongshotKind = 'combinada' | 'sorpresa' | 'marcador' | 'goleador' | 'otro';
+
+export interface LongshotLeg {
+  matchId: string;
+  compId: string;
+  compName: string;
+  date: string;
+  home: TeamRef;
+  away: TeamRef;
+  market: string; // Spanish, e.g. "Resultado final (1X2)"
+  selection: string; // Spanish, e.g. "Gana Lille"
+  /** model probability of this leg (calibrated where a calibration exists) */
+  prob: number;
+  fairOdds: number;
+  /** bookmaker decimal odds when ESPN publishes the market (1X2, totals, spread); otherwise absent */
+  marketOdds?: number;
+  category?: DailyCategory;
+  /** player of a goalscorer leg (if he does not play, bookmakers usually void the bet) */
+  player?: { id: string; name: string; short: string; teamId: string };
+}
+
+export interface LongshotBet {
+  id: string;
+  kind: LongshotKind;
+  /** Spanish title, e.g. "Combinada de 3 partidos", "Sorpresa: gana Lille", "Marcador exacto 2-1" */
+  label: string;
+  legs: LongshotLeg[]; // 1 for singles
+  /** probability of the whole bet (product of the legs for accumulators) */
+  prob: number;
+  /** 1 / prob */
+  fairOdds: number;
+  /** bookmaker odds of the whole bet when every leg has one (product for accumulators) */
+  marketOdds?: number;
+  /** odds used for the >= minimum rule and for display: marketOdds when known, else fairOdds */
+  displayOdds: number;
+  /** expected value per unit staked at marketOdds: prob·marketOdds − 1 (only when marketOdds) */
+  ev?: number;
+  /** "1 de cada N" helper: round(1 / prob) */
+  oneIn: number;
+  /** 0..100 ranking score */
+  score: number;
+  /** one or two Spanish sentences with the numbers behind the bet */
+  reason: string;
+  /** settled result for finished matches: all legs hit / any leg missed / void legs make it 'void' */
+  result?: 'hit' | 'miss' | 'void';
+}
+
+export interface LongshotDay {
+  /** local date YYYY-MM-DD (Europe/Madrid) */
+  date: string;
+  /** best bets of the day, best first (max ~12; at most 4 per kind) */
+  bets: LongshotBet[];
+}
+
+/** Out-of-sample record of one kind (walk-forward: the same daily rule applied to past days with data prior to each match). */
+export interface LongshotRecord {
+  kind: LongshotKind;
+  label: string;
+  bets: number;
+  hits: number;
+  /** hits / settled bets */
+  hitRate: number;
+  wilsonLow?: number;
+  wilsonHigh?: number;
+  /** mean model probability of those bets: compare with hitRate (calibration) */
+  expectedHitRate: number;
+  /** mean odds used (displayOdds) */
+  avgOdds: number;
+  /** flat 1-unit staking against bookmaker CLOSING odds, only on bets where every leg had a price */
+  roi?: { bets: number; staked: number; profit: number; roi: number };
+  /** longest losing streak observed (bets) — to set expectations */
+  longestLosingStreak?: number;
+}
+
+export interface LongshotFile {
+  generatedAt: string;
+  /** minimum odds of the section (6) */
+  minOdds: number;
+  /** today and the next days with matches (max 4), chronological */
+  days: LongshotDay[];
+  track: {
+    from: string;
+    to: string;
+    byKind: LongshotRecord[];
+    /** calibration of the model in the low-probability band (predicted vs observed), all kinds pooled */
+    calibration: CalibrationBin[];
+  };
+  /** Spanish warning shown prominently (+18, most of these bets lose, margin compounds in accumulators) */
   note: string;
 }
