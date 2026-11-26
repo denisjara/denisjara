@@ -6,7 +6,7 @@
  * COMPONENTES (cada uno exactamente como su variante recomendada, sin reajustar nada):
  *   1. ÁRBITRO (referee-fouls-k30): `stats.adjust` = multiplicador walk-forward del árbitro designado en tarjetas
  *      (k = 30) y faltas (k = 30), igual para los dos equipos (referee/model.ts).
- *   2. DISPONIBILIDAD (availability-props): `players.adjust` → `minutesFactor` (sancionados ×0,03; habitual que faltó
+ *   2. DISPONIBILIDAD (availability-props): `players.adjust` → `minutesFactor` (sancionados ×0,03 —desde la adopción, 0 como en producción—; habitual que faltó
  *      los 2 últimos ×0,65; que faltó el último de la misma competición ×0,9) (availability/model.ts). Sin la parte de
  *      equipo (λ / tiros), que no pasó.
  *   3. FORMA DE JUGADORES (playerform-fac6x40): `players.adjust` → `oppShotsFactor`, `oppSotFactor`, `cardsFactor`
@@ -42,9 +42,18 @@
  * HOLDOUT: tras la verificación, UNA sola mirada (la SEGUNDA en total) con `--final` sobre esta variante. Condición
  * pre-registrada: se adopta en producción solo si sus métricas objetivo NO empeoran en el holdout (estimación puntual),
  * por componente. Sin ajustes posteriores con el holdout.
+ *
+ * ADOPTADA en producción el 26-nov-2026 (pipeline/analytics/referee.ts, availability.ts y playerFactors.ts; MODEL.referee,
+ * MODEL.availability, MODEL.propsOppShrink). Única diferencia con lo evaluado hasta entonces, para que esta variante
+ * sea EXACTAMENTE producción: el sancionado lleva factor 0 (no se publica, como en producción) en lugar del ×0,03 del
+ * banco (availability-props lo conserva). Como el banco solo puntúa los pares que publican la base y la variante, esto
+ * solo quita a los sancionados de los pares comunes. Los componentes siguen viniendo de las variantes (que reexportan
+ * el núcleo): `production` debe dar en el banco exactamente las mismas cifras que esta variante (test en
+ * tests/experiments/factors-combo.test.ts).
  */
+import { PRODUCTION_MINUTES_FACTOR } from '../analytics/availability';
 import type { PlayerPropsInput } from '../analytics/players';
-import availability from './availability-props';
+import { makeAvailabilityVariant } from './availability/make';
 import playerform from './playerform-fac6x40';
 import referee from './referee-fouls-k30';
 import type { ModelVariant, PlayerAdjustInput, StatAdjustInput, StatPairs } from './types';
@@ -62,13 +71,19 @@ function mulPairs(parts: readonly StatPairs[]): StatPairs {
   return out;
 }
 
+/** availability-props con los factores de minutos de producción (sancionado 0 en lugar de ×0,03). */
+const availability = makeAvailabilityVariant('availability-props-prod', 'Disponibilidad en las props con los factores de producción (sancionado fuera)', {
+  props: 'all',
+  minutesFactors: PRODUCTION_MINUTES_FACTOR,
+});
+
 const statAdjusters = [referee.stats?.adjust].filter((f): f is NonNullable<typeof f> => !!f);
 const playerAdjusters = [availability.players?.adjust, playerform.players?.adjust].filter((f): f is NonNullable<typeof f> => !!f);
 
 const v: ModelVariant = {
   name: 'factors-combo',
   description:
-    'Factores adoptados juntos: árbitro (tarjetas y faltas, k = 30) + disponibilidad en las props (sancionados y habituales ausentes) + factores del rival de las props con contracción 6/40',
+    'Factores adoptados juntos (= producción desde el 26-nov-2026): árbitro (tarjetas y faltas, k = 30) + disponibilidad en las props (sancionados fuera y habituales ausentes) + factores del rival de las props con contracción 6/40',
   stats: {
     adjust(input: StatAdjustInput): StatPairs {
       return mulPairs(statAdjusters.map((f) => f(input)));

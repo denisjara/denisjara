@@ -282,6 +282,22 @@ describe('runBuild (mundo sintético)', () => {
     for (const fm of fin.form.home.last) expect(Date.parse(fm.date)).toBeLessThan(Date.parse(fin.match.date));
   });
 
+  it('factores del partido en todas las fichas: corte en el inicio, árbitro y notas (validados por el contrato)', () => {
+    const files = fs.readdirSync(path.join(outDir, 'matches'));
+    for (const file of files) {
+      const f = readJson<MatchFile>(outDir, `matches/${file}`);
+      expect(f.factors, file).toBeDefined();
+      expect(Date.parse(f.factors!.asOf)).toBe(Date.parse(f.match.date));
+      expect(['conocido', 'no publicado']).toContain(f.factors!.referee.status);
+      expect(f.factors!.notes.length).toBeGreaterThan(0);
+      // un sancionado probable (minutos × 0) nunca aparece en las props publicadas
+      for (const side of ['home', 'away'] as const) {
+        const out = new Set((f.factors!.absences?.[side] ?? []).filter((a) => a.minutesFactor === 0).map((a) => a.playerId));
+        expect(f.players[side].some((p) => out.has(p.player.id)), file).toBe(false);
+      }
+    }
+  });
+
   it('competición de liga: clasificación desde partidos con forma/xPts/Elo, simulación, backtest y jugadores', () => {
     const c = readJson<CompetitionFile>(outDir, 'competitions/liga-a.json');
     expect(c.standings).toHaveLength(1);

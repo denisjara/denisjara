@@ -222,6 +222,18 @@ cabeceras de micro-métricas.
   empezadas o resueltas van al final (`playableFirst`). El resumen del historial suma cuentas (`longshotSummary`), nunca promedia %.
 - Nunca prometer ganancias: nada de «apuesta segura», «gana»; el importe de la calculadora es un ejemplo, no una recomendación.
 
+### Factores del partido (`pages/match/FactorsPanel.tsx`, utilidades puras en `lib/factors.ts`)
+- Datos: `MatchFile.factors` normalizado por `normMatchFactors` (un apartado roto se omite). Panel `#factores` en la pestaña
+  Análisis (tras fuentes/λ), envuelto en `SafeBlock`; cada pieza (`Tile`) lleva además su propio `SafeBlock`.
+- Piezas: Árbitro (siempre: nombre, partidos previos, tarjetas/partido, «±x % tarjetas vs media de la liga» con `ratioDelta`,
+  etiqueta `refereeTone` — estricto ≥ +5 %, permisivo ≤ −5 %, si no normal — y medidor ±20 %; «Árbitro aún no publicado» si
+  falta), Eliminatoria (ida, global y `tieNeeds`: qué necesita cada equipo, sin valor doble de goles fuera), Bajas probables
+  (siempre; sancionado = «Fuera de las props»), Lo que se juega (estado + rango matemático mejor–peor), Forma reciente (xG
+  aproximado a favor/en contra + etiqueta), Local / visita (V-E-D y goles/partido), Jugadores en forma (índice 0–100).
+- **`UsageBadge`** `{ used }` — «Usado en el modelo» (icono Cpu + borde `accent-text`) o «Informativo» (borde discontinuo). Cada pieza
+  la lleva y un raíl izquierdo del mismo criterio (nunca solo color). Cabecera: `factorHighlights` (máx. 5 chips) y `factorUsage`.
+- Chips en tarjetas de partido: solo cuando `MatchSummary` traiga `factorFlags` (hoy no existe; `factorHighlights` ya da los textos).
+
 ### Filtros
 - **`FilterChip`** `{ active, onClick, count?, disabled?, title? }` + **`ChipRow`** `{ label }` — chips con `aria-pressed` y recuento
   (días, competiciones, categorías, tipos). Los usan `/hoy` y `/cuota-alta`.
@@ -327,7 +339,8 @@ Checklist antes de entregar una página: `npx tsc -p tsconfig.app.json --noEmit`
 
 `npm run data:mock` genera `public/mock-data/` (meta, home, competiciones `laliga`, `premier`, `seriea`,
 `brasileirao`, `saudi`, `champions`, `copadelrey`, 14 partidos con análisis completo — 2 en vivo, 2 terminados,
-el resto próximos —, 6 equipos, players, value, model y confidence: pronósticos de alta confianza con el mismo generador
+el resto próximos; entre ellos una vuelta de Copa con árbitro y un sancionado en la ida, un partido de LaLiga sin árbitro
+publicado y con un sancionado, y uno del Brasileirão con un equipo sin nada en juego —, 6 equipos, players, value, model y confidence: pronósticos de alta confianza con el mismo generador
 de candidatos que producción y reglas de prueba con cifras realistas; y `daily.json` + `home.daily`: 4 días con partidos
 —Champions hoy y mañana, ligas después—, las 7 categorías, combinadas con y sin cuota de mercado, una categoría de muestra
 pequeña y picks que no mejoran su tasa base; y `longshots.json` + `home.longshot`: 4 días con combinadas con y sin cuota de la

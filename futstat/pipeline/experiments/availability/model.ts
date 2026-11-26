@@ -25,32 +25,43 @@
  *   tiros   = tiros del jugador / tiros del equipo;  a puerta = ídem.
  * Multiplicador del equipo = max(FLOOR, 1 − K·Σ P_OUT·participación): K = 0,5 porque el sustituto aporta (en media)
  * la mitad de lo que se pierde. Sin líneas suficientes (o sin bajas) = 1 = producción.
+ *
+ * La parte de las PROPS (clases de baja y minutesFactor) está en PRODUCCIÓN desde el 26-nov-2026: el código vive en
+ * pipeline/analytics/availability.ts (parámetros MODEL.availability) y aquí solo se reexporta. En producción el
+ * sancionado lleva factor 0 (no se publica); las variantes availability-* del banco conservan el ×0,03 con el que se
+ * evaluaron (MINUTES_FACTOR, abajo). La parte de EQUIPO (λ, tiros) no pasó la regla y sigue solo aquí.
  */
 import { teamGamesFromLines, XG_PER_SHOT, XG_PER_SOT, XG_PROXY_CALIBRATION } from '../../analytics/players';
-import type { MatchRecord, PlayerLine } from '../../types';
+import {
+  minutesFactors as coreMinutesFactors,
+  recentLines,
+  teamAbsences as coreTeamAbsences,
+  type AbsenceKind,
+  type MinutesFactors,
+} from '../../analytics/availability';
+import type { PlayerLine } from '../../types';
 import type { HistoryView, PreMatch, StatPairs } from '../types';
 
-const DAY_MS = 86_400_000;
-/** ventana de las líneas (igual que las props de producción: TEAM_WINDOW_DAYS) */
-export const LINES_WINDOW_DAYS = 365;
-/** habitual: >= 60 % de los minutos (máx. 90 por partido) de los 5 últimos partidos del equipo con líneas */
-export const REGULAR_SHARE = 0.6;
-export const REGULAR_GAMES = 5;
+// Integradas en producción el 26-nov-2026 (pipeline/analytics/availability.ts): se reexportan para las variantes y tests.
+export { LINES_WINDOW_DAYS, PRODUCTION_MINUTES_FACTOR, recentLines, REGULAR_GAMES, REGULAR_SHARE, type AbsenceKind, type MinutesFactors } from '../../analytics/availability';
+
 /** partidos del equipo (con líneas) de la participación de cada jugador */
 export const SHARE_GAMES = 10;
 
-export type AbsenceKind = 'susp' | 'miss2' | 'miss1s' | 'miss1o';
-
-/** P(no juega) por clase (exploración de T1, redondeada). */
+/** P(no juega) por clase (exploración de T1, redondeada). Solo la usa la parte de equipo. */
 export const P_OUT: Record<AbsenceKind, number> = { susp: 1, miss2: 0.75, miss1s: 0.5, miss1o: 0.25 };
 
-/** Factor de minutos esperados de las props por clase (relativo a producción). 'susp' casi 0: ver SUSP_MINUTES_FACTOR. */
-export const MINUTES_FACTOR: Record<AbsenceKind, number> = { susp: 0.03, miss2: 0.65, miss1s: 0.9, miss1o: 1 };
+/**
+ * Factor de minutos esperados de las props por clase en las variantes del banco (relativo a producción anterior).
+ * Igual que MODEL.availability.minutesFactor salvo el sancionado: ver SUSP_MINUTES_FACTOR.
+ */
+export const MINUTES_FACTOR: MinutesFactors = { susp: 0.03, miss2: 0.65, miss1s: 0.9, miss1o: 1 };
 
 /**
- * Sancionado: 0,03 de sus minutos esperados (≈ 1-3 minutos) y no 0. Con 0 el jugador deja de publicarse y el banco
- * solo puntúa los pares que publican la base y la variante: la mejora no se mediría (saldría como «solo en la base»).
- * En producción se usaría 0 (no publicar). Con menos de 1 minuto esperado tampoco se publica (≈ habitual con < 33').
+ * Sancionado en el banco: 0,03 de sus minutos esperados (≈ 1-3 minutos) y no 0. Con 0 el jugador deja de publicarse y
+ * el banco solo puntúa los pares que publican la base y la variante: la mejora no se mediría (saldría como «solo en
+ * la base»). En producción se usa 0 (no publicar). Con menos de 1 minuto esperado tampoco se publica (≈ habitual con
+ * < 33').
  */
 export const SUSP_MINUTES_FACTOR = MINUTES_FACTOR.susp;
 
@@ -71,67 +82,12 @@ export interface TeamShares {
   sot: Map<string, number>;
 }
 
-/** Líneas del equipo anteriores al corte y dentro de la ventana, cronológicas. */
-export function recentLines(lines: readonly PlayerLine[], teamId: string, cutoff: number): PlayerLine[] {
-  const from = cutoff - LINES_WINDOW_DAYS * DAY_MS;
-  return lines.filter((l) => {
-    const t = Date.parse(l.date);
-    return l.teamId === teamId && t < cutoff && t >= from;
-  });
-}
-
-/** Último partido TERMINADO del equipo en la competición, anterior al corte (la vista ya está cortada). */
-function lastCompMatch(history: HistoryView, teamId: string, compId: string): MatchRecord | undefined {
-  const ms = history.teamMatches(teamId);
-  for (let i = ms.length - 1; i >= 0; i--) if (ms[i].compId === compId) return ms[i];
-  return undefined;
-}
-
 /**
- * Bajas probables del equipo `teamId` en el partido `match` (de la competición match.compId), con las líneas del
- * equipo `lines` (cualquier lista: se filtran por equipo y corte) y la vista del pasado `history`.
+ * Bajas probables del equipo `teamId` en el partido `match` (núcleo: analytics/availability.ts), con la P(no juega)
+ * de cada clase que usa la parte de equipo.
  */
 export function teamAbsences(match: Pick<PreMatch, 'compId' | 'date'>, teamId: string, lines: readonly PlayerLine[], history: HistoryView): Absence[] {
-  const cutoff = Date.parse(match.date);
-  const ls = recentLines(lines, teamId, cutoff);
-  const out = new Map<string, Absence>();
-
-  // 1) sanción: roja en el último partido terminado del equipo en esta competición (eventos o líneas)
-  const lastSame = lastCompMatch(history, teamId, match.compId);
-  if (lastSame) {
-    for (const e of lastSame.events ?? []) {
-      if (e.type === 'red' && e.teamId === teamId && e.playerId) out.set(e.playerId, { playerId: e.playerId, kind: 'susp', pOut: P_OUT.susp });
-    }
-    for (const l of ls) {
-      if (l.matchId === lastSame.id && l.red > 0) out.set(l.playerId, { playerId: l.playerId, kind: 'susp', pOut: P_OUT.susp });
-    }
-  }
-
-  // 2) habituales que no jugaron el último (o los dos últimos) partido del equipo con líneas
-  const games = (teamGamesFromLines(ls).get(teamId) ?? []).slice(-REGULAR_GAMES);
-  if (games.length === REGULAR_GAMES) {
-    const ids = new Set(games.map((g) => g.matchId));
-    const last = games[REGULAR_GAMES - 1].matchId;
-    const prev = games[REGULAR_GAMES - 2].matchId;
-    const lastComp = ls.find((l) => l.matchId === last)?.compId;
-    const minutes = new Map<string, number>();
-    const played = new Map<string, Set<string>>();
-    for (const l of ls) {
-      if (!ids.has(l.matchId) || !(l.minutes > 0)) continue;
-      minutes.set(l.playerId, (minutes.get(l.playerId) ?? 0) + Math.min(l.minutes, 90));
-      let s = played.get(l.playerId);
-      if (!s) played.set(l.playerId, (s = new Set()));
-      s.add(l.matchId);
-    }
-    for (const [pid, min] of [...minutes].sort((a, b) => (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0))) {
-      if (out.has(pid) || min < REGULAR_SHARE * 90 * REGULAR_GAMES) continue;
-      const s = played.get(pid)!;
-      if (s.has(last)) continue;
-      const kind: AbsenceKind = !s.has(prev) ? 'miss2' : lastComp === match.compId ? 'miss1s' : 'miss1o';
-      out.set(pid, { playerId: pid, kind, pOut: P_OUT[kind] });
-    }
-  }
-  return [...out.values()].sort((a, b) => (a.playerId < b.playerId ? -1 : a.playerId > b.playerId ? 1 : 0));
+  return coreTeamAbsences(match, teamId, lines, history).map((a) => ({ ...a, pOut: P_OUT[a.kind] }));
 }
 
 /** Participación de cada jugador en ataque, tiros y tiros a puerta en los SHARE_GAMES últimos partidos con líneas. */
@@ -193,13 +149,10 @@ export function statMultipliers(match: PreMatch, history: HistoryView, base: Sta
   return out;
 }
 
-/** minutesFactor de las props por baja: solo sanción (`suspOnly`) o todas las clases. Sin bajas = {}. */
-export function minutesFactors(absences: readonly Absence[], suspOnly: boolean): Record<string, number> {
-  const out: Record<string, number> = {};
-  for (const a of absences) {
-    if (suspOnly && a.kind !== 'susp') continue;
-    const f = MINUTES_FACTOR[a.kind];
-    if (f !== 1) out[a.playerId] = f;
-  }
-  return out;
+/**
+ * minutesFactor de las props por baja con los factores del banco (MINUTES_FACTOR, sancionado ×0,03) o los que se
+ * pasen: solo sanción (`suspOnly`) o todas las clases. Sin bajas = {}.
+ */
+export function minutesFactors(absences: readonly Pick<Absence, 'playerId' | 'kind'>[], suspOnly: boolean, factors: MinutesFactors = MINUTES_FACTOR): Record<string, number> {
+  return coreMinutesFactors(absences, factors, suspOnly);
 }

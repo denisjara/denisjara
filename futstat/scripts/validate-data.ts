@@ -708,6 +708,197 @@ const competitionMeta = obj(
 const valueEntry = obj({ match: matchSummary, pick: valuePick });
 
 // ---------------------------------------------------------------------------
+// Factores del partido (MatchFile.factors): validación estricta (sin claves desconocidas)
+// ---------------------------------------------------------------------------
+
+/** Como obj(), pero rechaza claves no declaradas (contrato cerrado). */
+function sobj(req: Record<string, Check>, opt: Record<string, Check> = {}, refine?: (v: Record<string, unknown>, at: string, c: Ctx) => void): Check {
+  const base = obj(req, opt, refine);
+  const known = new Set([...Object.keys(req), ...Object.keys(opt)]);
+  return (v, at, c) => {
+    base(v, at, c);
+    if (isObj(v)) for (const k of Object.keys(v)) if (!known.has(k)) fail(c, `${at}.${k}`, 'clave no permitida');
+  };
+}
+/** Texto no vacío y acotado (caracteres). */
+const text = (max: number): Check => (v, at, c) => {
+  str({ nonEmpty: true })(v, at, c);
+  if (typeof v === 'string' && Array.from(v).length > max) fail(c, at, `texto de más de ${max} caracteres`);
+};
+const literal = (x: unknown): Check => (v, at, c) => {
+  if (v !== x) fail(c, at, `debe ser ${JSON.stringify(x)}, recibido ${JSON.stringify(v)}`);
+};
+const goalsCount = num({ min: 0, max: 30, int: true });
+const perMatch = num({ min: 0, max: 15 });
+const refRatio = num({ min: 0.5, max: 2 });
+
+const FACTOR_ABSENCE_REASON: Record<string, string> = {
+  susp: 'sancionado (expulsado en el último partido)',
+  miss2: 'no jugó los 2 últimos partidos',
+  miss1s: 'no jugó el último partido',
+  miss1o: 'no jugó el último partido (otra competición)',
+};
+const STAKE_STATUS = ['título', 'plazas continentales', 'ascenso', 'descenso', 'sin nada en juego'] as const;
+const FORM_LABELS = ['rinde por encima de lo esperado', 'rinde por debajo de lo esperado', 'en línea con lo esperado'] as const;
+
+const factorReferee = anyOf(
+  sobj(
+    { status: literal('conocido'), name: text(80), matches: count, cardsRatio: refRatio, usedInModel: bool },
+    { cardsPerMatch: perMatch, foulsRatio: refRatio },
+    (v, at, c) => {
+      if (v.matches === 0 && v.cardsPerMatch !== undefined) fail(c, at, 'árbitro sin partidos previos con tarjetas por partido');
+      // usado por el modelo: con partidos previos de tarjetas o, al menos, de faltas (foulsRatio)
+      if (v.usedInModel === true && v.matches === 0 && v.foulsRatio === undefined) fail(c, at, 'árbitro sin partidos previos usado por el modelo');
+      if (typeof v.matches === 'number' && v.matches > 0 && v.cardsPerMatch === undefined) fail(c, at, 'árbitro con partidos previos sin tarjetas por partido');
+      if (v.matches === 0 && v.cardsRatio !== 1) fail(c, `${at}.cardsRatio`, 'sin partidos previos el ratio debe ser 1');
+    },
+  ),
+  sobj({ status: literal('no publicado'), usedInModel: literal(false) }),
+);
+
+const tieScore = sobj({ home: goalsCount, away: goalsCount });
+const factorTie = sobj(
+  { leg: literal(2), firstLegId: safeId, firstLegDate: str({ iso: true, nonEmpty: true }), firstLeg: tieScore, aggregate: tieScore, leader: str({ oneOf: ['home', 'away', 'none'] }), summary: text(220), usedInModel: literal(false) },
+  {},
+  (v, at, c) => {
+    const fl = v.firstLeg as { home: number; away: number } | undefined;
+    const ag = v.aggregate as { home: number; away: number } | undefined;
+    if (!isObj(fl) || !isObj(ag)) return;
+    const same = fl.home === ag.home && fl.away === ag.away;
+    const swapped = fl.home === ag.away && fl.away === ag.home;
+    if (!same && !swapped) fail(c, `${at}.aggregate`, 'el global no corresponde al marcador de la ida');
+    const leader = ag.home > ag.away ? 'home' : ag.home < ag.away ? 'away' : 'none';
+    if (v.leader !== leader) fail(c, `${at}.leader`, `debe ser "${leader}" según el global`);
+  },
+);
+
+function factorStakeSide(teams: number): Check {
+  return sobj(
+    { position: num({ min: 1, max: teams, int: true }), points: count, played: count, remaining: count, best: num({ min: 1, max: teams, int: true }), worst: num({ min: 1, max: teams, int: true }), status: str({ oneOf: STAKE_STATUS }), inPlay: arr(text(40), { max: 8 }) },
+    {},
+    (v, at, c) => {
+      if ((v.best as number) > (v.worst as number)) fail(c, at, 'mejor posición posible > peor');
+      const none = Array.isArray(v.inPlay) && v.inPlay.length === 0;
+      if (none !== (v.status === 'sin nada en juego')) fail(c, at, '"sin nada en juego" ⇔ ninguna zona en juego');
+      if (typeof v.points === 'number' && typeof v.played === 'number' && v.points > 3 * v.played) fail(c, at, 'más puntos que 3 por partido');
+    },
+  );
+}
+const factorStakes: Check = (v, at, c) => {
+  const teams = isObj(v) && typeof v.teams === 'number' && Number.isInteger(v.teams) && v.teams >= 2 && v.teams <= 40 ? v.teams : 40;
+  sobj({ teams: num({ min: 2, max: 40, int: true }), home: factorStakeSide(teams), away: factorStakeSide(teams), usedInModel: literal(false) }, {}, (o, a, cc) => {
+    const h = o.home as Record<string, unknown> | undefined;
+    const w = o.away as Record<string, unknown> | undefined;
+    if (isObj(h) && isObj(w) && h.position === w.position) fail(cc, a, 'local y visitante con la misma posición');
+    for (const s of [h, w]) if (isObj(s) && typeof s.played === 'number' && typeof s.remaining === 'number' && s.played + s.remaining !== 2 * (teams - 1)) fail(cc, a, 'jugados + restantes ≠ 2·(equipos − 1)');
+  })(v, at, c);
+};
+
+const factorTeamForm = sobj(
+  { last: num({ min: 3, max: 6, int: true }), goalsFor: perMatch, goalsAgainst: perMatch, netRes: num({ min: -4, max: 4 }), label: str({ oneOf: FORM_LABELS }) },
+  { xgFor: perMatch, xgAgainst: perMatch },
+  (v, at, c) => {
+    const r = v.netRes as number;
+    const want = r > 0.25 ? FORM_LABELS[0] : r < -0.25 ? FORM_LABELS[1] : FORM_LABELS[2];
+    if (typeof r === 'number' && v.label !== want) fail(c, `${at}.label`, `con netRes ${r} debe ser "${want}"`);
+    if ((v.xgFor === undefined) !== (v.xgAgainst === undefined)) fail(c, at, 'xgFor y xgAgainst van juntos');
+  },
+);
+const factorForm = sobj({ usedInModel: literal(false) }, { home: factorTeamForm, away: factorTeamForm }, (v, at, c) => {
+  if (v.home === undefined && v.away === undefined) fail(c, at, 'bloque de forma vacío');
+});
+
+const factorVenueSide = sobj(
+  { played: num({ min: 1, int: true }), w: count, d: count, l: count, gfPerMatch: perMatch, gaPerMatch: perMatch, scope: str({ oneOf: ['competición', 'todas'] }) },
+  {},
+  (v, at, c) => {
+    if ((v.w as number) + (v.d as number) + (v.l as number) !== v.played) fail(c, at, 'w + d + l ≠ played');
+  },
+);
+const factorVenue = sobj({ usedInModel: literal(true), note: text(200) }, { home: factorVenueSide, away: factorVenueSide }, (v, at, c) => {
+  if (v.home === undefined && v.away === undefined) fail(c, at, 'bloque casa/fuera vacío');
+});
+
+const factorAbsence = sobj(
+  { playerId: str({ nonEmpty: true }), name: text(80), kind: str({ oneOf: Object.keys(FACTOR_ABSENCE_REASON) }), reason: text(80), minutesShare: prob, minutesFactor: num({ min: 0, max: 1.5 }), usedInModel: bool },
+  {},
+  (v, at, c) => {
+    const want = Object.prototype.hasOwnProperty.call(FACTOR_ABSENCE_REASON, String(v.kind)) ? FACTOR_ABSENCE_REASON[String(v.kind)] : undefined;
+    if (want && v.reason !== want) fail(c, `${at}.reason`, `no corresponde a kind "${String(v.kind)}"`);
+    if (typeof v.minutesFactor === 'number' && v.usedInModel !== (v.minutesFactor !== 1)) fail(c, `${at}.usedInModel`, 'debe ser true ⇔ minutesFactor ≠ 1');
+    if (v.kind === 'susp' && v.usedInModel === true && v.minutesFactor !== 0) fail(c, `${at}.minutesFactor`, 'un sancionado usado por el modelo no juega (0)');
+  },
+);
+const absenceList: Check = (v, at, c) => {
+  arr(factorAbsence, { max: 11 })(v, at, c);
+  if (!Array.isArray(v)) return;
+  const ids = v.map((x) => (isObj(x) ? x.playerId : undefined));
+  if (new Set(ids).size !== ids.length) fail(c, at, 'jugadores repetidos');
+};
+const factorAbsences = sobj({ home: absenceList, away: absenceList }, {}, (v, at, c) => {
+  if (Array.isArray(v.home) && Array.isArray(v.away) && !v.home.length && !v.away.length) fail(c, at, 'bloque de bajas vacío');
+});
+
+const inFormPlayer = sobj({ playerId: str({ nonEmpty: true }), name: text(80), formIndex: num({ min: 0, max: 100 }), note: text(120) });
+const inFormList: Check = (v, at, c) => {
+  arr(inFormPlayer, { max: 3 })(v, at, c);
+  if (!Array.isArray(v)) return;
+  for (let i = 1; i < v.length; i++) if (isObj(v[i]) && isObj(v[i - 1]) && (v[i].formIndex as number) > (v[i - 1].formIndex as number)) fail(c, at, 'no está ordenado por formIndex');
+  const ids = v.map((x) => (isObj(x) ? x.playerId : undefined));
+  if (new Set(ids).size !== ids.length) fail(c, at, 'jugadores repetidos');
+};
+const factorInForm = sobj({ home: inFormList, away: inFormList, usedInModel: literal(false) });
+
+const matchFactors = sobj(
+  { asOf: str({ iso: true, nonEmpty: true }), referee: factorReferee, notes: arr(text(240), { min: 1, max: 8 }) },
+  { tie: factorTie, stakes: factorStakes, form: factorForm, venue: factorVenue, absences: factorAbsences, inForm: factorInForm },
+);
+
+/** Coherencia de los factores con el resto de la ficha (fecha del partido, props publicadas). */
+function factorsVsFile(f: Record<string, unknown>, file: Record<string, unknown>, at: string, c: Ctx): void {
+  const m = file.match as Record<string, unknown> | undefined;
+  const date = typeof m?.date === 'string' ? Date.parse(m.date) : NaN;
+  if (Number.isFinite(date)) {
+    if (typeof f.asOf === 'string' && Date.parse(f.asOf) !== date) fail(c, `${at}.asOf`, 'debe ser el inicio del partido (match.date)');
+    const tie = f.tie as Record<string, unknown> | undefined;
+    if (isObj(tie) && typeof tie.firstLegDate === 'string' && !(Date.parse(tie.firstLegDate) < date)) fail(c, `${at}.tie.firstLegDate`, 'la ida debe ser anterior al partido');
+    if (isObj(tie) && typeof m?.round === 'string' && !/·\s*Vuelta\b/.test(m.round)) fail(c, `${at}.tie`, 'eliminatoria en un partido que no es vuelta');
+  }
+  const players = file.players as Record<string, unknown> | undefined;
+  for (const side of ['home', 'away'] as const) {
+    const props = Array.isArray(players?.[side]) ? (players![side] as Record<string, unknown>[]) : [];
+    const byId = new Map(props.filter(isObj).map((p) => [String((p.player as Record<string, unknown> | undefined)?.id), p]));
+    const abs = (f.absences as Record<string, unknown> | undefined)?.[side];
+    if (Array.isArray(abs)) {
+      abs.forEach((a, i) => {
+        if (isObj(a) && a.minutesFactor === 0 && byId.has(String(a.playerId))) fail(c, `${at}.absences.${side}[${i}]`, 'sancionado (minutesFactor 0) publicado en las props');
+      });
+    }
+    const inf = (f.inForm as Record<string, unknown> | undefined)?.[side];
+    if (Array.isArray(inf)) {
+      inf.forEach((p, i) => {
+        if (!isObj(p)) return;
+        const prop = byId.get(String(p.playerId));
+        if (!prop) fail(c, `${at}.inForm.${side}[${i}]`, 'jugador en forma que no está en las props');
+        else if (prop.formIndex !== p.formIndex) fail(c, `${at}.inForm.${side}[${i}].formIndex`, 'no coincide con el de las props');
+      });
+    }
+  }
+}
+
+/**
+ * Valida un bloque de factores suelto (tests): contrato estricto y, con `file`, coherencia con la ficha. Devuelve los
+ * errores (vacío = válido).
+ */
+export function validateMatchFactors(factors: unknown, file?: Record<string, unknown>): string[] {
+  const c: Ctx = { file: 'factors', errors: [], detailRefs: [], compRefs: [] };
+  noNulls(factors, '$', c);
+  matchFactors(factors, '$', c);
+  if (file && isObj(factors)) factorsVsFile(factors, file, '$', c);
+  return c.errors;
+}
+
+// ---------------------------------------------------------------------------
 // Archivos raíz
 // ---------------------------------------------------------------------------
 
@@ -729,9 +920,11 @@ const matchFile = obj(
     actual: obj({ home: teamMatchStats, away: teamMatchStats }),
     events: arr(matchEvent),
     confidence: confidenceList(2),
+    factors: matchFactors,
   },
   (v, at, c) => {
     const m = v.match as Record<string, unknown> | undefined;
+    if (isObj(v.factors)) factorsVsFile(v.factors, v, `${at}.factors`, c);
     // alta confianza: próximos sin resultado; terminados con resultado; el primero coincide con prediction.safe
     const conf = v.confidence as Record<string, unknown>[] | undefined;
     if (Array.isArray(conf) && m) {

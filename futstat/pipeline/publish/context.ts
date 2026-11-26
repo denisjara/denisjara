@@ -45,6 +45,8 @@ import {
 import { walkForwardDC } from '../analytics/backtest';
 import { eloPercentile } from '../analytics/popularity';
 import { buildStatContext, expectedPairs, projectMatchStats, type StatContext, type StatKey, type TeamStatDists } from '../analytics/projections';
+import { refereeMultipliers, type RefereeMemo } from '../analytics/referee';
+import type { OppFactorCache } from '../analytics/playerFactors';
 import { settleDataOf } from '../analytics/settle';
 import type { XgMap } from '../analytics/teamStats';
 import { blendParts, preMatchView, type ComponentRow, type ModelVariant, type StatPairs, type WalkForwardRow } from '../experiments/types';
@@ -182,6 +184,10 @@ export interface BuildContext {
   compAverages: Map<string, LeagueAverages>;
   compStandings: Map<string, StandingGroup[]>;
   baseContexts: Map<string, PredictContext>;
+  /** medias de la competición por (corte, estadística, competición, temporada) del factor árbitro (analytics/referee.ts) */
+  refereeMemo: RefereeMemo;
+  /** contextos de estadísticas de los factores del rival de las props por (competición, temporada, día, equipos) */
+  oppFactorCache: OppFactorCache;
   /**
    * pronósticos de alta confianza (publish/confidence.ts, antes de construir cualquier MatchSummary): partidos próximos
    * (reglas de producción) → `prediction.safe` y MatchFile.confidence
@@ -412,6 +418,8 @@ export function createContext(opts: BuildOptions): BuildContext {
     compAverages: new Map(),
     compStandings: new Map(),
     baseContexts: new Map(),
+    refereeMemo: new Map(),
+    oppFactorCache: new Map(),
   };
 }
 
@@ -854,15 +862,23 @@ export function statContext(ctx: BuildContext, compId: string, before?: number, 
 }
 
 /**
- * Multiplicadores del gancho stats.adjust de la variante para un partido (undefined sin gancho = producción). El gancho
- * recibe el partido sin resultado (preMatchView), el pasado anterior a su inicio y las medias de producción.
+ * Multiplicadores de las medias proyectadas de un partido (undefined = ninguno).
+ *  - Producción (sin gancho stats.adjust): árbitro designado (analytics/referee.ts, MODEL.referee) en tarjetas y
+ *    faltas, solo si el partido tiene árbitro conocido.
+ *  - Con gancho stats.adjust de la variante: SUSTITUYE al de producción (`() => ({})` = producción anterior al
+ *    26-nov-2026). El gancho recibe el partido sin resultado (preMatchView), el pasado anterior a su inicio y las medias
+ *    de producción.
  */
 export function statMultipliers(ctx: BuildContext, m: MatchRecord, sc: StatContext): StatPairs | undefined {
   const adjust = ctx.variant?.stats?.adjust;
-  if (!adjust) return undefined;
+  const t = Date.parse(m.date);
+  if (!adjust) {
+    if (!m.referee?.id) return undefined;
+    const out = refereeMultipliers(m, historyView(ctx.history, Number.isFinite(t) ? t : ctx.now), expectedPairs(m.home.id, m.away.id, sc), MODEL.referee, ctx.refereeMemo);
+    return Object.keys(out).length ? out : undefined;
+  }
   const comp = ctx.configById.get(m.compId);
   if (!comp) return undefined;
-  const t = Date.parse(m.date);
   const out = adjust({
     ctx: { comp, configs: ctx.configById, homeLeague: homeLeagueFor(ctx, m) },
     match: preMatchView(m),

@@ -409,6 +409,26 @@ export function expectedPair(ctx: StatContext, key: StatKey, homeId: string, awa
   return { home: L.home * forH * agA, away: L.away * forA * agH };
 }
 
+/**
+ * Media esperada de un lado con contracción `forN` en el «a favor» del equipo y `agN` en el «en contra» del rival
+ * (expectedPair = forN = agN = ctx.priorN). La usan los factores del rival de las props (analytics/playerFactors.ts);
+ * undefined si la competición no tiene media de esa estadística.
+ */
+export function expectedSideMixed(ctx: StatContext, key: StatKey, homeId: string, awayId: string, side: 'home' | 'away', forN: number, agN: number): number | undefined {
+  const L = ctx.league[key];
+  if (!L) return undefined;
+  const ph = ctx.teams.get(homeId)?.[key];
+  const pa = ctx.teams.get(awayId)?.[key];
+  if (side === 'home') {
+    const forH = ratio(ph?.forHome, ratio(ph?.forAll, 1, forN), forN);
+    const agA = ratio(pa?.agAway, ratio(pa?.agAll, 1, agN), agN);
+    return L.home * forH * agA;
+  }
+  const forA = ratio(pa?.forAway, ratio(pa?.forAll, 1, forN), forN);
+  const agH = ratio(ph?.agHome, ratio(ph?.agAll, 1, agN), agN);
+  return L.away * forA * agH;
+}
+
 /** Recorta la distribución donde la cola acumulada es despreciable (la masa restante se pliega en el último índice). */
 function trimDist(dist: number[], eps = 1e-4): number[] {
   let acc = 0;

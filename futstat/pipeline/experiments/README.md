@@ -16,7 +16,10 @@ npx tsx scripts/eval-model.ts --variant=example --window=prev   # confirmatoria:
 npx tsx scripts/eval-model.ts --variant=example --window=pooled # tuning + prev juntas (criterio conjunto del pre-registro)
 ```
 
-Siempre se compara contra `baseline` (producción). Informe en consola y JSON en `.cache/eval/<variante>-<ventana>.json`.
+Siempre se compara contra `baseline`: la producción ANTERIOR a la última integración (desde el 26-nov-2026, producción
+sin árbitro, sin bajas probables y con factores del rival 40/40: `BASELINE_VARIANT` en `types.ts`; la de antes del
+22-nov-2026 es `BASELINE_2211_VARIANT`). `production` es la producción actual (variante vacía). Informe en consola y
+JSON en `.cache/eval/<variante>-<ventana>.json`.
 Tiempo: ~15 s la primera vez (línea base, luego en caché) + ~9–20 s por variante + ~20 s de comprobación de fuga.
 
 ---
@@ -132,11 +135,11 @@ Props de jugadores: tasas por 90 (players.rateHalfLifeDays) · minutos esperados
 | `combine.blend(row)` | 1X2 final (y opcionalmente `{ p, over25 }`) desde los componentes | pool lineal DC 0,05 / Elo 0,15 / mercado 0,8; sin cuotas 0,5 / 0,5 |
 | `combine.prepare(rows, asOf)` | reajuste del combinador con filas **estrictamente anteriores** a `asOf`; `combine.refitEvery`: `'monthly'` (día 1 de cada mes, por defecto) o cada N días | — |
 | `totals.adjustTotal(input)` | factor del total de goles manteniendo el 1X2 (se recalcula el objetivo de más de 2,5 con λ·factor y se recalibra) | 1 |
-| `stats.priorN`, `stats.halfLifeDays`, `stats.leaguePriorN` | contracción de las tasas de equipo, vida media, prior de la media de liga (córners, tarjetas…) | 6 · 150 · 20 |
+| `stats.priorN`, `stats.halfLifeDays`, `stats.leaguePriorN` | contracción de las tasas de equipo, vida media, prior de la media de liga (córners, tarjetas…) | 40 · 150 · 20 |
 | `stats.dispersion` | `'pooled'` (producción), `'global'`, `'team'` (por equipo contraída hacia la común), `'poisson'` o un número fijo | `'pooled'` |
-| `stats.adjust({ctx, match, history, base})` | **multiplicadores** (> 0) por equipo de la media de cada estadística (`base` = medias de producción de las que se proyectan), justo después de `expectedPair`: árbitro, necesidad de marcar… Llega a TODAS las proyecciones (`projectStatsFor`: fichas, pronósticos del día, alta confianza, cuota alta, banco) y, por `cardsFactor`, a las props de tarjeta | sin cambio |
+| `stats.adjust({ctx, match, history, base})` | **multiplicadores** (> 0) por equipo de la media de cada estadística (`base` = medias de producción de las que se proyectan), justo después de `expectedPair`: árbitro, necesidad de marcar… Llega a TODAS las proyecciones (`projectStatsFor`: fichas, pronósticos del día, alta confianza, cuota alta, banco) y, por `cardsFactor`, a las props de tarjeta. **Sustituye** al ajuste de producción | árbitro designado en tarjetas y faltas (`MODEL.referee`, `analytics/referee.ts`; 1 sin árbitro conocido) |
 | `players.rateHalfLifeDays` | vida media (días) de la ponderación temporal de las tasas por 90 de cada jugador, con referencia en el inicio del partido | sin ponderar (365 días) |
-| `players.adjust({ctx, match, teamId, side, history, base})` | cambios de la entrada de las props de un equipo (`Partial<PlayerPropsInput>`): `minutesFactor` por jugador (0 = no juega), `cardsFactor`, `teamLambda`… | sin cambio |
+| `players.adjust({ctx, match, teamId, side, history, base})` | cambios de la entrada de las props de un equipo (`Partial<PlayerPropsInput>`): `minutesFactor` por jugador (0 = no juega), `cardsFactor`, `teamLambda`… `base` llega SIN los ajustes de producción, que el gancho **sustituye** | bajas probables (sancionado fuera; `MODEL.availability`) + factores del rival 6/40 (`MODEL.propsOppShrink`), `analytics/playerFactors.ts` |
 
 ### Qué ve cada gancho (y por qué no puede mirar el futuro)
 
@@ -266,6 +269,72 @@ Nota de la línea base: frente a la producción anterior (`baseline`, priorN 6),
 tarjetas y tiros a puerta en todas las ventanas, pero sus props de jugador de tiros y tarjetas son algo peores en
 tuning (≥ 1 a puerta +0,0006, ≥ 2 tiros +0,0005, tarjeta +0,0003 de Brier, IC por encima de 0): los factores del
 rival de las props salen de esas proyecciones.
+
+## Resultados de la ronda de factores (26-nov-2026)
+
+Aplicación literal del pre-registro de arriba (que no se ha modificado). Δ de Brier **frente a `production` de ese
+momento** (scripts del banco con `runBaseline`/`runVariant`/`compare`/`leakCheck`; la CLI compara contra la línea base
+anterior), IC 95 % bootstrap por días, * = el IC excluye el 0. Fuga OK (diferencia máx. 0) en todas las ventanas de
+todas las variantes, más un test adversarial propio por factor (partidos futuros envenenados en la MISMA competición).
+
+**24 configuraciones = 6 factores × 4**, todas declaradas en la cabecera de sus archivos antes de evaluar y todas
+evaluadas (ninguna descartada ni añadida):
+
+| Factor | Configuraciones | Pasan | Resultado |
+|---|---|---|---|
+| Árbitro | `referee-k15`, `-k30`, `-k60`, `referee-fouls-k30` | las 4 | Elegida `referee-fouls-k30` por el desempate declarado (la única que también pasa en faltas). k15 era mejor en tarjetas en todas las ventanas: k = 30 no es el óptimo en muestra |
+| Bajas de jugadores | `availability-susp`, `-props`, `-team`, `-full` | `-props` | `-susp`: goleador +0,00001 en T2 (falla la regla 1). `-team` y `-full`: tiros por equipo significativamente peor en T2 (+0,00289*) |
+| Forma de jugadores | `playerform-hl60`, `-last5`, `-fac6`, `-fac6x40` | `-fac6`, `-fac6x40` | `hl60`: ≥ 2 tiros peor en T2 (+0,00073*); `last5`: ≥ 2 tiros peor en T1 (+0,00051*). Elegida `fac6x40` a posteriori por T1/prev (efecto de selección leve, declarado) |
+| Forma del equipo | `form-goals`, `-goals-noodds`, `-stats`, `-stats-k30` | ninguna | `form-goals`: RPS +0,00011 en T2 (puntual); `-noodds`: O/U +0,00003 en T2 y goleador peor en T1; `-stats`/`-k30`: córners (por equipo) peor en T1/prev |
+| Local/visitante | `homeaway-goals`, `-goals-noodds`, `-stats-k15`, `-stats-nosplit` | ninguna | τ² empírico-bayesiano = 0 en cada reajuste semanal desde febrero de 2026 (variantes de goles = producción); k15 peor en prev en córners, tarjetas y a puerta; sin separación, córners por equipo y tiros peor |
+| Necesidad de marcar | `stakes-legs`, `-table`, `-table-soft`, `-all` | ninguna | Goles por equipo peor en prev (regla 1); `-all` además ambos marcan peor en prev (+0,00026*). T1/T2 declaradas sin muestra (vueltas 8/18, recta final 0/2) |
+
+**Variantes aprobadas** (`referee-fouls-k30`, `availability-props`, `playerform-fac6x40`):
+
+| Δ Brier | T1 | T2 | prev | pooled |
+|---|---|---|---|---|
+| Tarjetas (fouls-k30) | −0,00294 | −0,00391* | −0,00291* | −0,00320* |
+| Tarjetas por equipo | −0,00143 | −0,00234* | −0,00154* | −0,00176* |
+| Faltas | −0,00219 (n = 142) | −0,00370* | −0,00149* | −0,00215* |
+| ≥ 1 a puerta (availability-props) | −0,00017* (en muestra) | −0,00012* | −0,00008 | — |
+| ≥ 2 tiros (availability-props) | −0,00016* (en muestra) | −0,00012* | −0,00011 | — |
+| ≥ 1 a puerta (fac6x40) | +0,00007 | −0,00061* | −0,00011 | −0,00048* |
+| ≥ 2 tiros (fac6x40) | −0,00030 | −0,00059* | −0,00024 | −0,00052* |
+| Tarjeta jugador (fac6x40) | −0,00017 | −0,00019* | −0,00012* | −0,00018* |
+
+`prev` se declaró «sin muestra» para los factores de jugadores (líneas desde el 7-may). Cada una tuvo **dos revisiones
+adversariales** independientes; las seis aceptaron, sin fugas. Reservas que constan: faltas del árbitro frágiles (MLS
+≈ 48 % de la ganancia en T2; en prev sin LaLiga 2 deja de ser significativa) y el «esperado» es una media de
+competición y temporada (parte del efecto podría ser mezcla de equipos); los factores de bajas se fijaron mirando T1
+(T1 en muestra) y el efecto es diminuto (≈ 0,08 % relativo); `fac6x40` sobre todo deshace el empeoramiento de las props
+del 22-nov (frente a `BASELINE_2211_VARIANT` en T2: +0,00002 / +0,00001 / +0,00010, n.s.).
+
+**Combinación** (`factors-combo.ts`, 1 configuración, ninguna componente retirada): mismas ganancias que cada factor
+por separado y nada significativamente peor en T1, T2, prev ni pooled; en T2 las props suman ≈ las de sus partes
+(≥ 1 a puerta −0,00075*, ≥ 2 tiros −0,00074*, tarjeta −0,00033*).
+
+**Holdout, SEGUNDA mirada** (`--final`, 2026-11-26T15:27Z, registrada en `.cache/holdout-looks.log`; 1.812 partidos en
+71 días, 42.400 pares, fuga OK). Referencia de la CLI: `baseline` de entonces = producción anterior al 22-nov (priorN 6).
+Ninguna métrica objetivo empeora (puntual): tarjetas −0,00726 [−0,01036; −0,00470], tarjetas por equipo −0,00575
+[−0,00767; −0,00403], faltas −0,00196 [−0,00474; +0,00093], goleador −0,00002, ≥ 1 a puerta −0,00028 [−0,00049;
+−0,00009], ≥ 2 tiros −0,00018 [−0,00040; +0,00004], tarjeta −0,00003 [−0,00010; +0,00004]. Límites: gran parte de la
+mejora en tarjetas es el priorN 40 del 22-nov; la combinación frente a la producción vigente en el holdout no se midió
+(sería otra mirada); el segmento con árbitro conocido son 250 partidos (tarjetas −0,00854 [−0,01666; −0,00210], faltas
+**+0,00080** [−0,00666; +0,00685], n = 244), así que el árbitro no se confirma; las dos partes de las props no se separan;
+tiros por equipo +0,00254 [−0,00021; +0,00517] frente a esa referencia (efecto del priorN 40, en muestra −0,0012).
+
+**Integración (26-nov-2026).** Producción = `factors-combo` (informes idénticos en T2 y prev), con una diferencia
+respecto a la combinación mirada en el holdout: el sancionado se quita de las props (factor 0) en lugar de ×0,03, que solo
+servía para poder puntuarlo; `factors-combo.ts` ya usa 0. Nueva `BASELINE_VARIANT` = producción previa a esta
+integración. El árbitro no actúa en los partidos próximos mientras ESPN no lo publique antes del inicio.
+
+**No adoptado, pero apuntado para un pre-registro propio:** (1) tarjetas ×0,92 y faltas ×0,95 para un equipo sin nada
+en juego en la recta final: en ese segmento de prev, tarjetas −0,0021 (estricto) / −0,0033 (suave) y faltas −0,0030 /
+−0,0035, IC < 0, pero no era objetivo pre-registrado por sí solo y el ajuste no tiene recta final: la prueba real es la
+primavera de 2027; (2) forma de estadísticas solo en faltas y tiros con K = 30 (mejora en T1, T2 y prev; córners
+empeora); (3) forma de xG por tiros en partidos SIN cuotas (coeficientes +0,23 / +0,30, t ≈ 5–6; con cuotas ≈ 0). Lo
+demás (forma, local/visitante, eliminatoria, lo que se juega) se publica solo como contexto en el bloque «Factores del
+partido» de cada ficha (`usedInModel: false`).
 
 ## Caché y rendimiento
 

@@ -12,7 +12,7 @@ import type { CompetitionStore, MatchRecord } from '../../pipeline/types';
 import { busiestDay, leakCheck, matchInfos, runVariant, type EvalData } from '../../pipeline/experiments/bench';
 import { historyView } from '../../pipeline/experiments/history';
 import { listVariants, loadVariant } from '../../pipeline/experiments/load';
-import { BASELINE_VARIANT, PRODUCTION_VARIANT, type ModelVariant } from '../../pipeline/experiments/types';
+import { BASELINE_2211_VARIANT as BASELINE_VARIANT, PRODUCTION_VARIANT, type ModelVariant } from '../../pipeline/experiments/types';
 import { GLOBAL_TOTAL, LEAGUE_TOTAL_DEFAULTS, leagueTotal, shrinkFactor } from '../../pipeline/experiments/totals/model';
 import totalsBest from '../../pipeline/experiments/totals-best';
 import totalsShrink from '../../pipeline/experiments/totals-shrink';

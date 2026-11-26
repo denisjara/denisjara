@@ -53,7 +53,7 @@ resultados en vivo sin esperar a la siguiente actualización.
 
 ### Versión portátil (un solo archivo)
 
-Además de la web, cada actualización genera **`FutStat-Lab.html`**: un único archivo (~15 MB) con la app,
+Además de la web, cada actualización genera **`FutStat-Lab.html`**: un único archivo (~19 MB, con todos los escudos) con la app,
 las tipografías, **todos** los datos del día (las ~900 fichas de competiciones, partidos, equipos y
 jugadores, comprimidas dentro del propio HTML) y los **escudos** de los equipos. Se descarga desde la web
 publicada (`https://denisjara.github.io/denisjara/FutStat-Lab.html`) y se abre con **doble clic** en
@@ -77,7 +77,7 @@ Para generarlo en local: `npm run build:standalone` → `standalone/FutStat-Lab.
 | **Alta confianza** | `/confianza` | Selecciones muy probables y de cuota baja cuyo mercado ha acertado al menos el 80 % fuera de muestra. Cabecera con el acierto real del holdout (n e intervalo de Wilson) junto a la línea base sin modelo, la tasa base y el lift; qué es y qué no es; picks de los próximos 14 días por día (probabilidad, cuota justa y de mercado, validación de su regla); acierto por mercado frente a su tasa base y resultados recientes con ✓/✗. |
 | **Ligas** | `/c/<liga>` | Una sección propia por cada liga (LaLiga, Premier League, Serie A, Bundesliga…) con pestañas: clasificación (con xPts y Elo), próximos partidos, resultados, estadísticas de equipos (goles, córners, tarjetas, tiros, posesión, over/BTTS, porterías a cero, goles por tramo de minutos), ratings, simulación de temporada, jugadores y backtest de esa liga. |
 | **Competiciones** | `/c/<competición>` | Champions, Europa League, Conference, Libertadores, Sudamericana, Nations League y copas nacionales, con la misma estructura (tabla de fase de liga cuando existe). |
-| **Análisis de partido** | `/m/<id>` | Ficha completa al estilo de una casa de apuestas: más de 20 familias de mercados (1X2, doble oportunidad, empate no apuesta, más/menos goles, ambos marcan, hándicap asiático y europeo, marcador exacto, mitades, descanso/final, goles por equipo, córners, tarjetas, tiros, faltas…) con probabilidad del modelo, cuota justa, cuota de mercado y valor esperado; matriz de marcadores; desglose del modelo (Dixon-Coles, Elo, mercado y ensamble) con explicación en lenguaje natural; forma reciente de ambos equipos; cara a cara; comparativa estadística; proyecciones de córners, tarjetas, tiros, tiros a puerta, faltas y fueras de juego; *props* de jugadores; y, en partidos terminados, estadísticas reales y eventos. |
+| **Análisis de partido** | `/m/<id>` | Ficha completa al estilo de una casa de apuestas: más de 20 familias de mercados (1X2, doble oportunidad, empate no apuesta, más/menos goles, ambos marcan, hándicap asiático y europeo, marcador exacto, mitades, descanso/final, goles por equipo, córners, tarjetas, tiros, faltas…) con probabilidad del modelo, cuota justa, cuota de mercado y valor esperado; matriz de marcadores; desglose del modelo (Dixon-Coles, Elo, mercado y ensamble) con explicación en lenguaje natural; forma reciente de ambos equipos; cara a cara; comparativa estadística; proyecciones de córners, tarjetas, tiros, tiros a puerta, faltas y fueras de juego; *props* de jugadores; panel **«Factores del partido»** (pestaña Análisis: árbitro y su rigor con las tarjetas, bajas probables y sancionados, forma reciente con xG aproximado, local/visita, estado de la eliminatoria, lo que se juega cada equipo y jugadores en forma, cada pieza marcada «Usado en el modelo» o «Informativo»); y, en partidos terminados, estadísticas reales y eventos. |
 | **Equipo** | `/t/<id>` | Elo e historial, estadísticas de temporada (local/visitante), forma, todos sus partidos, próximos rivales y plantilla con estado de forma. |
 | **Jugadores y estado de forma** | `/jugadores` | Ranking global por índice de forma (0–100) con goles, asistencias, tiros, tiros a puerta, tarjetas, faltas cometidas y recibidas, fueras de juego, paradas, métricas por 90 minutos y sus últimos 5 partidos. |
 | **Apuestas de valor** | `/valor` | Selecciones donde la probabilidad del modelo supera a la implícita en la cuota (EV positivo), con *edge*, cuota justa, confianza y stake sugerido por Kelly fraccional. |
@@ -189,6 +189,13 @@ esperado** (`EV = p · cuota − 1`).
   cruzando lo que genera con lo que concede su rival, con *shrinkage* hacia la media de la liga (40 partidos ficticios
   desde el 22-nov-2026; antes 6, demasiado débil: en el holdout el Brier de córners bajó de 0,2463 a 0,2400 y el de
   tarjetas de 0,2372 a 0,2295).
+- **Árbitro designado** (desde el 26-nov-2026, `MODEL.referee`,
+  [`pipeline/analytics/referee.ts`](pipeline/analytics/referee.ts)): si se conoce antes del partido, las medias de
+  tarjetas y faltas de los dos equipos se multiplican por su severidad, `R = (observado + k·ē) / (esperado + k·ē)` en sus
+  partidos terminados **anteriores** (todas las competiciones; esperado = media de la competición y temporada de cada
+  uno), contraída hacia 1 con k = 30 partidos ficticios. El 90 % central va de 0,90 a 1,10 en tarjetas y de 0,95 a
+  1,045 en faltas. **Hoy ESPN no publica el árbitro antes del partido**, así que en los partidos próximos el
+  multiplicador es 1 (ver [Fuente de datos](#fuente-de-datos-y-limitaciones)).
 - Estas variables están **sobredispersas** (varianza mayor que la media), así que se modelan con una
   **binomial negativa** cuya dispersión se estima por el método de momentos.
 - La distribución del total se obtiene por convolución de las de ambos equipos: escalera de líneas
@@ -203,6 +210,17 @@ esperado** (`EV = p · cuota − 1`).
   2 tiros, al menos 1 o 2 tiros a puerta, ver tarjeta y cometer 2 o más faltas. Las tasas individuales se
   regularizan para no sobrerreaccionar a muestras pequeñas y se ajustan a los minutos esperados y al
   contexto del partido.
+- **Factores del rival** (desde el 26-nov-2026, `MODEL.propsOppShrink`): en las props de tiros, tiros a puerta y tarjeta
+  el nivel «a favor» del propio equipo se contrae con 6 partidos ficticios y lo que concede el rival con 40. Las tasas
+  del jugador ya llevan el nivel de su equipo: con 40 en los dos lados se contraía dos veces y las props empeoraron tras
+  el cambio del 22-nov. Las proyecciones de equipo publicadas no cambian.
+- **Bajas probables** (desde el 26-nov-2026, `MODEL.availability`,
+  [`pipeline/analytics/availability.ts`](pipeline/analytics/availability.ts)), solo con partidos y líneas anteriores
+  (sin alineaciones ni partes médicos): expulsado en el último partido de su equipo en la **misma** competición ⇒
+  sancionado, no se publica en las props; habitual (≥ 60 % de los minutos en los 5 últimos partidos) que no jugó los 2
+  últimos ⇒ minutos esperados × 0,65; que solo faltó al último, de la misma competición ⇒ × 0,9 (de otra competición
+  se trata como rotación: sin cambio). Factores fijados con una exploración descriptiva de T1 (jun–jul 2026): un
+  expulsado jugó el partido siguiente 0 de 35 veces; un habitual que faltó a los 2 últimos jugó el 23,5 % (n = 34).
 
 ### 8. Simulación Monte Carlo de temporada
 
@@ -502,6 +520,94 @@ núcleo (`MODEL` en [`pipeline/config.ts`](pipeline/config.ts) y `PRIOR_N` en
   de contexto (descanso, calendario, competición europea, ascenso, inicio de temporada, movimiento de cuotas).
 - El holdout ya se ha mirado una vez para estas decisiones: deja de ser del todo virgen para ellas.
 
+### 15. Cambios del modelo (26-nov-2026): factores del partido
+
+**Protocolo.** La regla de adopción se escribió el 26-nov-2026 **antes** de calcular ningún resultado de los factores
+(pre-registro en [`pipeline/experiments/README.md`](pipeline/experiments/README.md)). Ventanas: **T1** (1-jun → 31-jul-2026,
+215 partidos), **T2** (1-ago → 15-sep, 1.142) y **prev** (temporadas pasadas, 1-ene → 31-may-2026, 2.636 partidos nunca
+evaluados antes: recta final de las ligas europeas, eliminatorias UEFA, árbitros europeos). Un factor se adopta si
+mejora sus métricas objetivo en T2 y en prev, alguna con IC bootstrap por días que excluye el 0, no empeora de forma
+significativa nada en T1 ni ninguna métrica principal, y pasa la comprobación de fuga. Siempre contra la producción del
+momento.
+
+**Volumen.** 6 factores × 4 configuraciones declaradas de antemano = **24 configuraciones**, todas evaluadas y
+publicadas. Cada factor que pasó tuvo **dos revisiones adversariales** independientes (fugas, sobreajuste, robustez por
+competición): las seis aceptaron, sin fugas.
+
+| Factor (configs) | Decisión | Por qué |
+|---|---|---|
+| Árbitro (4) | **Adoptado**: `referee-fouls-k30` | Tarjetas y faltas mejoran en T2 y prev (abajo). Faltas, frágil: en T2 casi la mitad de la ganancia es de la MLS y en prev, sin LaLiga 2, deja de ser significativa. Hoy no actúa: ESPN no publica árbitros antes del partido |
+| Bajas de jugadores (4) | **Adoptado**: `availability-props` | Props de tiros, tiros a puerta y tarjeta mejoran en T2. Factores fijados mirando T1 (T1 dentro de muestra). El ajuste por equipo (goles, tiros) no pasó: los equipos con bajas no tiran menos (tiros significativamente peor en T2) |
+| Forma de jugadores (4) | **Adoptado**: `playerform-fac6x40` (factores del rival 6/40) | Sobre todo **deshace** el empeoramiento de las props del 22-nov (frente al modelo anterior queda ≈ 0). Las tasas ponderadas por recencia y el multiplicador de los 5 últimos partidos **no pasaron** (≥ 2 tiros significativamente peor) |
+| Forma del equipo (4) | No adoptado, informativo | La de goles empeora el 1X2 en T2 (estimación puntual); la de estadísticas, córners en prev. Solo hay señal **sin cuotas** (xG aproximado por tiros: coeficientes +0,23 / +0,30); con cuotas ≈ 0: **el mercado ya la descuenta**, y desde junio solo el 3–12 % de los partidos no tiene cuotas |
+| Local/visitante por equipo (4) | No adoptado, informativo | La varianza de la ventaja local entre equipos, estimada cada semana, sale **0** desde febrero de 2026: indistinguible del ruido (variante = producción). Separar más o menos casa/fuera en córners, tarjetas y tiros empeora en prev |
+| Eliminatorias y recta final (4) | No adoptado, informativo | Sin ganancia consistente: en las vueltas mejora más/menos (prev −0,0058, n = 83) pero empeoran los goles por equipo; en la recta final 1X2 y goles no cambian |
+
+**Ganancia medida** de lo adoptado (los tres juntos frente a la producción anterior; Δ Brier, * = IC 95 % que excluye 0):
+
+| Métrica | T2 (1.142 partidos) | prev (2.636) |
+|---|---|---|
+| Tarjetas (total) | −0,0039* | −0,0029* |
+| Tarjetas por equipo | −0,0023* | −0,0015* |
+| Faltas | −0,0037* | −0,0015* |
+| ≥ 1 tiro a puerta (jugador) | −0,00073* | −0,00010 |
+| ≥ 2 tiros (jugador) | −0,00069* | −0,00024 |
+| Tarjeta (jugador) | −0,00032* | −0,00013* |
+| Goleador | −0,00003* | 0 |
+
+1X2, más/menos, ambos marcan, goles por equipo, córners, tiros y tiros a puerta: Δ = 0. En T1 todo va en la misma
+dirección sin significación. Las props mejoran poco (0,3–0,5 % de su Brier) y prev casi no tiene líneas de jugador
+(empiezan el 7-may: 192 partidos).
+
+**Holdout: SEGUNDA mirada en total** (26-nov-2026, una vez, la combinación de los tres; 16-sep en adelante, 1.812
+partidos en 71 días, 42.400 pares de jugador, sin fuga). Ninguna métrica objetivo empeora (estimación puntual):
+
+| Holdout (26-nov-2026) | Referencia | Combinación | Δ [IC 95 %] |
+|---|---|---|---|
+| Tarjetas | 0,2369 | 0,2297 | −0,0073 [−0,0104; −0,0047] |
+| Tarjetas por equipo | 0,2286 | 0,2229 | −0,0058 [−0,0077; −0,0040] |
+| Faltas | 0,2118 | 0,2098 | −0,0020 [−0,0047; +0,0009] |
+| ≥ 1 tiro a puerta | 0,1603 | 0,1600 | −0,00028 [−0,00049; −0,00009] |
+| ≥ 2 tiros | 0,1553 | 0,1551 | −0,00018 [−0,00040; +0,00004] |
+| Tarjeta (jugador) | 0,1025 | 0,1025 | −0,00003 [−0,00010; +0,00004] |
+| Goleador | 0,0738 | 0,0738 | −0,00002 [−0,00004; +0,00000] |
+
+Advertencias de esa mirada:
+- La **referencia** de la herramienta es el modelo de **antes del 22-nov**: buena parte de la mejora en tarjetas viene
+  de aquel cambio, no de estos factores. La comparación contra la producción vigente en el holdout **no se midió**
+  (habría sido otra mirada).
+- Solo **250 de 1.812** partidos del holdout tienen árbitro conocido. Ahí tarjetas mejora (−0,0085 [−0,0167; −0,0021])
+  pero faltas empeora un poco (+0,0008 [−0,0067; +0,0069], n = 244): **el árbitro no queda confirmado** en el holdout.
+- Las dos partes de las props no se pueden separar. En el holdout los sancionados llevaban ×0,03 para poder puntuarlos;
+  en producción no se publican (factor 0).
+- Los tiros por equipo empeoran +0,0025 [−0,0002; +0,0052] frente a la referencia: efecto del cambio del 22-nov (estos
+  factores no los tocan), que en muestra iba en sentido contrario. Queda vigilado.
+- El holdout se ha mirado ya **dos veces** (22-nov y 26-nov); no se ha hecho ningún ajuste posterior con él.
+
+**Lo prometedor que no se adopta:** bajar tarjetas y faltas de un equipo que ya no se juega nada en la recta final
+mejoró ese segmento en prev (tarjetas −0,0021 a −0,0033, faltas −0,0030 a −0,0035, IC que excluyen 0). No era una
+métrica objetivo pre-registrada por sí sola y el tramo de ajuste no tiene recta final de liga: necesita su propio
+pre-registro y confirmarse en la **recta final de la primavera de 2027**. Igual con la forma en faltas y tiros (mejora
+en las tres ventanas, pero restringirla a esas estadísticas sería una elección a posteriori).
+
+#### Factores del partido en la ficha
+
+Cada `matches/<id>.json` lleva un bloque `factors` («Factores del partido», validado por `scripts/validate-data.ts`)
+calculado **solo con información anterior al inicio**, también en partidos ya jugados: árbitro, bajas probables,
+rendimiento casa/fuera, forma reciente, estado de la eliminatoria, lo que se juega cada equipo y jugadores en forma.
+Cada apartado dice si es **«usado en el modelo»** (`usedInModel`: cambia de verdad las probabilidades publicadas de ese
+partido) o **«informativo»** (solo contexto):
+
+- **Usado en el modelo:** el árbitro, solo si ESPN lo ha publicado y tiene partidos previos con datos (si no, aparece
+  «no publicado» y no ajusta nada); cada baja probable que recorta minutos de las props (`minutesFactor` ≠ 1); y el
+  rendimiento casa/fuera en córners, tarjetas y tiros, que ya formaba parte de las proyecciones.
+- **Informativo:** forma reciente (xG aproximado por tiros frente a lo esperado por el Elo), casa/fuera en goles,
+  estado de la eliminatoria (solo si la ida está en los datos), lo que se juega cada equipo (ligas a doble vuelta sin
+  Argentina, Liga MX ni MLS, con ≥ 75 % de la fase regular jugada; rangos matemáticos, así que un equipo ya descendido
+  figura «sin nada en juego») y jugadores en forma.
+- Unas notas en español resumen qué usa el modelo y qué no. A 26-nov-2026 el árbitro figura «no publicado» en todos los
+  partidos próximos.
+
 ### Parámetros principales
 
 | Parámetro | Valor | Significado |
@@ -516,6 +622,9 @@ núcleo (`MODEL` en [`pipeline/config.ts`](pipeline/config.ts) y `PRIOR_N` en
 | `cupOnlyTier` | 1 | Tier del Elo inicial de equipos que solo juegan copas |
 | `totalShrink` | s 0,5 · 365 días · vida media 180 · 30 ficticios · 2,6 | Contracción del total de goles sin línea de mercado (salvo copas), desde el 22-nov-2026 |
 | `eloProbHomeAdv` | vacío (65 en todo) | Ventaja local del Elo por grupo para el 1X2: probada y revertida el 22-nov-2026 |
+| `referee` | kCards 30 · kFouls 30 · minCompN 20 · minCompNAll 10 | Severidad del árbitro en tarjetas y faltas (contracción y mínimos de la media de competición), desde el 26-nov-2026 |
+| `availability` | habitual ≥ 0,6 de los minutos en 5 partidos · líneas de 365 días · sancionado 0 · faltó 2: 0,65 · faltó 1 (misma comp.): 0,9 · (otra): 1 | Bajas probables en las props, desde el 26-nov-2026 |
+| `propsOppShrink` | forN 6 · agN 40 | Partidos ficticios del «a favor» propio y del «en contra» del rival en las props, desde el 26-nov-2026 |
 | `minEv` / `minProb` / `maxOdds` | 0,05 / 0,12 / 8 | Filtros de apuestas de valor |
 | `kellyFraction` / `kellyCap` | 0,25 / 0,05 | Kelly fraccional y tope por apuesta |
 | `simIterations` | 10 000 | Iteraciones de la simulación de temporada |
@@ -530,7 +639,14 @@ faltas (`PRIOR_N` = 40 partidos ficticios, vida media 150 días) está en
 
 **Fuente:** la API pública de ESPN (`site.api.espn.com`), sin clave y con CORS abierto: calendarios y
 resultados, clasificaciones, estadísticas de equipo y de jugador por partido, eventos (goles, tarjetas,
-cambios) y cuotas de DraftKings.
+cambios), árbitro principal y cuotas de DraftKings.
+
+**Árbitros** (desde el 26-nov-2026): del resumen del partido (`gameInfo.officials`) y del endpoint core `/officials`
+(circuito propio: si falla, solo se aplaza ese paso). A 26-nov-2026 hay árbitro en 12.715 de los 17.294 partidos del
+almacén (740 árbitros), casi todos los terminados de enero de 2025 al 20 de septiembre de 2026; desde octubre ESPN
+prácticamente no lo publica (2 de 925 partidos en octubre, ninguno en noviembre) y **nunca antes del partido** en los
+programados. Cada descarga vuelve a consultar los partidos de las próximas 72 horas; mientras no aparezca, el ajuste
+por árbitro no actúa.
 
 **Limitaciones que conviene conocer:**
 
@@ -542,7 +658,9 @@ cambios) y cuotas de DraftKings.
   ligas. Sin cuotas, el ensamble usa solo Dixon-Coles y Elo y no se calculan apuestas de valor.
 - **Estadísticas de jugadores** solo de los partidos con resumen disponible (últimos 180 días); algunas
   competiciones (por ejemplo, la Nations League) no los tienen.
-- **No se modelan** alineaciones confirmadas, lesiones, sanciones, rotaciones, clima ni motivación.
+- **No se modelan** alineaciones confirmadas, lesiones, rotaciones, clima ni motivación. Las sanciones, solo de forma
+  aproximada (roja en el último partido de la misma competición; sin recursos ni ciclos de amarillas). El árbitro, solo
+  cuando ESPN lo publica antes del partido (hoy no lo hace).
 - La API de ESPN **no es oficial ni está documentada**: puede cambiar o fallar sin aviso. El pipeline
   tolera caídas parciales (una competición que falla no detiene las demás), descarta los registros que no
   entiende y reutiliza el almacén de la ejecución anterior (ver [Seguridad y robustez](#seguridad-y-robustez)).
@@ -799,7 +917,7 @@ La app solo lee estos ficheros, todos tipados en [`src/types/data.ts`](src/types
 | `meta.json` | Competiciones, recuentos e índice de búsqueda de equipos |
 | `home.json` | Partidos populares, hoy, mañana, recientes, mejores apuestas de valor, mejores pronósticos de alta confianza (72 h) con su acierto fuera de muestra, resumen de los pronósticos del día (`daily`), la mejor apuesta de cuota alta aún abierta (`longshot`) y jugadores en forma |
 | `competitions/<id>.json` | Clasificación, partidos, estadísticas de equipos, ratings, simulación, jugadores, promedios de liga, backtest |
-| `matches/<id>.json` | Análisis completo de un partido: modelo, mercados, proyecciones, forma, H2H, comparativa, *props*, valor |
+| `matches/<id>.json` | Análisis completo de un partido: modelo, mercados, proyecciones, forma, H2H, comparativa, *props*, valor y factores del partido (`factors`: árbitro, bajas, forma, casa/fuera, eliminatoria, lo que se juega, jugadores en forma; cada uno «usado en el modelo» o «informativo») |
 | `teams/<id>.json` | Ficha de equipo |
 | `players.json` | Ranking global de jugadores por forma |
 | `value.json` | Todas las apuestas de valor |

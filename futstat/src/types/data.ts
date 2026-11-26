@@ -594,6 +594,192 @@ export interface MatchFile {
    * with `result` (rules fitted without the match).
    */
   confidence?: ConfidencePick[];
+  /**
+   * "Factores del partido": contexto calculado en el build SOLO con información anterior al inicio del partido
+   * (también en los terminados: es lo que se sabía antes del pitido inicial). Cada apartado dice si el modelo lo usa
+   * (`usedInModel`) o si es solo informativo. Ausente en datos antiguos.
+   */
+  factors?: MatchFactors;
+}
+
+// ---------------------------------------------------------------------------
+// Factores del partido (MatchFile.factors)
+// ---------------------------------------------------------------------------
+
+/** Árbitro designado conocido antes del partido. */
+export interface FactorRefereeKnown {
+  status: 'conocido';
+  name: string;
+  /** partidos anteriores del árbitro con tarjetas registradas (todas las competiciones), >= 0 */
+  matches: number;
+  /** tarjetas (amarillas + rojas) por partido en esos partidos; ausente con matches = 0 */
+  cardsPerMatch?: number;
+  /**
+   * severidad en tarjetas frente a la media de cada competición, contraída hacia 1 con 30 partidos ficticios
+   * (1,10 = +10 %); 1 sin partidos
+   */
+  cardsRatio: number;
+  /** ídem en faltas (ausente sin partidos con faltas registradas) */
+  foulsRatio?: number;
+  /** true: el multiplicador entra en las proyecciones de tarjetas y faltas (y en la prop de tarjeta) */
+  usedInModel: boolean;
+}
+
+/** ESPN aún no publicó el árbitro (se vuelve a consultar en cada actualización dentro de las 72 h previas). */
+export interface FactorRefereeUnknown {
+  status: 'no publicado';
+  usedInModel: false;
+}
+
+export type FactorReferee = FactorRefereeKnown | FactorRefereeUnknown;
+
+/** Estado de una eliminatoria a doble partido antes de la VUELTA (solo si la ida está en los datos). */
+export interface FactorTie {
+  leg: 2;
+  /** id del partido de ida */
+  firstLegId: string;
+  /** fecha ISO de la ida (anterior al partido) */
+  firstLegDate: string;
+  /** marcador de la ida tal como se jugó: home = local de la IDA (normalmente el visitante de este partido) */
+  firstLeg: { home: number; away: number };
+  /** global antes de la vuelta desde ESTE partido: home = goles del local de este partido en la ida */
+  aggregate: { home: number; away: number };
+  /** quién va por delante en el global */
+  leader: 'home' | 'away' | 'none';
+  /** frase en español, p. ej. "Benfica pierde 0-2 en el global: necesita ganar por 2 goles para forzar la prórroga" */
+  summary: string;
+  usedInModel: false;
+}
+
+/** Lo que se juega un equipo en la recta final de liga (rango matemático de posición final). */
+export type FactorStakeStatus = 'título' | 'plazas continentales' | 'ascenso' | 'descenso' | 'sin nada en juego';
+
+export interface FactorStake {
+  /** posición actual en la tabla reconstruida con los partidos anteriores (1..teams) */
+  position: number;
+  points: number;
+  played: number;
+  /** jornadas que le quedan (doble vuelta: 2·(equipos − 1) − jugados) */
+  remaining: number;
+  /** mejor y peor posición final matemáticamente posibles (1 <= best <= worst <= teams) */
+  best: number;
+  worst: number;
+  /** lo más importante que aún se juega (prioridad: título > plazas continentales > ascenso > descenso) */
+  status: FactorStakeStatus;
+  /** etiquetas de las zonas de la competición que aún puede ganar o perder (vacío ⇔ 'sin nada en juego') */
+  inPlay: string[];
+}
+
+/**
+ * Solo ligas de doble vuelta sin fases partidas y con >= 75 % de la fase regular jugada; ausente en el resto.
+ */
+export interface FactorStakes {
+  /** equipos de la tabla */
+  teams: number;
+  home: FactorStake;
+  away: FactorStake;
+  usedInModel: false;
+}
+
+/** Forma reciente de un equipo: últimos (máx. 6) partidos de los 75 días anteriores, todas las competiciones. */
+export interface FactorTeamForm {
+  /** partidos considerados (3..6) */
+  last: number;
+  /** goles a favor / en contra por partido */
+  goalsFor: number;
+  goalsAgainst: number;
+  /** xG aproximado por tiros a favor / en contra por partido (solo partidos con tiros de los dos; ausente si ninguno) */
+  xgFor?: number;
+  xgAgainst?: number;
+  /**
+   * xG neto (a favor − en contra) por partido frente a lo esperado por el Elo de los rivales, contraído hacia 0
+   * (con goles si no hay tiros). + = genera más (o concede menos) de lo esperado
+   */
+  netRes: number;
+  /** etiqueta del residuo (umbral ±0,25 goles/partido) */
+  label: 'rinde por encima de lo esperado' | 'rinde por debajo de lo esperado' | 'en línea con lo esperado';
+}
+
+export interface FactorForm {
+  home?: FactorTeamForm;
+  away?: FactorTeamForm;
+  usedInModel: false;
+}
+
+/** Rendimiento en la condición del partido: el local en casa, el visitante fuera. */
+export interface FactorVenueSide {
+  played: number;
+  w: number;
+  d: number;
+  l: number;
+  gfPerMatch: number;
+  gaPerMatch: number;
+  /** 'competición': partidos de esta competición y temporada (>= 3); 'todas': todas las competiciones, 365 días */
+  scope: 'competición' | 'todas';
+}
+
+export interface FactorVenue {
+  home?: FactorVenueSide;
+  away?: FactorVenueSide;
+  /** las proyecciones de córners/tarjetas/tiros ya separan casa y fuera por equipo; los goles, no */
+  usedInModel: true;
+  note: string;
+}
+
+/** Baja probable deducida de quién jugó (no hay alineaciones ni partes médicos). */
+export type FactorAbsenceKind = 'susp' | 'miss2' | 'miss1s' | 'miss1o';
+
+export interface FactorAbsence {
+  playerId: string;
+  name: string;
+  kind: FactorAbsenceKind;
+  /**
+   * susp → 'sancionado (expulsado en el último partido)'; miss2 → 'no jugó los 2 últimos partidos';
+   * miss1s → 'no jugó el último partido'; miss1o → 'no jugó el último partido (otra competición)'
+   */
+  reason: string;
+  /** cuota de los minutos del equipo en sus 5 últimos partidos con datos de jugadores (0..1) */
+  minutesShare: number;
+  /** factor de sus minutos esperados en las props (0 = no se publica; 1 = sin cambio) */
+  minutesFactor: number;
+  /** true ⇔ minutesFactor ≠ 1 */
+  usedInModel: boolean;
+}
+
+export interface FactorAbsences {
+  home: FactorAbsence[];
+  away: FactorAbsence[];
+}
+
+/** Jugador en forma (de los publicados en las props del partido). */
+export interface FactorInFormPlayer {
+  playerId: string;
+  name: string;
+  /** mismo índice 0..100 que PlayerProp.formIndex */
+  formIndex: number;
+  /** p. ej. "2 goles y 1 asistencia en los últimos 5 partidos del equipo" */
+  note: string;
+}
+
+export interface FactorInForm {
+  /** máx. 3 por equipo, de mayor a menor formIndex */
+  home: FactorInFormPlayer[];
+  away: FactorInFormPlayer[];
+  usedInModel: false;
+}
+
+export interface MatchFactors {
+  /** corte de la información: inicio del partido (= match.date) */
+  asOf: string;
+  referee: FactorReferee;
+  tie?: FactorTie;
+  stakes?: FactorStakes;
+  form?: FactorForm;
+  venue?: FactorVenue;
+  absences?: FactorAbsences;
+  inForm?: FactorInForm;
+  /** frases cortas en español: qué factores usa el modelo y cuáles son solo informativos (1..8) */
+  notes: string[];
 }
 
 export interface TeamMatchStatsPublic {

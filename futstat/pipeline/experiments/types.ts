@@ -4,8 +4,9 @@
  * Una variante es un objeto con ganchos opcionales que el núcleo (ratings, predict, projections, context) consulta.
  * TODOS los ganchos son opcionales y su ausencia equivale EXACTAMENTE a producción: la variante vacía
  * (`PRODUCTION_VARIANT`, «production») da las mismas predicciones y los mismos JSON publicados que el build.
- * `BASELINE_VARIANT` («baseline») es la versión ANTERIOR de producción (hasta el 22-nov-2026), expresada con ganchos
- * que desactivan lo que se integró ese día: es la referencia de comparación de eval-model.
+ * `BASELINE_VARIANT` («baseline») es la versión ANTERIOR de producción (hasta el 26-nov-2026), expresada con ganchos
+ * que desactivan lo que se integró ese día (árbitro, bajas probables y factores del rival de las props): es la
+ * referencia de comparación de eval-model. `BASELINE_2211_VARIANT` es la de antes del 22-nov-2026.
  *
  * Reglas (ver pipeline/experiments/README.md):
  *  - Walk-forward estricto: cada gancho solo puede usar información con fecha ANTERIOR al inicio del partido que se
@@ -257,7 +258,8 @@ export interface StatHooks {
   /**
    * ajuste por partido de las medias proyectadas (árbitro, necesidad de marcar…): devuelve MULTIPLICADORES (> 0) de la
    * media de cada equipo, que se aplican justo después de expectedPair (la dispersión no cambia). Una estadística
-   * ausente = 1. Se aplica en TODAS las proyecciones (fichas, pronósticos del día, cuota alta, banco) a través de
+   * ausente = 1. SUSTITUYE al ajuste de producción (árbitro designado, MODEL.referee, analytics/referee.ts):
+   * `() => ({})` = producción anterior al 26-nov-2026. Se aplica en TODAS las proyecciones (fichas, pronósticos del día, cuota alta, banco) a través de
    * projectStatsFor (publish/context.ts); los multiplicadores de tarjetas llegan también a las props de tarjeta de los
    * jugadores (cardsFactor = proyección / media del equipo).
    */
@@ -270,7 +272,10 @@ export interface PlayerAdjustInput {
   teamId: string;
   side: 'home' | 'away';
   history: HistoryView;
-  /** entrada de producción de buildPlayerProps (líneas del equipo anteriores al partido, λ y factores del rival) */
+  /**
+   * entrada de buildPlayerProps SIN los ajustes de producción de las props: líneas del equipo anteriores al partido, λ
+   * y factores del rival 40/40 (el de tarjetas ya con el multiplicador del árbitro, si lo hay)
+   */
   base: PlayerPropsInput;
 }
 
@@ -283,7 +288,9 @@ export interface PlayerHooks {
   rateHalfLifeDays?: number;
   /**
    * cambios de la entrada de las props de un equipo (se mezclan sobre `base`): p. ej. `minutesFactor` para bajas o
-   * rotaciones, `cardsFactor`… Se llama en propsFor (fichas y pronósticos del día) y en el banco.
+   * rotaciones, `cardsFactor`… Se llama en propsFor (fichas y pronósticos del día) y en el banco. SUSTITUYE a los
+   * ajustes de producción (bajas probables y factores del rival 6/40, analytics/playerFactors.ts
+   * productionPlayerAdjust): `() => ({})` = producción anterior al 26-nov-2026; `base` es la entrada SIN ellos.
    */
   adjust?(input: PlayerAdjustInput): Partial<PlayerPropsInput>;
 }
@@ -316,16 +323,32 @@ export const PRODUCTION_VARIANT: ModelVariant = {
 };
 
 /**
- * Versión ANTERIOR de producción (hasta el 22-nov-2026), referencia de comparación del banco: sin ventaja local por
- * grupo en las probabilidades del Elo (65 en todos), sin contracción del total de goles sin línea del mercado y con 6
- * partidos ficticios en la contracción de córners/tarjetas. Da exactamente las predicciones de entonces.
+ * Versión ANTERIOR de producción (hasta el 26-nov-2026), referencia de comparación del banco (`baseline`): sin los
+ * tres factores integrados ese día, desactivados con ganchos que SUSTITUYEN a producción sin cambiar nada:
+ *  - `stats.adjust` → {} : sin multiplicador del árbitro en tarjetas y faltas (analytics/referee.ts);
+ *  - `players.adjust` → {} : sin bajas probables en las props (analytics/availability.ts) y con los factores del
+ *    rival de producción 40/40 (sin la contracción 6/40 de analytics/playerFactors.ts).
+ * Da exactamente las predicciones de entonces (test de identidad en tests/experiments/bench.test.ts).
  */
 export const BASELINE_VARIANT: ModelVariant = {
   name: 'baseline',
-  description: 'Producción anterior (hasta el 22-nov-2026): ventaja local 65 en todos, sin contracción del total, priorN 6',
+  description: 'Producción anterior (hasta el 26-nov-2026): sin árbitro, sin bajas probables en las props y factores del rival 40/40',
+  stats: { adjust: () => ({}) },
+  players: { adjust: () => ({}) },
+};
+
+/**
+ * Producción hasta el 22-nov-2026 (la `baseline` de entonces), para tests y comparaciones históricas: además de lo
+ * anterior, sin ventaja local por grupo en las probabilidades del Elo (65 en todos), sin contracción del total de
+ * goles sin línea del mercado y con 6 partidos ficticios en la contracción de córners/tarjetas.
+ */
+export const BASELINE_2211_VARIANT: ModelVariant = {
+  name: 'baseline-2211',
+  description: 'Producción hasta el 22-nov-2026: ventaja local 65 en todos, sin contracción del total, priorN 6, sin los factores del 26-nov',
   eloProbs: { homeAdv: {} },
   totals: { adjustTotal: () => 1 },
-  stats: { priorN: 6 },
+  stats: { priorN: 6, adjust: () => ({}) },
+  players: { adjust: () => ({}) },
 };
 
 /** true si la variante no tiene ningún gancho (se comporta exactamente como producción). */

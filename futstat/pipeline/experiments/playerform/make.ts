@@ -1,7 +1,7 @@
 /** Fábrica de las variantes playerform-*.ts (ver playerform/model.ts y el pre-registro en playerform-hl60.ts). */
 import type { PlayerPropsInput } from '../../analytics/players';
 import type { ModelVariant } from '../types';
-import { factorRatios, formMultipliers, scaleLines, FORM_DEFAULTS, type FormOptions } from './model';
+import { factorRatios, formMultipliers, scaledFactor as scaled, scaleLines, FORM_DEFAULTS, type FormOptions } from './model';
 
 export interface PlayerFormOptions {
   /** (a) vida media de la ponderación de las tasas por 90 (gancho del núcleo players.rateHalfLifeDays) */
@@ -11,9 +11,6 @@ export interface PlayerFormOptions {
   /** (c) factores del rival de las props con otra contracción de las tasas de equipo: «a favor» propio y «en contra» del rival */
   factors?: { forN: number; agN: number };
 }
-
-/** Un factor de producción exactamente 1 es el de respaldo de propsFor (sin proyección o con < 3 partidos): se deja. */
-const scaled = (f: number, r: number) => (f === 1 || !(r > 0) || !Number.isFinite(r) ? f : f * r);
 
 export function makePlayerFormVariant(name: string, description: string, o: PlayerFormOptions): ModelVariant {
   const v: ModelVariant = { name, description };

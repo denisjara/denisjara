@@ -7,10 +7,15 @@
  * proyección; disponibilidad: último partido de la misma competición). Aquí se añaden partidos y líneas futuros (y a
  * la misma hora) EN LA MISMA competición, con el mismo árbitro, rojas, tarjetas, faltas y tiros extremos, y todas las
  * salidas de los dos ganchos deben ser idénticas.
+ *
+ * Desde el 26-nov-2026 la combinación es PRODUCCIÓN: sus salidas deben ser las de los ajustes del núcleo
+ * (analytics/referee.ts y analytics/playerFactors.ts), con el sancionado fuera (factor 0).
  */
 import { describe, expect, it } from 'vitest';
 import { Elo } from '../../src/lib/models';
-import { COMPETITION_BY_ID } from '../../pipeline/config';
+import { COMPETITION_BY_ID, MODEL } from '../../pipeline/config';
+import { productionPlayerAdjust } from '../../pipeline/analytics/playerFactors';
+import { refereeMultipliers } from '../../pipeline/analytics/referee';
 import type { PlayerPropsInput } from '../../pipeline/analytics/players';
 import type { MatchRecord, PlayerLine } from '../../pipeline/types';
 import { historyView } from '../../pipeline/experiments/history';
@@ -213,7 +218,28 @@ describe('factors-combo: composición de los factores adoptados', () => {
     const ka = Object.keys(a.players);
     const kp = Object.keys(p.players);
     expect(ka.filter((k) => kp.includes(k))).toEqual([]);
-    expect(c.players).toEqual({ ...a.players, ...p.players });
+    // única diferencia con availability-props: el sancionado (P7) lleva 0 (no se publica, como en producción) y no ×0,03
+    expect(a.players.minutesFactor!.P7).toBe(0.03);
+    expect(c.players).toEqual({ ...a.players, minutesFactor: { ...a.players.minutesFactor, P7: 0 }, ...p.players });
+  });
+
+  it('es exactamente PRODUCCIÓN: los ajustes del núcleo (árbitro, bajas y factores del rival) dan las mismas salidas', async () => {
+    const combo = await loadVariant('factors-combo');
+    for (const specs of [past(), [...past(), ...poison()]]) {
+      const h = view(specs, T0);
+      const c = outputs(combo, specs);
+      expect(refereeMultipliers(match, h, baseStats, MODEL.referee)).toEqual(c.stats);
+      const base = baseProps(h.playerLines('A'));
+      // con y sin la caché del build
+      const cache = new Map();
+      expect(productionPlayerAdjust({ match, teamId: 'A', side: 'home', history: h, base })).toEqual(c.players);
+      expect(productionPlayerAdjust({ match, teamId: 'A', side: 'home', history: h, base }, cache)).toEqual(c.players);
+      expect(productionPlayerAdjust({ match, teamId: 'A', side: 'home', history: h, base }, cache)).toEqual(c.players);
+      expect(cache.size).toBe(1);
+    }
+    expect(MODEL.referee).toMatchObject({ kCards: 30, kFouls: 30 });
+    expect(MODEL.propsOppShrink).toEqual({ forN: 6, agN: 40 });
+    expect(MODEL.availability.minutesFactor.susp).toBe(0);
   });
 
   it('envenenar la MISMA competición (misma hora y futuro, mismo árbitro, rojas, líneas extremas) no cambia nada', async () => {

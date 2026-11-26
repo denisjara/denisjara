@@ -15,6 +15,9 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { COMPETITION_BY_ID, MODEL } from '../pipeline/config';
 import { findValueBets } from '../pipeline/analytics/value';
+import { buildMatchFactors, teamAbsenceList } from '../pipeline/analytics/factors';
+import { historyView, type HistorySource } from '../pipeline/experiments/history';
+import type { MatchRecord, PlayerLine } from '../pipeline/types';
 import {
   CONFIDENCE_FAMILIES,
   confidenceCandidates,
@@ -58,6 +61,7 @@ import type {
   LeagueAverages,
   Market,
   MatchEventPublic,
+  MatchFactors,
   MatchFile,
   MatchStatus,
   MatchSummary,
@@ -338,6 +342,8 @@ interface MatchRec {
   odds?: OddsSnapshot;
   /** probabilidades pre-partido publicadas (para resultados) */
   pre?: Prob1X2;
+  /** árbitro designado (ficticio; ausente = ESPN aún no lo publicó) */
+  referee?: { id: string; name: string };
 }
 
 const MATCHES: MatchRec[] = [];
@@ -398,20 +404,20 @@ scheduleLeague('premier', PREMIER, 11, 7);
 scheduleLeague('seriea', SERIEA, 11, 7);
 scheduleLeague('saudi', SAUDI, 8, 7);
 
-// Brasileirão: 31 jornadas jugadas, la 32 hoy/mañana (con un partido ya terminado hoy)
+// Brasileirão: 35 jornadas jugadas (recta final: hay equipos sin nada en juego), la 36 hoy/mañana (con un partido ya terminado hoy)
 {
   const rounds = roundRobin(BRASIL);
   rounds.forEach((pairs, i) => {
     const rd = i + 1;
     pairs.forEach(([h, a], k) => {
-      if (rd <= 31) {
-        addMatch('brasileirao', at(-1 - Math.round(3.5 * (31 - rd)) - (k % 2), 22, k % 2 ? 0 : 30), `Rodada ${rd}`, h, a, 'finished');
-      } else if (rd === 32) {
+      if (rd <= 35) {
+        addMatch('brasileirao', at(-1 - Math.round(3.5 * (35 - rd)) - (k % 2), 22, k % 2 ? 0 : 30), `Rodada ${rd}`, h, a, 'finished');
+      } else if (rd === 36) {
         if (k === 0) addMatch('brasileirao', Math.max(at(0, 0, 30), NOW_MS - 3 * 3600_000), `Rodada ${rd}`, h, a, 'finished');
         else if (k < 5) addMatch('brasileirao', Math.min(T_TODAY_2 + 30 * 60_000, at(0, 23, 50)), `Rodada ${rd}`, h, a, 'scheduled');
         else addMatch('brasileirao', at(1, k % 2 ? 22 : 23, 30), `Rodada ${rd}`, h, a, 'scheduled');
       } else {
-        const base = 4 + 4 * (rd - 33);
+        const base = 4 + 4 * (rd - 37);
         addMatch('brasileirao', at(base + (k % 2), 22, 30), `Rodada ${rd}`, h, a, 'scheduled');
       }
     });
@@ -466,9 +472,11 @@ scheduleLeague('saudi', SAUDI, 8, 7);
   const low = shuffle(COPA_LOWER);
   for (let i = 0; i < 5; i++) addMatch('copadelrey', at(-7, 18 + (i % 2) * 2, 0), 'Primera eliminatoria', low[i * 2], low[i * 2 + 1], 'finished');
   const big = LALIGA.slice(5, 15);
+  // segunda eliminatoria a doble partido: ida (jugada hace 4-5 días, en casa del de Primera) y vuelta hoy/mañana
+  for (let i = 0; i < 10; i++) addMatch('copadelrey', at(-5 + (i % 2), 19 + (i % 3), 0), 'Segunda eliminatoria · Ida', big[i], low[i], 'finished');
   for (let i = 0; i < 10; i++) {
     const ms = i < 5 ? (i % 2 ? T_TODAY_2 : T_TODAY_1) : at(1, i % 2 ? 20 : 18, 0);
-    addMatch('copadelrey', ms, 'Segunda eliminatoria', low[i], big[i], 'scheduled');
+    addMatch('copadelrey', ms, 'Segunda eliminatoria · Vuelta', low[i], big[i], 'scheduled');
   }
 }
 
@@ -685,6 +693,53 @@ for (const m of MATCHES) {
       elo.update({ id: m.id, date: iso(m.ms), home: m.home.id, away: m.away.id, hg: m.hg!, ag: m.ag!, kMultiplier: m.compId === 'champions' ? 1.2 : 1 });
     }
   }
+}
+
+// ---------------------------------------------------------------------------
+// Árbitros (ficticios) y una sanción segura (caso límite de «Factores del partido»)
+// ---------------------------------------------------------------------------
+const REFEREES = [
+  'Mateo Lahoz', 'Jesús Gil Manzano', 'Alejandro Hernández', 'Ricardo de Burgos', 'Michael Oliver', 'Anthony Taylor',
+  'Simon Hooper', 'Daniele Orsato', 'Maurizio Mariani', 'Wilton Sampaio', 'Raphael Claus', 'Clément Turpin',
+  'Szymon Marciniak', 'Danny Makkelie', 'Turki Al-Khudhayr', 'Anderson Daronco',
+].map((name, i) => ({ id: String(9100 + i), name }));
+{
+  // terminados: casi todos con árbitro; próximos: solo los de las próximas 48 h con id par (el resto, «no publicado»)
+  for (const m of MATCHES) {
+    const h = Number(m.id);
+    const known = m.status === 'finished' || m.status === 'live' ? h % 9 !== 0 : m.ms < NOW_MS + 48 * 3_600_000 && h % 2 === 0;
+    if (known) m.referee = REFEREES[(h * 7 + m.compId.length) % REFEREES.length];
+  }
+}
+/** Expulsa (si no lo estaba ya) al jugador de campo con más minutos de `teamId` en el partido terminado `last`. */
+function forceRedCard(last: MatchRec | undefined, teamId: string): boolean {
+  const l = last?.lines?.filter((x) => x.teamId === teamId && x.p.pos !== 'G' && x.minutes >= 60).sort((a, b) => b.minutes - a.minutes)[0];
+  if (!last || !l || !last.stats) return false;
+  if (l.red === 0) {
+    const side = last.home.id === teamId ? 'home' : 'away';
+    if (l.yellow) {
+      l.yellow = 0;
+      last.stats[side].yellow = Math.max(0, (last.stats[side].yellow ?? 1) - 1);
+      last.events = (last.events ?? []).filter((e) => !(e.type === 'yellow' && e.playerId === l.p.ref.id));
+    }
+    l.red = 1;
+    last.stats[side].red = (last.stats[side].red ?? 0) + 1;
+    last.events = [...(last.events ?? []), { minute: "71'", type: 'red' as const, teamId, player: l.p.ref.name, playerId: l.p.ref.id }].sort((a, b) => parseInt(a.minute) - parseInt(b.minute));
+  }
+  return true;
+}
+/** Próximo partido de LaLiga cuyo local llega con un habitual expulsado en su último partido de liga. */
+const SUSP_MATCH: MatchRec | undefined = (() => {
+  const next = MATCHES.filter((m) => m.compId === 'laliga' && m.status === 'scheduled').sort((a, b) => a.ms - b.ms)[0];
+  if (!next) return undefined;
+  const last = MATCHES.filter((m) => m.compId === 'laliga' && m.status === 'finished' && (m.home.id === next.home.id || m.away.id === next.home.id) && m.ms < next.ms).sort((a, b) => b.ms - a.ms)[0];
+  return forceRedCard(last, next.home.id) ? next : undefined;
+})();
+/** Primera vuelta de Copa: el visitante (de Primera) llega con un habitual expulsado en la ida (vuelta con árbitro + bajas). */
+{
+  const vuelta = MATCHES.filter((m) => m.compId === 'copadelrey' && m.status === 'scheduled' && m.round.includes('Vuelta')).sort((a, b) => a.ms - b.ms)[0];
+  const ida = vuelta && MATCHES.find((m) => m.compId === 'copadelrey' && m.status === 'finished' && m.home.id === vuelta.away.id && m.away.id === vuelta.home.id);
+  if (vuelta) forceRedCard(ida, vuelta.away.id);
 }
 
 // ---------------------------------------------------------------------------
@@ -1291,6 +1346,78 @@ function summary(m: MatchRec): MatchSummary {
   return s;
 }
 
+// ---------------------------------------------------------------------------
+// Vista del pasado del mundo simulado (para «Factores del partido» con el módulo real analytics/factors.ts)
+// ---------------------------------------------------------------------------
+function toRecord(m: MatchRec): MatchRecord {
+  const rec: MatchRecord = { id: m.id, compId: m.compId, season: 2026, currentSeason: true, date: iso(m.ms), status: m.status, round: m.round, home: ref(m.home), away: ref(m.away) };
+  if (m.status === 'finished' && m.hg !== undefined && m.ag !== undefined) rec.score = { home: m.hg, away: m.ag };
+  if (m.stats) rec.stats = { home: { ...m.stats.home }, away: { ...m.stats.away } };
+  if (m.events) rec.events = m.events.map((e) => ({ minute: parseInt(e.minute, 10) || 0, clock: e.minute, type: e.type, teamId: e.teamId, playerId: e.playerId, player: e.player }));
+  if (m.referee) rec.referee = m.referee;
+  return rec;
+}
+const MOCK_RECORDS = new Map(MATCHES.map((m) => [m.id, toRecord(m)]));
+const MOCK_LINES = new Map<string, PlayerLine[]>();
+for (const m of MATCHES) {
+  if (m.status !== 'finished' || !m.lines) continue;
+  for (const l of m.lines) {
+    const isHome = l.teamId === m.home.id;
+    const line: PlayerLine = {
+      matchId: m.id,
+      compId: m.compId,
+      date: iso(m.ms),
+      teamId: l.teamId,
+      opponentId: isHome ? m.away.id : m.home.id,
+      isHome,
+      playerId: l.p.ref.id,
+      name: l.p.ref.name,
+      short: l.p.ref.short,
+      position: l.p.pos,
+      starter: l.minutes >= 60,
+      minutes: l.minutes,
+      goals: l.goals,
+      assists: l.assists,
+      shots: l.shots,
+      shotsOnTarget: l.sot,
+      yellow: l.yellow,
+      red: l.red,
+      foulsCommitted: l.foulsC,
+      foulsSuffered: l.foulsS,
+      offsides: l.offsides,
+      ownGoals: 0,
+    };
+    const list = MOCK_LINES.get(l.teamId) ?? [];
+    list.push(line);
+    MOCK_LINES.set(l.teamId, list);
+  }
+}
+const MOCK_HISTORY: HistorySource = (() => {
+  const byTeam = new Map<string, MatchRecord[]>();
+  const byComp = new Map<string, MatchRecord[]>();
+  const byRef = new Map<string, MatchRecord[]>();
+  const push = (mp: Map<string, MatchRecord[]>, k: string, r: MatchRecord) => (mp.get(k) ?? mp.set(k, []).get(k)!).push(r);
+  for (const r of MOCK_RECORDS.values()) {
+    push(byTeam, r.home.id, r);
+    push(byTeam, r.away.id, r);
+    push(byComp, r.compId, r);
+    if (r.referee) push(byRef, r.referee.id, r);
+  }
+  return { matchesByTeam: byTeam, matchesByComp: byComp, elo, linesByTeam: MOCK_LINES, matchesByReferee: byRef };
+})();
+/** Factores del partido del mundo simulado (props sin los sancionados, como en producción). */
+function mockFactors(m: MatchRec, props: { home: PlayerProp[]; away: PlayerProp[] }): { factors: MatchFactors; players: { home: PlayerProp[]; away: PlayerProp[] } } {
+  const rec = MOCK_RECORDS.get(m.id)!;
+  const hv = historyView(MOCK_HISTORY, Date.parse(rec.date));
+  const lines = { home: MOCK_LINES.get(m.home.id) ?? [], away: MOCK_LINES.get(m.away.id) ?? [] };
+  const out = (teamId: string, ls: PlayerLine[]) => new Set(teamAbsenceList(rec, teamId, ls, hv, true).filter((a) => a.minutesFactor === 0).map((a) => a.playerId));
+  const outH = out(m.home.id, lines.home);
+  const outA = out(m.away.id, lines.away);
+  const players = { home: props.home.filter((p) => !outH.has(p.player.id)), away: props.away.filter((p) => !outA.has(p.player.id)) };
+  const factors = buildMatchFactors({ match: rec, comp: COMPETITION_BY_ID.get(m.compId)!, history: hv, lines, players });
+  return { factors, players };
+}
+
 // Elegir partidos con análisis completo: los más populares próximos/en vivo + 2 terminados recientes
 {
   const upcoming = MATCHES.filter((m) => (m.status === 'scheduled' && m.ms < NOW_MS + 14 * DAY) || m.status === 'live');
@@ -1303,6 +1430,16 @@ function summary(m: MatchRec): MatchSummary {
   }
   const recent = MATCHES.filter((m) => m.status === 'finished' && m.ms > NOW_MS - 3 * DAY).sort((a, b) => popularity(b) - popularity(a));
   for (const m of recent.slice(0, 2)) DETAIL.add(m.id);
+  // casos límite de «Factores del partido»: sanción probable, vuelta de eliminatoria y equipo sin nada en juego
+  if (SUSP_MATCH) DETAIL.add(SUSP_MATCH.id);
+  const vuelta = MATCHES.filter((m) => m.compId === 'copadelrey' && m.status === 'scheduled' && m.round.includes('Vuelta')).sort((a, b) => a.ms - b.ms)[0];
+  if (vuelta) DETAIL.add(vuelta.id);
+  const bra = MATCHES.filter((m) => m.compId === 'brasileirao' && m.status === 'scheduled').sort((a, b) => a.ms - b.ms);
+  const calm = bra.find((m) => {
+    const st = mockFactors(m, { home: [], away: [] }).factors.stakes;
+    return st?.home.status === 'sin nada en juego' || st?.away.status === 'sin nada en juego';
+  });
+  if (calm ?? bra[0]) DETAIL.add((calm ?? bra[0]).id);
 }
 
 // ---------------------------------------------------------------------------
@@ -1526,7 +1663,7 @@ function simulate(c: string, table: StandingRow[]): SeasonSimulation | undefined
     for (const z of cfg.simulationZones!) {
       const from = z.from < 0 ? n + z.from + 1 : z.from;
       const to = z.to < 0 ? n + z.to + 1 : z.to;
-      probs[z.label] = r(sum(dist.slice(from - 1, to)), 4);
+      probs[z.label] = Math.min(1, r(sum(dist.slice(from - 1, to)), 4)); // suma de redondeos: puede pasar de 1 por 1e-4
     }
     const expRank = sum(dist.map((p, k) => p * (k + 1)));
     return { team: row.team, currentPoints: row.points, expectedPoints: r(ptsSum[i] / IT, 1), expectedRank: r(expRank, 2), probs, positionDist: dist };
@@ -1786,6 +1923,7 @@ for (const id of DETAIL) {
     { key: 'cs', label: 'Porterías a cero', home: sh.cleanSheetPct, away: sa.cleanSheetPct, better: 'high', format: 'pct' },
     { key: 'elo', label: 'Rating Elo', home: fh.elo, away: fa.elo, better: 'high', format: 'int' },
   ];
+  const fx = mockFactors(m, { home: propsFor(m.home, p.lam.lambdaHome), away: propsFor(m.away, p.lam.lambdaAway) });
   const file: MatchFile = {
     generatedAt: GENERATED_AT,
     match: S(m),
@@ -1795,7 +1933,7 @@ for (const id of DETAIL) {
     form: { home: fh, away: fa },
     h2h,
     comparison,
-    players: { home: propsFor(m.home, p.lam.lambdaHome), away: propsFor(m.away, p.lam.lambdaAway) },
+    players: fx.players,
     valueBets: m.status === 'scheduled' ? p.valueBets : [],
     table: table.length
       ? {
@@ -1810,6 +1948,7 @@ for (const id of DETAIL) {
   };
   const conf = m.status === 'scheduled' ? p.conf : m.status === 'finished' ? mockSettled(m, p.cands) : [];
   if (conf.length) file.confidence = conf;
+  file.factors = fx.factors;
   matchFiles.push(file);
   write(`matches/${m.id}.json`, file);
 }

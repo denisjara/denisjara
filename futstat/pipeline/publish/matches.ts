@@ -26,6 +26,8 @@ import { predictMatch, type PredictionResult } from '../analytics/predict';
 import { toMatchSummary } from '../analytics/summary';
 import { buildComparison, buildFormBlock, buildH2H } from '../analytics/form';
 import { buildPlayerProps, type PlayerPropsInput } from '../analytics/players';
+import { productionPlayerAdjust } from '../analytics/playerFactors';
+import { buildMatchFactors } from '../analytics/factors';
 import { historyView } from '../experiments/history';
 import { preMatchView } from '../experiments/types';
 import { popularityScore } from '../analytics/popularity';
@@ -345,13 +347,22 @@ export function propsFor(
   return buildPlayerProps(match ? withPlayerHooks(ctx, input, match, side, before) : input);
 }
 
-/** Entrada de las props con el gancho `players` de la variante (sin gancho, la misma entrada). */
+/**
+ * Entrada de las props con los ajustes de producción o con el gancho `players` de la variante.
+ *  - Producción (sin players.adjust): bajas probables (sancionados fuera, habituales ausentes con menos minutos) y
+ *    factores del rival con contracción MODEL.propsOppShrink (analytics/playerFactors.ts).
+ *  - Con players.adjust de la variante: SUSTITUYE a los de producción (`() => ({})` = producción anterior al
+ *    26-nov-2026). players.rateHalfLifeDays se aplica en los dos casos.
+ */
 function withPlayerHooks(ctx: BuildContext, base: PlayerPropsInput, match: MatchRecord, side: 'home' | 'away', before: number): PlayerPropsInput {
   const hooks = ctx.variant?.players;
-  if (!hooks) return base;
-  let input: PlayerPropsInput = hooks.rateHalfLifeDays !== undefined ? { ...base, rateHalfLifeDays: hooks.rateHalfLifeDays, asOf: before } : base;
+  let input: PlayerPropsInput = hooks?.rateHalfLifeDays !== undefined ? { ...base, rateHalfLifeDays: hooks.rateHalfLifeDays, asOf: before } : base;
+  if (!hooks?.adjust) {
+    const adj = productionPlayerAdjust({ match: preMatchView(match), teamId: base.teamId, side, history: historyView(ctx.history, before), base: input }, ctx.oppFactorCache);
+    return { ...input, ...adj, teamId: base.teamId, opponentId: base.opponentId };
+  }
   const comp = ctx.configById.get(match.compId);
-  if (hooks.adjust && comp) {
+  if (comp) {
     const adj = hooks.adjust({
       ctx: { comp, configs: ctx.configById, homeLeague: homeLeagueFor(ctx, match) },
       match: preMatchView(match),
@@ -478,6 +489,9 @@ export function buildMatchFile(ctx: BuildContext, m: MatchRecord): MatchFile {
     valueBets: result.valueBets,
   };
 
+  const factors = matchFactorsFor(ctx, m, file.players);
+  if (factors) file.factors = factors;
+
   // clasificación: grupo con ambos equipos (o con el local / visitante)
   const groups = enrichedStandings(ctx, comp);
   if (groups.length) {
@@ -508,6 +522,32 @@ export function buildMatchFile(ctx: BuildContext, m: MatchRecord): MatchFile {
   const conf = isFinishedRecord(m) ? ctx.confidenceSettled?.get(m.id) : ctx.upcomingIds.has(m.id) ? ctx.confidencePicks?.get(m.id) : undefined;
   if (conf?.length) file.confidence = conf;
   return file;
+}
+
+/**
+ * «Factores del partido» de la ficha (analytics/factors.ts): todo con información anterior al inicio del partido
+ * (vista del pasado cortada en su inicio, líneas anteriores y las props ya calculadas). Indica si el modelo usa cada
+ * ajuste en ESTE build: sin gancho de la variante, producción (árbitro y bajas probables). Es un bloque informativo:
+ * un fallo inesperado deja la ficha sin él (y se avisa en el log) en lugar de tumbar la publicación.
+ */
+export function matchFactorsFor(ctx: BuildContext, m: MatchRecord, players: MatchFile['players']): MatchFile['factors'] {
+  const comp = ctx.configById.get(m.compId);
+  const t = Date.parse(m.date);
+  if (!comp || !Number.isFinite(t)) return undefined;
+  try {
+    return buildMatchFactors({
+      match: m,
+      comp,
+      history: historyView(ctx.history, t),
+      lines: { home: ctx.linesByTeam.get(m.home.id) ?? [], away: ctx.linesByTeam.get(m.away.id) ?? [] },
+      players,
+      modelUses: { referee: !ctx.variant?.stats?.adjust, availability: !ctx.variant?.players?.adjust },
+      refereeMemo: ctx.refereeMemo,
+    });
+  } catch (e) {
+    ctx.log(`  aviso: factores del partido ${m.id} omitidos (${e instanceof Error ? e.message : String(e)})`);
+    return undefined;
+  }
 }
 
 /** Ids de partidos de una competición en cada ventana publicada. */

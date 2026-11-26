@@ -35,6 +35,13 @@ import type {
   LongshotKind,
   LongshotLeg,
   LongshotRecord,
+  FactorAbsence,
+  FactorInFormPlayer,
+  FactorReferee,
+  FactorStake,
+  FactorTeamForm,
+  FactorVenueSide,
+  MatchFactors,
   MatchFile,
   MatchStatus,
   MatchSummary,
@@ -557,6 +564,176 @@ function normModelMarket(mk: unknown): MatchFile['model']['market'] {
   return { ...(mk as object), probs, margin: fin(mk.margin) as number, method: DEVIG_METHODS.has(str(mk.method)) ? str(mk.method) : '' };
 }
 
+// ---------------------------------------------------------------------------
+// Factores del partido (MatchFile.factors): cada apartado malformado se descarta (nunca se inventan cifras)
+// ---------------------------------------------------------------------------
+
+/** Número finito dentro de [lo, hi] o undefined. */
+const finIn = (x: unknown, lo: number, hi: number): number | undefined => {
+  const n = fin(x);
+  return n !== undefined && n >= lo && n <= hi ? n : undefined;
+};
+const intIn = (x: unknown, lo: number, hi: number): number | undefined => {
+  const n = finIn(x, lo, hi);
+  return n !== undefined && Number.isInteger(n) ? n : undefined;
+};
+/** Apartado opcional: si `f` lanza o devuelve undefined, el apartado no se muestra. */
+function safePart<T>(x: unknown, f: (o: Obj) => T | undefined): T | undefined {
+  if (!isObj(x)) return undefined;
+  try {
+    return f(x);
+  } catch {
+    return undefined;
+  }
+}
+
+const FACTOR_REASON: Record<FactorAbsence['kind'], string> = {
+  susp: 'sancionado (expulsado en el último partido)',
+  miss2: 'no jugó los 2 últimos partidos',
+  miss1s: 'no jugó el último partido',
+  miss1o: 'no jugó el último partido (otra competición)',
+};
+const STAKE_STATUS = new Set<string>(['título', 'plazas continentales', 'ascenso', 'descenso', 'sin nada en juego']);
+const FORM_LABELS = new Set<string>(['rinde por encima de lo esperado', 'rinde por debajo de lo esperado', 'en línea con lo esperado']);
+/** Umbral de |netRes| para «rinde por encima/debajo» (FORM_LABEL_THRESHOLD de pipeline/analytics/factors.ts). */
+const FORM_LABEL_THRESHOLD = 0.25;
+/** Primera aparición de cada jugador (un playerId repetido duplicaría filas y claves de React). */
+function uniqueBy<T extends { playerId: string }>(xs: T[], seen = new Set<string>()): T[] {
+  return xs.filter((x) => (seen.has(x.playerId) ? false : (seen.add(x.playerId), true)));
+}
+
+function normFactorReferee(x: unknown): FactorReferee {
+  const unknownRef: FactorReferee = { status: 'no publicado', usedInModel: false };
+  if (!isObj(x) || x.status !== 'conocido') return unknownRef;
+  const name = short(x.name, 80);
+  const matches = intIn(x.matches, 0, 100_000);
+  const cardsRatio = finIn(x.cardsRatio, 0.2, 5);
+  if (!name || matches === undefined || cardsRatio === undefined) return unknownRef;
+  const out: FactorReferee = { status: 'conocido', name, matches, cardsRatio, usedInModel: bool(x.usedInModel) };
+  const cpm = finIn(x.cardsPerMatch, 0, 30);
+  if (cpm !== undefined) out.cardsPerMatch = cpm;
+  const fr = finIn(x.foulsRatio, 0.2, 5);
+  if (fr !== undefined) out.foulsRatio = fr;
+  return out;
+}
+
+const tieScore = (x: unknown) => (isObj(x) && intIn(x.home, 0, 99) !== undefined && intIn(x.away, 0, 99) !== undefined ? { home: x.home as number, away: x.away as number } : undefined);
+
+function normStakeSide(x: unknown): FactorStake | undefined {
+  if (!isObj(x)) return undefined;
+  const nums = ['position', 'points', 'played', 'remaining', 'best', 'worst'].map((k) => intIn(x[k], 0, 1000));
+  if (nums.some((n) => n === undefined)) return undefined;
+  const [position, points, played, remaining, best, worst] = nums as number[];
+  const status = STAKE_STATUS.has(str(x.status)) ? (x.status as FactorStake['status']) : undefined;
+  if (!status || position < 1 || best < 1 || best > worst) return undefined;
+  return { position, points, played, remaining, best, worst, status, inPlay: strList(x.inPlay, 8).map((l) => short(l, 40)).filter(Boolean) };
+}
+
+function normTeamForm(x: unknown): FactorTeamForm | undefined {
+  if (!isObj(x)) return undefined;
+  const last = intIn(x.last, 1, 20);
+  const goalsFor = finIn(x.goalsFor, 0, 30);
+  const goalsAgainst = finIn(x.goalsAgainst, 0, 30);
+  const netRes = finIn(x.netRes, -10, 10);
+  if (last === undefined || goalsFor === undefined || goalsAgainst === undefined || netRes === undefined) return undefined;
+  // etiqueta desconocida: se deduce del residuo con el mismo umbral que el pipeline (no se muestra «en línea» con −2)
+  const label = FORM_LABELS.has(str(x.label))
+    ? (x.label as FactorTeamForm['label'])
+    : netRes > FORM_LABEL_THRESHOLD
+      ? 'rinde por encima de lo esperado'
+      : netRes < -FORM_LABEL_THRESHOLD
+        ? 'rinde por debajo de lo esperado'
+        : 'en línea con lo esperado';
+  const out: FactorTeamForm = { last, goalsFor, goalsAgainst, netRes, label };
+  const xf = finIn(x.xgFor, 0, 30);
+  const xa = finIn(x.xgAgainst, 0, 30);
+  if (xf !== undefined && xa !== undefined) {
+    out.xgFor = xf;
+    out.xgAgainst = xa;
+  }
+  return out;
+}
+
+function normVenueSide(x: unknown): FactorVenueSide | undefined {
+  if (!isObj(x)) return undefined;
+  const played = intIn(x.played, 1, 1000);
+  const w = intIn(x.w, 0, 1000);
+  const d = intIn(x.d, 0, 1000);
+  const l = intIn(x.l, 0, 1000);
+  const gf = finIn(x.gfPerMatch, 0, 30);
+  const ga = finIn(x.gaPerMatch, 0, 30);
+  if (played === undefined || w === undefined || d === undefined || l === undefined || gf === undefined || ga === undefined || w + d + l !== played) return undefined;
+  return { played, w, d, l, gfPerMatch: gf, gaPerMatch: ga, scope: x.scope === 'competición' ? 'competición' : 'todas' };
+}
+
+function normAbsence(a: Obj): FactorAbsence | undefined {
+  const kind = str(a.kind) as FactorAbsence['kind'];
+  // hasOwn: «__proto__» o «constructor» no deben resolver a Object.prototype
+  const reason = Object.prototype.hasOwnProperty.call(FACTOR_REASON, kind) ? FACTOR_REASON[kind] : undefined;
+  const name = short(a.name, 80);
+  const playerId = optStr(a.playerId);
+  if (!reason || !name || !playerId) return undefined;
+  const minutesFactor = finIn(a.minutesFactor, 0, 1.5) ?? 1;
+  return { playerId, name, kind, reason, minutesShare: finIn(a.minutesShare, 0, 1) ?? 0, minutesFactor, usedInModel: minutesFactor !== 1 };
+}
+
+function normInFormPlayer(p: Obj): FactorInFormPlayer | undefined {
+  const name = short(p.name, 80);
+  const formIndex = finIn(p.formIndex, 0, 100);
+  const playerId = optStr(p.playerId);
+  if (!name || formIndex === undefined || !playerId) return undefined;
+  return { playerId, name, formIndex, note: short(p.note, 120) };
+}
+
+/** Bloque de factores normalizado (undefined si no es un objeto). Un apartado roto se omite, el resto se muestra. */
+export function normMatchFactors(x: unknown): MatchFactors | undefined {
+  if (!isObj(x)) return undefined;
+  const out: MatchFactors = { asOf: validDate(x.asOf) ?? '', referee: normFactorReferee(x.referee), notes: strList(x.notes, 8).map((n) => short(n, 240)).filter(Boolean) };
+  const tie = safePart(x.tie, (t) => {
+    const firstLeg = tieScore(t.firstLeg);
+    const aggregate = tieScore(t.aggregate);
+    const summary = short(t.summary, 220);
+    if (!firstLeg || !aggregate || !summary) return undefined;
+    const leader: 'home' | 'away' | 'none' = aggregate.home > aggregate.away ? 'home' : aggregate.home < aggregate.away ? 'away' : 'none';
+    return { leg: 2 as const, firstLegId: str(t.firstLegId), firstLegDate: validDate(t.firstLegDate) ?? '', firstLeg, aggregate, leader, summary, usedInModel: false as const };
+  });
+  if (tie) out.tie = tie;
+  const stakes = safePart(x.stakes, (s) => {
+    const home = normStakeSide(s.home);
+    const away = normStakeSide(s.away);
+    const teams = intIn(s.teams, 2, 100);
+    return home && away && teams !== undefined && [home, away].every((t) => t.position <= teams && t.worst <= teams) ? { teams, home, away, usedInModel: false as const } : undefined;
+  });
+  if (stakes) out.stakes = stakes;
+  const form = safePart(x.form, (f) => {
+    const home = normTeamForm(f.home);
+    const away = normTeamForm(f.away);
+    return home || away ? { ...(home ? { home } : {}), ...(away ? { away } : {}), usedInModel: false as const } : undefined;
+  });
+  if (form) out.form = form;
+  const venue = safePart(x.venue, (v) => {
+    const home = normVenueSide(v.home);
+    const away = normVenueSide(v.away);
+    return home || away ? { ...(home ? { home } : {}), ...(away ? { away } : {}), usedInModel: true as const, note: short(v.note, 200) } : undefined;
+  });
+  if (venue) out.venue = venue;
+  const absences = safePart(x.absences, (a) => {
+    const seen = new Set<string>();
+    const home = uniqueBy(list(a.home, normAbsence, 50), seen).slice(0, 11);
+    const away = uniqueBy(list(a.away, normAbsence, 50), seen).slice(0, 11);
+    return home.length || away.length ? { home, away } : undefined;
+  });
+  if (absences) out.absences = absences;
+  const inForm = safePart(x.inForm, (p) => {
+    const seen = new Set<string>();
+    const home = uniqueBy(list(p.home, normInFormPlayer, 20), seen).slice(0, 3);
+    const away = uniqueBy(list(p.away, normInFormPlayer, 20), seen).slice(0, 3);
+    return home.length || away.length ? { home, away, usedInModel: false as const } : undefined;
+  });
+  if (inForm) out.inForm = inForm;
+  return out;
+}
+
 function normMatchFile(v: Obj): MatchFile {
   const match = normMatch(v.match);
   if (!match) throw new Error('Partido sin datos mínimos');
@@ -632,6 +809,13 @@ function normMatchFile(v: Obj): MatchFile {
       ? { home: finKeys(v.actual.home, ACTUAL_NUM_KEYS), away: finKeys(v.actual.away, ACTUAL_NUM_KEYS) }
       : undefined,
     confidence: list(v.confidence, normConfidencePick, 4),
+    factors: (() => {
+      try {
+        return normMatchFactors(v.factors);
+      } catch {
+        return undefined;
+      }
+    })(),
   } as unknown as MatchFile;
 }
 

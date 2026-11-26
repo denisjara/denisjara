@@ -28,8 +28,15 @@ const BUILD_DIR = path.join(ROOT_DIR, 'dist-standalone');
 const OUT_DIR = path.join(ROOT_DIR, 'standalone');
 const OUT_FILE = path.join(OUT_DIR, 'FutStat-Lab.html');
 const LOGO_CACHE = path.join(ROOT_DIR, '.cache', 'logos');
-/** Tope del archivo final: por debajo de 16 MB para que también se pueda publicar como página única. */
-const MAX_FILE_BYTES = Number(process.env.STANDALONE_MAX_BYTES ?? 15_700_000);
+/**
+ * Tope del archivo final. Con los datos de ~15 MB (comprimidos) hacen falta ~6 MB más para que quepan TODOS los
+ * escudos (≈670 a 64 px): con el tope antiguo de 15,7 MB solo entraban unos pocos y sin internet casi todos los
+ * equipos salían con iniciales. 22 MB de tope (el archivo ronda 19 MB) sigue siendo cómodo para Safari/iPhone (los datos se descomprimen por archivo,
+ * bajo demanda). Si los datos crecen, los escudos de las competiciones top siguen entrando primero.
+ */
+const MAX_FILE_BYTES = Number(process.env.STANDALONE_MAX_BYTES ?? 22_000_000);
+/** Aviso visible en el log de CI si quedan fuera demasiados escudos por tamaño (antes pasaba en silencio). */
+const LOGO_WARN_SHARE = 0.9;
 const LOGO_SIZE = 64;
 const LOGO_MAX_BYTES = 60_000;
 const LOGO_CONCURRENCY = 8;
@@ -268,6 +275,9 @@ async function main() {
   console.log(`✓ ${path.relative(ROOT_DIR, OUT_FILE)} · ${mb(size)}`);
   console.log(`  datos: ${Object.keys(files).length} archivos (${mb(rawBytes)} → comprimidos en el HTML)`);
   console.log(`  escudos: ${Object.keys(logos).length} de ${urls.length} incluidos · no disponibles en ESPN: ${missing} · fuera por tamaño: ${overBudget}`);
+  if (urls.length && Object.keys(logos).length < LOGO_WARN_SHARE * (urls.length - missing)) {
+    console.warn(`⚠ solo caben ${Object.keys(logos).length} de ${urls.length - missing} escudos disponibles: sube STANDALONE_MAX_BYTES o reduce los datos`);
+  }
   console.log(`  se actualiza solo (con internet) desde: ${REMOTE_DATA_URL || '— (desactivado)'}`);
 }
 

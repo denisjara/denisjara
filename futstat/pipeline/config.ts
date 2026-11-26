@@ -241,6 +241,40 @@ export const MODEL = {
    * were 2.85). Cups are excluded (real extreme totals in ties between divisions; shrinking them was worse).
    */
   totalShrink: { s: 0.5, windowDays: 365, halfLifeDays: 180, priorN: 30, globalTotal: 2.6 },
+  /**
+   * Árbitro designado (en producción desde el 26-nov-2026; código en pipeline/analytics/referee.ts). Multiplicador
+   * walk-forward de la media de tarjetas y de faltas de los DOS equipos: en los partidos terminados anteriores del
+   * árbitro, R = (ΣO + k·ē) / (ΣE + k·ē), con O lo observado y E la media de la competición y temporada de cada uno de
+   * sus partidos (todas las temporadas si tiene < `minCompN` partidos con dato; sin contar el partido si la competición
+   * tiene < `minCompNAll`), contraído hacia 1 con k partidos ficticios. Sin árbitro conocido (hoy ESPN no lo publica
+   * antes del inicio; la descarga lo vuelve a buscar en los partidos de las próximas 72 h) el multiplicador es 1.
+   * Variante referee-fouls-k30 (pre-registro 2026-11-26): Δ Brier frente a la producción anterior en T2 tarjetas
+   * −0,0039, tarjetas por equipo −0,0023, faltas −0,0037 (IC excluyen 0); holdout sin empeorar (estimación puntual).
+   */
+  referee: { kCards: 30, kFouls: 30, minCompN: 20, minCompNAll: 10 },
+  /**
+   * Bajas probables en las props de jugadores (en producción desde el 26-nov-2026; pipeline/analytics/availability.ts).
+   * Por jugador, con las líneas y partidos anteriores al partido: expulsado en el último partido del equipo en la MISMA
+   * competición ⇒ sancionado (no se publica: factor 0); habitual (>= `regularShare` de los minutos de los
+   * `regularGames` últimos partidos del equipo) que no jugó los 2 últimos ⇒ minutos esperados × 0,65; que no jugó el
+   * último y era de la misma competición ⇒ × 0,9 (de otra competición, rotación: sin cambio). Factores fijados con una
+   * exploración descriptiva de T1 (availability-props; en el banco el sancionado llevaba ×0,03 solo para poder
+   * puntuarlo).
+   */
+  availability: {
+    regularShare: 0.6,
+    regularGames: 5,
+    linesWindowDays: 365,
+    minutesFactor: { susp: 0, miss2: 0.65, miss1s: 0.9, miss1o: 1 },
+  },
+  /**
+   * Factores del rival de las props de tiros, tiros a puerta y tarjetas (en producción desde el 26-nov-2026;
+   * pipeline/analytics/playerFactors.ts): el factor de producción (proyección del equipo / su media) se multiplica por
+   * proyección(forN, agN) / proyección(40, 40), con `forN` partidos ficticios en el «a favor» del propio equipo y `agN`
+   * en el «en contra» del rival. Las tasas por 90 del jugador ya llevan el nivel de su equipo: con 40 en los dos lados
+   * ese nivel se contraía dos veces. Las proyecciones de equipo publicadas no cambian. Variante playerform-fac6x40.
+   */
+  propsOppShrink: { forN: 6, agN: 40 },
   /** value bets */
   minEv: 0.05,
   minProb: 0.12,

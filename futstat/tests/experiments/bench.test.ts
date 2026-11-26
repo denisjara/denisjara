@@ -14,6 +14,8 @@ import { kMultiplierFor } from '../../pipeline/analytics/ratings';
 import { predictMatch } from '../../pipeline/analytics/predict';
 import { PRIOR_N } from '../../pipeline/analytics/projections';
 import { productionTotalFactor } from '../../pipeline/analytics/totals';
+import { refereeMultipliers } from '../../pipeline/analytics/referee';
+import { productionPlayerAdjust } from '../../pipeline/analytics/playerFactors';
 import { computeWalkForward, createContext, refitBoundaries, wfContext } from '../../pipeline/publish/context';
 import {
   bootstrapByDay,
@@ -26,7 +28,7 @@ import {
 } from '../../pipeline/experiments/bench';
 import { historyView } from '../../pipeline/experiments/history';
 import { checkVariantSource, loadVariant, validateVariant } from '../../pipeline/experiments/load';
-import { BASELINE_VARIANT, PRODUCTION_VARIANT, isEmptyVariant, preMatchView, type ModelVariant, type StatPairs, type WalkForwardRow } from '../../pipeline/experiments/types';
+import { BASELINE_2211_VARIANT, BASELINE_VARIANT, PRODUCTION_VARIANT, isEmptyVariant, preMatchView, type ModelVariant, type StatPairs, type WalkForwardRow } from '../../pipeline/experiments/types';
 import example from '../../pipeline/experiments/example';
 import { HOLDOUT_LOG, main as evalMain } from '../../scripts/eval-model';
 
@@ -161,18 +163,19 @@ const identity: ModelVariant = {
     adjustTotal: ({ ctx, match, lambdaHome, lambdaAway }) =>
       productionTotalFactor({ hasMarketTotal: ctx.market?.over25 !== undefined, kind: ctx.comp.kind, compId: match.compId, before: ctx.history, lambdaHome, lambdaAway }),
   },
-  // multiplicadores 1 en todas las estadísticas proyectadas (y la vista del árbitro, que no cambia nada)
+  // multiplicadores 1 en todas las estadísticas proyectadas salvo el árbitro de producción (tarjetas y faltas)
   stats: {
     priorN: PRIOR_N,
     halfLifeDays: 150,
     dispersion: 'pooled',
     leaguePriorN: 20,
-    adjust: ({ base, match, history }) => {
-      if (match.referee) history.refereeMatches(match.referee.id);
-      return Object.fromEntries(Object.keys(base).map((k) => [k, { home: 1, away: 1 }])) as StatPairs;
-    },
+    adjust: ({ base, match, history }) => ({
+      ...(Object.fromEntries(Object.keys(base).map((k) => [k, { home: 1, away: 1 }])) as StatPairs),
+      ...refereeMultipliers(match, history, base, MODEL.referee),
+    }),
   },
-  players: { adjust: ({ base, history, teamId }) => (history.playerLines(teamId).length >= 0 ? { cardsFactor: base.cardsFactor } : {}) },
+  // los ajustes de producción de las props (bajas probables y factores del rival 6/40), reproducidos con el gancho
+  players: { adjust: ({ match, teamId, side, history, base }) => ({ cardsFactor: base.cardsFactor, ...productionPlayerAdjust({ match, teamId, side, history, base }) }) },
 };
 
 describe('variante vacía = producción', () => {
@@ -249,8 +252,30 @@ describe('variante vacía = producción', () => {
     expect(t1.n + t2.n).toBe(r.n);
   });
 
-  it('baseline = producción anterior: mismo 1X2; total contraído solo sin línea de goles y fuera de copas; córners distintos', () => {
+  it('baseline = producción anterior (26-nov-2026): mismo 1X2, goles, córners y tiros; tarjetas y faltas (árbitro) y props distintas', () => {
     const legacy = runVariant(BASELINE_VARIANT, data, { reuse: base });
+    let cards = 0;
+    let fouls = 0;
+    let props = 0;
+    let suspended = 0;
+    for (const [id, p] of base.rows) {
+      const l = legacy.rows.get(id)!;
+      expect([p.p, p.ep, p.lh, p.la, p.over25, p.btts]).toEqual([l.p, l.ep, l.lh, l.la, l.over25, l.btts]);
+      expect([p.corners, p.shots, p.sot]).toEqual([l.corners, l.shots, l.sot]);
+      if (p.cards && l.cards && Math.abs(p.cards.exp - l.cards.exp) > 1e-6) cards++;
+      if (p.fouls && l.fouls && Math.abs(p.fouls.exp - l.fouls.exp) > 1e-6) fouls++;
+      if (p.pl && l.pl && JSON.stringify(p.pl) !== JSON.stringify(l.pl)) props++;
+      // el habitual que falta (jugador 0) puede tener menos minutos, pero ningún publicado desaparece salvo sancionados
+      if (l.pl && p.pl) suspended += l.pl.filter((x) => !p.pl!.some((y) => y.id === x.id && y.s === x.s)).length;
+    }
+    expect(cards).toBeGreaterThan(50);
+    expect(fouls).toBeGreaterThan(50);
+    expect(props).toBeGreaterThan(50);
+    expect(suspended).toBe(0); // en este mundo nadie ve roja
+  });
+
+  it('la producción anterior al 22-nov-2026 (BASELINE_2211_VARIANT): mismo 1X2; total contraído solo sin línea de goles y fuera de copas', () => {
+    const legacy = runVariant(BASELINE_2211_VARIANT, data, { reuse: base });
     const byId = new Map(prod.allMatches.map((m) => [m.id, m]));
     let shrunk = 0;
     let corners = 0;
@@ -266,6 +291,26 @@ describe('variante vacía = producción', () => {
     }
     expect(shrunk).toBeGreaterThan(50);
     expect(corners).toBeGreaterThan(50);
+  });
+
+  it('producción (variante vacía) = factors-combo: mismas predicciones y mismas cifras del banco frente a la base', async () => {
+    const combo = await loadVariant('factors-combo');
+    const legacy = runVariant(BASELINE_VARIANT, data, { reuse: base });
+    const run = runVariant(combo, data, { reuse: legacy });
+    const prodRun = runVariant(PRODUCTION_VARIANT, data, { reuse: legacy });
+    expect(run.rows.size).toBe(prodRun.rows.size);
+    for (const [id, p] of prodRun.rows) expect(run.rows.get(id)).toEqual(p);
+    const infos = matchInfos(base.ctx!);
+    for (const w of ['tuning', 'prev'] as const) {
+      const a = compare(legacy, prodRun, infos, w, data);
+      const b = compare(legacy, run, infos, w, data);
+      const strip = (r: typeof a) => ({ ...r, variant: '', description: '', generatedAt: '', seconds: undefined });
+      expect(strip(b)).toEqual(strip(a));
+      expect(a.n).toBeGreaterThan(100);
+    }
+    const t = compare(legacy, prodRun, infos, 'tuning', data);
+    expect(t.ci.cards!.diff).not.toBe(0);
+    expect(t.ci.pSot1!.diff).not.toBe(0);
   });
 });
 
@@ -304,7 +349,8 @@ describe('ganchos', () => {
   });
 
   it('stats.adjust: los multiplicadores cambian las proyecciones (nunca reutiliza las de la base) y llegan a las props de tarjeta', () => {
-    const base = runVariant(PRODUCTION_VARIANT, data);
+    // base: producción sin el árbitro (el gancho de la variante SUSTITUYE al de producción)
+    const base = runVariant({ name: 'sin-arbitro', description: 'producción sin árbitro', stats: { adjust: () => ({}) } }, data);
     const cards: ModelVariant = { name: 'mas-tarjetas', description: '+30 % de tarjetas', stats: { adjust: () => ({ cards: { home: 1.3, away: 1.3 } }) } };
     const run = runVariant(cards, data, { reuse: base });
     let n = 0;

@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowDownRight, ArrowRight, ArrowUpRight, Brain, Grid3x3, Lightbulb, ListOrdered, Scale, Sigma, Zap } from 'lucide-react';
 import type { MatchFile, MatchSummary, OddsSnapshot, Prob1X2, StandingRow, ValuePick } from '../../../types/data';
-import { EmptyState, FormChips, Heatmap, Meter, ProbBar1X2, SegmentedControl, TeamCrest, cx } from '../../components';
+import { EmptyState, FormChips, SafeBlock, Heatmap, Meter, ProbBar1X2, SegmentedControl, TeamCrest, cx } from '../../components';
 import { useMediaQuery } from '../../lib/hooks';
 import { ev as fmtEv, fairOddsFromProb, int, num, odds as fmtOdds, pct, signed, signedPct, xg } from '../../lib/format';
 import { noteColor } from '../competition/shared';
@@ -10,6 +10,7 @@ import { pickMarketLabel } from '../../lib/picks';
 import { lookup } from '../../lib/lookup';
 import { DistColumns, SplitBar } from './charts';
 import { Panel, Stat, TeamTag } from './parts';
+import { FactorsPanel } from './FactorsPanel';
 import { foldTail, fmtLine, localizeNumbers, matrixStats, topScores, totalGoalsDist, validMatrix } from './utils';
 
 interface TabProps {
@@ -588,7 +589,14 @@ function TablePanel({ file, match }: TabProps) {
 // ---------------------------------------------------------------------------
 export function AnalysisTab({ file, match }: TabProps) {
   if (!file.model) {
-    return <EmptyState icon={<Brain />} title="Sin modelo para este partido" description="El análisis del modelo no está disponible todavía." />;
+    return (
+      <div className="space-y-6">
+        <EmptyState icon={<Brain />} title="Sin modelo para este partido" description="El análisis del modelo no está disponible todavía." />
+        <SafeBlock label="Factores del partido">
+        <FactorsPanel factors={file.factors} match={match} />
+      </SafeBlock>
+      </div>
+    );
   }
   return (
     <div className="space-y-6">
@@ -599,6 +607,9 @@ export function AnalysisTab({ file, match }: TabProps) {
           <ExplanationPanel items={file.model.explanation ?? []} />
         </div>
       </div>
+      <SafeBlock label="Factores del partido">
+        <FactorsPanel factors={file.factors} match={match} />
+      </SafeBlock>
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
         <ScoreMatrixPanel file={file} match={match} />
         <GoalsPanel file={file} match={match} />
