@@ -94,7 +94,17 @@ const EPS = 1e-9;
 // Familias
 // ---------------------------------------------------------------------------
 
-export type ConfidenceTheme = 'resultado' | 'goles' | 'corners' | 'tarjetas';
+/**
+ * Temas de confidence.json: resultado, goles, córners y tarjetas. 'tiros', 'faltas' y 'jugadores' son los de las
+ * familias ADICIONALES del apartado «Pronósticos del día» (DAILY_EXTRA_FAMILIES, analytics/daily.ts): solo daily.json.
+ */
+export type ConfidenceTheme = 'resultado' | 'goles' | 'corners' | 'tarjetas' | 'tiros' | 'faltas' | 'jugadores';
+
+export interface FamilyDef {
+  id: string;
+  theme: ConfidenceTheme;
+  label: string;
+}
 
 export const CONFIDENCE_FAMILIES = [
   { id: '1x2-fav', theme: 'resultado', label: 'Gana el favorito' },
@@ -120,11 +130,43 @@ export const CONFIDENCE_FAMILIES = [
   { id: 'cards-over-2.5', theme: 'tarjetas', label: 'Más de 2.5 tarjetas' },
   { id: 'cards-under-5.5', theme: 'tarjetas', label: 'Menos de 5.5 tarjetas' },
   { id: 'cards-under-6.5', theme: 'tarjetas', label: 'Menos de 6.5 tarjetas' },
-] as const satisfies readonly { id: string; theme: ConfidenceTheme; label: string }[];
+] as const satisfies readonly FamilyDef[];
 
-export type ConfidenceFamily = (typeof CONFIDENCE_FAMILIES)[number]['id'];
-export const FAMILY_BY_ID: ReadonlyMap<ConfidenceFamily, (typeof CONFIDENCE_FAMILIES)[number]> = new Map(
-  CONFIDENCE_FAMILIES.map((f) => [f.id, f]),
+/**
+ * Familias ADICIONALES del apartado «Pronósticos del día» (candidatos y reglas en analytics/daily.ts, con el mismo
+ * procedimiento: Platt por familia|fuente, umbral, solo oro y validación fuera de muestra mensual). NO forman parte de
+ * confidence.json ni de la página /confianza: confidenceCandidates y las reglas por defecto solo usan
+ * CONFIDENCE_FAMILIES.
+ */
+export const DAILY_EXTRA_FAMILIES = [
+  { id: 'sot-over-6.5', theme: 'tiros', label: 'Más de 6.5 tiros a puerta' },
+  { id: 'sot-over-7.5', theme: 'tiros', label: 'Más de 7.5 tiros a puerta' },
+  { id: 'sot-over-8.5', theme: 'tiros', label: 'Más de 8.5 tiros a puerta' },
+  { id: 'sot-under-11.5', theme: 'tiros', label: 'Menos de 11.5 tiros a puerta' },
+  { id: 'sot-under-12.5', theme: 'tiros', label: 'Menos de 12.5 tiros a puerta' },
+  { id: 'sot-under-13.5', theme: 'tiros', label: 'Menos de 13.5 tiros a puerta' },
+  { id: 'sot-team-over-2.5', theme: 'tiros', label: 'Un equipo: más de 2.5 tiros a puerta' },
+  { id: 'sot-team-over-3.5', theme: 'tiros', label: 'Un equipo: más de 3.5 tiros a puerta' },
+  { id: 'shots-over-19.5', theme: 'tiros', label: 'Más de 19.5 tiros' },
+  { id: 'shots-over-21.5', theme: 'tiros', label: 'Más de 21.5 tiros' },
+  { id: 'shots-over-23.5', theme: 'tiros', label: 'Más de 23.5 tiros' },
+  { id: 'shots-under-31.5', theme: 'tiros', label: 'Menos de 31.5 tiros' },
+  { id: 'shots-under-33.5', theme: 'tiros', label: 'Menos de 33.5 tiros' },
+  { id: 'shots-under-35.5', theme: 'tiros', label: 'Menos de 35.5 tiros' },
+  { id: 'fouls-over-17.5', theme: 'faltas', label: 'Más de 17.5 faltas' },
+  { id: 'fouls-over-19.5', theme: 'faltas', label: 'Más de 19.5 faltas' },
+  { id: 'fouls-under-27.5', theme: 'faltas', label: 'Menos de 27.5 faltas' },
+  { id: 'fouls-under-29.5', theme: 'faltas', label: 'Menos de 29.5 faltas' },
+  { id: 'fouls-under-31.5', theme: 'faltas', label: 'Menos de 31.5 faltas' },
+  { id: 'player-sot-1', theme: 'jugadores', label: 'Jugador: 1+ tiro a puerta' },
+  { id: 'player-shot-1', theme: 'jugadores', label: 'Jugador: 1+ tiro' },
+  { id: 'player-shot-2', theme: 'jugadores', label: 'Jugador: 2+ tiros' },
+  { id: 'player-goal', theme: 'jugadores', label: 'Jugador: marca gol' },
+] as const satisfies readonly FamilyDef[];
+
+export type ConfidenceFamily = (typeof CONFIDENCE_FAMILIES)[number]['id'] | (typeof DAILY_EXTRA_FAMILIES)[number]['id'];
+export const FAMILY_BY_ID: ReadonlyMap<ConfidenceFamily, FamilyDef> = new Map<ConfidenceFamily, FamilyDef>(
+  [...CONFIDENCE_FAMILIES, ...DAILY_EXTRA_FAMILIES].map((f) => [f.id, f]),
 );
 
 /** Cómo se resuelve una selección con el resultado real. */
@@ -134,7 +176,35 @@ export type ConfidenceSettle =
   | { kind: 'handicap'; side: 'home' | 'away'; line: number }
   | { kind: 'total'; stat: 'goals' | 'corners' | 'cards'; side: 'over' | 'under'; line: number }
   | { kind: 'team-total'; team: 'home' | 'away'; side: 'over' | 'under'; line: number }
-  | { kind: 'btts'; yes: boolean };
+  | { kind: 'btts'; yes: boolean }
+  // ---- familias adicionales del apartado diario (analytics/daily.ts)
+  /** total del partido (sin `team`) o de un equipo de tiros a puerta, tiros o faltas */
+  | { kind: 'stat'; stat: ExtraStat; team?: 'home' | 'away'; side: 'over' | 'under'; line: number }
+  /** prop de jugador: al menos `min` tiros a puerta / tiros / goles. Si el jugador no juega, nulo (se devuelve) */
+  | { kind: 'player'; playerId: string; stat: 'shotsOnTarget' | 'shots' | 'goals'; min: number };
+
+export type ExtraStat = 'shotsOnTarget' | 'shots' | 'fouls';
+
+/** Jugador de un prop (familias 'player-*'): lo que la ficha necesita para mostrarlo. */
+export interface CandidatePlayer {
+  id: string;
+  name: string;
+  short: string;
+  teamId: string;
+  position?: string;
+  expMinutes?: number;
+}
+
+/**
+ * Datos de resolución de las familias adicionales (analytics/daily.ts los rellena; nunca en partidos con prórroga o
+ * penaltis). `players` = líneas de jugador del partido (undefined si no hay resumen descargado: los props no se evalúan).
+ */
+export interface ExtraSettleData {
+  shotsOnTarget?: { home: number; away: number };
+  shots?: { home: number; away: number };
+  fouls?: { home: number; away: number };
+  players?: ReadonlyMap<string, { minutes: number; shots: number; shotsOnTarget: number; goals: number }>;
+}
 
 export interface ConfidenceCandidate {
   family: ConfidenceFamily;
@@ -158,6 +228,8 @@ export interface ConfidenceCandidate {
    * 'estadistico' = sin cuotas (Dixon-Coles + Elo). Son modelos distintos y se calibran por separado.
    */
   segment: ConfidenceSegment;
+  /** solo props de jugador (familias adicionales del apartado diario) */
+  player?: CandidatePlayer;
 }
 
 export type ConfidenceSegment = 'mercado' | 'estadistico';
@@ -179,6 +251,9 @@ export interface CandidateInput {
   minEloGames?: number;
   /** partidos previos con córners / tarjetas del equipo con menos historial (undefined = no se comprueba) */
   statGames?: { corners?: number; cards?: number };
+  /** goles esperados finales de cada equipo (no los usa confidenceCandidates; sí los props del apartado diario) */
+  lambdaHome?: number;
+  lambdaAway?: number;
 }
 
 export interface CandidateOptions {
@@ -517,7 +592,7 @@ function overUnderResult(value: number, side: 'over' | 'under', line: number): C
 }
 
 /** Resultado de una selección; undefined si el partido no tiene el dato necesario (córners/tarjetas). */
-export function settleCandidate(c: Pick<ConfidenceCandidate, 'settle'>, d: SettleData): CandidateResult | undefined {
+export function settleCandidate(c: Pick<ConfidenceCandidate, 'settle'>, d: SettleData & ExtraSettleData): CandidateResult | undefined {
   const s = c.settle;
   const outcome = d.hg > d.ag ? 'home' : d.hg === d.ag ? 'draw' : 'away';
   switch (s.kind) {
@@ -538,6 +613,17 @@ export function settleCandidate(c: Pick<ConfidenceCandidate, 'settle'>, d: Settl
     case 'btts': {
       const yes = d.hg > 0 && d.ag > 0;
       return yes === s.yes ? 'hit' : 'miss';
+    }
+    case 'stat': {
+      const v = d[s.stat];
+      if (!v || !Number.isFinite(v.home) || !Number.isFinite(v.away)) return undefined;
+      return overUnderResult(s.team ? v[s.team] : v.home + v.away, s.side, s.line);
+    }
+    case 'player': {
+      if (!d.players) return undefined; // partido sin líneas de jugador: no se evalúa
+      const l = d.players.get(s.playerId);
+      if (!l || !(l.minutes > 0)) return 'void'; // no jugó: las casas anulan la apuesta
+      return l[s.stat] >= s.min ? 'hit' : 'miss';
     }
   }
 }
@@ -609,6 +695,8 @@ export function walkForwardInput(ctx: BuildContext, m: MatchRecord): CandidateIn
     odds: m.odds,
     withMarket: !!pred.model.market,
     ...teamHistoryBefore(ctx, m, sc, t),
+    lambdaHome: pred.lambdaHome,
+    lambdaAway: pred.lambdaAway,
   };
 }
 
@@ -625,6 +713,11 @@ export interface HistoryOptions extends CandidateOptions {
   /** competiciones a evaluar (por defecto todas) */
   compIds?: string[];
   log?: (msg: string) => void;
+  /**
+   * gancho por partido evaluado (familias adicionales del apartado diario): recibe la entrada sin fuga de
+   * walkForwardInput y los datos de resolución. No cambia el historial devuelto.
+   */
+  visit?: (m: MatchRecord, input: CandidateInput, d: SettleData, item: ConfidenceHistoryItem) => void;
 }
 
 /** Historial walk-forward: todos los partidos terminados de la temporada actual que se pueden predecir sin fuga. */
@@ -677,6 +770,7 @@ export function confidenceHistory(ctx: BuildContext, opts: HistoryOptions = {}):
       item.extraTime = true;
       et90++;
     }
+    opts.visit?.(m, input, d, item);
     out.push(item);
   }
   out.sort((a, b) => Date.parse(a.date) - Date.parse(b.date) || a.matchId.localeCompare(b.matchId));
@@ -848,15 +942,17 @@ export interface ConfidenceRuleOptions {
   families?: ConfidenceFamily[];
   /** reglas excluidas (claves de ruleKey: 'familia' o 'familia|fuente') */
   exclude?: string[];
+  /** catálogo de familias para las que se ajustan reglas. Default CONFIDENCE_FAMILIES (apartado diario: las adicionales) */
+  familyDefs?: readonly FamilyDef[];
 }
 
-type ResolvedRuleOptions = Required<Omit<ConfidenceRuleOptions, 'families' | 'minCalibrated' | 'exclude'>> & {
+type ResolvedRuleOptions = Required<Omit<ConfidenceRuleOptions, 'families' | 'minCalibrated' | 'exclude' | 'familyDefs'>> & {
   minCalibrated?: number;
   families?: ConfidenceFamily[];
   exclude?: string[];
 };
 
-export const DEFAULT_RULE_OPTIONS: Required<Omit<ConfidenceRuleOptions, 'families' | 'minCalibrated' | 'exclude'>> = {
+export const DEFAULT_RULE_OPTIONS: Required<Omit<ConfidenceRuleOptions, 'families' | 'minCalibrated' | 'exclude' | 'familyDefs'>> = {
   method: 'platt',
   segmented: true,
   targetRate: 0.82,
@@ -950,7 +1046,8 @@ export function confidenceRulesFrom(history: ConfidenceHistoryItem[], opts: Conf
   const snapUp = (x: number) => thresholds.find((t) => t >= x - 1e-9);
   const rules: ConfidenceRule[] = [];
   const rejected: RejectedFamily[] = [];
-  for (const f of CONFIDENCE_FAMILIES) {
+  for (const def of opts.familyDefs ?? CONFIDENCE_FAMILIES) {
+    const f = def as { id: ConfidenceFamily; theme: ConfidenceTheme; label: string };
     if (allowed && !allowed.has(f.id)) continue;
     for (const segment of segments) {
       if (excluded.has(ruleKey(f.id, segment)) || excluded.has(f.id)) continue;
@@ -1056,7 +1153,7 @@ export function ruleFor(rules: ConfidenceRules, c: Pick<ConfidenceCandidate, 'fa
 
 function stripUndefined<T extends object>(o: T): Partial<T> {
   const out: Partial<T> = {};
-  for (const [k, v] of Object.entries(o)) if (v !== undefined && k !== 'families' && k !== 'exclude') (out as Record<string, unknown>)[k] = v;
+  for (const [k, v] of Object.entries(o)) if (v !== undefined && k !== 'families' && k !== 'exclude' && k !== 'familyDefs') (out as Record<string, unknown>)[k] = v;
   return out;
 }
 
@@ -1086,6 +1183,9 @@ export interface SelectOptions {
    * la franja plata [0,80, 0,85) acertó 79,9 % fuera de muestra en la revisión y ya no se publica)
    */
   minHitRate?: number;
+  /** picks como mucho por tema y por familia. Default 1 y 1 (el apartado diario valida sus familias sin estos límites) */
+  maxPerTheme?: number;
+  maxPerFamily?: number;
 }
 
 /** Acierto mínimo de la franja (en el histórico con el que se ajusta la regla) del nivel oro, el único que se publica. */
@@ -1119,13 +1219,15 @@ export function selectConfidencePicks(candidates: ConfidenceCandidate[], rules: 
   }
   eligible.sort((a, b) => b.rank - a.rank || b.prob - a.prob || a.family.localeCompare(b.family));
   const out: ConfidencePick[] = [];
-  const themes = new Set<ConfidenceTheme>();
-  const families = new Set<ConfidenceFamily>();
+  const maxPerTheme = opts.maxPerTheme ?? 1;
+  const maxPerFamily = opts.maxPerFamily ?? 1;
+  const themes = new Map<ConfidenceTheme, number>();
+  const families = new Map<ConfidenceFamily, number>();
   for (const e of eligible) {
     if (out.length >= maxPerMatch) break;
-    if (themes.has(e.theme) || families.has(e.family)) continue;
-    themes.add(e.theme);
-    families.add(e.family);
+    if ((themes.get(e.theme) ?? 0) >= maxPerTheme || (families.get(e.family) ?? 0) >= maxPerFamily) continue;
+    themes.set(e.theme, (themes.get(e.theme) ?? 0) + 1);
+    families.set(e.family, (families.get(e.family) ?? 0) + 1);
     const { rank: _rank, ...pick } = e;
     void _rank;
     out.push(pick);
@@ -1255,7 +1357,7 @@ export function settlePicks(items: ConfidenceHistoryItem[], rules: ConfidenceRul
   for (const it of items) {
     const picks = selectConfidencePicks(it.candidates, rules, opts);
     for (const p of picks) {
-      const src = it.candidates.find((c) => c.family === p.family && c.selection === p.selection) as SettledCandidate | undefined;
+      const src = it.candidates.find((c) => c.family === p.family && c.marketId === p.marketId && c.selection === p.selection) as SettledCandidate | undefined;
       if (!src) continue;
       const sp: SettledPick = {
         ...p,
@@ -1632,6 +1734,12 @@ export interface WalkForwardResult {
   published: SettledPick[];
   /** partidos de los tramos */
   items: ConfidenceHistoryItem[];
+  /**
+   * reglas de cada tramo (mismo índice que `folds`): `all` = las del procedimiento ajustado con todo lo anterior;
+   * `published` = las validadas con los tramos anteriores. Para medir fuera de muestra otras reglas de selección
+   * (apartado diario) con exactamente las reglas vigentes en cada tramo.
+   */
+  foldRules: { all: ConfidenceRules; published: ConfidenceRules }[];
 }
 
 /** Inicios de mes (UTC) entre dos instantes. */
@@ -1662,7 +1770,7 @@ function monthStarts(fromMs: number, toMs: number): number[] {
 export function walkForwardConfidence(history: ConfidenceHistoryItem[], opts: WalkForwardOptions = {}): WalkForwardResult {
   const minTrain = opts.minTrain ?? WALK_FORWARD_MIN_TRAIN;
   const select = opts.select ?? {};
-  const out: WalkForwardResult = { folds: [], candidatePicks: [], published: [], items: [] };
+  const out: WalkForwardResult = { folds: [], candidatePicks: [], published: [], items: [], foldRules: [] };
   if (history.length <= minTrain) return out;
   const times = history.map((h) => Date.parse(h.date));
   const firstIdx = (t: number) => {
@@ -1685,6 +1793,7 @@ export function walkForwardConfidence(history: ConfidenceHistoryItem[], opts: Wa
     out.candidatePicks.push(...all);
     out.published.push(...published);
     out.items.push(...items);
+    out.foldRules.push({ all: proc.rules, published: filtered.rules });
     out.folds.push({
       start: new Date(starts[k]).toISOString(),
       end: endT === Infinity ? history[history.length - 1].date : new Date(endT).toISOString(),
@@ -1792,6 +1901,12 @@ export interface ConfidenceEvaluation {
   excluded: { key: string; reason: string }[];
   /** picks publicados del walk-forward de los últimos `recentDays` días (fuera de muestra), más recientes primero */
   recentSettled: SettledPick[];
+  /**
+   * walk-forward mensual completo (picks de todas las reglas, publicados y reglas de cada tramo) e historial usado, para
+   * el apartado diario. Propiedades NO enumerables (no se serializan ni se copian con `{ ...ev }`).
+   */
+  wf: WalkForwardResult;
+  history: ConfidenceHistoryItem[];
 }
 
 export const PROCEDURE_TEXT = [
@@ -1892,7 +2007,7 @@ export function evaluateConfidence(ctx: BuildContext, opts: EvaluateOptions = {}
     .filter((p) => Date.parse(p.date) > lastT - recentDays * DAY_MS)
     .sort((a, b) => Date.parse(b.date) - Date.parse(a.date) || a.matchId.localeCompare(b.matchId));
 
-  return {
+  const evaluation: ConfidenceEvaluation = {
     generatedAt: new Date(ctx.now).toISOString(),
     split: {
       calibrationFraction: calFrac,
@@ -1927,5 +2042,12 @@ export function evaluateConfidence(ctx: BuildContext, opts: EvaluateOptions = {}
     byFamily,
     excluded: [...fixedKeys].map(([key, reason]) => ({ key, reason })),
     recentSettled,
+    wf,
+    history,
   };
+  // datos de trabajo para el apartado diario: no enumerables, para que no acaben en el informe JSON de
+  // scripts/eval-confidence.ts (ni el tramo virgen oculto) ni en copias superficiales
+  Object.defineProperty(evaluation, 'wf', { value: wf, enumerable: false });
+  Object.defineProperty(evaluation, 'history', { value: history, enumerable: false });
+  return evaluation;
 }

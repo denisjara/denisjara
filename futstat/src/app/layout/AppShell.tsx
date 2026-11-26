@@ -10,7 +10,7 @@ import { Disclaimer } from '../components/Disclaimer';
 import { Logo, ThemeToggle, UpdatedIndicator } from './Brand';
 import { GlobalSearch } from './GlobalSearch';
 import { SidebarNav } from './Sidebar';
-import { MAIN_NAV } from './nav';
+import { BOTTOM_NAV } from './nav';
 
 /** Vuelve arriba al cambiar de ruta (HashRouter no tiene ScrollRestoration). */
 function ScrollToTop() {
@@ -193,11 +193,12 @@ export function AppShell({ children }: { children: ReactNode }) {
         className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-bg/90 pb-[env(safe-area-inset-bottom)] backdrop-blur-md lg:hidden"
       >
         <ul className="mx-auto grid h-[var(--bottom-nav-h)] max-w-lg grid-cols-6">
-          {MAIN_NAV.map((item) => (
+          {BOTTOM_NAV.map((item) => (
             <li key={item.to}>
               <NavLink
                 to={item.to}
                 end={item.end}
+                aria-label={item.short && item.short !== item.label ? item.label : undefined}
                 className={({ isActive }) =>
                   cx(
                     'relative flex h-full min-w-0 flex-col items-center justify-center gap-1 text-[10.5px] font-medium transition-colors min-[400px]:text-[11px]',

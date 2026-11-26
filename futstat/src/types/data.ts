@@ -972,6 +972,11 @@ export interface DailyPick extends ConfidencePick {
   player?: { id: string; name: string; short: string; teamId: string; position?: string; expMinutes?: number };
   /** 0..100 ranking score (calibrated probability, out-of-sample record of its family, lift over its base rate) */
   score?: number;
+  /**
+   * validationHitRate − baseRate, in proportion points (unsettled picks only). In daily picks `baseRate` is the base rate
+   * of the family in the walk-forward matches (its natural selection with no threshold). <= 0: purely structural hit rate.
+   */
+  lift?: number;
 }
 
 /** Expected numbers of the match (model projections), for context next to the picks. */

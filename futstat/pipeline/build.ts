@@ -18,9 +18,10 @@
  * Fases: índices + modelos actuales (Elo global, Dixon-Coles por liga, Elo→goles, medias de goles) →
  * Dixon-Coles walk-forward y predicciones pre-partido de la temporada actual (xG proxy, backtest, aciertos) →
  * pronósticos de alta confianza (historial walk-forward, calibración → holdout, reglas de producción) →
+ * pronósticos del día (familias de tiros, faltas y jugadores, récord de la regla diaria) →
  * competiciones (clasificación con forma/xPts/Elo, próximos, resultados, estadísticas, ratings, simulación,
- * jugadores, backtest, insights) → fichas de partido → jugadores → fichas de equipo → valor, alta confianza, portada,
- * modelo, meta.
+ * jugadores, backtest, insights) → fichas de partido → jugadores → fichas de equipo → valor, alta confianza,
+ * pronósticos del día, portada, modelo, meta.
  *
  * PUERTA DE CALIDAD: todo se escribe en un directorio temporal (`<salida>.tmp`, p. ej. public/data.tmp), se valida
  * con scripts/validate-data.ts (contrato + umbrales de cordura) y SOLO si pasa sustituye a la salida: la versión
@@ -39,7 +40,9 @@ import { buildCompetition } from './publish/competition';
 import { buildMatchFile } from './publish/matches';
 import { buildTeamFile, primaryCompetition, teamCompetitions, teamsToPublish } from './publish/teams';
 import { buildConfidenceFile, homeConfidence, prepareConfidence } from './publish/confidence';
+import { buildDailyFile, dailyFamiliesSummary, dailySummaryLine, homeDaily, prepareDaily } from './publish/daily';
 import type { ConfidenceHistoryItem } from './analytics/confidence';
+import { dailyHistory, type DailyHistory } from './analytics/daily';
 import {
   aggregateBacktest,
   buildHomeFile,
@@ -71,6 +74,11 @@ export interface RunBuildOptions extends BuildOptions {
   outDir: string;
   /** historial walk-forward de alta confianza ya calculado (tests); por defecto lo calcula el motor */
   confidenceHistory?: ConfidenceHistoryItem[];
+  /**
+   * (tests, junto con confidenceHistory) historial de las familias adicionales del apartado diario: mismos partidos y
+   * orden que confidenceHistory. Sin él, con confidenceHistory el apartado diario solo usa las familias existentes.
+   */
+  dailyExtraHistory?: ConfidenceHistoryItem[];
   /** validación antes de publicar (por defecto contrato + umbrales de cordura de producción) */
   validate?: ValidateOptions;
 }
@@ -137,8 +145,18 @@ function runBuildLocked(opts: RunBuildOptions, outDir: string, log: (msg: string
   const wf = computeWalkForward(ctx);
   timer.lap('Walk-forward y predicciones pre-partido', `${wf.refits} ajustes DC, ${wf.predictions} partidos`);
 
-  // alta confianza: ANTES de construir cualquier MatchSummary (prediction.safe y MatchFile.confidence lo leen del ctx)
-  const confidence = prepareConfidence(ctx, { history: opts.confidenceHistory });
+  // alta confianza: ANTES de construir cualquier MatchSummary (prediction.safe y MatchFile.confidence lo leen del ctx).
+  // El historial walk-forward se calcula UNA vez para las familias existentes (confidence.json) y las adicionales del
+  // apartado diario (daily.json): cada partido se predice una sola vez.
+  let history: DailyHistory | undefined;
+  if (!opts.confidenceHistory) {
+    try {
+      history = dailyHistory(ctx, { log });
+    } catch (e) {
+      log(`  aviso: historial de las familias del apartado diario no disponible (${(e as Error)?.message ?? e})`);
+    }
+  }
+  const confidence = prepareConfidence(ctx, { history: opts.confidenceHistory ?? history?.base });
   const ho = confidence.ev?.holdout;
   timer.lap(
     'Alta confianza (walk-forward y holdout)',
@@ -146,6 +164,10 @@ function runBuildLocked(opts: RunBuildOptions, outDir: string, log: (msg: string
       ? `holdout ${ho!.hits}/${ho!.n} = ${(ho!.n ? (ho!.hitRate * 100).toFixed(1) : '—')} % · ${confidence.ev.rules.rules.length} reglas · ${confidence.upcoming} picks próximos`
       : (confidence.error ?? 'no disponible'),
   );
+
+  // pronósticos del día: familias adicionales (tiros, faltas, jugadores) y récord de la regla de selección diaria
+  const daily = prepareDaily(ctx, confidence, history ?? { extra: opts.dailyExtraHistory });
+  timer.lap('Pronósticos del día (familias y récord)', dailySummaryLine(daily));
 
   const staging = stagingDirFor(outDir);
   assertSafeOutputDir(outDir, ROOT_DIR); // otra vez: pudo cambiar mientras se ajustaban los modelos
@@ -231,13 +253,21 @@ function runBuildLocked(opts: RunBuildOptions, outDir: string, log: (msg: string
     const backtest = aggregateBacktest(per);
     const confidenceFile = buildConfidenceFile(ctx, confidence);
     writer.write('confidence.json', confidenceFile);
-    writer.write('home.json', buildHomeFile(ctx, bets, players, backtest, homeConfidence(ctx, confidence)));
+    const dailyFile = buildDailyFile(ctx, daily, confidence);
+    writer.write('daily.json', dailyFile);
+    writer.write('home.json', buildHomeFile(ctx, bets, players, backtest, homeConfidence(ctx, confidence), homeDaily(dailyFile)));
     writer.write(
       'model.json',
-      buildModelFile(ctx, per, backtest, { competitions: metas.length, teams: teamIds.length, players: players.length, valueBets: bets.length }, confidenceFile),
+      buildModelFile(ctx, per, backtest, { competitions: metas.length, teams: teamIds.length, players: players.length, valueBets: bets.length }, confidenceFile, {
+        file: dailyFile,
+        families: dailyFamiliesSummary(daily),
+      }),
     );
     writer.write('meta.json', buildMetaFile(ctx, metas, teamIndex, { players: players.length, valueBets: bets.length }, packageVersion()));
-    timer.lap('Portada, valor, confianza, modelo y meta', `${bets.length} apuestas de valor, ${confidenceFile.picks.length} picks de alta confianza`);
+    timer.lap(
+      'Portada, valor, confianza, día, modelo y meta',
+      `${bets.length} apuestas de valor, ${confidenceFile.picks.length} picks de alta confianza, ${dailyFile.days.reduce((n, d) => n + d.counts.picks, 0)} picks del día en ${dailyFile.days.length} días`,
+    );
 
     // ---- puerta de calidad: solo se publica si el conjunto completo pasa la validación
     const validation = validateDataDir(staging, { ...(opts.validate ?? {}), partial: opts.validate?.partial ?? !!opts.only?.length });

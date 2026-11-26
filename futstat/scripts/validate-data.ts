@@ -995,6 +995,246 @@ const confidenceFile = obj(
   },
 );
 
+
+// ---------------------------------------------------------------------------
+// Pronósticos del día (daily.json y HomeFile.daily)
+// ---------------------------------------------------------------------------
+
+const DAILY_CATEGORY_IDS = ['resultado', 'goles', 'tiros', 'corners', 'tarjetas', 'faltas', 'jugadores'] as const;
+const DAILY_COMBO_LEGS: Record<string, [number, number]> = { segura: [2, 2], equilibrada: [3, 3], atrevida: [4, 5] };
+const pickKey = (p: Record<string, unknown>) => `${String(p.family)}|${String(p.marketId)}|${String(p.selection)}`;
+
+/**
+ * Pick del apartado diario: un ConfidencePick (solo oro, prob >= umbral, cuota justa = 1/p) con categoría, puntuación
+ * 0..100 y, en los props, el jugador. Sin resultado ⇒ su regla está validada fuera de muestra (>= 30 picks y >= 80 %).
+ */
+const dailyPick: Check = (v, at, c) => {
+  confidencePick(v, at, c);
+  if (!isObj(v)) return;
+  obj(
+    { category: str({ oneOf: DAILY_CATEGORY_IDS }) },
+    {
+      reason: str({ nonEmpty: true }),
+      player: obj({ id: safeId, name: str({ nonEmpty: true }), short: str(), teamId: safeId }, { position: str({ oneOf: ['G', 'D', 'M', 'F', '?'] }), expMinutes: num({ min: 0, max: 130 }) }),
+      score: num({ min: 0, max: 100 }),
+      lift: num({ min: -1, max: 1 }),
+    },
+    (p, a, cc) => {
+      if ((p.category === 'jugadores') !== (p.player !== undefined)) fail(cc, a, 'los picks de jugadores (y solo ellos) llevan `player`');
+      if (typeof p.lift === 'number' && typeof p.validationHitRate === 'number' && typeof p.baseRate === 'number' && Math.abs((p.lift as number) - ((p.validationHitRate as number) - (p.baseRate as number))) > 1e-4) {
+        fail(cc, a, 'lift distinto de acierto fuera de muestra − tasa base');
+      }
+      if (p.result === undefined) {
+        if (typeof p.validationN !== 'number' || (p.validationN as number) < 30 || !(((p.validationHitRate as number) ?? 0) >= 0.8 - 1e-9)) {
+          fail(cc, a, `pick del día de una regla sin validar fuera de muestra (${String(p.validationHitRate)}, n = ${String(p.validationN)})`);
+        }
+      }
+    },
+  )(v, at, c);
+};
+
+const statTriple = obj({ home: nonNeg, away: nonNeg, total: nonNeg }, {}, (v, at, c) => {
+  const s = (v.home as number) + (v.away as number);
+  if (Number.isFinite(s) && Math.abs(s - (v.total as number)) > 0.03) fail(c, at, `total ${String(v.total)} ≠ local + visitante (${s.toFixed(2)})`);
+});
+
+/** Grupo de redundancia deducible del pick publicado: misma estadística y sentido, o mismo jugador. */
+function dailyGroup(p: Record<string, unknown>): string | undefined {
+  if (isObj(p.player)) return `jugador-${String(p.player.id)}`;
+  const id = String(p.marketId);
+  const sel = String(p.selection);
+  const m = /^(?:(sot|shots|fouls|corners|cards)-ou|ou)-[\d.]+$/.exec(id);
+  if (m && /^(Más|Menos) de /.test(sel)) return `${m[1] ?? 'goles'}-${sel.startsWith('Más') ? 'over' : 'under'}`;
+  return undefined;
+}
+
+const dailyMatch = obj(
+  {
+    match: matchSummary,
+    picks: arr(dailyPick, { min: 1, max: 8 }),
+    expected: obj({ goals: statTriple }, { shotsOnTarget: statTriple, shots: statTriple, corners: statTriple, cards: statTriple, fouls: statTriple }),
+    analysis: arr(str({ nonEmpty: true }), { min: 2, max: 5 }),
+  },
+  {},
+  (v, at, c) => {
+    const m = v.match as Record<string, unknown> | undefined;
+    const picks = v.picks as Record<string, unknown>[] | undefined;
+    if (!isObj(m) || !Array.isArray(picks)) return;
+    if (m.status !== 'scheduled' && m.status !== 'live' && m.status !== 'finished') fail(c, at, `pronósticos del día de un partido "${String(m.status)}" (programado, en juego o terminado)`);
+    const perCat = new Map<string, number>();
+    const keys = new Set<string>();
+    const groups = new Set<string>();
+    picks.forEach((p, i) => {
+      if (!isObj(p)) return;
+      perCat.set(String(p.category), (perCat.get(String(p.category)) ?? 0) + 1);
+      if (keys.has(pickKey(p))) fail(c, `${at}.picks[${i}]`, 'pick repetido');
+      keys.add(pickKey(p));
+      const g = dailyGroup(p);
+      if (g) {
+        if (groups.has(g)) fail(c, `${at}.picks[${i}]`, `pick redundante con otro del mismo partido (${g})`);
+        groups.add(g);
+      }
+      if (m.status !== 'finished' && p.result !== undefined) fail(c, `${at}.picks[${i}]`, 'resultado en un partido no terminado');
+      if (m.status === 'finished' && p.result === undefined) fail(c, `${at}.picks[${i}]`, 'pick de un partido terminado sin resultado');
+      if (i > 0 && isObj(picks[i - 1]) && typeof p.score === 'number' && typeof picks[i - 1].score === 'number' && (p.score as number) > (picks[i - 1].score as number) + 1e-9) {
+        fail(c, `${at}.picks`, 'no está ordenado por puntuación');
+      }
+    });
+    for (const [cat, n] of perCat) if (n > 2) fail(c, `${at}.picks`, `${n} picks de la categoría ${cat} (máximo 2)`);
+  },
+);
+
+const dailyCombo = obj(
+  {
+    id: str({ oneOf: Object.keys(DAILY_COMBO_LEGS) }),
+    label: str({ nonEmpty: true }),
+    legs: arr(obj({ matchId: safeId, home: str({ nonEmpty: true }), away: str({ nonEmpty: true }), compName: str({ nonEmpty: true }), pick: dailyPick }), { min: 2, max: 5 }),
+    prob,
+    fairOdds: num({ min: 1 }),
+  },
+  { marketOdds: odds },
+  (v, at, c) => {
+    const legs = v.legs as { matchId?: string; pick?: Record<string, unknown> }[] | undefined;
+    if (!Array.isArray(legs)) return;
+    const range = DAILY_COMBO_LEGS[String(v.id)];
+    if (range && (legs.length < range[0] || legs.length > range[1])) fail(c, at, `combinada ${String(v.id)} con ${legs.length} patas (${range[0]}–${range[1]})`);
+    if (new Set(legs.map((l) => l?.matchId)).size !== legs.length) fail(c, at, 'dos patas del mismo partido');
+    let product = 1;
+    let market = 1;
+    let allPriced = true;
+    for (const l of legs) {
+      const p = l?.pick;
+      if (!isObj(p)) return;
+      if (p.result !== undefined) fail(c, at, 'pata ya resuelta');
+      product *= (typeof p.calibratedProb === 'number' ? p.calibratedProb : (p.prob as number)) as number;
+      if (typeof p.marketOdds === 'number') market *= p.marketOdds;
+      else allPriced = false;
+    }
+    if (typeof v.prob === 'number' && Math.abs((v.prob as number) - product) > 2e-3) fail(c, at, `prob ${String(v.prob)} ≠ producto de las patas (${product.toFixed(4)})`);
+    if (typeof v.prob === 'number' && typeof v.fairOdds === 'number' && (v.prob as number) > 0 && Math.abs((v.fairOdds as number) * (v.prob as number) - 1) > 0.01) {
+      fail(c, at, `cuota justa ${String(v.fairOdds)} incoherente con prob ${String(v.prob)}`);
+    }
+    if (v.marketOdds !== undefined && !allPriced) fail(c, at, 'marketOdds sin cuota en todas las patas');
+    if (typeof v.marketOdds === 'number' && allPriced && Math.abs((v.marketOdds as number) / market - 1) > 0.01) fail(c, at, `marketOdds ${String(v.marketOdds)} ≠ producto de las cuotas (${market.toFixed(3)})`);
+  },
+);
+
+const dailyDay = obj(
+  {
+    date: str({ pattern: /^\d{4}-\d{2}-\d{2}$/ }),
+    matches: arr(dailyMatch),
+    top: arr(obj({ matchId: safeId, pick: dailyPick }), { max: 10 }),
+    combos: arr(dailyCombo, { max: 3 }),
+    counts: obj({ matches: count, picks: count, matchesAnalyzed: count }),
+  },
+  {},
+  (v, at, c) => {
+    const matches = v.matches as { match?: Record<string, unknown>; picks?: Record<string, unknown>[] }[] | undefined;
+    const counts = v.counts as Record<string, number> | undefined;
+    if (!Array.isArray(matches) || !isObj(counts)) return;
+    const picksOf = new Map<string, { status: unknown; keys: Set<string> }>();
+    let total = 0;
+    const noon = Date.parse(`${String(v.date)}T12:00:00Z`);
+    for (const m of matches) {
+      if (!isObj(m?.match) || !Array.isArray(m.picks)) return;
+      const id = String(m.match.id);
+      if (picksOf.has(id)) fail(c, `${at}.matches`, `partido ${id} repetido`);
+      picksOf.set(id, { status: m.match.status, keys: new Set(m.picks.filter(isObj).map(pickKey)) });
+      total += m.picks.length;
+      const t = Date.parse(String(m.match.date));
+      if (Number.isFinite(noon) && Number.isFinite(t) && Math.abs(t - noon) > 38 * 3_600_000) fail(c, `${at}.matches`, `el partido ${id} (${String(m.match.date)}) no es del día ${String(v.date)}`);
+    }
+    if (counts.matches !== matches.length) fail(c, `${at}.counts`, `matches ${counts.matches} ≠ ${matches.length}`);
+    if (counts.picks !== total) fail(c, `${at}.counts`, `picks ${counts.picks} ≠ ${total}`);
+    if (counts.matchesAnalyzed < matches.length) fail(c, `${at}.counts`, 'matchesAnalyzed menor que los partidos con pick');
+    const open = (matchId: unknown, pick: unknown, where: string) => {
+      const e = picksOf.get(String(matchId));
+      if (!e) return fail(c, where, `partido ${String(matchId)} ausente de matches`);
+      if (e.status !== 'scheduled') fail(c, where, `pick de un partido "${String(e.status)}" (solo partidos por jugar)`);
+      if (isObj(pick) && !e.keys.has(pickKey(pick))) fail(c, where, 'el pick no está entre los del partido');
+    };
+    const top = v.top as { matchId?: string; pick?: Record<string, unknown> }[];
+    if (Array.isArray(top)) {
+      if (new Set(top.map((t) => t?.matchId)).size !== top.length) fail(c, `${at}.top`, 'más de un pick del mismo partido');
+      top.forEach((t, i) => {
+        open(t?.matchId, t?.pick, `${at}.top[${i}]`);
+        const prev = top[i - 1]?.pick;
+        if (i > 0 && isObj(prev) && isObj(t?.pick) && typeof t.pick.score === 'number' && typeof prev.score === 'number' && (t.pick.score as number) > (prev.score as number) + 1e-9) {
+          fail(c, `${at}.top`, 'no está ordenado por puntuación');
+        }
+      });
+    }
+    const combos = v.combos as { id?: string; legs?: { matchId?: string; pick?: unknown }[] }[];
+    if (Array.isArray(combos)) {
+      if (new Set(combos.map((x) => x?.id)).size !== combos.length) fail(c, `${at}.combos`, 'tipo de combinada repetido');
+      combos.forEach((x, i) => (Array.isArray(x?.legs) ? x.legs : []).forEach((l, j) => open(l?.matchId, l?.pick, `${at}.combos[${i}].legs[${j}]`)));
+    }
+  },
+);
+
+const dailyBaseline = obj({ label: str({ nonEmpty: true }), ...confidenceRecordFields }, { wilsonLow: prob, wilsonHigh: prob, matches: count }, (v, at, c) => checkRate(v, at, c));
+
+const dailyFile = obj(
+  {
+    generatedAt: iso,
+    days: arr(dailyDay, { max: 4 }),
+    categories: arr(obj({ id: str({ oneOf: DAILY_CATEGORY_IDS }), label: str({ nonEmpty: true }) }), { min: 1, max: DAILY_CATEGORY_IDS.length }),
+    track: obj(
+      {
+        overall: confidenceRecord,
+        byCategory: arr(
+          obj({ category: str({ oneOf: DAILY_CATEGORY_IDS }), label: str({ nonEmpty: true }), ...confidenceRecordFields }, { ...confidenceRecordOpt, baseRate: prob }, (v, at, c) => checkRate(v, at, c)),
+          { max: DAILY_CATEGORY_IDS.length },
+        ),
+      },
+      {
+        combos: arr(
+          obj(
+            { id: str({ oneOf: Object.keys(DAILY_COMBO_LEGS) }), label: str({ nonEmpty: true }), days: num({ min: 1, int: true }), hits: count, hitRate: prob, avgLegs: num({ min: 2, max: 5 }), avgFairOdds: num({ min: 1 }) },
+            {},
+            (v, at, c) => checkRate(v, at, c, 'days'),
+          ),
+          { max: 3 },
+        ),
+        baseline: dailyBaseline,
+      },
+    ),
+    note: str({ nonEmpty: true }),
+  },
+  {},
+  (v, at, c) => {
+    const days = v.days as { date?: string; matches?: { match?: { status?: string } }[] }[];
+    if (Array.isArray(days)) {
+      for (let i = 1; i < days.length; i++) if (!(String(days[i]?.date) > String(days[i - 1]?.date))) fail(c, `${at}.days`, 'días repetidos o sin ordenar');
+      // picks por jugar ⇒ existe un récord fuera de muestra que los respalda
+      const openPicks = days.some((d) => (d?.matches ?? []).some((m) => m?.match?.status === 'scheduled'));
+      const overall = isObj(v.track) && isObj(v.track.overall) ? (v.track.overall.n as number) : 0;
+      if (openPicks && !(overall >= 30)) fail(c, `${at}.track.overall`, `picks del día publicados sin récord fuera de muestra suficiente (n = ${String(overall)})`);
+    }
+    for (const k of ['categories', 'byCategory'] as const) {
+      const list = (k === 'categories' ? v.categories : isObj(v.track) ? v.track.byCategory : undefined) as Record<string, unknown>[] | undefined;
+      if (Array.isArray(list)) {
+        const ids = list.map((x) => (isObj(x) ? (k === 'categories' ? x.id : x.category) : undefined));
+        if (new Set(ids).size !== ids.length) fail(c, `${at}.${k}`, 'categoría repetida');
+      }
+    }
+  },
+);
+
+const homeDaily = obj(
+  { date: str({ pattern: /^\d{4}-\d{2}-\d{2}$/ }), matches: count, picks: count, top: arr(obj({ match: matchSummary, pick: dailyPick }), { max: 4 }) },
+  {},
+  (v, at, c) => {
+    const top = v.top as { match?: Record<string, unknown>; pick?: Record<string, unknown> }[];
+    if (!Array.isArray(top)) return;
+    if (new Set(top.map((x) => (isObj(x?.match) ? x.match.id : undefined))).size !== top.length) fail(c, `${at}.top`, 'más de un pick del mismo partido');
+    for (const x of top) {
+      if (isObj(x?.match) && x.match.status !== 'scheduled') fail(c, `${at}.top`, 'pick de un partido que no está por jugar');
+      if (isObj(x?.pick) && x.pick.result !== undefined) fail(c, `${at}.top`, 'pick ya resuelto');
+    }
+  },
+);
+
 const homeFile = obj(
   {
     generatedAt: iso,
@@ -1014,6 +1254,7 @@ const homeFile = obj(
         fail(c, at, 'más de un pick del mismo partido');
       }
     },
+    daily: homeDaily,
     confidenceHeadline: obj(
       { hitRate: prob, picks: num({ min: 1, int: true }), hits: count, from: iso, to: iso },
       { upcoming: count, wilsonLow: prob, wilsonHigh: prob, baselineRate: prob, avgFairOdds: num({ min: 1 }) },
@@ -1097,7 +1338,7 @@ export interface ValidateOptions {
   partial?: boolean;
 }
 
-const ROOT_FILES = new Set(['meta.json', 'home.json', 'players.json', 'value.json', 'model.json', 'confidence.json']);
+const ROOT_FILES = new Set(['meta.json', 'home.json', 'players.json', 'value.json', 'model.json', 'confidence.json', 'daily.json']);
 const SUB_DIRS = new Set(['competitions', 'matches', 'teams']);
 const SAFE_FILE = /^[A-Za-z0-9_-]{1,40}\.json$/;
 
@@ -1185,6 +1426,7 @@ export function validateDataDir(dir: string = OUTPUT_DIR, opts: ValidateOptions 
   check('value.json', valueFile);
   check('model.json', modelFile);
   check('confidence.json', confidenceFile);
+  check('daily.json', dailyFile);
 
   const compFiles = listJson(dir, 'competitions');
   for (const id of compIds) if (!compFiles.includes(`competitions/${id}.json`)) c.errors.push(`meta.json: falta competitions/${id}.json`);

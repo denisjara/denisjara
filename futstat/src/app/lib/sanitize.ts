@@ -20,6 +20,13 @@ import type {
   CompetitionMeta,
   ConfidenceFile,
   ConfidencePick,
+  DailyCategory,
+  DailyCombo,
+  DailyDay,
+  DailyExpected,
+  DailyFile,
+  DailyMatch,
+  DailyPick,
   FormMatch,
   HomeFile,
   MatchFile,
@@ -40,6 +47,7 @@ import type {
   ValuePick,
 } from '../../types/data';
 import { safeImageUrl } from './safeUrl';
+import { DAILY_CATEGORIES, DAILY_CATEGORY_LABEL, inferDailyCategory, isDailyCategory } from './daily';
 
 type Obj = Record<string, unknown>;
 
@@ -478,6 +486,7 @@ function normHome(v: Obj): HomeFile {
     modelHeadline: mh,
     topConfidence: list(v.topConfidence, confidenceItem, 20),
     confidenceHeadline: normConfidenceHeadline(v.confidenceHeadline),
+    daily: normHomeDaily(v.daily),
   } as unknown as HomeFile;
 }
 
@@ -807,6 +816,265 @@ function normConfidence(v: Obj): ConfidenceFile {
   } as unknown as ConfidenceFile;
 }
 
+// ---------------------------------------------------------------------------
+// Pronósticos del día (daily.json y HomeFile.daily)
+// ---------------------------------------------------------------------------
+const DAY_KEY = /^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/;
+const dayKeyStr = (x: unknown): string | undefined => (typeof x === 'string' && DAY_KEY.test(x) && !Number.isNaN(Date.parse(`${x}T12:00:00Z`)) ? x : undefined);
+/** Texto de una línea acotado (frases del análisis): sin saltos de línea ni espacios repetidos. */
+const sentence = (x: unknown, max: number): string => short(typeof x === 'string' ? x.replace(/\s+/g, ' ') : x, max);
+
+/**
+ * Pick del apartado «Pronósticos del día». Más tolerante que normConfidencePick con los campos del histórico (las
+ * categorías nuevas —tiros, faltas, jugadores— pueden no traerlos), pero igual de estricto con lo que se enseña:
+ * probabilidad válida, selección con texto, categoría de la lista blanca y nunca el nivel 'plata'.
+ */
+export function normDailyPick(p: unknown): DailyPick | undefined {
+  if (!isObj(p)) return undefined;
+  const prob = prob01(p.prob);
+  const selection = sentence(p.selection, 120);
+  if (prob === undefined || prob <= 0 || !selection) return undefined;
+  if (p.tier !== undefined && !TIERS.has(str(p.tier))) return undefined;
+  const pl = isObj(p.player) && short(p.player.name, 80) ? p.player : undefined;
+  const family = short(p.family, 40) || 'otro';
+  const marketId = short(p.marketId, 60) || 'otro';
+  const category: DailyCategory | undefined = isDailyCategory(p.category) ? p.category : inferDailyCategory(family, marketId, !!pl);
+  if (!category) return undefined;
+  const marketOdds = fin(p.marketOdds);
+  const fair = fin(p.fairOdds);
+  const hist = prob01(p.historicalHitRate);
+  const ho = oosRecord(p.holdoutHitRate, p.holdoutN, p.holdoutWilsonLow, p.holdoutWilsonHigh);
+  const va = oosRecord(p.validationHitRate, p.validationN, p.validationWilsonLow, p.validationWilsonHigh);
+  const score = fin(p.score);
+  const lift = fin(p.lift);
+  const expMinutes = pl ? fin(pl.expMinutes) : undefined;
+  return {
+    family,
+    marketId,
+    market: sentence(p.market, 120) || 'Mercado',
+    selection,
+    prob,
+    fairOdds: fair !== undefined && fair >= 1 ? fair : Math.min(1000, 1 / prob),
+    marketOdds: marketOdds !== undefined && marketOdds > 1 ? marketOdds : undefined,
+    oddsKind: p.oddsKind === 'directa' || p.oddsKind === 'sintetica' ? p.oddsKind : undefined,
+    tier: 'oro',
+    // sin histórico de ajuste no se inventa: 0 casos (la página solo enseña el récord fuera de muestra, con su n)
+    historicalHitRate: hist ?? 0,
+    historicalN: hist !== undefined ? Math.max(0, fin(p.historicalN) ?? 0) : 0,
+    threshold: prob01(p.threshold),
+    calibratedProb: prob01(p.calibratedProb),
+    source: SOURCES.has(str(p.source)) ? (p.source as DailyPick['source']) : undefined,
+    validationHitRate: va.rate,
+    validationN: va.n,
+    validationWilsonLow: va.lo,
+    validationWilsonHigh: va.hi,
+    holdoutHitRate: ho.rate,
+    holdoutN: ho.n,
+    holdoutWilsonLow: ho.lo,
+    holdoutWilsonHigh: ho.hi,
+    baseRate: prob01(p.baseRate),
+    result: RESULTS.has(str(p.result)) ? (p.result as DailyPick['result']) : undefined,
+    category,
+    reason: sentence(p.reason, 280) || undefined,
+    player: pl
+      ? {
+          id: short(pl.id, 20),
+          name: short(pl.name, 80),
+          short: short(pl.short, 40) || short(pl.name, 40),
+          teamId: short(pl.teamId, 20),
+          position: POSITIONS.has(str(pl.position)) ? str(pl.position) : undefined,
+          expMinutes: expMinutes !== undefined && expMinutes >= 0 && expMinutes <= 130 ? expMinutes : undefined,
+        }
+      : undefined,
+    score: score !== undefined ? Math.max(0, Math.min(100, score)) : undefined,
+    // mejora sobre la tasa base: solo con validación propia (sin ella no hay de qué restar)
+    lift: lift !== undefined && Math.abs(lift) <= 1 && va.rate !== undefined ? lift : undefined,
+  };
+}
+
+/** Terna local / visitante / total de un valor esperado: finita y no negativa (el total se deriva si falta). */
+function expectedTriple(x: unknown): { home: number; away: number; total: number } | undefined {
+  if (!isObj(x)) return undefined;
+  const home = fin(x.home);
+  const away = fin(x.away);
+  if (home === undefined || away === undefined || home < 0 || away < 0 || home > 200 || away > 200) return undefined;
+  const total = fin(x.total);
+  return { home, away, total: total !== undefined && total >= 0 && total <= 400 ? total : home + away };
+}
+
+const DAILY_MAX_PICKS = 8;
+const DAILY_MAX_PER_CATEGORY = 2;
+
+function normDailyMatch(v: Obj): DailyMatch | undefined {
+  const match = normMatch(v.match);
+  if (!match) return undefined;
+  // como mucho 2 por categoría y 8 en total (lo que promete el contrato), sin selecciones repetidas
+  const perCat = new Map<DailyCategory, number>();
+  const seen = new Set<string>();
+  const picks = list(v.picks, (p) => normDailyPick(p), 60).filter((p) => {
+    const key = `${p.family}|${p.selection}`;
+    const k = perCat.get(p.category) ?? 0;
+    if (seen.has(key) || k >= DAILY_MAX_PER_CATEGORY) return false;
+    seen.add(key);
+    perCat.set(p.category, k + 1);
+    return true;
+  }).slice(0, DAILY_MAX_PICKS);
+  if (!picks.length) return undefined;
+  const e = isObj(v.expected) ? v.expected : {};
+  const pr = match.prediction;
+  const goals = expectedTriple(e.goals) ?? (pr && fin(pr.xgHome) !== undefined && fin(pr.xgAway) !== undefined ? expectedTriple({ home: pr.xgHome, away: pr.xgAway }) : undefined);
+  const expected = {
+    goals,
+    shotsOnTarget: expectedTriple(e.shotsOnTarget),
+    shots: expectedTriple(e.shots),
+    corners: expectedTriple(e.corners),
+    cards: expectedTriple(e.cards),
+    fouls: expectedTriple(e.fouls),
+  } as DailyExpected;
+  return { match, picks, expected, analysis: strList(v.analysis, 40).map((s) => sentence(s, 320)).filter(Boolean).slice(0, 5) };
+}
+
+/** Combinada: todas sus patas deben ser válidas (si falla una, la probabilidad combinada ya no describe lo que se ve). */
+function normDailyCombo(c: Obj, i: number): DailyCombo | undefined {
+  const prob = prob01(c.prob);
+  if (prob === undefined || prob <= 0 || !Array.isArray(c.legs) || c.legs.length < 2 || c.legs.length > 12) return undefined;
+  const legs: DailyCombo['legs'] = [];
+  const matches = new Set<string>();
+  for (const l of c.legs as unknown[]) {
+    if (!isObj(l)) return undefined;
+    const pick = normDailyPick(l.pick);
+    const matchId = short(l.matchId, 20);
+    const home = short(l.home, 60);
+    const away = short(l.away, 60);
+    // patas de partidos DISTINTOS: dos selecciones del mismo partido no son independientes
+    if (!pick || !matchId || !home || !away || matches.has(matchId)) return undefined;
+    matches.add(matchId);
+    legs.push({ matchId, home, away, compName: short(l.compName, 60), pick });
+  }
+  // el producto de probabilidades nunca supera a la de su pata menos probable
+  const cap = Math.min(...legs.map((l) => Math.max(l.pick.prob, l.pick.calibratedProb ?? 0)));
+  if (prob > cap + 0.005) return undefined;
+  const fair = fin(c.fairOdds);
+  const marketOdds = fin(c.marketOdds);
+  const id = short(c.id, 24) || `combo-${i + 1}`;
+  return {
+    id,
+    label: sentence(c.label, 60) || `Combinada ${id}`,
+    legs,
+    prob,
+    fairOdds: fair !== undefined && fair >= 1 ? fair : Math.min(1000, 1 / prob),
+    marketOdds: marketOdds !== undefined && marketOdds > 1 && legs.every((l) => l.pick.marketOdds !== undefined) ? marketOdds : undefined,
+  };
+}
+
+function normDailyDay(d: Obj): DailyDay | undefined {
+  const date = dayKeyStr(d.date);
+  if (!date) return undefined;
+  const ids = new Set<string>();
+  const matches = list(d.matches, normDailyMatch, 200).filter((m) => (ids.has(m.match.id) ? false : (ids.add(m.match.id), true)));
+  const inTop = new Set<string>();
+  const top = list(
+    d.top,
+    (t) => {
+      const matchId = str(t.matchId).trim();
+      const pick = normDailyPick(t.pick);
+      // uno por partido y solo de partidos del día (la fila necesita el partido para pintarse)
+      if (!pick || !ids.has(matchId) || inTop.has(matchId)) return undefined;
+      inTop.add(matchId);
+      return { matchId, pick };
+    },
+    60,
+  ).slice(0, 10);
+  const c = isObj(d.counts) ? d.counts : {};
+  const picks = matches.reduce((s, m) => s + m.picks.length, 0);
+  return {
+    date,
+    matches,
+    top,
+    combos: list(d.combos, normDailyCombo, 12).slice(0, 3),
+    // partidos y picks se cuentan sobre lo que realmente se muestra
+    counts: { matches: matches.length, picks, matchesAnalyzed: Math.max(matches.length, Math.round(fin(c.matchesAnalyzed) ?? 0)) },
+  };
+}
+
+function normDaily(v: Obj): DailyFile {
+  const t = isObj(v.track) ? v.track : {};
+  const dates = new Set<string>();
+  const cats = new Set<DailyCategory>();
+  const days = list(v.days, normDailyDay, 14)
+    .filter((d) => (dates.has(d.date) ? false : (dates.add(d.date), true)))
+    .sort((a, b) => a.date.localeCompare(b.date))
+    .slice(0, 7);
+  const categories = list(v.categories, (c) => (isDailyCategory(c.id) && !cats.has(c.id) ? (cats.add(c.id), { id: c.id, label: short(c.label, 24) || DAILY_CATEGORY_LABEL[c.id] }) : undefined), 20);
+  const byCat = new Set<DailyCategory>();
+  return {
+    ...(v as object),
+    days,
+    categories: categories.length ? categories : DAILY_CATEGORIES.map((id) => ({ id, label: DAILY_CATEGORY_LABEL[id] })),
+    track: {
+      overall: normRecord(t.overall) ?? { picks: 0, n: 0, hits: 0, hitRate: 0, from: '', to: '' },
+      byCategory: list(
+        t.byCategory,
+        (x) => {
+          if (!isDailyCategory(x.category) || byCat.has(x.category)) return undefined;
+          const r = normRecord({ ...x, from: '', to: '' });
+          if (!r) return undefined;
+          byCat.add(x.category);
+          return { category: x.category, label: short(x.label, 24) || DAILY_CATEGORY_LABEL[x.category], baseRate: prob01(x.baseRate), picks: r.picks, n: r.n, hits: r.hits, hitRate: r.hitRate, wilsonLow: r.wilsonLow, wilsonHigh: r.wilsonHigh, voids: r.voids };
+        },
+        20,
+      ),
+      combos: list(
+        t.combos,
+        (x) => {
+          const id = short(x.id, 24);
+          const daysN = fin(x.days);
+          const hits = fin(x.hits);
+          if (!id || daysN === undefined || hits === undefined || daysN <= 0 || hits < 0 || hits > daysN) return undefined;
+          const avgFair = fin(x.avgFairOdds);
+          const avgLegs = fin(x.avgLegs);
+          return {
+            id,
+            label: short(x.label, 60) || id,
+            days: Math.round(daysN),
+            hits: Math.round(hits),
+            // el acierto es siempre aciertos / días (no se confía en una cifra que no cuadre con sus cuentas)
+            hitRate: hits / daysN,
+            avgLegs: avgLegs !== undefined && avgLegs >= 1 ? avgLegs : undefined,
+            avgFairOdds: avgFair !== undefined && avgFair >= 1 ? avgFair : undefined,
+          };
+        },
+        6,
+      ),
+      baseline: isObj(t.baseline) && optStr(t.baseline.label) ? (() => {
+        const r = normRecord({ ...t.baseline, from: '', to: '' });
+        return r && r.n > 0 ? { label: short(t.baseline.label, 200), picks: r.picks, n: r.n, hits: r.hits, hitRate: r.hitRate, wilsonLow: r.wilsonLow, wilsonHigh: r.wilsonHigh, matches: r.matches } : undefined;
+      })() : undefined,
+    },
+    note: short(v.note, 1200),
+  } as unknown as DailyFile;
+}
+
+/** Bloque «Pronósticos del día» de la portada: sin fecha válida o sin picks válidos, no se muestra. */
+function normHomeDaily(x: unknown): HomeFile['daily'] {
+  if (!isObj(x)) return undefined;
+  const date = dayKeyStr(x.date);
+  const seen = new Set<string>();
+  const top = list(
+    x.top,
+    (b) => {
+      const match = normMatch(b.match);
+      const pick = normDailyPick(b.pick);
+      if (!match || !pick || seen.has(match.id)) return undefined;
+      seen.add(match.id);
+      return { match, pick };
+    },
+    8,
+  );
+  if (!date || !top.length) return undefined;
+  return { date, matches: Math.max(top.length, Math.round(fin(x.matches) ?? 0)), picks: Math.max(top.length, Math.round(fin(x.picks) ?? 0)), top };
+}
+
 /**
  * Normaliza el JSON de `path` (ruta relativa al directorio de datos, ya validada).
  * Lanza Error si el archivo no tiene la forma mínima (objeto con `generatedAt`).
@@ -820,6 +1088,7 @@ export function normalizeDataFile(path: string, value: unknown): unknown {
   if (path === 'value.json') return normValue(value);
   if (path === 'model.json') return normModel(value);
   if (path === 'confidence.json') return normConfidence(value);
+  if (path === 'daily.json') return normDaily(value);
   let m = /^competitions\/([a-z0-9-]{1,40})\.json$/.exec(path);
   if (m) return normCompetition(value, m[1]);
   m = /^matches\/[0-9]+\.json$/.exec(path);

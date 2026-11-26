@@ -115,6 +115,8 @@ cabeceras de micro-métricas.
 
 - Shell: barra lateral fija ≥1024px (`lg`), contenido `max-w-page` (1360px) con `px-4 sm:px-6`.
   En móvil, cabecera de 56px + barra inferior (el `main` ya reserva su alto).
+  Menú en `layout/nav.ts`: `MAIN_NAV` (barra lateral y cajón) y `BOTTOM_NAV` (6 huecos de la barra inferior: Inicio, Hoy,
+  Partidos, Confianza, Jugadores, Valor; las entradas con `drawerOnly` —Modelo— solo salen en el cajón).
 - Página: `<div className="space-y-6">` (o `space-y-10` en páginas largas con Sections).
 - Rejillas: tarjetas de partido `grid gap-4 md:grid-cols-2 2xl:grid-cols-3`; dos columnas de
   contenido `grid gap-6 xl:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]`; KPIs `grid grid-cols-2 lg:grid-cols-4 gap-3`.
@@ -178,6 +180,26 @@ cabeceras de micro-métricas.
 - Textos obligatorios junto a estos pronósticos: son «selecciones muy probables con cuota baja», no una ventaja frente a
   la casa; junto al acierto, la línea base sin modelo (`track.baseline`), la tasa base / lift y la cuota justa media; +18.
 
+### Pronósticos del día (`Daily.tsx`, utilidades puras en `lib/daily.ts`; página `/hoy` en `pages/DailyPage.tsx` + `pages/daily/parts.tsx`)
+- Datos: `useDaily()` → `daily.json` (`DailyFile`: `days[]` con `matches`, `top`, `combos`, `counts`; `categories`; `track`) y
+  `home.daily` (avance de Inicio). `sanitize.ts` deja pasar solo categorías de la lista blanca (`DAILY_CATEGORIES`), descarta
+  combinadas con alguna pata inválida o con una probabilidad mayor que la de una pata, y acota listas y textos.
+- **`CategoryBadge`** `{ category, label? }` — insignia neutra con icono (`CATEGORY_ICON`): resultado, goles, tiros, córners,
+  tarjetas, faltas, jugadores. Nunca un color por categoría.
+- **`DailyTopRow`** `{ match, pick, rank?, now, day?, categoryLabel? }` — fila del «Top del día» (partido, competición, hora local ·
+  categoría · mercado → selección · récord fuera de muestra · frase · prob./justa/mercado). Enlaza al partido.
+- **`DailyRecordNote`** `{ pick }` — récord fuera de muestra de la regla del pick (`pickRecord`: walk-forward y, si falta, holdout
+  de la familia) con n e intervalo; n < 50 ⇒ «muestra pequeña». **`DailyLiftNote`** `{ pick }` — mejora sobre su tasa base
+  (`pick.lift`, en pp); si no mejora, avisa. **`PlayerVoidNote`** — «si no juega, la apuesta suele anularse» (props de jugador).
+- **`DailyKickoff`** `{ match, now, day? }` — hora local o estado («● 67'», «Final», «Empezado»). **`DailyOdds`** / **`DailyNum`**.
+- De la página (no exportados en `components`): `DailyMatchCard` (valores esperados `ExpectedStrip`, picks por categoría, lectura
+  del partido; `defaultOpen={false}` en móvil la pliega a una línea por pick), `ComboCard` + `ComboWarning` (cada pata baja la
+  probabilidad), `FeaturedCompetition` («Hoy juega la UEFA Champions League · N partidos»), `HowToRead`.
+- Filtros de `/hoy` sincronizados con la URL: `?dia=YYYY-MM-DD&comp=<compId>&cat=<categoría>`; se aplican al top (`dailyTop`) y a
+  las tarjetas (`filterDailyMatches`). Competiciones ordenadas con `groupDailyByCompetition` (Champions primero).
+- Avisos de contraste: los textos de aviso van en `ink-2` con el icono en `warn` (el token `warn` no llega a AA como texto
+  pequeño en tema claro). Los partidos ya empezados no se atenúan con opacidad: se marcan con su estado.
+
 ### Forma y equipos
 - **`TeamCrest`** `{ team: {name, abbr?, logo?, color?}, size?=24, alt? }` — logo o iniciales sobre color del equipo.
 - **`FormChips`** `{ form: "WWDLW", max?=5, size?: 'xs'|'sm'|'md', label? }` — V/E/D con letra; último a la derecha subrayado.
@@ -227,7 +249,7 @@ cabeceras de micro-métricas.
 ## 7. Librería (`src/app/lib`)
 
 - **`data.ts`**: `useMeta()`, `useHome()`, `useCompetition(id)`, `useMatch(id)`, `useTeam(id)`, `usePlayers()`,
-  `useValue()`, `useModel()`, `useConfidence()` → `{ data, error, loading, reload }`. `useCompetitionMeta(id)`,
+  `useValue()`, `useModel()`, `useConfidence()`, `useDaily()` → `{ data, error, loading, reload }`. `useCompetitionMeta(id)`,
   `useCompetitions(ids)` (varias en paralelo, resultados parciales), `fetchJson(path)` con caché,
   `DataError` (`notFound`). Base: `BASE_URL + (VITE_DATA_DIR ?? 'data')`.
 - **`format.ts`**: `pct(p, d?)`, `num(x, d?)`, `int`, `compact`, `odds(o)`, `fairOddsFromProb(p)`, `xg`, `ev`,
@@ -280,7 +302,9 @@ Checklist antes de entregar una página: `npx tsc -p tsconfig.app.json --noEmit`
 `npm run data:mock` genera `public/mock-data/` (meta, home, competiciones `laliga`, `premier`, `seriea`,
 `brasileirao`, `saudi`, `champions`, `copadelrey`, 14 partidos con análisis completo — 2 en vivo, 2 terminados,
 el resto próximos —, 6 equipos, players, value, model y confidence: pronósticos de alta confianza con el mismo generador
-de candidatos que producción y reglas de prueba con cifras realistas). Las fechas son relativas al momento de generarlo
+de candidatos que producción y reglas de prueba con cifras realistas; y `daily.json` + `home.daily`: 4 días con partidos
+—Champions hoy y mañana, ligas después—, las 7 categorías, combinadas con y sin cuota de mercado, una categoría de muestra
+pequeña y picks que no mejoran su tasa base). Las fechas son relativas al momento de generarlo
 (siempre hay partidos hoy/mañana/en vivo): regenera si lo usas otro día.
 Arranca con `VITE_DATA_DIR=mock-data npx vite --port <tu puerto> --strictPort`.
 

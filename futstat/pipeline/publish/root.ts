@@ -1,10 +1,12 @@
 /**
- * Archivos raíz: players.json, value.json, home.json, model.json y meta.json (confidence.json: publish/confidence.ts).
+ * Archivos raíz: players.json, value.json, home.json, model.json y meta.json (confidence.json: publish/confidence.ts;
+ * daily.json: publish/daily.ts).
  */
 import type {
   BacktestSummary,
   ConfidenceFile,
   CompetitionMeta,
+  DailyFile,
   HomeFile,
   MatchSummary,
   MetaFile,
@@ -22,7 +24,7 @@ import { buildPlayerSeasonRows } from '../analytics/players';
 import { pickScore } from '../analytics/value';
 import type { BuildContext } from './context';
 import { matchSummary } from './matches';
-import { methodologySections, modelParameters } from './methodology';
+import { methodologySections, modelParameters, type DailyFamiliesSummary } from './methodology';
 import { DAY_MS, localDay, nextDay } from './util';
 
 export const GLOBAL_MAX_PLAYERS = 600;
@@ -122,6 +124,7 @@ export function buildHomeFile(
   players: PlayerSeasonRow[],
   backtest: BacktestSummary | undefined,
   confidence?: { topConfidence: NonNullable<HomeFile['topConfidence']>; headline?: HomeFile['confidenceHeadline'] },
+  daily?: HomeFile['daily'],
 ): HomeFile {
   const now = ctx.now;
   const ms = publishedMatches(ctx);
@@ -186,6 +189,7 @@ export function buildHomeFile(
     file.topConfidence = confidence.topConfidence;
     if (confidence.headline) file.confidenceHeadline = confidence.headline;
   }
+  if (daily) file.daily = daily;
   return file;
 }
 
@@ -208,10 +212,11 @@ export function buildModelFile(
   backtest: BacktestSummary | undefined,
   counts: { competitions: number; teams: number; players: number; valueBets: number },
   confidence?: ConfidenceFile,
+  daily?: { file: DailyFile; families?: DailyFamiliesSummary },
 ): ModelFile {
   return {
     generatedAt: ctx.refDate,
-    sections: methodologySections({ ctx, backtest, ...counts, confidence }),
+    sections: methodologySections({ ctx, backtest, ...counts, confidence, daily: daily?.file, dailyFamilies: daily?.families }),
     backtest: backtest ?? emptyBacktest(),
     perCompetition: per,
     parameters: modelParameters(ctx),

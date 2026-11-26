@@ -18,6 +18,7 @@ function lazyPage<T extends ComponentType<object>>(load: () => Promise<{ default
 
 // Carga perezosa: cada página es un chunk independiente.
 const HomePage = lazyPage(() => import('./pages/HomePage'));
+const DailyPage = lazyPage(() => import('./pages/DailyPage'));
 const CalendarPage = lazyPage(() => import('./pages/CalendarPage'));
 const CompetitionPage = lazyPage(() => import('./pages/competition/CompetitionPage'));
 const MatchPage = lazyPage(() => import('./pages/match/MatchPage'));
@@ -33,6 +34,7 @@ export function AppRoutes() {
   return (
     <Routes>
       <Route path="/" element={<HomePage />} />
+      <Route path="/hoy" element={<DailyPage />} />
       <Route path="/partidos" element={<CalendarPage />} />
       <Route path="/c/:compId" element={<CompetitionPage />} />
       <Route path="/m/:matchId" element={<MatchPage />} />

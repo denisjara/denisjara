@@ -10,6 +10,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type {
   CompetitionFile,
   ConfidenceFile,
+  DailyFile,
   HomeFile,
   MatchFile,
   MetaFile,
@@ -26,6 +27,7 @@ import type { CompetitionConfig } from '../pipeline/config';
 import type { CompetitionStore, MatchRecord, PlayerLine } from '../pipeline/types';
 import { PublishRejectedError, runBuild, stagingDirFor, type BuildReport } from '../pipeline/build';
 import {
+  CONFIDENCE_FAMILIES,
   FAMILY_BY_ID,
   settleCandidate,
   type ConfidenceFamily,
@@ -630,6 +632,40 @@ function confidenceTestHistory(stores: CompetitionStore[]): ConfidenceHistoryIte
   return items.sort((a, b) => Date.parse(a.date) - Date.parse(b.date) || a.matchId.localeCompare(b.matchId));
 }
 
+/** Familias adicionales del apartado diario usadas en el historial sintético (resolución: la real de cada una). */
+const EXTRA_TEST_FAMILIES: [ConfidenceFamily, ConfidenceSettle, string][] = [
+  ['shots-over-19.5', { kind: 'stat', stat: 'shots', side: 'over', line: 19.5 }, 'Más de 19.5 tiros'],
+  ['sot-under-12.5', { kind: 'stat', stat: 'shotsOnTarget', side: 'under', line: 12.5 }, 'Menos de 12.5 tiros a puerta'],
+  ['sot-team-over-2.5', { kind: 'stat', stat: 'shotsOnTarget', team: 'home', side: 'over', line: 2.5 }, 'Local: más de 2.5 tiros a puerta'],
+  ['fouls-under-29.5', { kind: 'stat', stat: 'fouls', side: 'under', line: 29.5 }, 'Menos de 29.5 faltas'],
+  ['fouls-under-31.5', { kind: 'stat', stat: 'fouls', side: 'under', line: 31.5 }, 'Menos de 31.5 faltas'],
+  ['player-shot-1', { kind: 'player', playerId: 'x', stat: 'shots', min: 1 }, 'Jugador: al menos 1 tiro'],
+];
+
+/**
+ * Historial de las familias adicionales para los MISMOS partidos (y orden) que confidenceTestHistory: en los ficticios,
+ * candidatos de las dos fuentes de un modelo algo prudente (acierto = probabilidad + 0,07, así el umbral queda bajo y
+ * los partidos próximos del mundo sintético lo superan); los props tienen un 6 % de nulos (el jugador no juega).
+ */
+function dailyExtraTestHistory(base: ConfidenceHistoryItem[]): ConfidenceHistoryItem[] {
+  const rng = mulberry32(777);
+  return base.map((it) => {
+    if (!it.matchId.startsWith('hist-')) return { ...it, candidates: [], base: {} };
+    const candidates: SettledCandidate[] = [];
+    const natural: Partial<Record<ConfidenceFamily, SettledCandidate['result']>> = {};
+    for (const [family, settle, selection] of EXTRA_TEST_FAMILIES) {
+      for (const segment of ['mercado', 'estadistico'] as const) {
+        const prob = 0.6 + rng() * 0.33;
+        const isPlayer = settle.kind === 'player';
+        const result: SettledCandidate['result'] = isPlayer && rng() < 0.06 ? 'void' : rng() < prob + 0.07 ? 'hit' : 'miss';
+        candidates.push({ family, theme: FAMILY_BY_ID.get(family)!.theme, marketId: `${family}-${segment}`, market: selection, selection, prob, fairOdds: 1 / prob, settle, segment, result });
+      }
+      natural[family] = rng() < 0.84 ? 'hit' : 'miss';
+    }
+    return { ...it, candidates, base: natural };
+  });
+}
+
 describe('alta confianza (build)', () => {
   it('sin historial suficiente: confidence.json vacío pero válido, sin cifras en portada y la sección de metodología lo dice', () => {
     const c = readJson<ConfidenceFile>(outDir, 'confidence.json');
@@ -647,13 +683,31 @@ describe('alta confianza (build)', () => {
     expect(sec?.body.join(' ')).toMatch(/Todavía no hay suficientes partidos/);
   });
 
+  it('sin historial suficiente: daily.json válido, con los días pero sin picks ni cifras, y sin resumen en portada', () => {
+    const d = readJson<DailyFile>(outDir, 'daily.json');
+    expect(d.categories.map((c) => c.id)).toEqual(['resultado', 'goles', 'tiros', 'corners', 'tarjetas', 'faltas', 'jugadores']);
+    expect(d.days.length).toBeGreaterThan(0);
+    expect(d.days.length).toBeLessThanOrEqual(4);
+    for (const day of d.days) {
+      expect(day.matches).toEqual([]);
+      expect(day.top).toEqual([]);
+      expect(day.combos).toEqual([]);
+      expect(day.counts.matchesAnalyzed).toBeGreaterThan(0);
+    }
+    expect(d.track.overall.n).toBe(0);
+    expect(d.track.byCategory).toEqual([]);
+    expect(d.note).toMatch(/Juego responsable, solo mayores de 18 años/);
+    expect(readJson<HomeFile>(outDir, 'home.json').daily).toBeUndefined();
+  });
+
   describe('con historial', () => {
     let dir: string;
     let stores: CompetitionStore[];
     beforeAll(() => {
       dir = path.join(tmp, 'conf');
       stores = testStores();
-      runBuild({ stores, configs: CONFIGS, now: NOW, outDir: dir, fast: true, log: () => {}, validate: NO_SANITY, confidenceHistory: confidenceTestHistory(stores) });
+      const history = confidenceTestHistory(stores);
+      runBuild({ stores, configs: CONFIGS, now: NOW, outDir: dir, fast: true, log: () => {}, validate: NO_SANITY, confidenceHistory: history, dailyExtraHistory: dailyExtraTestHistory(history) });
     });
 
     it('pasa la validación del contrato', () => {
@@ -773,6 +827,193 @@ describe('alta confianza (build)', () => {
       expect(body).toMatch(/estrategia fija SIN modelo/);
       expect(body).toMatch(/marca de tiempo, así que esa marca no demuestra/);
       expect(body).toMatch(/Fugas residuales mínimas/);
+    });
+
+    // ---- pronósticos del día (daily.json): las familias adicionales NO cambian confidence.json (los tests de arriba
+    // siguen exigiendo solo sus dos familias) y alimentan únicamente el apartado diario
+    it('daily.json: días ordenados, picks validados (máx. 2 por categoría y 8 por partido), análisis y cifras esperadas', () => {
+      const d = readJson<DailyFile>(dir, 'daily.json');
+      const today = localDay(NOW.getTime(), 'Europe/Madrid');
+      expect(d.days.length).toBeGreaterThan(0);
+      expect(d.days.length).toBeLessThanOrEqual(4);
+      const categories = new Set<string>();
+      let players = 0;
+      d.days.forEach((day, i) => {
+        if (i) expect(day.date > d.days[i - 1].date).toBe(true);
+        expect(day.date >= today).toBe(true);
+        expect(day.counts.matches).toBe(day.matches.length);
+        expect(day.counts.picks).toBe(day.matches.reduce((n, m) => n + m.picks.length, 0));
+        expect(day.counts.matchesAnalyzed).toBeGreaterThanOrEqual(day.matches.length);
+        for (const m of day.matches) {
+          expect(['scheduled', 'live', 'finished']).toContain(m.match.status);
+          if (m.match.status === 'scheduled') expect(localDay(Date.parse(m.match.date), 'Europe/Madrid')).toBe(day.date);
+          expect(m.picks.length).toBeGreaterThan(0);
+          expect(m.picks.length).toBeLessThanOrEqual(8);
+          expect(m.analysis.length).toBeGreaterThanOrEqual(2);
+          expect(m.analysis.length).toBeLessThanOrEqual(5);
+          expect(m.analysis[0]).toMatch(/Goles esperados/);
+          expect(m.expected.goals.total).toBeCloseTo(m.expected.goals.home + m.expected.goals.away, 1);
+          expect(m.expected.shotsOnTarget!.total).toBeGreaterThan(3);
+          const perCat = new Map<string, number>();
+          m.picks.forEach((p, k) => {
+            if (k) expect(p.score!).toBeLessThanOrEqual(m.picks[k - 1].score!);
+            perCat.set(p.category, (perCat.get(p.category) ?? 0) + 1);
+            categories.add(p.category);
+            expect(p.category).toBe(FAMILY_BY_ID.get(p.family as ConfidenceFamily)!.theme);
+            expect(p.tier).toBe('oro');
+            expect(p.historicalHitRate).toBeGreaterThanOrEqual(0.85);
+            expect(p.prob).toBeGreaterThanOrEqual(p.threshold! - 1e-9);
+            expect(p.score).toBeGreaterThanOrEqual(0);
+            expect(p.score).toBeLessThanOrEqual(100);
+            if (m.match.status !== 'finished') {
+              expect(p.result).toBeUndefined();
+              expect(p.validationN).toBeGreaterThanOrEqual(30);
+              expect(p.validationHitRate).toBeGreaterThanOrEqual(0.8);
+              expect(p.reason!.length).toBeGreaterThan(20);
+              if (p.lift !== undefined) expect(p.lift).toBeCloseTo(p.validationHitRate! - p.baseRate!, 4);
+            } else expect(['hit', 'miss', 'void']).toContain(p.result);
+            if (p.category === 'jugadores') {
+              players++;
+              expect(p.player!.name.length).toBeGreaterThan(0);
+              expect(p.marketId).toBe(`player-${p.player!.id}-shots-1`);
+              expect(p.selection).toContain(p.player!.name);
+              expect(p.reason).toMatch(/tiros/);
+            } else expect(p.player).toBeUndefined();
+          });
+          for (const n of perCat.values()) expect(n).toBeLessThanOrEqual(2);
+          expect(new Set(m.picks.map((p) => `${p.family}|${p.marketId}|${p.selection}`)).size).toBe(m.picks.length);
+        }
+      });
+      // familias existentes y adicionales conviven en el apartado diario
+      expect(categories.has('resultado') || categories.has('goles')).toBe(true);
+      expect(['tiros', 'faltas', 'jugadores'].some((c) => categories.has(c))).toBe(true);
+      for (const cat of ['tiros', 'faltas', 'jugadores']) expect(categories.has(cat)).toBe(true);
+      expect(players).toBeGreaterThan(0);
+      // hoy: el partido EN JUEGO conserva sus picks (calculados como antes del saque, sin resultado) fuera de top y combinadas
+      const live = d.days[0].matches.find((m) => m.match.id === 'live-a67')!;
+      expect(live.match.status).toBe('live');
+      expect(live.match.score).toEqual({ home: 1, away: 0 });
+      expect(live.picks.length).toBeGreaterThan(0);
+      expect(live.picks.every((p) => p.result === undefined && p.source === 'estadistico')).toBe(true); // sin cuota previa al saque
+      expect(d.days[0].top.some((t) => t.matchId === 'live-a67')).toBe(false);
+      expect(d.days[0].combos.some((c) => c.legs.some((l) => l.matchId === 'live-a67'))).toBe(false);
+      // hoy: un partido ya terminado aparece con sus picks reconstruidos walk-forward y resueltos
+      const settled = d.days[0].matches.filter((m) => m.match.status === 'finished');
+      expect(d.days[0].date).toBe(today);
+      expect(settled.length).toBeGreaterThan(0);
+      for (const m of settled) {
+        expect(localDay(Date.parse(m.match.date), 'Europe/Madrid')).toBe(today);
+        const sc = m.match.score!;
+        for (const p of m.picks) if (p.family === 'ah+1.5') expect(p.result).toBe(sc.home - sc.away + 1.5 > 0 ? 'hit' : 'miss');
+      }
+      // ...pero confidence.json no cambia de alcance
+      const c = readJson<ConfidenceFile>(dir, 'confidence.json');
+      const baseIds = new Set<string>(CONFIDENCE_FAMILIES.map((f) => f.id));
+      expect(c.picks.every((x) => baseIds.has(x.pick.family))).toBe(true);
+      expect(c.track.byFamily.map((f) => f.family)).toEqual(CONFIDENCE_FAMILIES.map((f) => f.id));
+    });
+
+    it('daily.json: top (uno por partido, por puntuación), combinadas de partidos distintos con prob = producto, y portada', () => {
+      const d = readJson<DailyFile>(dir, 'daily.json');
+      const withTop = d.days.filter((x) => x.top.length > 0);
+      expect(withTop.length).toBeGreaterThan(0);
+      for (const day of d.days) {
+        const open = new Map(day.matches.filter((m) => m.match.status === 'scheduled' && Date.parse(m.match.date) > NOW.getTime()).map((m) => [m.match.id, m]));
+        expect(day.top.length).toBe(Math.min(10, open.size));
+        expect(new Set(day.top.map((t) => t.matchId)).size).toBe(day.top.length);
+        day.top.forEach((t, i) => {
+          if (i) expect(t.pick.score!).toBeLessThanOrEqual(day.top[i - 1].pick.score!);
+          expect(open.get(t.matchId)!.picks.some((p) => p.family === t.pick.family && p.selection === t.pick.selection)).toBe(true);
+        });
+        const ids = day.combos.map((x) => x.id);
+        expect(new Set(ids).size).toBe(ids.length);
+        for (const combo of day.combos) {
+          const [min, max] = combo.id === 'segura' ? [2, 2] : combo.id === 'equilibrada' ? [3, 3] : [4, 5];
+          expect(combo.legs.length).toBeGreaterThanOrEqual(min);
+          expect(combo.legs.length).toBeLessThanOrEqual(max);
+          expect(new Set(combo.legs.map((l) => l.matchId)).size).toBe(combo.legs.length);
+          expect(combo.prob).toBeCloseTo(combo.legs.reduce((p, l) => p * (l.pick.calibratedProb ?? l.pick.prob), 1), 3);
+          expect(combo.fairOdds).toBeCloseTo(1 / combo.prob, 2);
+          for (const l of combo.legs) {
+            const m = open.get(l.matchId)!;
+            expect(m.match.home.name).toBe(l.home);
+            expect(m.picks.some((p) => p.family === l.pick.family && p.selection === l.pick.selection)).toBe(true);
+          }
+        }
+        if (open.size >= 2) expect(ids).toContain('segura');
+        if (open.size < 2) expect(day.combos).toEqual([]);
+      }
+      const home = readJson<HomeFile>(dir, 'home.json');
+      const first = withTop[0];
+      expect(home.daily).toMatchObject({ date: first.date, matches: first.counts.matches, picks: first.counts.picks });
+      expect(home.daily!.top.length).toBe(Math.min(4, first.top.length));
+      home.daily!.top.forEach((t, i) => {
+        expect(t.match.id).toBe(first.top[i].matchId);
+        expect(t.pick.selection).toBe(first.top[i].pick.selection);
+        expect(t.match.prediction).toBeUndefined(); // ficha compacta
+      });
+    });
+
+    it('daily.json: récord fuera de muestra de la regla diaria (global, por categoría, combinadas y línea base) y aviso', () => {
+      const d = readJson<DailyFile>(dir, 'daily.json');
+      const o = d.track.overall;
+      expect(o.n).toBeGreaterThan(200);
+      expect(o.hitRate).toBeCloseTo(o.hits / o.n, 4);
+      expect(o.wilsonLow!).toBeLessThanOrEqual(o.hitRate);
+      expect(o.wilsonHigh!).toBeGreaterThanOrEqual(o.hitRate);
+      expect(d.track.byCategory.reduce((n, x) => n + x.picks, 0)).toBe(o.picks);
+      expect(d.track.byCategory.reduce((n, x) => n + x.hits, 0)).toBe(o.hits);
+      const cats = d.track.byCategory.map((x) => x.category);
+      expect(cats).toContain('resultado');
+      expect(cats).toContain('goles');
+      expect(cats.some((x) => x === 'tiros' || x === 'faltas' || x === 'jugadores')).toBe(true);
+      for (const x of d.track.byCategory) {
+        expect(x.label.length).toBeGreaterThan(0);
+        expect(x.baseRate).toBeGreaterThan(0.5);
+        if (x.n > 0) expect(x.hitRate).toBeCloseTo(x.hits / x.n, 4);
+      }
+      const jug = d.track.byCategory.find((x) => x.category === 'jugadores');
+      if (jug) expect(jug.voids).toBeGreaterThan(0);
+      expect(d.track.baseline!.label).toMatch(/visitante marca menos de 3/);
+      for (const x of d.track.combos ?? []) expect(x.hitRate).toBeCloseTo(x.hits / x.days, 4);
+      expect(d.note).toMatch(/fuera de muestra/);
+      expect(d.note).toMatch(/no es ventaja frente a la casa/);
+      expect(d.note).toMatch(/alineación/);
+      expect(d.note).toMatch(/mayores de 18 años/);
+    });
+
+    it('la validación rechaza un daily.json incoherente', () => {
+      const broken = path.join(tmp, 'daily-broken');
+      fs.cpSync(dir, broken, { recursive: true });
+      const d = readJson<DailyFile>(broken, 'daily.json') as unknown as Record<string, any>;
+      const day = d.days.find((x: any) => x.combos.length > 0 && x.matches.length > 1);
+      expect(day).toBeDefined();
+      const combo = day.combos[0];
+      combo.legs[1] = { ...combo.legs[1], matchId: combo.legs[0].matchId }; // dos patas del mismo partido
+      combo.prob = 0.99; // ≠ producto de las patas
+      const m = day.matches[0];
+      m.picks[0] = { ...m.picks[0], tier: 'plata' }; // solo se publica oro
+      const p = m.picks[m.picks.length - 1];
+      m.picks.push({ ...p, selection: `${p.selection} bis` }, { ...p, selection: `${p.selection} ter` }, { ...p, category: 'apuestas', selection: 'x' }); // > 2 por categoría, categoría desconocida
+      const other = day.matches[1];
+      other.picks[0] = { ...other.picks[0], prob: other.picks[0].threshold - 0.05, validationN: 12 }; // bajo el umbral y sin validar
+      day.top[0] = { ...day.top[0], matchId: 'no-existe' };
+      day.counts.picks += 5;
+      d.track.overall.hitRate = 0.999;
+      fs.writeFileSync(path.join(broken, 'daily.json'), JSON.stringify(d));
+      const all = validateDataDir(broken, NO_SANITY).errors.join('\n');
+      expect(all).toMatch(/daily\.json: .*dos patas del mismo partido/);
+      expect(all).toMatch(/daily\.json: .*≠ producto de las patas/);
+      expect(all).toMatch(/daily\.json: .*"plata" no permitido/);
+      expect(all).toMatch(/daily\.json: .*picks de la categoría .* \(máximo 2\)/);
+      expect(all).toMatch(/daily\.json: .*"apuestas" no permitido/);
+      expect(all).toMatch(/daily\.json: .*< umbral/);
+      expect(all).toMatch(/daily\.json: .*regla sin validar fuera de muestra/);
+      expect(all).toMatch(/daily\.json: .*partido no-existe ausente de matches/);
+      expect(all).toMatch(/daily\.json: .*counts: picks/);
+      expect(all).toMatch(/daily\.json: .*hitRate 0\.999 ≠/);
+      fs.rmSync(path.join(broken, 'daily.json'));
+      expect(validateDataDir(broken, NO_SANITY).errors).toContain('daily.json: archivo ausente');
     });
 
     it('la validación rechaza picks incoherentes en confidence.json', () => {

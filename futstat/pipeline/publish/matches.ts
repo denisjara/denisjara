@@ -285,7 +285,11 @@ function cardsOfStats(s: TeamMatchStats | undefined): number | undefined {
   return s.yellow + (s.red ?? 0);
 }
 
-function propsFor(
+/**
+ * Props de los jugadores de un equipo para un partido con datos ANTERIORES a `before`: líneas de jugador previas, λ del
+ * equipo y factores del rival de las proyecciones dadas. La usan la ficha del partido y el apartado diario (walk-forward).
+ */
+export function propsFor(
   ctx: BuildContext,
   teamId: string,
   opponentId: string,

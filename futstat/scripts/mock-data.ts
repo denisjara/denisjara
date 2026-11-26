@@ -80,6 +80,12 @@ import type {
   TeamMatchStatsPublic,
   ConfidenceFile,
   ConfidencePick,
+  DailyCategory,
+  DailyCombo,
+  DailyDay,
+  DailyFile,
+  DailyMatch,
+  DailyPick,
   TeamRating,
   TeamRef,
   TeamSeasonStats,
@@ -2050,6 +2056,280 @@ const confidenceFile: ConfidenceFile = {
 };
 write('confidence.json', confidenceFile);
 
+// --- Pronósticos del día (daily.json): mejores selecciones validadas de hoy y de los próximos días con partidos
+/** Reglas de prueba de las categorías que no existen en confidence.json (tiros, faltas, jugadores). */
+const MOCK_DAILY_RULES: Record<string, { gold: number; val: [number, number]; base: number }> = {
+  'shots-over': { gold: 0.86, val: [412, 468], base: 0.842 },
+  'sot-over': { gold: 0.85, val: [305, 349], base: 0.851 },
+  // muestra pequeña a propósito (n < 50): la UI no debe darle acierto propio
+  'fouls-over': { gold: 0.85, val: [38, 44], base: 0.83 },
+  'player-shots-1': { gold: 0.86, val: [520, 588], base: 0.861 },
+  'player-sot-1': { gold: 0.8, val: [301, 352], base: 0.79 },
+};
+const DAILY_LABEL: Record<DailyCategory, string> = { resultado: 'Resultado', goles: 'Goles', tiros: 'Tiros', corners: 'Córners', tarjetas: 'Tarjetas', faltas: 'Faltas', jugadores: 'Jugadores' };
+const DAILY_ORDER: DailyCategory[] = ['resultado', 'goles', 'tiros', 'corners', 'tarjetas', 'faltas', 'jugadores'];
+const es = (x: number, d = 1) => x.toFixed(d).replace('.', ',');
+const miles = (x: number) => String(Math.round(x)).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+const madridDay = (ms: number) => new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Madrid', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(ms));
+const overFromDist = (dist: number[], line: number) => sum(dist.filter((_, k) => k > line));
+const dailyScore = (cal: number, rate: number, n: number, base: number) => Math.round(clampN(100 * (0.6 * cal + 0.3 * rate + 0.1 * clampN(0.5 + (rate - base) * 5, 0, 1)) - (n < 50 ? 6 : 0), 0, 100) * 10) / 10;
+
+function dailyPicksFor(m: MatchRec): { picks: DailyPick[]; expected: DailyMatch['expected']; analysis: string[] } {
+  const pred = predict(m);
+  const proj = projectionsFor(m);
+  const P = (k: StatProjection['key']) => proj.find((x) => x.key === k)!;
+  const la = AVG.get(m.compId)!;
+  const comp = COMPETITION_BY_ID.get(m.compId)!.shortName;
+  const hn = m.home.short;
+  const an = m.away.short;
+  const q = pred.q;
+  const all: DailyPick[] = [];
+
+  // 1) familias de alta confianza (resultado, goles, córners, tarjetas): mismos candidatos y reglas que confidence.json
+  for (const c of pred.cands) {
+    const rule = MOCK_RULES[c.family];
+    if (!rule || c.prob < rule.gold) continue;
+    const cal = r(clampN(rule.oro[0] + (c.prob - rule.gold) * 0.6, 0.85, 0.97), 4);
+    const pc = P('corners');
+    const pk = P('cards');
+    const reason =
+      c.theme === 'resultado'
+        ? `Elo ${miles(elo.get(m.home.id))} (${hn}) frente a ${miles(elo.get(m.away.id))} (${an}); el ensamble da ${Math.round(q.p.home * 100)}% / ${Math.round(q.p.draw * 100)}% / ${Math.round(q.p.away * 100)}%.`
+        : c.theme === 'goles'
+          ? `Goles esperados ${es(q.xgHome, 2)}–${es(q.xgAway, 2)} (total ${es(q.xgHome + q.xgAway, 2)}); en ${comp} se marcan ${es(la.goalsPerMatch, 2)} por partido.`
+          : c.theme === 'corners'
+            ? `Proyección de ${es(pc.total)} córners (${es(pc.home)}–${es(pc.away)}); la media de ${comp} es ${es(la.cornersPerMatch)}.`
+            : `Proyección de ${es(pk.total)} tarjetas (${es(pk.home)}–${es(pk.away)}); la media de ${comp} es ${es(la.cardsPerMatch)}.`;
+    const pick: DailyPick = {
+      family: c.family,
+      marketId: c.marketId,
+      market: c.market,
+      selection: c.selection,
+      prob: r(c.prob, 4),
+      fairOdds: r(1 / c.prob, 3),
+      tier: 'oro',
+      historicalHitRate: rule.oro[0],
+      historicalN: rule.oro[1],
+      threshold: rule.gold,
+      calibratedProb: cal,
+      source: c.segment,
+      ...MOCK_OOS(c.family),
+      category: c.theme,
+      reason,
+      score: dailyScore(cal, rule.val[0] / rule.val[1], rule.val[1], rule.base),
+      lift: r(rule.val[0] / rule.val[1] - rule.base, 4),
+    };
+    if (c.marketOdds) {
+      pick.marketOdds = r(c.marketOdds, 3);
+      if (c.oddsKind) pick.oddsKind = c.oddsKind;
+    } else if (m.odds && c.theme === 'goles' && Number(m.id) % 3 !== 0) {
+      // en la fuente real casi ningún mercado de goles por línea trae cuota; aquí 2 de cada 3 partidos con cuotas
+      // la llevan (con el margen de la casa: siempre por debajo de la cuota justa) para probar las dos presentaciones
+      pick.marketOdds = Math.max(1.01, r(1 / (c.prob * 1.055), 2));
+      pick.oddsKind = 'directa';
+    }
+    all.push(pick);
+  }
+
+  // 2) totales de tiros, tiros a puerta y faltas: la línea más alta que supera el umbral de su regla
+  const statPick = (family: string, key: StatProjection['key'], category: DailyCategory, noun: string, lines: number[], avg: number | undefined) => {
+    const rule = MOCK_DAILY_RULES[family];
+    const pr = P(key);
+    const best = lines
+      .map((line) => ({ line, p: overFromDist(pr.totalDist, line) }))
+      .filter((x) => x.p >= rule.gold && x.p <= 0.97)
+      .sort((a, b) => b.line - a.line)[0];
+    if (!best) return;
+    const [vh, vn] = rule.val;
+    const [lo, hi] = wilsonInterval(vh, vn);
+    const cal = r(clampN(vh / vn + (best.p - rule.gold) * 0.6, 0.8, 0.97), 4);
+    all.push({
+      family: `${family}-${best.line}`,
+      marketId: `${key === 'shotsOnTarget' ? 'sot' : key}-ou-${best.line}`,
+      market: `${pr.label} totales`,
+      selection: `Más de ${best.line} ${noun}`,
+      prob: r(best.p, 4),
+      fairOdds: r(1 / best.p, 3),
+      tier: 'oro',
+      historicalHitRate: r(vh / vn + 0.012, 4),
+      historicalN: vn * 2,
+      threshold: rule.gold,
+      calibratedProb: cal,
+      source: m.odds ? 'mercado' : 'estadistico',
+      validationHitRate: r(vh / vn, 4),
+      validationN: vn,
+      validationWilsonLow: r(lo, 4),
+      validationWilsonHigh: r(hi, 4),
+      baseRate: rule.base,
+      category,
+      reason: `Proyección de ${es(pr.total)} ${noun} (${hn} ${es(pr.home)} – ${es(pr.away)} ${an})${avg !== undefined ? `; la media de ${comp} es ${es(avg)}` : ''}.`,
+      score: dailyScore(cal, vh / vn, vn, rule.base),
+      lift: r(vh / vn - rule.base, 4),
+    });
+  };
+  statPick('sot-over', 'shotsOnTarget', 'tiros', 'tiros a puerta', [4.5, 5.5, 6.5, 7.5, 8.5], la.shotsOnTargetPerMatch);
+  statPick('shots-over', 'shots', 'tiros', 'tiros', [16.5, 18.5, 20.5, 22.5, 24.5], la.shotsPerMatch);
+  statPick('fouls-over', 'fouls', 'faltas', 'faltas', [16.5, 18.5, 20.5, 22.5], la.foulsPerMatch);
+
+  // 3) props de jugadores (1+ tiro / 1+ tiro a puerta) de titulares probables
+  for (const [t, lam] of [[m.home, pred.lam.lambdaHome], [m.away, pred.lam.lambdaAway]] as [TeamDef, number][]) {
+    for (const pp of propsFor(t, lam).filter((x) => x.expMinutes >= 65).slice(0, 3)) {
+      const opts: [string, number, string, string][] = [
+        ['player-sot-1', pp.pSot1, 'Tiros a puerta del jugador', '1 o más tiros a puerta'],
+        ['player-shots-1', pp.pShots1, 'Tiros del jugador', '1 o más tiros'],
+      ];
+      const opt = opts.find(([f, pr]) => pr >= MOCK_DAILY_RULES[f].gold && pr <= 0.97);
+      if (!opt) continue;
+      const [family, prob, market, what] = opt;
+      const rule = MOCK_DAILY_RULES[family];
+      const [vh, vn] = rule.val;
+      const [lo, hi] = wilsonInterval(vh, vn);
+      const cal = r(clampN(vh / vn + (prob - rule.gold) * 0.5, 0.8, 0.96), 4);
+      all.push({
+        family,
+        marketId: `${family}-${pp.player.id}`,
+        market,
+        selection: `${pp.player.short}: ${what}`,
+        prob: r(prob, 4),
+        fairOdds: r(1 / prob, 3),
+        tier: 'oro',
+        historicalHitRate: r(vh / vn + 0.01, 4),
+        historicalN: vn * 2,
+        threshold: rule.gold,
+        calibratedProb: cal,
+        source: m.odds ? 'mercado' : 'estadistico',
+        validationHitRate: r(vh / vn, 4),
+        validationN: vn,
+        validationWilsonLow: r(lo, 4),
+        validationWilsonHigh: r(hi, 4),
+        baseRate: rule.base,
+        category: 'jugadores',
+        reason: `${pp.goals} goles en ${pp.apps} partidos (${pp.minutes}'); se le esperan ${pp.expMinutes} minutos y su equipo proyecta ${es(t === m.home ? P('shots').home : P('shots').away)} tiros.`,
+        player: { id: pp.player.id, name: pp.player.name, short: pp.player.short, teamId: t.id, position: pp.player.position, expMinutes: pp.expMinutes },
+        score: dailyScore(cal, vh / vn, vn, rule.base),
+      lift: r(vh / vn - rule.base, 4),
+      });
+    }
+  }
+
+  // mejores primero: como mucho 2 por categoría y 8 en total
+  const perCat = new Map<DailyCategory, number>();
+  const picks: DailyPick[] = [];
+  for (const pick of all.sort((a, b) => b.score! - a.score! || b.prob - a.prob)) {
+    const k = perCat.get(pick.category) ?? 0;
+    if (k >= 2 || picks.length >= 8) continue;
+    perCat.set(pick.category, k + 1);
+    picks.push(pick);
+  }
+  const tri = (k: StatProjection['key']) => ({ home: P(k).home, away: P(k).away, total: P(k).total });
+  const fav = q.p.home >= q.p.away ? hn : an;
+  const analysis = [
+    `${fav} es favorito (${Math.round(Math.max(q.p.home, q.p.away) * 100)}%); marcador más probable ${q.likelyScore} y ${es(q.xgHome + q.xgAway, 2)} goles esperados.`,
+    `Más de 2,5 goles: ${Math.round(q.over25 * 100)}% · ambos marcan: ${Math.round(q.btts * 100)}%.`,
+    `Tiros: ${es(P('shots').total)} previstos, ${es(P('shotsOnTarget').total)} a puerta (${hn} ${es(P('shotsOnTarget').home)} – ${es(P('shotsOnTarget').away)} ${an}).`,
+    `Córners: ${es(P('corners').total)} previstos (media de ${comp}: ${es(la.cornersPerMatch)}) · tarjetas: ${es(P('cards').total)} (media ${es(la.cardsPerMatch)}).`,
+    ((names: string[]) => (names.length > 1 ? `Jugadores: ${names.join(' y ')} son los rematadores con más minutos previstos.` : names.length ? `Jugadores: ${names[0]} es el rematador con más minutos previstos.` : undefined))(
+      picks.filter((x) => x.category === 'jugadores').map((x) => x.player!.short),
+    ),
+  ].filter((x): x is string => !!x);
+  return { picks, expected: { goals: { home: r(q.xgHome, 2), away: r(q.xgAway, 2), total: r(q.xgHome + q.xgAway, 2) }, shotsOnTarget: tri('shotsOnTarget'), shots: tri('shots'), corners: tri('corners'), cards: tri('cards'), fouls: tri('fouls') }, analysis };
+}
+
+const dailyRank = (m: MatchRec) => (m.compId === 'champions' ? 100 : COMPETITION_BY_ID.get(m.compId)!.tier);
+function dailyCombos(matches: { rec: MatchRec; dm: DailyMatch }[]): DailyCombo[] {
+  // solo partidos que no han empezado, del mejor al peor por su mejor pick
+  const pool = matches.filter((x) => x.rec.status === 'scheduled' && x.rec.ms > NOW_MS).sort((a, b) => b.dm.picks[0].score! - a.dm.picks[0].score!);
+  const build = (id: string, label: string, n: number, choose: (picks: DailyPick[], used: Set<DailyCategory>) => DailyPick): DailyCombo | undefined => {
+    if (pool.length < n) return undefined;
+    const used = new Set<DailyCategory>();
+    const legs = pool.slice(0, n).map(({ rec, dm }) => {
+      const pick = choose(dm.picks, used);
+      used.add(pick.category);
+      return { matchId: rec.id, home: rec.home.short, away: rec.away.short, compName: COMPETITION_BY_ID.get(rec.compId)!.shortName, pick };
+    });
+    const prob = legs.reduce((a, l) => a * (l.pick.calibratedProb ?? l.pick.prob), 1);
+    const combo: DailyCombo = { id, label, legs, prob: r(prob, 4), fairOdds: r(1 / prob, 3) };
+    if (legs.every((l) => l.pick.marketOdds)) combo.marketOdds = r(legs.reduce((a, l) => a * l.pick.marketOdds!, 1), 3);
+    return combo;
+  };
+  const byCal = (ps: DailyPick[]) => [...ps].sort((a, b) => (b.calibratedProb ?? b.prob) - (a.calibratedProb ?? a.prob));
+  return [
+    build('segura', 'Combinada segura', 3, (ps) => byCal(ps).find((x) => x.marketOdds && (x.calibratedProb ?? x.prob) >= 0.9) ?? byCal(ps)[0]),
+    build('equilibrada', 'Combinada equilibrada', 4, (ps, used) => byCal(ps).find((x) => !used.has(x.category)) ?? byCal(ps)[0]),
+    build('atrevida', 'Combinada atrevida', 6, (ps, used) => byCal(ps).reverse().find((x) => !used.has(x.category)) ?? byCal(ps)[byCal(ps).length - 1]),
+  ].filter((x): x is DailyCombo => !!x);
+}
+
+const dailyDays: DailyDay[] = [];
+{
+  const todayKey = madridDay(NOW_MS);
+  const byDay = new Map<string, MatchRec[]>();
+  for (const m of MATCHES.filter((x) => (x.status === 'scheduled' || x.status === 'live') && x.ms < NOW_MS + 7 * DAY)) {
+    const k = madridDay(m.ms);
+    if (k < todayKey) continue;
+    byDay.set(k, [...(byDay.get(k) ?? []), m]);
+  }
+  for (const date of [...byDay.keys()].sort().slice(0, 4)) {
+    const recs = byDay.get(date)!.sort((a, b) => dailyRank(b) - dailyRank(a) || a.ms - b.ms || a.id.localeCompare(b.id));
+    const built = recs
+      .map((rec) => ({ rec, ...dailyPicksFor(rec) }))
+      .filter((x) => x.picks.length > 0)
+      .map((x) => ({ rec: x.rec, dm: { match: slimS(x.rec), picks: x.picks, expected: x.expected, analysis: x.analysis } satisfies DailyMatch }));
+    dailyDays.push({
+      date,
+      matches: built.map((x) => x.dm),
+      // uno por partido, del mejor al peor; como mucho 3 de la misma categoría para que el top no sea monótono
+      top: (() => {
+        const perCat = new Map<DailyCategory, number>();
+        return [...built]
+          .sort((a, b) => b.dm.picks[0].score! - a.dm.picks[0].score!)
+          .slice(0, 10)
+          .map((x) => {
+            const pick = x.dm.picks.find((p) => (perCat.get(p.category) ?? 0) < 3) ?? x.dm.picks[0];
+            perCat.set(pick.category, (perCat.get(pick.category) ?? 0) + 1);
+            return { matchId: x.rec.id, pick };
+          })
+          .sort((a, b) => b.pick.score! - a.pick.score!);
+      })(),
+      combos: dailyCombos(built),
+      counts: { matches: built.length, picks: sum(built.map((x) => x.dm.picks.length)), matchesAnalyzed: recs.length },
+    });
+  }
+}
+const DAILY_TRACK: Record<DailyCategory, [number, number, number]> = {
+  // aciertos, resueltos, tasa base (walk-forward mensual; cifras de prueba)
+  resultado: [1531, 1721, 0.905],
+  goles: [2447, 2742, 0.862],
+  tiros: [717, 817, 0.846],
+  corners: [542, 624, 0.854],
+  tarjetas: [626, 678, 0.938],
+  faltas: [38, 44, 0.83],
+  jugadores: [821, 940, 0.834],
+};
+const dailyFile: DailyFile = {
+  generatedAt: GENERATED_AT,
+  days: dailyDays,
+  categories: DAILY_ORDER.map((id) => ({ id, label: DAILY_LABEL[id] })),
+  track: {
+    overall: {
+      ...rec(sum(Object.values(DAILY_TRACK).map((x) => x[0])), sum(Object.values(DAILY_TRACK).map((x) => x[1])), sum(Object.values(DAILY_TRACK).map((x) => x[1])) + 21),
+      voids: 21,
+      from: iso(DAY0 - 170 * DAY),
+      to: iso(NOW_MS - DAY),
+      matches: 2984,
+    },
+    byCategory: DAILY_ORDER.map((category) => ({ category, label: DAILY_LABEL[category], baseRate: DAILY_TRACK[category][2], ...rec(DAILY_TRACK[category][0], DAILY_TRACK[category][1]) })),
+    combos: [
+      { id: 'segura', label: 'Combinada segura', days: 96, hits: 71, hitRate: r(71 / 96, 4), avgLegs: 3, avgFairOdds: 1.36 },
+      { id: 'equilibrada', label: 'Combinada equilibrada', days: 96, hits: 57, hitRate: r(57 / 96, 4), avgLegs: 4, avgFairOdds: 1.62 },
+      { id: 'atrevida', label: 'Combinada atrevida', days: 41, hits: 19, hitRate: r(19 / 41, 4), avgLegs: 6, avgFairOdds: 2.21 },
+    ],
+    baseline: confidenceFile.track.baseline,
+  },
+  note: 'Son selecciones muy probables con cuota baja: aciertan mucho porque son fáciles, no porque ganen a la casa. Los props de jugador suelen anularse si el jugador no participa: comprueba la alineación. Cada pata que añades a una combinada baja su probabilidad. No garantiza nada. Juego responsable, solo mayores de 18 años. (Datos simulados.)',
+};
+write('daily.json', dailyFile);
+
 // --- Portada
 const inDays = (m: MatchRec, d: number) => m.ms >= DAY0 + d * DAY && m.ms < DAY0 + (d + 1) * DAY;
 const today = MATCHES.filter((m) => inDays(m, 0)).sort((a, b) => a.ms - b.ms);
@@ -2092,6 +2372,12 @@ const homeFile: HomeFile = {
       .filter((x) => (seen.has(x.match.id) ? false : (seen.add(x.match.id), true)))
       .slice(0, 8)
       .sort((a, b) => Date.parse(a.match.date) - Date.parse(b.match.date) || a.match.id.localeCompare(b.match.id));
+  })(),
+  daily: (() => {
+    const d = dailyDays.find((x) => x.counts.picks > 0);
+    if (!d) return undefined;
+    const byId = new Map(d.matches.map((x) => [x.match.id, x.match]));
+    return { date: d.date, matches: d.counts.matches, picks: d.counts.picks, top: d.top.slice(0, 4).map((t) => ({ match: byId.get(t.matchId)!, pick: t.pick })) };
   })(),
   confidenceHeadline: {
     hitRate: confidenceFile.track.holdout.hitRate,

@@ -39,3 +39,5 @@ export { Tooltip, InfoTip } from './Tooltip';
 export { Disclaimer } from './Disclaimer';
 export { TierBadge, SafePickChip, OutOfSampleNote, ResultMark, ConfidenceRow, RateCI, ciText, groupByMatch, confidenceSelection, confidenceMarket, outOfSample, ownRate, wilson90, beyond90, TIER_LABEL, OOS_MIN_N } from './Confidence';
 export type { ConfidenceRowProps } from './Confidence';
+export { CATEGORY_ICON, CategoryBadge, DailyKickoff, DailyLiftNote, DailyNum, DailyOdds, DailyRecordNote, DailyTopRow, PLAYER_VOID_NOTE, PlayerVoidNote, dailyMarket, dailySelection, marketOddsText, marketOddsTitle } from './Daily';
+export type { DailyTopRowProps } from './Daily';

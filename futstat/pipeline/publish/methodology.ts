@@ -1,7 +1,7 @@
 /**
  * Secciones de metodología (español) de public/data/model.json, con los valores ajustados en este build.
  */
-import type { BacktestSummary, ConfidenceFile, ModelFile } from '../../src/types/data';
+import type { BacktestSummary, ConfidenceFile, DailyFile, ModelFile } from '../../src/types/data';
 import { MODEL, UPCOMING_DAYS } from '../config';
 import { MAX_EV } from '../analytics/value';
 import { ELO_GOAL_WEIGHT_FACTOR, LOW_DATA_GAMES } from '../analytics/predict';
@@ -22,6 +22,18 @@ export interface MethodologyInput {
   valueBets: number;
   /** pronósticos de alta confianza publicados en este build (cifras del holdout) */
   confidence?: ConfidenceFile;
+  /** pronósticos del día publicados en este build y resumen de sus familias adicionales (tiros, faltas, jugadores) */
+  daily?: DailyFile;
+  dailyFamilies?: DailyFamiliesSummary;
+}
+
+/** Reglas (familia · fuente) de las familias adicionales del apartado diario, con su validación fuera de muestra. */
+export interface DailyFamiliesSummary {
+  published: { label: string; source: string; n: number; hits: number }[];
+  /** con regla pero sin validar (< 30 picks o < 80 % fuera de muestra) */
+  unvalidated: { label: string; source: string; n: number; hits: number }[];
+  /** familias sin ninguna regla (la probabilidad no llega a un 82 % recalibrado con muestra suficiente) */
+  discarded: string[];
 }
 
 const day = (iso: string) => {
@@ -107,6 +119,53 @@ export function confidenceSection(cf: ConfidenceFile | undefined, bt: BacktestSu
   }
   body.push('Juego responsable: son estimaciones estadísticas, no garantías. Solo mayores de 18 años y con dinero que puedas permitirte perder.');
   return { title: 'Pronósticos de alta confianza', body };
+}
+
+/** Sección «Pronósticos del día» con las cifras reales (walk-forward) de este build. */
+export function dailySection(df: DailyFile | undefined, fam: DailyFamiliesSummary | undefined): ModelFile['sections'][number] {
+  const body: string[] = [
+    'Qué es: para cada partido de hoy y de los días siguientes con partidos (máximo 4 días) se reúnen TODAS las selecciones que superan una regla validada fuera de muestra —las de alta confianza (resultado, goles, córners, tarjetas) y tres grupos propios de este apartado: tiros y tiros a puerta, faltas y jugadores— con los números esperados del partido, un análisis en viñetas y una frase por pronóstico con las cifras que lo sostienen. Como mucho 2 por categoría y 8 por partido, sin redundancias (nunca «más de 6,5» y «más de 7,5» de lo mismo, ni dos pronósticos de resultado, ni dos del mismo jugador).',
+    'Familias propias, mismo rigor: tiros a puerta totales y por equipo, tiros totales y faltas salen de las proyecciones binomial negativa (con partidos de días anteriores); los pronósticos de jugador («1+ tiro», «2+ tiros», «1+ tiro a puerta», «marca gol») de sus tasas por 90 minutos con líneas de jugador anteriores al partido, solo para quien tiene 60 o más minutos esperados, jugó alguno de los 2 últimos partidos de su equipo y suma 270 minutos. Cada familia y fuente (con cuotas / sin cuotas) se recalibra (Platt), solo se usa su franja oro (85 % o más en su histórico) y solo se publica si en el walk-forward mensual acumula al menos 30 pronósticos con un 80 % o más de acierto. Se resuelven con las estadísticas del partido (sin dato no se evalúa; con prórroga se excluye); si el jugador no juega, el pronóstico es nulo, como hacen las casas.',
+  ];
+  if (fam) {
+    const list = (xs: DailyFamiliesSummary['published']) => xs.map((x) => `${x.label} · ${x.source} (${n0(x.hits)}/${n0(x.n)})`).join('; ');
+    body.push(
+      `En este build: ${fam.published.length} reglas propias publicadas${fam.published.length ? ` — ${list(fam.published)}` : ''}.` +
+        (fam.unvalidated.length ? ` No publicadas (sin validación suficiente fuera de muestra o sin franja oro): ${list(fam.unvalidated)}.` : '') +
+        (fam.discarded.length ? ` Sin regla (su probabilidad no llega a un 82 % recalibrado con muestra suficiente): ${fam.discarded.join('; ')}.` : ''),
+    );
+  }
+  const t = df?.track;
+  const o = t?.overall;
+  if (t && o && o.n > 0) {
+    const b = t.baseline;
+    body.push(
+      `Récord fuera de muestra de esta misma regla de selección (walk-forward mensual del ${day(o.from)} al ${day(o.to)}, ${n0(o.matches ?? 0)} partidos; en cada mes, reglas ajustadas y validadas solo con lo anterior): ${rateWithCi(o)}${o.voids ? `, ${n0(o.voids)} nulos` : ''}.` +
+        (b && b.n > 0 ? ` Una estrategia fija SIN modelo (${b.label}) acierta ${rateWithCi(b)} en los mismos partidos: casi todo el acierto es estructural.` : ''),
+    );
+    body.push(
+      `Por categoría (acierto fuera de muestra frente a la tasa base de sus familias, es decir, su selección natural sin umbral): ${t.byCategory
+        .map((x) => `${x.label} ${pc(x.hitRate, 1)} (${n0(x.hits)}/${n0(x.n)}${x.voids ? `, ${n0(x.voids)} nulos` : ''}${x.baseRate !== undefined ? `; base ${pc(x.baseRate, 1)}` : ''})`)
+        .join('; ')}.`,
+    );
+    body.push(
+      'Puntuación 0–100 de cada pronóstico: 50 % probabilidad recalibrada, 30 % límite inferior de Wilson (90 %) del récord fuera de muestra de su regla y 20 % lift sobre la tasa base de su familia; se restan 8 puntos si el lift es nulo o negativo (acierto puramente estructural). En el walk-forward la puntuación de cada mes solo usa el récord y las tasas base anteriores a ese mes. Los mejores del día: uno por partido, por puntuación, y como mucho 3 del mismo mercado.',
+    );
+    if (t.combos?.length) {
+      body.push(
+        `Combinadas: patas de partidos distintos (una por partido, primero las de lift positivo y como mucho 2 del mismo mercado); la probabilidad es el producto de las probabilidades recalibradas, suponiendo partidos independientes. Fuera de muestra, por día en que se pudieron formar: ${t.combos
+          .map((x) => `${x.label.toLowerCase()} ${pc(x.hitRate, 1)} (${n0(x.hits)}/${n0(x.days)} días; ${d(x.avgLegs, 1)} patas, cuota justa media ${d(x.avgFairOdds)})`)
+          .join('; ')}. Una pata nula no cuenta; cuantas más patas, más días falla.`,
+      );
+    }
+    body.push(
+      'Límites: son selecciones de cuota baja (alto acierto NO es beneficio ni ventaja frente a la casa, que cobra margen); la fuente no publica cuotas de tiros, faltas ni jugadores, así que su rentabilidad no se puede medir; los pronósticos de jugador dependen de la alineación, que no se conoce al calcularlos; los partidos de hoy ya terminados se muestran con sus pronósticos reconstruidos (reglas ajustadas sin ese partido) y resueltos, y los que están en juego con los calculados solo con información anterior al saque (última cuota previa), así que pueden diferir ligeramente de los que se vieron antes de empezar.',
+    );
+  } else {
+    body.push('Todavía no hay suficientes partidos terminados para medir el acierto fuera de muestra: no se publican pronósticos del día.');
+  }
+  body.push('Juego responsable: son estimaciones estadísticas, no garantías. Solo mayores de 18 años y con dinero que puedas permitirte perder.');
+  return { title: 'Pronósticos del día', body };
 }
 
 export function methodologySections(i: MethodologyInput): ModelFile['sections'] {
@@ -221,6 +280,7 @@ export function methodologySections(i: MethodologyInput): ModelFile['sections'] 
   });
 
   sections.push(confidenceSection(i.confidence, bt));
+  if (i.daily) sections.push(dailySection(i.daily, i.dailyFamilies));
 
   sections.push({
     title: 'Calidad de los datos',

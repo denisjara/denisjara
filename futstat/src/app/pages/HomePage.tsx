@@ -1,17 +1,20 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Activity, BadgePercent, CalendarClock, Check, Flame, History, Radio, ShieldCheck, Target, TrendingUp, Users, X, Zap } from 'lucide-react';
+import { Activity, ArrowRight, BadgePercent, CalendarCheck, CalendarClock, Check, Flame, History, Radio, ShieldCheck, Target, TrendingUp, Users, X, Zap } from 'lucide-react';
 import type { ConfidencePick, HomeFile, MatchSummary, PlayerSeasonRow, ValuePick } from '../../types/data';
 import { useHome, useMeta } from '../lib/data';
 import { pickMarketLabel, pickSelection } from '../lib/picks';
 import { lookup } from '../lib/lookup';
 import { useLiveScores, withLive } from '../lib/live';
+import { useNow } from '../lib/hooks';
+import { upcomingFirst } from '../lib/daily';
 import { groupMatchesByCompetition } from '../lib/competitions';
-import { ev as fmtEv, int, kickoff, longDate, num, odds as fmtOdds, pct, plural, capitalize, sumFinite } from '../lib/format';
+import { ev as fmtEv, fromDayKey, int, kickoff, longDate, num, odds as fmtOdds, pct, plural, capitalize, relativeDay, shortDate, sumFinite } from '../lib/format';
 import {
   Card,
   CompetitionBadge,
   ConfidenceRow,
+  DailyTopRow,
   Disclaimer,
   EmptyState,
   ErrorState,
@@ -263,6 +266,45 @@ function ConfidenceList({ items, headline }: { items: { match: MatchSummary; pic
 }
 
 // ---------------------------------------------------------------------------
+// Pronósticos del día (avance de /hoy)
+// ---------------------------------------------------------------------------
+function DailyTeaser({ daily }: { daily: NonNullable<HomeFile['daily']> }) {
+  const nowDate = useNow(60_000);
+  const now = nowDate.getTime();
+  const items = upcomingFirst(daily.top, now).slice(0, 4);
+  const day = fromDayKey(daily.date);
+  const name = relativeDay(day, nowDate);
+  const rel = name === 'Hoy' || name === 'Mañana';
+  return (
+    <Section
+      id="pronosticos-del-dia"
+      eyebrow={rel ? `${name} · ${shortDate(day)}` : capitalize(name)}
+      title="Pronósticos del día"
+      icon={<CalendarCheck />}
+      moreTo="/hoy"
+      moreLabel="Ver todos"
+      description={`Lo mejor de ${plural(daily.picks, 'pronóstico')} validados en ${plural(daily.matches, 'partido')}: resultado, goles, tiros, córners, tarjetas y jugadores. Muy probables y de cuota baja; no son una ventaja frente a la casa.`}
+    >
+      <Card pad="none" className="overflow-hidden">
+        <ol className="divide-y divide-line/70">
+          {items.map((t, i) => (
+            <li key={`${t.match.id}-${t.pick.family}-${t.pick.selection}`}>
+              <DailyTopRow match={t.match} pick={t.pick} rank={i + 1} now={now} day={daily.date} />
+            </li>
+          ))}
+        </ol>
+        <div className="border-t border-line px-3 py-2 sm:px-4">
+          <Link to="/hoy" className="btn-ghost -mx-2.5">
+            Ver los {int(daily.picks)} pronósticos y las combinadas del día
+            <ArrowRight className="h-4 w-4 shrink-0" aria-hidden="true" />
+          </Link>
+        </div>
+      </Card>
+    </Section>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Jugadores en racha
 // ---------------------------------------------------------------------------
 function HotPlayers({ players }: { players: PlayerSeasonRow[] }) {
@@ -372,6 +414,8 @@ export default function HomePage() {
       <SafeBlock label="Resumen del día">
         <DayHero home={home} liveCount={liveCount} />
       </SafeBlock>
+
+      {home.daily && home.daily.top.length > 0 && <DailyTeaser daily={home.daily} />}
 
       <Section
         id="populares"
